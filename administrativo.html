@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLYXU Admin — Gestión de Inventario</title>
+    <link rel="stylesheet" href="blyxu-style.css">
+    <style>
+        /* Specific Admin Styles */
+        .admin-layout { padding: 100px 5% 50px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; }
+        .admin-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; backdrop-filter: blur(16px); }
+        .admin-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: #fff; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-control { width: 100%; background: var(--surface-1); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 8px; font-family: inherit; font-size: 14px; transition: all .3s; }
+        .form-control:focus { border-color: var(--primary); outline: none; background: var(--surface-2); box-shadow: 0 0 10px var(--glow); }
+        .admin-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; transition: all .3s; }
+        .admin-btn:hover { box-shadow: 0 5px 20px var(--glow); transform: translateY(-2px); }
+        .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .admin-setting { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.03); margin-bottom:22px; }
+        .admin-setting-title { font-size:13px; color:#fff; font-weight:700; margin-bottom:4px; }
+        .admin-setting-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
+        .admin-toggle { min-width:92px; padding:10px 14px; border:none; border-radius:999px; color:#fff; background:rgba(255,255,255,.12); font-weight:800; cursor:pointer; }
+        .admin-toggle.active { background:linear-gradient(135deg,var(--primary),var(--secondary)); box-shadow:0 0 18px var(--glow); }
+        
+        .table-wrapper { overflow-x: auto; }
+        .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .admin-table th { background: rgba(255,255,255,0.03); padding: 12px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .admin-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
+        .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .action-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; transition: color .3s; }
+        .action-btn:hover { color: var(--primary); }
+        
+        .toast { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); opacity: 0; transition: all .4s; z-index: 1000; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        
+        @media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } }
+
+        /* Login & Loader Styles */
+        #admin-login-screen { position: fixed; inset: 0; z-index: 2000; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        .login-box { background: var(--glass-bg); padding: 40px; border-radius: 20px; border: 1px solid var(--glass-border); text-align: center; width: 90%; max-width: 400px; backdrop-filter: blur(20px); box-shadow: 0 20px 60px rgba(0,0,0,0.5); transition: all 0.5s; }
+        .login-box img { height: 60px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(155,44,250,0.5)); }
+        .login-box h2 { font-size: 24px; font-weight: 800; margin-bottom: 24px; letter-spacing: 2px; }
+        #login-error { color: #ef4444; font-size: 13px; margin-bottom: 16px; display: none; }
+        
+        .loader-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-top: 30px; display: none; }
+        .loader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 10px; transition: width 0.1s linear; }
+        .loader-text { font-size: 12px; color: var(--text-muted); margin-top: 12px; letter-spacing: 2px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="bg-animation"></div>
+
+    <!-- Login Screen -->
+    <div id="admin-login-screen">
+        <div class="login-box" id="login-box">
+            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
+            <h2>ADMINISTRACIÓN</h2>
+            
+            <form id="admin-login-form">
+                <div id="login-error">Contraseña incorrecta</div>
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <input type="password" class="form-control" id="admin-password" placeholder="Ingresa tu contraseña" required style="text-align: center; letter-spacing: 2px;">
+                </div>
+                <button type="submit" class="admin-btn">Ingresar</button>
+            </form>
+            
+            <div class="loader-container" id="login-loader">
+                <div class="loader-bar" id="login-loader-bar"></div>
+            </div>
+            <div class="loader-text" id="login-loader-text">SINCRONIZANDO CON GOOGLE SHEETS...</div>
+        </div>
+    </div>
+
+    <!-- Main Content (Hidden initially) -->
+    <div id="admin-main-content" style="display: none;">
+        <nav class="navbar scrolled" style="position: sticky;">
+            <a href="BLYXU.html" class="nav-logo">
+                <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
+                <span class="nav-logo-text">BLYXU Admin</span>
+            </a>
+            <div class="nav-actions">
+                <a href="BLYXU.html" style="color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:rgba(255,255,255,0.1); padding:8px 16px; border-radius:8px;">Cerrar Sesión</a>
+            </div>
+        </nav>
+
+    <div class="admin-layout">
+        <!-- Panel Formulario -->
+        <div class="admin-panel">
+            <h2 class="admin-title">Gestión de Producto</h2>
+            <div class="admin-setting">
+                <div>
+                    <div class="admin-setting-title">Precios minoristas</div>
+                    <div class="admin-setting-desc">Controla si el catálogo general muestra precios.</div>
+                </div>
+                <button class="admin-toggle" id="toggle-retail-prices" type="button">OFF</button>
+            </div>
+            <form id="product-form">
+                <input type="hidden" id="prod-id" name="id">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" class="form-control" id="prod-nombre" name="Nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select class="form-control" id="prod-categoria" name="Categoria" required>
+                        <option value="Collares">Collares</option>
+                        <option value="Pulseras">Pulseras</option>
+                        <option value="Aretes">Aretes</option>
+                        <option value="Anillos">Anillos</option>
+                        <option value="Sets">Sets</option>
+                        <option value="Dijes">Dijes</option>
+                        <option value="BANNER" style="background:var(--primary);color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
+                    </select>
+                </div>
+                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label>Precio Minorista</label>
+                        <!-- Usando type text y parseAmount para evitar corrupción de datos -->
+                        <input type="text" class="form-control" id="prod-precio" name="Precio" required>
+                    </div>
+                    <div>
+                        <label>Precio Mayorista</label>
+                        <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
+                    </div>
+                </div>
+                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div>
+                        <label>Catálogo</label>
+                        <select class="form-control" id="prod-catalogo" name="Catalogo">
+                            <option value="Ambos">Minorista y Mayorista</option>
+                            <option value="Minorista">Solo Minorista</option>
+                            <option value="Mayorista">Solo Mayorista</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Stock</label>
+                        <input type="number" class="form-control" id="prod-stock" name="Stock" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>URL de Imagen</label>
+                    <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label>Colores (separados por coma)</label>
+                    <input type="text" class="form-control" id="prod-color" name="Color" placeholder="morado, dorado">
+                </div>
+                <button type="submit" class="admin-btn" id="btn-save">Guardar / Enviar</button>
+            </form>
+        </div>
+
+        <!-- Panel Tabla -->
+        <div class="admin-panel">
+            <h2 class="admin-title">Inventario Actual</h2>
+            <div class="smart-search admin-smart-search">
+                <input type="search" id="admin-inventory-search" placeholder="Buscar por nombre, categoria, color, SKU o estado" autocomplete="off">
+            </div>
+            <div class="table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Imagen</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Catálogo</th>
+                            <th>Minorista</th>
+                            <th>Mayorista</th>
+                            <th>Stock</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        <tr><td colspan="8" style="text-align:center;">Cargando inventario de Google Sheets...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    </div> <!-- End Main Content -->
+
+    <div class="toast" id="toast">Acción completada</div>
+
+    <script src="admin-app.js"></script>
+</body>
+</html>

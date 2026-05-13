@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Producto — BLYXU</title>
+    <link rel="stylesheet" href="blyxu-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+</head>
+<body class="dark-mode">
+
+    <div class="bg-animation"></div>
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- ===== NAVBAR ===== -->
+    <nav class="navbar scrolled" id="navbar">
+        <div class="nav-container">
+            <a href="BLYXU.html" class="nav-logo">
+                <img src="Logo2.png" alt="BLYXU">
+                <span class="nav-logo-text">BLYXU</span>
+            </a>
+
+            <ul class="nav-links" id="nav-links">
+                <li><a href="BLYXU.html#inicio">Inicio</a></li>
+                <li><a href="BLYXU.html#coleccion">Catálogo</a></li>
+                <li><a href="BLYXU.html#contacto">Contacto</a></li>
+                <li><a href="administrativo.html">Administrativo</a></li>
+            </ul>
+
+            <div class="nav-actions">
+                <button class="nav-icon-btn" id="cart-btn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                    <span class="cart-badge" id="cart-count">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== PRODUCT DETAIL ===== -->
+    <main class="product-detail-container" id="product-detail">
+        <div class="product-gallery">
+            <div class="product-main-img" id="detail-img-container">
+                <img src="" alt="" id="detail-img">
+            </div>
+        </div>
+
+        <div class="product-info">
+            <div class="product-info-cat" id="detail-cat">Categoría</div>
+            <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
+            
+            <div class="product-info-price">
+                <span id="detail-price">$0</span>
+                <span class="old" id="detail-old-price" style="display:none;">$0</span>
+            </div>
+
+            <p class="product-info-desc" id="detail-desc">
+                Cargando detalles del producto...
+            </p>
+
+            <div class="product-specs">
+                <div class="spec-item">
+                    <span class="spec-label">Disponibilidad</span>
+                    <span class="spec-value" id="detail-stock">En Stock</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Colores</span>
+                    <span class="spec-value" id="detail-colors">Varios</span>
+                </div>
+            </div>
+
+            <div class="product-info-actions">
+                <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ===== RECOMMENDED PRODUCTS ===== -->
+    <section class="recommended-section">
+        <div class="section-header" style="margin-bottom: 40px;">
+            <h2 class="section-title">Productos <span class="gradient">Recomendados</span></h2>
+        </div>
+        <div class="products-grid" id="products-grid">
+            <!-- Cargado por JS -->
+        </div>
+    </section>
+
+    <!-- ===== CART SIDEBAR (Shared) ===== -->
+    <div class="cart-overlay" id="cart-overlay"></div>
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h3>Tu Carrito</h3>
+            <button class="cart-close" id="cart-close">✕</button>
+        </div>
+        <div class="cart-items" id="cart-items"></div>
+        <div class="cart-footer">
+            <div class="cart-total-row">
+                <span>Total</span>
+                <span id="cart-total">$0</span>
+            </div>
+            <button class="btn-checkout" id="btn-checkout">Finalizar Compra vía WhatsApp</button>
+        </div>
+    </div>
+
+    <script src="blyxu-app.js"></script>
+    <script>
+        // Lógica específica para la página de producto
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = Number.parseInt(urlParams.get('id'), 10);
+            const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
+            const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
+            activeCatalogMode = detailCatalogMode;
+
+            // Esperar a que los productos carguen en blyxu-app.js
+            // Como loadProducts es asíncrona, necesitamos asegurarnos de que terminó
+            if (allProducts.length === 0) {
+                await loadProducts({ renderCatalog: false });
+            }
+
+            const product = allProducts[productId];
+            if (!Number.isInteger(productId) || !product) {
+                document.getElementById('product-detail').innerHTML = `
+                    <div class="product-not-found">
+                        <h2>Producto no encontrado</h2>
+                        <a href="BLYXU.html#coleccion" class="main-banner-btn">Volver al catálogo</a>
+                    </div>
+                `;
+                return;
+            }
+
+            // Rellenar datos
+            const name = product.Nombre || product.nombre || product.Producto || 'Producto';
+            const price = getProductPrice(product, detailCatalogMode);
+            const oldPrice = parseFloat(product.Precio_Anterior || 0);
+            const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
+            const cat = product.Categoria || product.categoria || '';
+            const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
+            const stock = parseInt(product.Stock || product.stock || 0);
+            const colors = product.Color || product.color || 'Único';
+
+            document.getElementById('detail-name').textContent = name;
+            document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
+            document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
+            document.getElementById('detail-desc').textContent = desc;
+            document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado';
+            document.getElementById('detail-colors').textContent = colors;
+
+            const detailImg = document.getElementById('detail-img');
+            detailImg.alt = name;
+            detailImg.onerror = () => {
+                detailImg.onerror = null;
+                detailImg.src = 'Logo2.png';
+                document.getElementById('detail-img-container').classList.add('is-fallback');
+            };
+            detailImg.src = img || 'Logo2.png';
+
+            if (detailShowsPrices && oldPrice > price) {
+                const oldEl = document.getElementById('detail-old-price');
+                oldEl.textContent = formatMoney(oldPrice);
+                oldEl.style.display = 'inline';
+            }
+
+            const detailCartBtn = document.getElementById('btn-add-to-cart-detail');
+            detailCartBtn.disabled = stock <= 0 || !detailShowsPrices;
+            detailCartBtn.textContent = !detailShowsPrices ? 'Precio por consultar' : (stock > 0 ? 'Añadir al Carrito' : 'Producto Agotado');
+            detailCartBtn.onclick = () => {
+                if (stock <= 0 || !detailShowsPrices) return;
+                addToCart(productId, null, detailCatalogMode);
+            };
+
+            // Renderizar recomendados (otros productos de la misma categoría o aleatorios)
+            const normalizedCat = cat.toLowerCase();
+            const recommendationSource = getCurrentCatalogProducts();
+            const sameCategory = recommendationSource.filter(p =>
+                allProducts.indexOf(p) !== productId && (p.Categoria || p.categoria || '').toLowerCase() === normalizedCat
+            );
+            const otherProducts = recommendationSource.filter(p =>
+                allProducts.indexOf(p) !== productId && (p.Categoria || p.categoria || '').toLowerCase() !== normalizedCat
+            );
+            const recommended = [...sameCategory, ...otherProducts].slice(0, 4);
+            
+            renderProducts(recommended, { featuredFirst: false, mode: detailCatalogMode });
+            
+            // Actualizar título de la página
+            document.title = `${name} — BLYXU`;
+        });
+    </script>
+</body>
+</html>
