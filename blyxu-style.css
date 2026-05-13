@@ -790,6 +790,25 @@ body {
     border-color: var(--glass-border);
 }
 
+.catalog-load-more-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 0 8px;
+}
+
+.catalog-load-status {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.catalog-load-more {
+    min-width: 160px;
+    background: rgba(255, 255, 255, .04);
+}
+
 /* ===== PRODUCT GRID ===== */
 .collection-section {
     position: relative;

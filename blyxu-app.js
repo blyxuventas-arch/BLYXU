@@ -23,6 +23,8 @@ let bannerProducts = [];
 let productsLoadError = '';
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
+const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
+const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const CATALOG_BATCH_SIZE = 12;
 let activeCatalogMode = 'retail';
 let showRetailPrices = localStorage.getItem(RETAIL_PRICE_VISIBILITY_KEY) !== '0';
@@ -107,6 +109,56 @@ function getProductField(product, fields, fallback = '') {
         }
     }
     return fallback;
+}
+
+function readCache(key) {
+    try {
+        const value = JSON.parse(localStorage.getItem(key) || 'null');
+        return value && typeof value === 'object' ? value : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeCache(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data }));
+    } catch (error) {
+        console.warn('No se pudo guardar cache local:', error);
+    }
+}
+
+function setProductsLoading(isLoading) {
+    const loading = document.getElementById('loading-products');
+    if (loading) loading.style.display = isLoading ? 'flex' : 'none';
+}
+
+function hydrateProductsFromCache() {
+    const cached = readCache(PRODUCTS_CACHE_KEY);
+    const products = cached?.data?.products;
+    const banners = cached?.data?.banners;
+
+    if (!Array.isArray(products) || !products.length) return false;
+
+    allProducts = products;
+    bannerProducts = Array.isArray(banners) ? banners : [];
+    productsLoadError = '';
+    setProductsLoading(false);
+    return true;
+}
+
+function hydrateSiteConfigFromCache() {
+    const cached = readCache(SITE_CONFIG_CACHE_KEY);
+    const config = cached?.data;
+
+    if (!config || typeof config !== 'object') return false;
+
+    siteConfig = config;
+    if (siteConfig[RETAIL_PRICE_CONFIG_KEY] !== undefined) {
+        showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY]) === '1';
+        localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
+    }
+    return true;
 }
 
 function parseGallery(value) {
@@ -240,34 +292,55 @@ function applySmartProductSearch(products) {
 
 // ── LOAD PRODUCTS FROM GOOGLE SHEETS ──
 async function loadProducts(options = {}) {
-    const { renderCatalog = true } = options;
+    const { renderCatalog = true, useCache = true } = options;
+    const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache();
+
+    if (useCache && Object.keys(siteConfig).length === 0) {
+        hydrateSiteConfigFromCache();
+    }
+
+    if (renderCatalog && usedProductCache) {
+        renderBanners(bannerProducts);
+        renderCatalogProducts();
+    }
 
     if (!productsLoadPromise) {
-        productsLoadPromise = fetchProducts();
+        productsLoadPromise = fetchProducts({ showLoading: !usedProductCache && renderCatalog });
     }
     if (!configLoadPromise) {
         configLoadPromise = fetchSiteConfig();
     }
 
-    await Promise.all([productsLoadPromise, configLoadPromise]);
+    if (usedProductCache) {
+        Promise.all([productsLoadPromise, configLoadPromise]).then(() => {
+            if (renderCatalog) {
+                renderBanners(bannerProducts);
+                renderCatalogProducts();
+            }
+        });
+        return allProducts;
+    }
 
     if (renderCatalog) {
+        await Promise.all([productsLoadPromise, configLoadPromise]);
         renderBanners(bannerProducts);
         renderCatalogProducts();
+    } else {
+        await productsLoadPromise;
     }
 
     return allProducts;
 }
 
-async function fetchProducts() {
-    const loading = document.getElementById('loading-products');
+async function fetchProducts(options = {}) {
+    const { showLoading = true } = options;
     let dataProducts = [];
 
     if (!GOOGLE_SHEET_API) {
         dataProducts = getDemoProducts();
     } else {
         try {
-            if (loading) loading.style.display = 'flex';
+            setProductsLoading(showLoading);
             const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL);
             const data = await res.json();
             if (data && (data.status === 'error' || data.ok === false)) {
@@ -284,15 +357,25 @@ async function fetchProducts() {
         } catch (err) {
             console.error('Error cargando productos:', err);
             productsLoadError = err.message || 'No se pudo conectar con Google Sheets';
+            if (allProducts.length) {
+                productsLoadError = '';
+                setProductsLoading(false);
+                return allProducts;
+            }
             dataProducts = [];
         }
     }
     
-    if (loading) loading.style.display = 'none';
+    setProductsLoading(false);
+
+    if (!dataProducts.length && allProducts.length) {
+        return allProducts;
+    }
     
     // Separar banners del catálogo regular
     bannerProducts = dataProducts.filter(p => String(p.Categoria || p.categoria || '').toUpperCase() === 'BANNER');
     allProducts = dataProducts.filter(p => String(p.Categoria || p.categoria || '').toUpperCase() !== 'BANNER');
+    writeCache(PRODUCTS_CACHE_KEY, { products: allProducts, banners: bannerProducts });
 
     return allProducts;
 }
@@ -308,6 +391,7 @@ async function fetchSiteConfig() {
             siteConfig = data.config;
             showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] || '0') === '1';
             localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
+            writeCache(SITE_CONFIG_CACHE_KEY, siteConfig);
         }
     } catch (err) {
         console.warn('No se pudo cargar configuración del sitio:', err);
@@ -503,11 +587,11 @@ function renderProducts(products, options = {}) {
 
         if (rendered < filtered.length) {
             grid.insertAdjacentHTML('beforeend', `
-                <div class="catalog-load-more-wrap" style="grid-column:1/-1;display:flex;justify-content:center;padding:18px 0 6px;">
-                    <button class="btn-filter" type="button" onclick="loadMoreCatalogBatch()">Cargar mas productos</button>
+                <div class="catalog-load-more-wrap">
+                    <span class="catalog-load-status">Mostrando ${rendered} de ${filtered.length} productos</span>
+                    <button class="catalog-load-more btn-filter" type="button" onclick="loadMoreCatalogBatch()">Ver mas</button>
                 </div>
             `);
-            observeCatalogLoadMore(renderToken);
         }
     }
 
@@ -519,25 +603,6 @@ function loadMoreCatalogBatch() {
     if (catalogBatchState) {
         catalogBatchState.renderNextBatch();
     }
-}
-
-function observeCatalogLoadMore(renderToken) {
-    const marker = document.querySelector('.catalog-load-more-wrap');
-    if (!marker || !('IntersectionObserver' in window)) return;
-
-    const observer = new IntersectionObserver(entries => {
-        if (renderToken !== catalogRenderToken) {
-            observer.disconnect();
-            return;
-        }
-
-        if (entries.some(entry => entry.isIntersecting)) {
-            observer.disconnect();
-            loadMoreCatalogBatch();
-        }
-    }, { rootMargin: '300px' });
-
-    observer.observe(marker);
 }
 
 function getColorHex(name) {
