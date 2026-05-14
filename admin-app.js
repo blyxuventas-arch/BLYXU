@@ -4,6 +4,7 @@ let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
 const INVENTORY_BATCH_SIZE = 25;
+const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 let inventoryRenderedRows = 0;
 let inventoryRenderToken = 0;
 let inventoryLoadMoreObserver = null;
@@ -49,6 +50,9 @@ function normalizeImageUrl(value) {
 function normalizeGoogleProduct(product) {
     return {
         ...product,
+        ID: getProductField(product, ['ID Variacion', 'ID VariaciÃ³n', 'ID', 'id'], ''),
+        idVariacion: getProductField(product, ['ID Variacion', 'ID VariaciÃ³n', 'ID', 'id'], ''),
+        idProducto: getProductField(product, ['ID Producto', 'ID_Producto', 'idProducto'], ''),
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'Producto'], ''),
         Categoria: getProductField(product, ['Categoría', 'Categoria'], ''),
         Precio: getProductField(product, ['Precio'], 0),
@@ -56,7 +60,15 @@ function normalizeGoogleProduct(product) {
         Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'Estilo'], 'Ambos'),
         Stock: getProductField(product, ['Cantidad', 'Stock'], 0),
         Imagen: normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen'], '')),
-        Color: getProductField(product, ['Color'], '')
+        Color: getProductField(product, ['Color'], ''),
+        Stock_Inicial: getProductField(product, ['Stock Inicial', 'Stock_Inicial'], 0),
+        Galeria: getProductField(product, ['Galeria JSON', 'GalerÃ­a JSON', 'Galeria'], ''),
+        Descripcion: getProductField(product, ['Caracteristicas del producto', 'CaracterÃ­sticas del producto', 'Descripcion'], ''),
+        Tamano: getProductField(product, ['Tamano', 'TamaÃ±o', 'Talla'], ''),
+        Estilo: getProductField(product, ['Estilo'], ''),
+        SKU: getProductField(product, ['SKU'], ''),
+        Estado: getProductField(product, ['Estado'], 'Activo'),
+        Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de CreaciÃ³n'], '')
     };
 }
 
@@ -104,6 +116,38 @@ function scoreInventorySearch(product, query) {
     return score;
 }
 
+async function postProductToGoogleSheets(data) {
+    const isEditing = Boolean(data['ID Variacion'] || data.id || data.editId);
+    const payloads = [
+        {
+            resource: 'productos',
+            action: isEditing ? 'editar' : 'crear',
+            data
+        },
+        {
+            action: isEditing ? 'edit_product' : 'add_product',
+            ...data
+        }
+    ];
+    let lastError = 'No se pudo guardar el producto';
+
+    for (const payload of payloads) {
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+
+        if (result && (result.ok || result.status === 'success')) {
+            return result.data || result;
+        }
+
+        lastError = result?.error || result?.message || lastError;
+    }
+
+    throw new Error(lastError);
+}
+
 function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
     const indexed = inventario.map((product, index) => ({ product, index }));
@@ -116,9 +160,101 @@ function getFilteredInventory() {
         .sort((a, b) => b.score - a.score);
 }
 
+function el(id) {
+    return document.getElementById(id);
+}
+
+function setInputValue(id, value = '') {
+    const input = el(id);
+    if (input) input.value = value ?? '';
+}
+
+function getInputValue(id) {
+    return el(id)?.value?.trim() || '';
+}
+
+function buildProductPayload() {
+    const stock = Number(getInputValue('prod-stock') || 0);
+    const stockInicial = Number(getInputValue('prod-stock-inicial') || stock || 0);
+    const idVariacion = getInputValue('prod-id');
+    const idProducto = getInputValue('prod-id-producto') || idVariacion;
+    const nombre = getInputValue('prod-nombre');
+    const categoria = getInputValue('prod-categoria');
+    const descripcion = getInputValue('prod-descripcion');
+    const imagen = getInputValue('prod-imagen');
+
+    return {
+        'ID Variacion': idVariacion,
+        'ID Producto': idProducto,
+        'Nombre del Producto': nombre,
+        Nombre: nombre,
+        Categoria: categoria,
+        'CategorÃ­a': categoria,
+        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+        Precio: parseAmount(getInputValue('prod-precio')),
+        'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+        'Stock Inicial': stockInicial,
+        Cantidad: stock,
+        'Caracteristicas del producto': descripcion,
+        Descripcion: descripcion,
+        Tamano: getInputValue('prod-tamano'),
+        Color: getInputValue('prod-color'),
+        Estilo: getInputValue('prod-estilo'),
+        'Imagen Principal': imagen,
+        Imagen: imagen,
+        'Galeria JSON': getInputValue('prod-galeria'),
+        SKU: getInputValue('prod-sku'),
+        Estado: getInputValue('prod-estado') || 'Activo',
+        'Fecha de Creacion': getInputValue('prod-fecha-creacion')
+    };
+}
+
+function setProductFormMode(isEditing) {
+    const title = el('product-form-title');
+    const mode = el('product-form-mode');
+    const btn = el('btn-save');
+    if (title) title.textContent = isEditing ? 'Editar Producto' : 'Nuevo Producto';
+    if (mode) mode.textContent = isEditing ? 'Editando' : 'Creando';
+    if (btn) btn.textContent = isEditing ? 'Guardar cambios' : 'Guardar producto';
+}
+
+function resetProductForm() {
+    const form = el('product-form');
+    if (form) form.reset();
+    setInputValue('prod-id', '');
+    setInputValue('prod-id-producto', '');
+    setInputValue('prod-fecha-creacion', '');
+    setInputValue('prod-stock-inicial', '0');
+    setInputValue('prod-stock', '0');
+    setInputValue('prod-catalogo', 'Ambos');
+    setInputValue('prod-estado', 'Activo');
+    setProductFormMode(false);
+}
+
+function updateCategoryOptions() {
+    const list = el('admin-category-options');
+    const select = el('prod-categoria');
+
+    const defaults = ['Collares', 'Pulseras', 'Aretes', 'Anillos', 'Sets', 'Dijes', 'BANNER'];
+    const categories = [...new Set([
+        ...defaults,
+        ...inventario.map(p => p.Categoria).filter(Boolean)
+    ])].sort((a, b) => String(a).localeCompare(String(b), 'es'));
+
+    if (list) {
+        list.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}"></option>`).join('');
+    }
+    if (select && select.tagName === 'SELECT') {
+        const current = select.value;
+        select.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
+        if (current && categories.includes(current)) select.value = current;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initRetailPriceToggle();
     initInventorySearch();
+    initCarouselImageAdmin();
     
     // --- LOGIN LOGIC ---
     const loginForm = document.getElementById('admin-login-form');
@@ -188,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const stock = Number(document.getElementById('prod-stock').value || 0);
         const data = {
             'Nombre del Producto': document.getElementById('prod-nombre').value,
+            Categoria: document.getElementById('prod-categoria').value,
             'Categoría': document.getElementById('prod-categoria').value,
             Precio: cleanPrecio,
             'Precio Mayor': cleanPrecioMayorista,
@@ -199,24 +336,14 @@ document.addEventListener('DOMContentLoaded', () => {
             Estado: 'Activo'
         };
 
+        Object.assign(data, buildProductPayload());
+
         try {
             // Se envía mediante POST formData porque App Script lo recibe mejor
-            const res = await fetch(GOOGLE_SHEET_API, {
-                method: 'POST',
-                body: JSON.stringify({
-                    resource: 'productos',
-                    action: 'crear',
-                    data
-                })
-            });
-            const result = await res.json();
-
-            if (!result.ok) {
-                throw new Error(result.error || 'No se pudo guardar el producto');
-            }
+            await postProductToGoogleSheets(data);
 
             showToast('Producto guardado en Google Sheets');
-            document.getElementById('product-form').reset();
+            resetProductForm();
             
             // Recargamos el inventario tras 2 segundos para dar tiempo a que Google Sheets actualice
             setTimeout(() => {
@@ -230,6 +357,33 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = false;
             btn.textContent = 'Guardar / Enviar';
         }
+    });
+
+    document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
+
+    document.getElementById('btn-add-variant')?.addEventListener('click', () => {
+        // Keep: Nombre, Categoria, Precio, Precio Mayorista, Catalogo, Estado, ID Producto
+        const idVariacion = getInputValue('prod-id');
+        const idProducto = getInputValue('prod-id-producto');
+        
+        // If it doesn't have an ID Producto yet, use the ID Variacion of the current product as the parent ID
+        if (!idProducto && idVariacion) {
+            setInputValue('prod-id-producto', idVariacion);
+        }
+        
+        // Clear variation specific fields to allow entering a new variation quickly
+        setInputValue('prod-id', '');
+        setInputValue('prod-color', '');
+        setInputValue('prod-tamano', '');
+        setInputValue('prod-estilo', '');
+        setInputValue('prod-imagen', '');
+        setInputValue('prod-galeria', '');
+        setInputValue('prod-sku', '');
+        setInputValue('prod-stock', '0');
+        setInputValue('prod-stock-inicial', '0');
+        
+        setProductFormMode(false); // Switch back to 'Creating' mode
+        showToast('Listo para nueva variante (Nombre, precio e ID Producto mantenidos)');
     });
 });
 
@@ -292,6 +446,126 @@ async function saveSiteConfig(key, value) {
     }
 }
 
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.onerror = () => reject(reader.error || new Error('No se pudo leer la imagen'));
+        reader.readAsDataURL(file);
+    });
+}
+
+async function uploadCarouselImage(file) {
+    if (!file) return '';
+    if (!file.type.startsWith('image/')) {
+        throw new Error('Selecciona un archivo de imagen valido');
+    }
+    if (file.size > MAX_CAROUSEL_IMAGE_SIZE) {
+        throw new Error('La imagen pesa mas de 5 MB');
+    }
+
+    const base64Data = await fileToBase64(file);
+    const res = await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'upload_image',
+            fileName: file.name,
+            mimeType: file.type,
+            base64Data
+        })
+    });
+    const result = await res.json();
+
+    if (!(result && (result.ok || result.status === 'success'))) {
+        throw new Error(result?.error || result?.message || 'No se pudo subir la imagen');
+    }
+
+    return normalizeImageUrl(result.url || result.data?.url || '');
+}
+
+function initCarouselImageAdmin() {
+    const form = document.getElementById('carousel-image-form');
+    const fileInput = document.getElementById('carousel-file');
+    const imageUrlInput = document.getElementById('carousel-image-url');
+    const preview = document.getElementById('carousel-preview');
+    const titleInput = document.getElementById('carousel-title');
+    const descriptionInput = document.getElementById('carousel-description');
+    const btn = document.getElementById('btn-save-carousel');
+    if (!form || !fileInput || !imageUrlInput || !preview || !btn) return;
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (!file) {
+            preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            preview.innerHTML = `<img src="${reader.result}" alt="Preview carrusel">`;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    imageUrlInput.addEventListener('input', () => {
+        const url = imageUrlInput.value.trim();
+        if (url) {
+            preview.innerHTML = `<img src="${url}" alt="Preview carrusel" onerror="this.parentElement.innerHTML='<span>No se pudo cargar la URL</span>'">`;
+        }
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Guardando banner...';
+
+        try {
+            const file = fileInput.files?.[0];
+            let imageUrl = imageUrlInput.value.trim();
+            if (file) {
+                btn.textContent = 'Subiendo imagen...';
+                imageUrl = await uploadCarouselImage(file);
+                imageUrlInput.value = imageUrl;
+            }
+
+            if (!imageUrl) {
+                throw new Error('Sube una imagen o pega una URL');
+            }
+
+            const title = titleInput.value.trim() || 'BLYXU';
+            const description = descriptionInput.value.trim() || 'Nueva imagen del carrusel de inicio';
+            await postProductToGoogleSheets({
+                'Nombre del Producto': title,
+                Nombre: title,
+                Categoria: 'BANNER',
+                Precio: 0,
+                'Precio Mayor': 0,
+                'Stock Inicial': 1,
+                Cantidad: 1,
+                'Imagen Principal': imageUrl,
+                Imagen: imageUrl,
+                Color: description,
+                'Caracteristicas del producto': description,
+                Estilo: 'Ambos',
+                Catalogo: 'Ambos',
+                Estado: 'Activo'
+            });
+
+            showToast('Banner guardado para el carrusel de inicio');
+            form.reset();
+            preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
+            setTimeout(() => cargarInventario(), 2000);
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'No se pudo guardar el banner');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
+}
+
 function initInventorySearch() {
     const input = document.getElementById('admin-inventory-search');
     if (!input) return;
@@ -320,6 +594,7 @@ async function cargarInventario() {
         }
         inventario = (Array.isArray(data) ? data : (data.data || data.productos || []))
             .map(normalizeGoogleProduct);
+        updateCategoryOptions();
         
         if (inventario.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay productos en el inventario.</td></tr>';
@@ -448,6 +723,8 @@ function observeInventoryLoadMore(renderToken) {
 
 function editarProducto(index) {
     const p = inventario[index];
+    setInputValue('prod-id', p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '');
+    setInputValue('prod-id-producto', p.idProducto || p['ID Producto'] || '');
     document.getElementById('prod-nombre').value = p.Nombre || p.Producto || '';
     document.getElementById('prod-categoria').value = p.Categoria || '';
     document.getElementById('prod-precio').value = p.Precio || '';
@@ -456,6 +733,15 @@ function editarProducto(index) {
     document.getElementById('prod-stock').value = p.Stock || p.Cantidad || '';
     document.getElementById('prod-imagen').value = p.Imagen || '';
     document.getElementById('prod-color').value = p.Color || '';
+    setInputValue('prod-stock-inicial', p.Stock_Inicial || p['Stock Inicial'] || p.Stock || p.Cantidad || '');
+    setInputValue('prod-descripcion', p.Descripcion || p['Caracteristicas del producto'] || '');
+    setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
+    setInputValue('prod-estilo', p.Estilo || '');
+    setInputValue('prod-galeria', p.Galeria || p['Galeria JSON'] || '');
+    setInputValue('prod-sku', p.SKU || '');
+    setInputValue('prod-estado', p.Estado || 'Activo');
+    setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
+    setProductFormMode(true);
     
     // Si manejas edición real, aquí cargarías el id
     // document.getElementById('prod-id').value = p.id || p.fila || '';

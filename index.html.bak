@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLYXU&trade; - Joyer&iacute;a &amp; Accesorios Premium</title>
+    <title>BLYXUâ„¢ â€” JoyerÃ­a & Accesorios Premium</title>
     <meta name="description"
-        content="BLYXU - Tu destino para joyer&iacute;a y accesorios premium. Colecciones exclusivas en tonos p&uacute;rpura y oro.">
+        content="BLYXU - Tu destino para joyerÃ­a y accesorios premium. Colecciones exclusivas en tonos pÃºrpura y oro.">
     <link rel="stylesheet" href="blyxu-style.css">
 </head>
 
@@ -25,7 +25,7 @@
 
         <ul class="nav-links" id="nav-links">
             <li><a href="#inicio" class="active">Inicio</a></li>
-            <li><a href="#coleccion">Catálogo</a></li>
+            <li><a href="#coleccion">CatÃ¡logo</a></li>
             <li><a href="#mayorista">Mayorista</a></li>
             <li><a href="#contacto">Contacto</a></li>
             <li><a href="administrativo.html">Administrativo</a></li>
@@ -47,14 +47,14 @@
     <!-- ===== MAIN BANNER (INICIO) ===== -->
     <section class="main-banner" id="inicio">
         <div class="main-banner-track" id="main-banner-track">
-            <!-- Los banners dinámicos se insertarán aquí por JS -->
+            <!-- Los banners dinÃ¡micos se insertarÃ¡n aquÃ­ por JS -->
             <div class="main-banner-slide active">
                 <img src="hero_necklace.png" alt="Banner" style="filter: brightness(0.4);">
                 <div class="main-banner-overlay"></div>
                 <div class="main-banner-content">
                     <h1 class="main-banner-title">BIENVENIDOS A BLYXU</h1>
                     <p class="main-banner-desc">Cargando banners desde el sistema administrativo...</p>
-                    <a href="#coleccion" class="main-banner-btn">Explorar Colección</a>
+                    <a href="#coleccion" class="main-banner-btn">Explorar ColecciÃ³n</a>
                 </div>
             </div>
         </div>
@@ -75,32 +75,104 @@
         </div>
     </section>
 
+    <!-- ===== CARRUSEL GLASS DE PRODUCTOS ===== -->
+    <section class="hero product-showcase" id="presentacion">
+        <div class="hero-content">
+            <div class="hero-tag">
+                <span class="dot"></span>
+                Producto del inventario
+            </div>
 
-    <!-- ===== CAROUSEL DE IMAGENES ===== -->
-    <section class="image-marquee-section" id="image-carousel">
-        <div class="image-marquee" id="image-marquee-container">
-            <!-- Se llenará con JS -->
+            <h1 class="hero-title">
+                VITRINA<br>
+                <span class="gradient">BLYXU GLASS</span>
+            </h1>
+
+            <p class="hero-subtitle">
+                Un carrusel de productos variados con tarjetas de cristal, brillo intenso y movimiento automatico.
+            </p>
+
+            <div class="hero-sizes">
+                <span class="active">Bisuteria</span>
+                <span>Caimanes</span>
+                <span>Accesorios</span>
+                <span>Nuevos</span>
+            </div>
+
+            <div class="hero-cta">
+                <button class="btn-add-cart"
+                    onclick="document.getElementById('coleccion').scrollIntoView({behavior:'smooth'})">
+                    <span class="icon-circle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+                            <path d="M3 6h18" />
+                            <path d="M16 10a4 4 0 01-8 0" />
+                        </svg>
+                    </span>
+                    VER PRODUCTO
+                </button>
+                <div>
+                    <div class="hero-price-label">CONSULTA</div>
+                    <div class="hero-price">Por consultar</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="hero-carousel glass-carousel" aria-label="Carrusel de productos destacados">
+                <div class="hero-carousel-track is-loading" id="hero-track">
+                    <div class="product-carousel-loading">
+                        <div class="spinner"></div>
+                        <span>Cargando productos del inventario...</span>
+                    </div>
+                </div>
+
+                <button class="hero-carousel-btn prev" id="hero-prev" title="Anterior" type="button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
+                <button class="hero-carousel-btn next" id="hero-next" title="Siguiente" type="button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
+
+                <div class="hero-slider-nav">
+                    <span id="hero-current-slide">01</span>
+                    <span class="line"></span>
+                    <span id="hero-total-slides">03</span>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- ===== NEW COLLECTION / CATALOG ===== -->
     <section class="collection-section" id="coleccion">
-        <div class="section-header">
+        <div class="section-header reveal">
             <div>
-                <h2 class="section-title">NUEVA COLECCIÓN</h2>
+                <h2 class="section-title">NUEVA COLECCIÃ“N</h2>
                 <div class="smart-search">
-                    <input type="search" id="catalog-search" placeholder="Buscar producto, categor&iacute;a, color o SKU"
+                    <input type="search" id="catalog-search" placeholder="Buscar producto, categoria, color o SKU"
                         autocomplete="off">
                 </div>
             </div>
-            <div class="catalog-filter-bar" style="justify-content: flex-end;">
+            <div class="catalog-filter-bar">
+                <div class="section-tags" id="section-tags">
+                    <span data-cat="todos" class="active" onclick="setFilter('todos')">Todos</span>
+                    <span data-cat="collares" onclick="setFilter('collares')">Collares</span>
+                    <span data-cat="pulseras" onclick="setFilter('pulseras')">Pulseras</span>
+                    <span data-cat="aretes" onclick="setFilter('aretes')">Aretes</span>
+                    <span data-cat="anillos" onclick="setFilter('anillos')">Anillos</span>
+                </div>
                 <label class="category-select-wrap" for="catalog-category-select">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         aria-hidden="true">
                         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                     </svg>
-                    <select id="catalog-category-select" aria-label="Filtrar por categor&iacute;a">
-                        <option value="todos">Todas las categor&iacute;as</option>
+                    <select id="catalog-category-select" aria-label="Filtrar por categoria">
+                        <option value="todos">Todas las categorias</option>
                     </select>
                 </label>
             </div>
@@ -123,20 +195,20 @@
                 <img src="Logo2.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
                 <span class="nav-logo-text" style="font-size:20px">BLYXU</span>
             </a>
-            <p>Joyería y accesorios premium con diseños exclusivos. Cada pieza refleja elegancia, calidad y estilo
-                único.</p>
+            <p>JoyerÃ­a y accesorios premium con diseÃ±os exclusivos. Cada pieza refleja elegancia, calidad y estilo
+                Ãºnico.</p>
         </div>
         <div>
-            <h4>Navegación</h4>
+            <h4>NavegaciÃ³n</h4>
             <ul>
                 <li><a href="#inicio">Inicio</a></li>
-                <li><a href="#coleccion">Catálogo</a></li>
+                <li><a href="#coleccion">CatÃ¡logo</a></li>
                 <li><a href="#mayorista">Mayorista</a></li>
                 <li><a href="#contacto">Contacto</a></li>
             </ul>
         </div>
         <div>
-            <h4>Categorías</h4>
+            <h4>CategorÃ­as</h4>
             <ul>
                 <li><a href="#" onclick="setFilter('collares')">Collares</a></li>
                 <li><a href="#" onclick="setFilter('pulseras')">Pulseras</a></li>
@@ -153,8 +225,8 @@
             </ul>
         </div>
         <div class="footer-bottom">
-            <span>© 2026 BLYXU™ — Todos los derechos reservados</span>
-            <span>Hecho con ✦ en Colombia</span>
+            <span>Â© 2026 BLYXUâ„¢ â€” Todos los derechos reservados</span>
+            <span>Hecho con âœ¦ en Colombia</span>
         </div>
     </footer>
 
@@ -162,11 +234,11 @@
     <div class="cart-overlay" id="cart-overlay"></div>
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-header">
-            <h3>🛒 Tu Carrito</h3>
-            <button class="cart-close" id="cart-close">✕</button>
+            <h3>ðŸ›’ Tu Carrito</h3>
+            <button class="cart-close" id="cart-close">âœ•</button>
         </div>
         <div class="cart-items" id="cart-items">
-            <div class="cart-empty">Tu carrito está vacío ✦</div>
+            <div class="cart-empty">Tu carrito estÃ¡ vacÃ­o âœ¦</div>
         </div>
         <div class="cart-footer">
             <div class="cart-total">
@@ -180,7 +252,7 @@
     <!-- ===== WHOLESALE ACCESS ===== -->
     <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
         <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
-            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">✕</button>
+            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">âœ•</button>
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">Acceso mayorista</div>
             <h2 id="wholesale-title">Ingresa tu clave</h2>
@@ -207,6 +279,5 @@
 </body>
 
 </html>
-
 
 

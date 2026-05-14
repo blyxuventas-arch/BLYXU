@@ -15,15 +15,15 @@
     <!-- ===== NAVBAR ===== -->
     <nav class="navbar scrolled" id="navbar">
         <div class="nav-container">
-            <a href="BLYXU.html" class="nav-logo">
+            <a href="index.html" class="nav-logo">
                 <img src="Logo2.png" alt="BLYXU">
                 <span class="nav-logo-text">BLYXU</span>
             </a>
 
             <ul class="nav-links" id="nav-links">
-                <li><a href="BLYXU.html#inicio">Inicio</a></li>
-                <li><a href="BLYXU.html#coleccion">Catálogo</a></li>
-                <li><a href="BLYXU.html#contacto">Contacto</a></li>
+                <li><a href="index.html#inicio">Inicio</a></li>
+                <li><a href="index.html#coleccion">Catálogo</a></li>
+                <li><a href="index.html#contacto">Contacto</a></li>
                 <li><a href="administrativo.html">Administrativo</a></li>
             </ul>
 
@@ -40,8 +40,9 @@
     <main class="product-detail-container" id="product-detail">
         <div class="product-gallery">
             <div class="product-main-img" id="detail-img-container">
-                <img src="" alt="" id="detail-img">
+                <img src="" alt="" id="detail-img" style="transition: opacity 0.2s ease-in-out;">
             </div>
+            <div class="product-thumbnails" id="detail-thumbnails" style="display: flex; gap: 10px; margin-top: 15px; overflow-x: auto; padding-bottom: 5px;"></div>
         </div>
 
         <div class="product-info">
@@ -57,6 +58,8 @@
                 Cargando detalles del producto...
             </p>
 
+            <div id="product-variations" style="display: none; margin-bottom: 24px;"></div>
+
             <div class="product-specs">
                 <div class="spec-item">
                     <span class="spec-label">Disponibilidad</span>
@@ -65,6 +68,18 @@
                 <div class="spec-item">
                     <span class="spec-label">Colores</span>
                     <span class="spec-value" id="detail-colors">Varios</span>
+                </div>
+                <div class="spec-item" id="spec-sku-row" style="display: none;">
+                    <span class="spec-label">SKU / Ref</span>
+                    <span class="spec-value" id="detail-sku"></span>
+                </div>
+                <div class="spec-item" id="spec-size-row" style="display: none;">
+                    <span class="spec-label">Tamaño</span>
+                    <span class="spec-value" id="detail-size"></span>
+                </div>
+                <div class="spec-item" id="spec-style-row" style="display: none;">
+                    <span class="spec-label">Estilo</span>
+                    <span class="spec-value" id="detail-style"></span>
                 </div>
             </div>
 
@@ -122,7 +137,7 @@
                 document.getElementById('product-detail').innerHTML = `
                     <div class="product-not-found">
                         <h2>Producto no encontrado</h2>
-                        <a href="BLYXU.html#coleccion" class="main-banner-btn">Volver al catálogo</a>
+                        <a href="index.html#coleccion" class="main-banner-btn">Volver al catálogo</a>
                     </div>
                 `;
                 return;
@@ -137,6 +152,9 @@
             const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
             const stock = parseInt(product.Stock || product.stock || 0);
             const colors = product.Color || product.color || 'Único';
+            const sku = product.SKU || product.idVariacion || '';
+            const size = product.Tamano || product.tamano || '';
+            const style = product.Estilo || product.estilo || '';
 
             document.getElementById('detail-name').textContent = name;
             document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
@@ -144,6 +162,54 @@
             document.getElementById('detail-desc').textContent = desc;
             document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado';
             document.getElementById('detail-colors').textContent = colors;
+
+            if (sku) {
+                document.getElementById('detail-sku').textContent = sku;
+                document.getElementById('spec-sku-row').style.display = 'flex';
+            }
+            if (size) {
+                document.getElementById('detail-size').textContent = size;
+                document.getElementById('spec-size-row').style.display = 'flex';
+            }
+            if (style) {
+                document.getElementById('detail-style').textContent = style;
+                document.getElementById('spec-style-row').style.display = 'flex';
+            }
+
+            // Variaciones (Mismo idProducto)
+            const parentId = product.idProducto;
+            const siblings = parentId ? allProducts.filter(p => p.idProducto === parentId && String(p.Categoria || p.categoria || '').toLowerCase() !== 'banner') : [];
+            
+            if (siblings.length > 1) {
+                const varContainer = document.getElementById('product-variations');
+                let html = '<h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Variantes Disponibles</h3><div style="display: flex; gap: 8px; flex-wrap: wrap;">';
+                
+                siblings.forEach((sib, index) => {
+                    const sibIndex = allProducts.indexOf(sib);
+                    const isActive = sibIndex === productId;
+                    
+                    let labelParts = [];
+                    if (sib.Color) labelParts.push(sib.Color);
+                    if (sib.Tamano || sib.tamano) labelParts.push(sib.Tamano || sib.tamano);
+                    if (sib.Estilo || sib.estilo) labelParts.push(sib.Estilo || sib.estilo);
+                    
+                    let label = labelParts.join(' - ');
+                    if (!label) {
+                        label = sib.idVariacion || `Opción ${index + 1}`;
+                    }
+
+                    html += `<button onclick="window.location.href='producto.html?id=${sibIndex}${detailCatalogMode==='wholesale'?'&catalogo=mayorista':''}'" 
+                                style="padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background: ${isActive ? 'rgba(155,44,250,0.1)' : 'rgba(255,255,255,0.03)'}; color: ${isActive ? '#fff' : 'var(--text-muted)'}; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.borderColor='var(--primary)'; this.style.color='#fff';"
+                                onmouseout="if(!${isActive}){ this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='var(--text-muted)'; }">
+                                ${escapeHtml(label)}
+                             </button>`;
+                });
+                html += '</div>';
+                
+                varContainer.innerHTML = html;
+                varContainer.style.display = 'block';
+            }
 
             const detailImg = document.getElementById('detail-img');
             detailImg.alt = name;
@@ -153,6 +219,34 @@
                 document.getElementById('detail-img-container').classList.add('is-fallback');
             };
             detailImg.src = img || 'Logo2.png';
+
+            // Generar galería de miniaturas si el producto tiene más imágenes
+            const allImages = getProductImageSet(product);
+            const thumbsContainer = document.getElementById('detail-thumbnails');
+            if (allImages.length > 1) {
+                thumbsContainer.innerHTML = allImages.map(imgUrl => `
+                    <img src="${escapeHtml(imgUrl)}" 
+                         class="gallery-thumb" 
+                         style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; flex-shrink: 0;"
+                         onclick="
+                             const mainImg = document.getElementById('detail-img');
+                             if(mainImg.src === '${escapeHtml(imgUrl)}') return;
+                             mainImg.style.opacity = 0;
+                             setTimeout(() => {
+                                 mainImg.src='${escapeHtml(imgUrl)}';
+                                 mainImg.onload = () => mainImg.style.opacity = 1;
+                             }, 150);
+                             document.querySelectorAll('.gallery-thumb').forEach(t=>t.style.borderColor='transparent'); 
+                             this.style.borderColor='var(--primary)';
+                         "
+                         onerror="this.style.display='none'">
+                `).join('');
+                const firstThumb = thumbsContainer.querySelector('.gallery-thumb');
+                if (firstThumb) firstThumb.style.borderColor = 'var(--primary)';
+                thumbsContainer.style.display = 'flex';
+            } else {
+                if (thumbsContainer) thumbsContainer.style.display = 'none';
+            }
 
             if (detailShowsPrices && oldPrice > price) {
                 const oldEl = document.getElementById('detail-old-price');

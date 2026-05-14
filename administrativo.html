@@ -7,17 +7,26 @@
     <link rel="stylesheet" href="blyxu-style.css">
     <style>
         /* Specific Admin Styles */
-        .admin-layout { padding: 100px 5% 50px; display: grid; grid-template-columns: 350px 1fr; gap: 30px; }
-        .admin-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; backdrop-filter: blur(16px); }
-        .admin-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; color: #fff; }
-        .form-group { margin-bottom: 16px; }
+        .admin-layout { padding: 72px 4% 36px; display: grid; grid-template-columns: minmax(420px, 520px) 1fr; gap: 20px; align-items:start; }
+        .admin-stack { display: flex; flex-direction: column; gap: 18px; }
+        .admin-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 18px; backdrop-filter: blur(16px); }
+        .admin-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; color: #fff; }
+        .admin-title-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+        .admin-title-row .admin-title { margin-bottom:0; }
+        .admin-mode-pill { border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:6px 10px; color:var(--secondary); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; background:rgba(155,44,250,.12); white-space:nowrap; }
+        .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-        .form-control { width: 100%; background: var(--surface-1); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px; border-radius: 8px; font-family: inherit; font-size: 14px; transition: all .3s; }
+        .form-control { width: 100%; background: var(--surface-1); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 11px; border-radius: 8px; font-family: inherit; font-size: 13px; transition: all .3s; }
         .form-control:focus { border-color: var(--primary); outline: none; background: var(--surface-2); box-shadow: 0 0 10px var(--glow); }
-        .admin-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; transition: all .3s; }
+        textarea.form-control { min-height:76px; resize:vertical; line-height:1.4; }
+        .admin-form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0 10px; }
+        .admin-form-wide { grid-column:1 / -1; }
+        .admin-form-actions { display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; margin-top:6px; }
+        .admin-btn { width: 100%; padding: 12px 14px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; transition: all .3s; }
+        .admin-btn.secondary { width:auto; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
         .admin-btn:hover { box-shadow: 0 5px 20px var(--glow); transform: translateY(-2px); }
         .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-        .admin-setting { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.03); margin-bottom:22px; }
+        .admin-setting { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:rgba(255,255,255,.03); margin-bottom:14px; }
         .admin-setting-title { font-size:13px; color:#fff; font-weight:700; margin-bottom:4px; }
         .admin-setting-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
         .admin-toggle { min-width:92px; padding:10px 14px; border:none; border-radius:999px; color:#fff; background:rgba(255,255,255,.12); font-weight:800; cursor:pointer; }
@@ -30,11 +39,14 @@
         .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
         .action-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; transition: color .3s; }
         .action-btn:hover { color: var(--primary); }
+        .carousel-admin-preview { min-height: 120px; border: 1px dashed rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; overflow: hidden; margin-bottom: 12px; text-align: center; }
+        .carousel-admin-preview img { width: 100%; height: 100%; min-height: 120px; object-fit: cover; display: block; }
         
         .toast { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); opacity: 0; transition: all .4s; z-index: 1000; }
         .toast.show { transform: translateY(0); opacity: 1; }
         
-        @media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .admin-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .admin-form-grid, .admin-form-actions { grid-template-columns: 1fr; } .admin-btn.secondary { width:100%; } }
 
         /* Login & Loader Styles */
         #admin-login-screen { position: fixed; inset: 0; z-index: 2000; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; flex-direction: column; }
@@ -86,9 +98,13 @@
         </nav>
 
     <div class="admin-layout">
+        <div class="admin-stack">
         <!-- Panel Formulario -->
         <div class="admin-panel">
-            <h2 class="admin-title">Gestión de Producto</h2>
+            <div class="admin-title-row">
+                <h2 class="admin-title" id="product-form-title">Nuevo Producto</h2>
+                <span class="admin-mode-pill" id="product-form-mode">Creando</span>
+            </div>
             <div class="admin-setting">
                 <div>
                     <div class="admin-setting-title">Precios minoristas</div>
@@ -147,8 +163,82 @@
                     <label>Colores (separados por coma)</label>
                     <input type="text" class="form-control" id="prod-color" name="Color" placeholder="morado, dorado">
                 </div>
-                <button type="submit" class="admin-btn" id="btn-save">Guardar / Enviar</button>
+                <div class="admin-form-grid">
+                    <div class="form-group">
+                        <label>ID Producto</label>
+                        <input type="text" class="form-control" id="prod-id-producto" placeholder="Automatico si se deja vacio">
+                    </div>
+                    <div class="form-group">
+                        <label>SKU</label>
+                        <input type="text" class="form-control" id="prod-sku" placeholder="Referencia interna">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock Inicial</label>
+                        <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Tamano</label>
+                        <input type="text" class="form-control" id="prod-tamano" placeholder="Talla, largo o medida">
+                    </div>
+                    <div class="form-group">
+                        <label>Estilo</label>
+                        <input type="text" class="form-control" id="prod-estilo" placeholder="Elegante, casual, premium">
+                    </div>
+                    <div class="form-group">
+                        <label>Estado</label>
+                        <select class="form-control" id="prod-estado">
+                            <option value="Activo">Activo</option>
+                            <option value="Disponible">Disponible</option>
+                            <option value="Agotado">Agotado</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="form-group admin-form-wide">
+                        <label>Caracteristicas del producto</label>
+                        <textarea class="form-control" id="prod-descripcion" placeholder="Materiales, medidas, detalles o notas del producto"></textarea>
+                    </div>
+                    <div class="form-group admin-form-wide">
+                        <label>Galeria JSON</label>
+                        <textarea class="form-control" id="prod-galeria" placeholder='["https://imagen-1.jpg", "https://imagen-2.jpg"]'></textarea>
+                    </div>
+                </div>
+                <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
+                <div class="admin-form-actions" style="grid-template-columns: 1fr auto;">
+                    <button type="submit" class="admin-btn" id="btn-save">Guardar producto</button>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="button" class="admin-btn secondary" id="btn-add-variant" title="Mantiene nombre, precio e ID Producto para crear una variación rápidamente">➕ Variante</button>
+                        <button type="button" class="admin-btn secondary" id="btn-reset-product">Nuevo</button>
+                    </div>
+                </div>
             </form>
+        </div>
+
+        <div class="admin-panel">
+            <h2 class="admin-title">Carrusel de Inicio</h2>
+            <div class="admin-setting-desc" style="margin-bottom:16px;">Sube imagenes para el banner principal. Se guardan como categoria BANNER y aparecen en Inicio.</div>
+            <form id="carousel-image-form">
+                <div class="carousel-admin-preview" id="carousel-preview">
+                    <span>Selecciona una imagen para previsualizarla</span>
+                </div>
+                <div class="form-group">
+                    <label>Imagen del carrusel</label>
+                    <input type="file" class="form-control" id="carousel-file" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>URL de imagen subida o externa</label>
+                    <input type="text" class="form-control" id="carousel-image-url" placeholder="Se completa al subir la imagen">
+                </div>
+                <div class="form-group">
+                    <label>Titulo del banner</label>
+                    <input type="text" class="form-control" id="carousel-title" placeholder="Ej: Coleccion exclusiva 2026">
+                </div>
+                <div class="form-group">
+                    <label>Descripcion corta</label>
+                    <textarea class="form-control" id="carousel-description" rows="3" placeholder="Texto que saldra sobre la imagen"></textarea>
+                </div>
+                <button type="submit" class="admin-btn" id="btn-save-carousel">Subir y guardar banner</button>
+            </form>
+        </div>
         </div>
 
         <!-- Panel Tabla -->
