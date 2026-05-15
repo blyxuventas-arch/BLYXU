@@ -3,275 +3,513 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLYXU Admin — Gestión de Inventario</title>
+    <title>BLYXU Admin — Dashboard Neumórfico</title>
     <link rel="stylesheet" href="blyxu-style.css">
     <style>
-        /* Specific Admin Styles */
-        .admin-layout { padding: 72px 4% 36px; display: grid; grid-template-columns: minmax(420px, 520px) 1fr; gap: 20px; align-items:start; }
-        .admin-stack { display: flex; flex-direction: column; gap: 18px; }
-        .admin-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 18px; backdrop-filter: blur(16px); }
-        .admin-title { font-size: 18px; font-weight: 800; margin-bottom: 14px; color: #fff; }
-        .admin-title-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
-        .admin-title-row .admin-title { margin-bottom:0; }
-        .admin-mode-pill { border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:6px 10px; color:var(--secondary); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1px; background:rgba(155,44,250,.12); white-space:nowrap; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-        .form-control { width: 100%; background: var(--surface-1); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 11px; border-radius: 8px; font-family: inherit; font-size: 13px; transition: all .3s; }
-        .form-control:focus { border-color: var(--primary); outline: none; background: var(--surface-2); box-shadow: 0 0 10px var(--glow); }
-        textarea.form-control { min-height:76px; resize:vertical; line-height:1.4; }
-        .admin-form-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0 10px; }
-        .admin-form-wide { grid-column:1 / -1; }
-        .admin-form-actions { display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center; margin-top:6px; }
-        .admin-btn { width: 100%; padding: 12px 14px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; transition: all .3s; }
-        .admin-btn.secondary { width:auto; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
-        .admin-btn:hover { box-shadow: 0 5px 20px var(--glow); transform: translateY(-2px); }
-        .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-        .admin-setting { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:rgba(255,255,255,.03); margin-bottom:14px; }
-        .admin-setting-title { font-size:13px; color:#fff; font-weight:700; margin-bottom:4px; }
-        .admin-setting-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
-        .admin-toggle { min-width:92px; padding:10px 14px; border:none; border-radius:999px; color:#fff; background:rgba(255,255,255,.12); font-weight:800; cursor:pointer; }
-        .admin-toggle.active { background:linear-gradient(135deg,var(--primary),var(--secondary)); box-shadow:0 0 18px var(--glow); }
-        
-        .table-wrapper { overflow-x: auto; }
-        .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .admin-table th { background: rgba(255,255,255,0.03); padding: 12px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .admin-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
-        .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
-        .action-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 4px; transition: color .3s; }
-        .action-btn:hover { color: var(--primary); }
-        .carousel-admin-preview { min-height: 120px; border: 1px dashed rgba(255,255,255,.18); border-radius: 10px; background: rgba(255,255,255,.03); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; overflow: hidden; margin-bottom: 12px; text-align: center; }
-        .carousel-admin-preview img { width: 100%; height: 100%; min-height: 120px; object-fit: cover; display: block; }
-        
-        .toast { position: fixed; bottom: 30px; right: 30px; background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 8px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(100px); opacity: 0; transition: all .4s; z-index: 1000; }
-        .toast.show { transform: translateY(0); opacity: 1; }
-        
-        @media (max-width: 1100px) { .admin-layout { grid-template-columns: 1fr; } }
-        @media (max-width: 640px) { .admin-form-grid, .admin-form-actions { grid-template-columns: 1fr; } .admin-btn.secondary { width:100%; } }
+        :root {
+            --primary: #a855f7;
+            --primary-dark: #7c3aed;
+            --primary-light: #d8b4fe;
+            --secondary: #f472b6;
+            --accent: #22d3ee;
+            --success: #34d399;
+            --danger: #fb7185;
+            --warning: #fbbf24;
+            --bg-deep: #0d0a1a;
+            --bg-dark: #12101e;
+            --bg-card: #1e1a30;
+            --bg-surface: #2a2545;
+            --text-main: #f1f0f7;
+            --text-muted: #a69dc2;
+            --text-dim: #706a8a;
+            --glass-bg: rgba(30, 25, 48, 0.7);
+            --glass-border: rgba(168, 85, 247, 0.15);
+            --glass-shadow: 0 20px 40px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(168,85,247,0.06);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body, html { height:100%; margin:0; overflow:hidden; background:var(--bg-dark); color:var(--text-main); font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
 
-        /* Login & Loader Styles */
-        #admin-login-screen { position: fixed; inset: 0; z-index: 2000; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        .login-box { background: var(--glass-bg); padding: 40px; border-radius: 20px; border: 1px solid var(--glass-border); text-align: center; width: 90%; max-width: 400px; backdrop-filter: blur(20px); box-shadow: 0 20px 60px rgba(0,0,0,0.5); transition: all 0.5s; }
-        .login-box img { height: 60px; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(155,44,250,0.5)); }
-        .login-box h2 { font-size: 24px; font-weight: 800; margin-bottom: 24px; letter-spacing: 2px; }
-        #login-error { color: #ef4444; font-size: 13px; margin-bottom: 16px; display: none; }
-        
-        .loader-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-top: 30px; display: none; }
-        .loader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 10px; transition: width 0.1s linear; }
-        .loader-text { font-size: 12px; color: var(--text-muted); margin-top: 12px; letter-spacing: 2px; display: none; }
+        .bg-animation { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+        .bg-animation::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(168,85,247,0.06),transparent 70%); top:-15%; left:-5%; animation:bgFloat 40s infinite alternate ease-in-out; }
+        .bg-animation::after { content:''; position:absolute; width:500px; height:500px; border-radius:50%; background:radial-gradient(circle,rgba(244,114,182,0.04),transparent 70%); bottom:-10%; right:-5%; animation:bgFloat 35s infinite alternate-reverse ease-in-out; }
+        @keyframes bgFloat { 0%{transform:translate(0,0)scale(1)} 100%{transform:translate(40px,30px)scale(1.1)} }
+        .bg-grid { position:fixed; inset:0; z-index:0; background-image:linear-gradient(rgba(168,85,247,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,0.025) 1px,transparent 1px); background-size:56px 56px; pointer-events:none; }
+
+        ::-webkit-scrollbar { width:4px; height:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:rgba(168,85,247,0.25); border-radius:99px; }
+        ::-webkit-scrollbar-thumb:hover { background:rgba(168,85,247,0.4); }
+
+        .dashboard-layout { display:grid; grid-template-columns:220px 1fr; height:100vh; width:100vw; position:relative; z-index:10; }
+
+        /* SIDEBAR */
+        .sub-sidebar { background:rgba(13,10,26,0.95); padding:16px 10px; display:flex; flex-direction:column; gap:4px; overflow-y:auto; border-right:1px solid rgba(168,85,247,0.06); z-index:20; }
+        .sidebar-logo { padding:4px 12px 16px; border-bottom:1px solid rgba(168,85,247,0.05); margin-bottom:6px; }
+        .sidebar-logo h1 { font-size:20px; font-weight:800; letter-spacing:2.5px; background:linear-gradient(135deg,#c084fc,#f472b6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0; }
+        .sidebar-section h4 { font-size:8.5px; text-transform:uppercase; letter-spacing:2px; color:rgba(168,85,247,0.25); margin:14px 0 6px 10px; font-weight:600; }
+        .sidebar-btn { width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); font-size:12px; font-weight:400; padding:9px 12px; border-radius:8px; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:8px; margin-bottom:1px; position:relative; }
+        .sidebar-btn:hover { background:rgba(168,85,247,0.06); color:#fff; }
+        .sidebar-btn.active { background:rgba(168,85,247,0.08); color:var(--primary-light); font-weight:500; }
+        .sidebar-btn.active::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:2px; height:14px; background:linear-gradient(180deg,var(--primary),var(--secondary)); border-radius:0 2px 2px 0; }
+        .sidebar-btn.logout { margin-top:auto; color:rgba(251,113,133,0.4); }
+        .sidebar-btn.logout:hover { background:rgba(251,113,133,0.05); color:#fb7185; }
+
+        /* MAIN */
+        .dashboard-main { display:flex; flex-direction:column; height:100vh; overflow:hidden; position:relative; }
+        .dashboard-header { padding:20px 32px 10px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+        .dashboard-header h1 { font-size:20px; font-weight:700; margin:0; color:#fff; letter-spacing:-0.3px; }
+        .dashboard-badge { background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.08); padding:4px 14px; border-radius:99px; font-size:8px; font-weight:600; color:var(--primary-light); letter-spacing:1px; text-transform:uppercase; }
+        .dashboard-content-area { padding:0 32px 28px; flex:1; overflow-y:auto; }
+        .dashboard-section { display:none; animation:fadeSlideIn .35s ease; }
+        .dashboard-section.active { display:block; }
+        @keyframes fadeSlideIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        /* PANELS */
+        .admin-panel { background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:16px; padding:24px; backdrop-filter:blur(16px); box-shadow:var(--glass-shadow); margin-bottom:18px; transition:all .3s; }
+        .admin-panel:hover { border-color:rgba(168,85,247,0.22); }
+        .admin-panel.gradient-bg { background:linear-gradient(145deg,rgba(30,25,48,0.85),rgba(13,10,26,0.95)); }
+        .admin-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:16px; }
+        .admin-title-row h2 { font-size:16px; font-weight:600; margin:0; color:#fff; }
+        .admin-mode-pill { border:none; border-radius:999px; padding:3px 8px; color:#fff; font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; background:linear-gradient(135deg,var(--primary),var(--secondary)); }
+
+        /* FORMS */
+        .form-group { margin-bottom:12px; }
+        .form-group label { display:block; font-size:10px; color:var(--text-muted); margin-bottom:4px; font-weight:500; }
+        .form-control { width:100%; background:rgba(0,0,0,0.25); border:1px solid rgba(168,85,247,0.06); color:#fff; padding:10px 14px; border-radius:10px; font-family:inherit; font-size:12.5px; font-weight:400; transition:all .2s; }
+        .form-control::placeholder { color:rgba(255,255,255,0.1); }
+        .form-control:hover { border-color:rgba(168,85,247,0.12); background:rgba(0,0,0,0.3); }
+        .form-control:focus { border-color:var(--primary); outline:none; background:rgba(168,85,247,0.04); box-shadow:0 0 0 2px rgba(168,85,247,0.08); }
+        textarea.form-control { min-height:64px; resize:vertical; line-height:1.4; }
+        .admin-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 10px; }
+        .admin-form-wide { grid-column:1/-1; }
+        select.form-control { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23706a8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px; }
+        select.form-control option { background:#1e1a30; color:#fff; }
+
+        /* BUTTONS */
+        .admin-btn { width:100%; padding:10px 18px; background:linear-gradient(135deg,var(--primary),var(--primary-dark)); border:none; border-radius:10px; color:#fff; font-weight:500; font-size:12px; cursor:pointer; transition:all .25s; box-shadow:0 3px 12px rgba(168,85,247,0.15); display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+        .admin-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(168,85,247,0.2); }
+        .admin-btn:active { transform:translateY(0)scale(0.98); }
+        .admin-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:none; }
+        .admin-btn.secondary { background:var(--bg-surface); color:var(--text-muted); box-shadow:none; border:1px solid rgba(255,255,255,0.04); }
+        .admin-btn.secondary:hover { background:rgba(42,37,69,0.8); color:#fff; border-color:rgba(255,255,255,0.08); }
+        .admin-btn.danger { background:rgba(251,113,133,0.08); color:var(--danger); box-shadow:none; border:1px solid rgba(251,113,133,0.08); }
+        .admin-btn.danger:hover { background:rgba(251,113,133,0.12); }
+
+        /* SPLIT */
+        .grid-split { display:grid; grid-template-columns:minmax(380px,520px) 1fr; gap:20px; align-items:start; }
+
+        /* PREVIEW */
+        .preview-container { display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:10px; }
+        .preview-card { background:var(--glass-bg); border-radius:16px; overflow:hidden; border:1px solid rgba(168,85,247,0.12); width:100%; max-width:280px; box-shadow:0 30px 60px rgba(0,0,0,0.4); backdrop-filter:blur(12px); transition:all .4s; }
+        .preview-card:hover { transform:translateY(-3px)scale(1.01); border-color:rgba(168,85,247,0.2); }
+        .preview-img-wrapper { position:relative; padding-top:100%; background:linear-gradient(135deg,#140928,#0a0418); overflow:hidden; }
+        .preview-img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; padding:12px; transition:transform .6s; }
+        .preview-card:hover .preview-img { transform:scale(1.05); }
+        .preview-badge { position:absolute; top:10px; left:10px; background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; font-size:8px; font-weight:700; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:0.6px; box-shadow:0 3px 10px rgba(168,85,247,0.2); }
+        .preview-body { padding:16px; display:flex; flex-direction:column; gap:6px; }
+        .preview-title { font-size:15px; font-weight:700; color:#fff; margin:0; line-height:1.2; }
+        .preview-price { font-size:18px; font-weight:700; color:var(--primary-light); margin:0; }
+        .preview-btn { width:100%; padding:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.04); border-radius:10px; color:var(--text-dim); font-weight:600; text-align:center; text-transform:uppercase; letter-spacing:1.2px; font-size:9px; transition:all .3s; cursor:default; }
+        .preview-card:hover .preview-btn { background:rgba(255,255,255,0.06); color:var(--text-muted); }
+
+        /* INVENTORY */
+        .table-wrapper { border-radius:12px; overflow:hidden; border:1px solid rgba(168,85,247,0.04); }
+        .inventory-tree { width:100%; border-collapse:separate; border-spacing:0; }
+        .inventory-tree thead { position:sticky; top:0; z-index:5; }
+        .inventory-tree th { padding:8px 12px; font-size:8px; text-transform:uppercase; color:var(--text-dim); font-weight:600; letter-spacing:1.5px; background:rgba(13,10,26,0.5); border-bottom:1px solid rgba(168,85,247,0.04); }
+        .mother-row td { background:rgba(168,85,247,0.02); padding:10px 12px; border-bottom:1px solid rgba(168,85,247,0.03); }
+        .mother-row:hover td { background:rgba(168,85,247,0.04); }
+        .variant-row td { background:rgba(0,0,0,0.08); padding:7px 12px; border-bottom:1px solid rgba(255,255,255,0.01); }
+        .variant-row td:first-child { border-left:2px solid rgba(168,85,247,0.12); padding-left:24px; }
+        .variant-row:hover td { background:rgba(168,85,247,0.02); }
+        .tree-connector { display:inline-block; width:12px; height:1px; border-top:1.5px solid rgba(168,85,247,0.1); margin-right:5px; vertical-align:middle; }
+        .mother-badge-id { display:inline-block; background:rgba(168,85,247,0.1); color:var(--primary-light); padding:1px 6px; border-radius:3px; font-weight:600; font-size:8px; }
+        .variant-badge-id { display:inline-block; background:rgba(251,191,36,0.08); color:var(--warning); padding:1px 4px; border-radius:3px; font-weight:500; font-size:8px; }
+        .variant-count-badge { display:inline-block; background:rgba(168,85,247,0.04); color:var(--text-dim); padding:1px 6px; border-radius:99px; font-size:8px; font-weight:500; }
+        .toggle-vars-btn { background:rgba(168,85,247,0.05); color:var(--primary-light); font-size:8px; padding:4px 8px; border-radius:5px; border:none; cursor:pointer; font-weight:500; transition:all .2s; width:100%; }
+        .toggle-vars-btn:hover { background:rgba(168,85,247,0.1); }
+        .action-btn-edit { background:rgba(168,85,247,0.1); color:#fff; border:none; padding:4px 10px; border-radius:5px; font-weight:500; font-size:9px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+        .action-btn-edit:hover { background:rgba(168,85,247,0.18); }
+        .action-btn-edit-sm { background:transparent; color:var(--text-dim); border:1px solid rgba(255,255,255,0.04); padding:2px 7px; border-radius:4px; font-weight:400; font-size:9px; cursor:pointer; transition:all .2s; white-space:nowrap; }
+        .action-btn-edit-sm:hover { border-color:rgba(168,85,247,0.15); color:var(--primary-light); }
+        .action-btn-delete-sm { border:1px solid rgba(251,113,133,0.08); color:var(--danger); padding:2px 7px; border-radius:4px; font-weight:400; font-size:9px; cursor:pointer; transition:all .2s; background:rgba(251,113,133,0.03); white-space:nowrap; }
+        .action-btn-delete-sm:hover { background:rgba(251,113,133,0.06); }
+        .stock-positive { color:var(--success); font-weight:700; font-size:12px; }
+        .stock-negative { color:var(--danger); font-weight:700; font-size:12px; }
+
+        /* TOAST */
+        .toast { position:fixed; bottom:20px; right:20px; background:rgba(168,85,247,0.85); backdrop-filter:blur(12px); color:#fff; padding:10px 18px; border-radius:10px; font-weight:500; font-size:11.5px; box-shadow:0 12px 32px rgba(0,0,0,0.4); transform:translateY(60px); opacity:0; transition:all .4s; z-index:9999; max-width:360px; border:1px solid rgba(255,255,255,0.04); }
+        .toast.show { transform:translateY(0); opacity:1; }
+        .toast.error { background:rgba(251,113,133,0.85); }
+        .toast.success { background:rgba(52,211,153,0.85); }
+        .toast.warning { background:rgba(251,191,36,0.85); }
+
+        /* MODAL */
+        .modal-overlay { position:fixed; inset:0; background:rgba(13,10,26,0.7); backdrop-filter:blur(12px); z-index:5000; display:flex; align-items:center; justify-content:center; }
+        .modal-box { background:linear-gradient(145deg,rgba(30,25,48,0.97),rgba(18,15,30,0.98)); border:1px solid rgba(168,85,247,0.1); border-radius:16px; padding:28px; width:90%; max-width:400px; box-shadow:0 40px 80px rgba(0,0,0,0.6); }
+        .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .modal-header h3 { color:#fff; font-size:15px; font-weight:600; }
+        .modal-body { color:var(--text-muted); font-size:12.5px; line-height:1.5; margin-bottom:18px; }
+        .modal-footer { display:flex; gap:8px; justify-content:flex-end; }
+        .modal-footer .admin-btn { width:auto; min-width:80px; padding:8px 16px; font-size:11px; border-radius:8px; }
+        .close-modal-btn { background:rgba(255,255,255,0.03); border:none; color:var(--text-dim); width:28px; height:28px; border-radius:50%; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+        .close-modal-btn:hover { background:rgba(255,255,255,0.06); color:#fff; }
+
+        /* LOGIN */
+        #admin-login-screen { position:fixed; inset:0; z-index:9999; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        .login-box { background:var(--glass-bg); backdrop-filter:blur(20px); padding:40px; border-radius:20px; text-align:center; width:90%; max-width:360px; border:1px solid rgba(168,85,247,0.08); box-shadow:0 40px 80px rgba(0,0,0,0.5); }
+        .login-box h2 { color:var(--text-dim); letter-spacing:2px; font-size:11px; font-weight:600; margin-bottom:18px; text-transform:uppercase; }
+        #login-error { color:var(--danger); font-size:11px; margin-bottom:12px; display:none; font-weight:500; }
+        .loader-container { width:100%; height:2.5px; background:rgba(255,255,255,0.04); border-radius:99px; overflow:hidden; margin-top:24px; display:none; }
+        .loader-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:99px; transition:width 0.1s linear; }
+        .loader-text { font-size:9px; color:var(--text-dim); margin-top:6px; letter-spacing:1.5px; display:none; font-weight:400; }
+
+        .drop-zone { cursor:pointer; transition:all .2s; }
+        .drop-zone.drag-over { background:rgba(168,85,247,0.06)!important; border-color:var(--primary)!important; }
+
+        .empty-state { text-align:center; padding:40px 20px; color:var(--text-dim); }
+        .empty-state span { font-size:32px; display:block; margin-bottom:12px; }
+        .empty-state p { font-size:12px; color:var(--text-muted); }
+        .inventory-load-more-row td { background:rgba(13,10,26,0.4)!important; }
+
+        @media(max-width:1100px) { .grid-split{grid-template-columns:1fr} .dashboard-layout{grid-template-columns:1fr} .sub-sidebar{display:none} }
+        @media(max-width:768px) { .dashboard-header{padding:14px 18px 8px;flex-direction:column;align-items:flex-start;gap:4px} .dashboard-content-area{padding:0 14px 20px} .admin-panel{padding:16px;border-radius:12px} .dashboard-header h1{font-size:17px} }
     </style>
 </head>
 <body>
 
     <div class="bg-animation"></div>
+    <div class="bg-grid"></div>
 
-    <!-- Login Screen -->
+    <!-- ---------------------------------------------------
+         PANTALLA DE LOGIN
+         --------------------------------------------------- -->
     <div id="admin-login-screen">
         <div class="login-box" id="login-box">
-            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
-            <h2>ADMINISTRACIÓN</h2>
+            <img src="Logo2.png" alt="BLYXU" style="width:100%;max-width:160px;display:block;margin:0 auto 16px;">
+            <h2>INICIANDO ÁREA ADMINISTRATIVA</h2>
             
             <form id="admin-login-form">
                 <div id="login-error">Contraseña incorrecta</div>
                 <div class="form-group" style="margin-bottom: 24px;">
-                    <input type="password" class="form-control" id="admin-password" placeholder="Ingresa tu contraseña" required style="text-align: center; letter-spacing: 2px;">
+                    <input type="password" class="form-control" id="admin-password" placeholder="Ingresa tu contraseña" required style="text-align:center;letter-spacing:4px;">
                 </div>
-                <button type="submit" class="admin-btn">Ingresar</button>
+                <button type="submit" class="admin-btn">Desbloquear Sistema</button>
             </form>
             
             <div class="loader-container" id="login-loader">
                 <div class="loader-bar" id="login-loader-bar"></div>
             </div>
-            <div class="loader-text" id="login-loader-text">SINCRONIZANDO CON GOOGLE SHEETS...</div>
+            <div class="loader-text" id="login-loader-text">SINCRONIZANDO DB...</div>
         </div>
     </div>
 
-    <!-- Main Content (Hidden initially) -->
-    <div id="admin-main-content" style="display: none;">
-        <nav class="navbar scrolled" style="position: sticky;">
-            <a href="BLYXU.html" class="nav-logo">
-                <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
-                <span class="nav-logo-text">BLYXU Admin</span>
-            </a>
-            <div class="nav-actions">
-                <a href="BLYXU.html" style="color:#fff; text-decoration:none; font-size:13px; font-weight:600; background:rgba(255,255,255,0.1); padding:8px 16px; border-radius:8px;">Cerrar Sesión</a>
+    <!-- ---------------------------------------------------
+         MAIN DASHBOARD LAYOUT
+         --------------------------------------------------- -->
+    <div id="admin-main-content" style="display: none;" class="dashboard-layout">
+        
+        <!-- Main Sidebar -->
+        <aside class="sub-sidebar">
+            <div class="sidebar-logo">
+                <img src="Logo2.png" alt="BLYXU" style="width:100%;max-width:120px;display:block;margin:0 auto;">
             </div>
-        </nav>
 
-    <div class="admin-layout">
-        <div class="admin-stack">
-        <!-- Panel Formulario -->
-        <div class="admin-panel">
-            <div class="admin-title-row">
-                <h2 class="admin-title" id="product-form-title">Nuevo Producto</h2>
-                <span class="admin-mode-pill" id="product-form-mode">Creando</span>
+            <div class="sidebar-menu-wrapper" style="flex: 1;">
+                <div class="sidebar-section">
+                    <h4>Operaciones</h4>
+                    <button class="sidebar-btn active" onclick="switchDashboardView('products', 'Gestión de Productos')">
+                        <span style="font-size:18px; width:24px;">📦</span> Añadir Producto
+                    </button>
+                    <button class="sidebar-btn" onclick="switchDashboardView('inventory', 'Inventario Actual')">
+                        <span style="font-size:18px; width:24px;">📋</span> Ver Inventario
+                    </button>
+                    <button class="sidebar-btn" onclick="switchDashboardView('orders', 'Pedidos y Facturación')">
+                        <span style="font-size:18px; width:24px;">💳</span> Pedidos y Fact.
+                    </button>
+                </div>
+                
+                <div class="sidebar-section" style="margin-top:30px;">
+                    <h4>Sistema</h4>
+                    <button class="sidebar-btn" onclick="switchDashboardView('settings', 'Configuración del Sitio')">
+                        <span style="font-size:18px; width:24px;">⚙️</span> Config. & Banner
+                    </button>
+                </div>
             </div>
-            <div class="admin-setting">
-                <div>
-                    <div class="admin-setting-title">Precios minoristas</div>
-                    <div class="admin-setting-desc">Controla si el catálogo general muestra precios.</div>
-                </div>
-                <button class="admin-toggle" id="toggle-retail-prices" type="button">OFF</button>
-            </div>
-            <form id="product-form">
-                <input type="hidden" id="prod-id" name="id">
-                <div class="form-group">
-                    <label>Nombre del Producto</label>
-                    <input type="text" class="form-control" id="prod-nombre" name="Nombre" required>
-                </div>
-                <div class="form-group">
-                    <label>Categoría</label>
-                    <select class="form-control" id="prod-categoria" name="Categoria" required>
-                        <option value="Collares">Collares</option>
-                        <option value="Pulseras">Pulseras</option>
-                        <option value="Aretes">Aretes</option>
-                        <option value="Anillos">Anillos</option>
-                        <option value="Sets">Sets</option>
-                        <option value="Dijes">Dijes</option>
-                        <option value="BANNER" style="background:var(--primary);color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
-                    </select>
-                </div>
-                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div>
-                        <label>Precio Minorista</label>
-                        <!-- Usando type text y parseAmount para evitar corrupción de datos -->
-                        <input type="text" class="form-control" id="prod-precio" name="Precio" required>
-                    </div>
-                    <div>
-                        <label>Precio Mayorista</label>
-                        <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
-                    </div>
-                </div>
-                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div>
-                        <label>Catálogo</label>
-                        <select class="form-control" id="prod-catalogo" name="Catalogo">
-                            <option value="Ambos">Minorista y Mayorista</option>
-                            <option value="Minorista">Solo Minorista</option>
-                            <option value="Mayorista">Solo Mayorista</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Stock</label>
-                        <input type="number" class="form-control" id="prod-stock" name="Stock" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>URL de Imagen</label>
-                    <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label>Colores (separados por coma)</label>
-                    <input type="text" class="form-control" id="prod-color" name="Color" placeholder="morado, dorado">
-                </div>
-                <div class="admin-form-grid">
-                    <div class="form-group">
-                        <label>ID Producto</label>
-                        <input type="text" class="form-control" id="prod-id-producto" placeholder="Automatico si se deja vacio">
-                    </div>
-                    <div class="form-group">
-                        <label>SKU</label>
-                        <input type="text" class="form-control" id="prod-sku" placeholder="Referencia interna">
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Inicial</label>
-                        <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Tamano</label>
-                        <input type="text" class="form-control" id="prod-tamano" placeholder="Talla, largo o medida">
-                    </div>
-                    <div class="form-group">
-                        <label>Estilo</label>
-                        <input type="text" class="form-control" id="prod-estilo" placeholder="Elegante, casual, premium">
-                    </div>
-                    <div class="form-group">
-                        <label>Estado</label>
-                        <select class="form-control" id="prod-estado">
-                            <option value="Activo">Activo</option>
-                            <option value="Disponible">Disponible</option>
-                            <option value="Agotado">Agotado</option>
-                            <option value="Inactivo">Inactivo</option>
-                        </select>
-                    </div>
-                    <div class="form-group admin-form-wide">
-                        <label>Caracteristicas del producto</label>
-                        <textarea class="form-control" id="prod-descripcion" placeholder="Materiales, medidas, detalles o notas del producto"></textarea>
-                    </div>
-                    <div class="form-group admin-form-wide">
-                        <label>Galeria JSON</label>
-                        <textarea class="form-control" id="prod-galeria" placeholder='["https://imagen-1.jpg", "https://imagen-2.jpg"]'></textarea>
-                    </div>
-                </div>
-                <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
-                <div class="admin-form-actions" style="grid-template-columns: 1fr auto;">
-                    <button type="submit" class="admin-btn" id="btn-save">Guardar producto</button>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <button type="button" class="admin-btn secondary" id="btn-add-variant" title="Mantiene nombre, precio e ID Producto para crear una variación rápidamente">➕ Variante</button>
-                        <button type="button" class="admin-btn secondary" id="btn-reset-product">Nuevo</button>
-                    </div>
-                </div>
-            </form>
-        </div>
 
-        <div class="admin-panel">
-            <h2 class="admin-title">Carrusel de Inicio</h2>
-            <div class="admin-setting-desc" style="margin-bottom:16px;">Sube imagenes para el banner principal. Se guardan como categoria BANNER y aparecen en Inicio.</div>
-            <form id="carousel-image-form">
-                <div class="carousel-admin-preview" id="carousel-preview">
-                    <span>Selecciona una imagen para previsualizarla</span>
-                </div>
-                <div class="form-group">
-                    <label>Imagen del carrusel</label>
-                    <input type="file" class="form-control" id="carousel-file" accept="image/*">
-                </div>
-                <div class="form-group">
-                    <label>URL de imagen subida o externa</label>
-                    <input type="text" class="form-control" id="carousel-image-url" placeholder="Se completa al subir la imagen">
-                </div>
-                <div class="form-group">
-                    <label>Titulo del banner</label>
-                    <input type="text" class="form-control" id="carousel-title" placeholder="Ej: Coleccion exclusiva 2026">
-                </div>
-                <div class="form-group">
-                    <label>Descripcion corta</label>
-                    <textarea class="form-control" id="carousel-description" rows="3" placeholder="Texto que saldra sobre la imagen"></textarea>
-                </div>
-                <button type="submit" class="admin-btn" id="btn-save-carousel">Subir y guardar banner</button>
-            </form>
-        </div>
-        </div>
+            <div class="sidebar-section" style="margin-top: auto;">
+                    <button class="sidebar-btn logout" onclick="window.location.href='index.html'">
+                    <span style="font-size:16px; width:24px;">🚪</span> Cerrar Sesión
+                </button>
+            </div>
+        </aside>
 
-        <!-- Panel Tabla -->
-        <div class="admin-panel">
-            <h2 class="admin-title">Inventario Actual</h2>
-            <div class="smart-search admin-smart-search">
-                <input type="search" id="admin-inventory-search" placeholder="Buscar por nombre, categoria, color, SKU o estado" autocomplete="off">
+        <!-- Right: Main Work Area -->
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <h1 id="current-section-title">Gestión de Productos</h1>
+                <div class="dashboard-badge">Panel Administrativo</div>
+            </header>
+
+            <div class="dashboard-content-area">
+                
+                <!-- VISTA 1: AÑADIR PRODUCTO -->
+                <div id="view-products" class="dashboard-section active">
+                    <div class="grid-split">
+                        <!-- Formulario -->
+                        <div class="admin-panel gradient-bg">
+                            <div class="admin-title-row">
+                                <h2>Nuevo Producto</h2>
+                                <span class="admin-mode-pill" id="product-form-mode">Creando</span>
+                            </div>
+                            <form id="product-form">
+                                <div class="form-group">
+                                    <label>Nombre del Producto</label>
+                                    <input type="text" class="form-control" id="prod-nombre" name="Nombre" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Categoría</label>
+                                    <select class="form-control" id="prod-categoria" name="Categoria" required>
+                                        <option value="Collares">Collares</option>
+                                        <option value="Pulseras">Pulseras</option>
+                                        <option value="Aretes">Aretes</option>
+                                        <option value="Anillos">Anillos</option>
+                                        <option value="Sets">Sets</option>
+                                        <option value="Dijes">Dijes</option>
+                                        <option value="BANNER" style="background:#9B2CFA;color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                                    <div>
+                                        <label>Precio Minorista</label>
+                                        <input type="text" class="form-control" id="prod-precio" name="Precio" required>
+                                    </div>
+                                    <div>
+                                        <label>Precio Mayorista</label>
+                                        <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
+                                    </div>
+                                </div>
+                                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                                    <div>
+                                        <label>Catálogo</label>
+                                        <select class="form-control" id="prod-catalogo" name="Catalogo">
+                                            <option value="Ambos">Minorista y Mayorista</option>
+                                            <option value="Minorista">Solo Minorista</option>
+                                            <option value="Mayorista">Solo Mayorista</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>Stock General</label>
+                                        <input type="number" class="form-control" id="prod-stock" name="Stock" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>URL de Imagen o Arrastra aquí</label>
+                                    <div class="drop-zone" id="prod-image-drop-zone" style="background:rgba(0,0,0,0.2); border:1px dashed rgba(155,44,250,0.3); border-radius:16px; padding:10px; display:flex; gap:10px; align-items:center;">
+                                        <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="https://..." style="margin:0; border:none; background:transparent;">
+                                        <span style="font-size:18px;">📁</span>
+                                    </div>
+                                </div>
+                                <div style="grid-column:1/-1;border:1px solid rgba(155,44,250,0.2);border-radius:16px;padding:16px;background:rgba(155,44,250,0.05);margin-bottom:16px;">
+                                    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9B2CFA;font-weight:800;margin-bottom:12px;">🧬 JERARQUÍA DE PRODUCTO</div>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label title="ID del producto principal que agrupa todas sus variantes" style="color:#9B2CFA;font-weight:800;">⭐ ID Producto Madre</label>
+                                            <input type="text" class="form-control" id="prod-id-producto" placeholder="Ej: PROD-001" style="border-color:rgba(155,44,250,0.3);">
+                                        </div>
+                                        <div class="form-group">
+                                            <label title="ID único para esta variante específica" style="color:#FFA500;font-weight:800;">🔸 ID Variante (Hija)</label>
+                                            <input type="text" class="form-control" id="prod-id" name="id" placeholder="Auto si está vacío" style="border-color:rgba(255,165,0,0.3);">
+                                        </div>
+                                    </div>
+                                    <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:center;">Mismo ID Madre = Mismo grupo de variantes</div>
+                                </div>
+                                <div class="admin-form-grid">
+                                    <div class="form-group">
+                                        <label>Colores (comas)</label>
+                                        <input type="text" class="form-control" id="prod-color" name="Color" placeholder="morado, dorado">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>SKU</label>
+                                        <input type="text" class="form-control" id="prod-sku">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Stock Inicial</label>
+                                        <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Tamano</label>
+                                        <input type="text" class="form-control" id="prod-tamano">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Estilo</label>
+                                        <input type="text" class="form-control" id="prod-estilo">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Estado</label>
+                                        <select class="form-control" id="prod-estado">
+                                            <option value="Activo">Activo</option>
+                                            <option value="Disponible">Disponible</option>
+                                            <option value="Agotado">Agotado</option>
+                                            <option value="Inactivo">Inactivo</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group admin-form-wide">
+                                        <label>Caracteristicas</label>
+                                        <textarea class="form-control" id="prod-descripcion" placeholder="Materiales, notas..."></textarea>
+                                    </div>
+                                    <div class="form-group admin-form-wide">
+                                        <label>Galeria JSON</label>
+                                        <textarea class="form-control" id="prod-galeria" placeholder='["url1", "url2"]'></textarea>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
+                                
+                                <!-- CONTENEDOR DE VARIANTES DINÁMICAS -->
+                                <div id="variants-container" style="margin-top:30px; display: flex; flex-direction: column; gap: 20px;"></div>
+
+
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:30px; gap:16px;">
+                                    <div style="display:flex; gap:12px; align-items:center; flex:1;">
+                                        <button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button>
+                                        <button type="button" class="admin-btn" id="btn-add-variant" style="background:#6C5CE7; box-shadow:0 10px 20px rgba(108,92,231,0.2);">➕ Nueva Variante</button>
+                                    </div>
+                                    <button type="submit" class="admin-btn" id="btn-save" style="flex:1;">Guardar Producto General</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Vista Previa -->
+                        <div class="admin-panel" style="position: sticky; top: 0; background: transparent; box-shadow: none; padding:0;">
+                            <h2 style="font-size:16px; font-weight:800; margin-bottom:4px; margin-top:0; color:#fff;">Vista Previa</h2>
+                            <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:30px;">Así se verá en la tienda.</p>
+
+                            
+                            <div class="preview-container">
+                                <div class="preview-card">
+                                    <div class="preview-img-wrapper">
+                                        <img id="preview-img-el" src="Logo2.png" class="preview-img" alt="Preview" onerror="this.src='Logo2.png'">
+                                        <div id="preview-badge-el" class="preview-badge" style="display:none;"></div>
+                                    </div>
+                                    <div class="preview-body">
+                                        <div id="preview-cat-el" style="font-size:10px; color:var(--secondary); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:800;">CATEGORÍA</div>
+                                        <div id="preview-title-el" class="preview-title">Nombre del Producto</div>
+                                        <div id="preview-price-el" class="preview-price">$0</div>
+                                        <div class="preview-btn">Añadir al Carrito</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA 2: INVENTARIO -->
+                <div id="view-inventory" class="dashboard-section">
+                    <div class="admin-panel gradient-bg" style="padding:0; overflow:hidden;">
+                        <div style="padding:32px 32px 0;">
+                            <input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoría, SKU o ID..." autocomplete="off">
+                        </div>
+                        <div class="table-wrapper" style="padding: 24px 32px;">
+                            <table class="inventory-tree">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Img</th>
+                                        <th>Producto (Ref)</th>
+                                        <th>Atributos</th>
+                                        <th>Precio</th>
+                                        <th>Inventario</th>
+                                        <th>Variantes</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-tbody">
+                                    <tr><td colspan="7" style="text-align:center; padding: 40px;">Cargando base de datos...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA 3: PEDIDOS -->
+                <div id="view-orders" class="dashboard-section">
+                    <div class="admin-panel" style="text-align: center; padding: 80px 20px;">
+                        <span style="font-size:50px; display:block; margin-bottom:24px;">💳</span>
+                        <h2 style="font-size:24px; font-weight:800; margin-bottom:12px; color:#fff;">Gestión de Pedidos</h2>
+                        <p style="color:rgba(255,255,255,0.4); max-width:400px; margin:0 auto; font-size:14px; line-height:1.6;">Este módulo de facturación y seguimiento de pedidos te permitirá controlar tus envíos como todo un profesional. Próximamente.</p>
+                    </div>
+                </div>
+
+                <!-- VISTA 4: AJUSTES -->
+                <div id="view-settings" class="dashboard-section">
+                    <div class="admin-panel" style="max-width: 600px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; margin-bottom:32px;">
+                            <div>
+                                <h3 style="margin:0; font-size:15px; font-weight:800; color:#fff;">Precios Minoristas</h3>
+                                <p style="margin:4px 0 0; font-size:12px; color:rgba(255,255,255,0.4);">Controla si el catálogo general muestra los precios.</p>
+                            </div>
+                            <button class="admin-btn" id="toggle-retail-prices" style="width:100px; padding:10px; border-radius:99px; background:#fff; color:#111;">OFF</button>
+                        </div>
+                        
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Carrusel de Inicio</h3>
+                        <form id="carousel-image-form">
+                            <div style="height:180px; background:rgba(0,0,0,0.2); border:2px dashed rgba(155,44,250,0.2); border-radius:24px; display:flex; align-items:center; justify-content:center; margin-bottom:24px; overflow:hidden;" id="carousel-preview" class="drop-zone">
+                                <span style="font-size:13px; color:rgba(255,255,255,0.2); font-weight:600;">Arrastra tu banner aquí</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Subir Imagen</label>
+                                <input type="file" class="form-control" id="carousel-file" accept="image/*">
+                            </div>
+                            <div class="form-group">
+                                <label>URL de la imagen (Auto generada)</label>
+                                <input type="text" class="form-control" id="carousel-image-url" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Título del Banner</label>
+                                <input type="text" class="form-control" id="carousel-title">
+                            </div>
+                            <div class="form-group">
+                                <label>Descripción Corta</label>
+                                <textarea class="form-control" id="carousel-description" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-carousel">Subir Banner</button>
+                        </form>
+                    </div>
+                </div>
+
             </div>
-            <div class="table-wrapper">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Imagen</th>
-                            <th>Nombre</th>
-                            <th>Categoría</th>
-                            <th>Catálogo</th>
-                            <th>Minorista</th>
-                            <th>Mayorista</th>
-                            <th>Stock</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-tbody">
-                        <tr><td colspan="8" style="text-align:center;">Cargando inventario de Google Sheets...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        </main>
     </div>
-
-    </div> <!-- End Main Content -->
 
     <div class="toast" id="toast">Acción completada</div>
+
+    <!-- Modal de confirmación -->
+    <div class="modal-overlay" id="confirm-modal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-title">Confirmar</h3>
+                <button class="close-modal-btn" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body">¿Estás seguro?</div>
+            <div class="modal-footer">
+                <button class="admin-btn secondary" id="modal-cancel-btn" style="width:auto;min-width:100px;">Cancelar</button>
+                <button class="admin-btn danger" id="modal-confirm-btn" style="width:auto;min-width:100px;">Eliminar</button>
+            </div>
+        </div>
+    </div>
+    <!-- Modal de Edición -->
+    <div class="modal-overlay" id="edit-product-modal" style="display:none; padding:40px 20px; overflow-y:auto; align-items:flex-start;">
+        <div class="modal-box" style="width:100%; max-width:900px; margin:auto; background:var(--bg-dark); border:1px solid rgba(168,85,247,0.2);">
+            <div class="modal-header" style="padding-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:24px;">
+                <h3 style="font-size:18px; color:var(--primary-light);">Editar Producto / Variante</h3>
+                <button class="close-modal-btn" onclick="cerrarModalEdicion()">✕</button>
+            </div>
+            <div id="edit-modal-content-area">
+                <!-- Se inyectará el formulario aquí -->
+            </div>
+        </div>
+    </div>
+    
+
 
     <script src="admin-app.js"></script>
 </body>

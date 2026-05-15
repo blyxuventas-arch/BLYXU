@@ -1167,17 +1167,6 @@ function getDemoProducts() {
     ];
 }
 
-// -- CHECKOUT VIA WHATSAPP --
-function checkout() {
-    if (!cart.length) return;
-    const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    let msg = '*Pedido BLYXU*\n\n';
-    cart.forEach(c => { msg += `- ${c.name} x ${c.qty} - ${formatMoney(c.price * c.qty)}\n`; });
-    msg += `\n*Total: ${formatMoney(total)}*`;
-    const phone = '573000000000'; // ? Reemplaza con tu numero
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-}
-
 // -- INIT --
 async function saveOrderToGoogleSheets(cliente, total) {
     const productos = cart.map(item => ({

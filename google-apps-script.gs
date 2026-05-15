@@ -99,7 +99,8 @@ function doGet(e) {
       });
     }
 
-    var sheetName = getParam_(e, 'sheet') || HOJA_VARIANTES;
+    var sheetName = getParam_(e, 'sheet') || getParam_(e, 'resource') || HOJA_VARIANTES;
+    if (sheetName === 'productos') sheetName = HOJA_VARIANTES;
     var headers = getHeadersForSheet_(sheetName);
     var sheet = headers
       ? getOrCreateSheet(doc, sheetName, headers)
@@ -167,8 +168,31 @@ function doPost(e) {
 
     if (action === 'delete_product') {
       var sheetDelete = doc.getSheetByName(HOJA_VARIANTES);
-      var deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Variacion', data.id);
-      if (!deleted && data.ID_Producto) deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Producto', data.ID_Producto);
+      var deleted = false;
+      
+      // Try by ID Variacion
+      if (data.id) {
+        deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Variacion', data.id);
+      }
+      
+      // Try by ID Producto
+      if (!deleted && data.ID_Producto) {
+        deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Producto', data.ID_Producto);
+      }
+
+      // Try by _rowIndex as fallback if provided
+      if (!deleted && data._rowIndex) {
+        try {
+          sheetDelete.deleteRow(data._rowIndex);
+          deleted = true;
+        } catch(e) {}
+      }
+
+      // Try by Name as last resort
+      if (!deleted && data.nombre) {
+        deleted = deleteRowsByColumnMatch(sheetDelete, 'Nombre del Producto', data.nombre);
+      }
+
       return createJsonResponse({
         status: deleted ? 'success' : 'error'
       });
@@ -355,7 +379,10 @@ function sheetToObjects_(sheet) {
       if (row[j] !== '' && row[j] !== null) empty = false;
     }
 
-    if (!empty) result.push(obj);
+    if (!empty) {
+      obj['_rowIndex'] = i + 1;
+      result.push(obj);
+    }
   }
 
   return result;

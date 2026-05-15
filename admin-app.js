@@ -10,14 +10,99 @@ let inventoryRenderToken = 0;
 let inventoryLoadMoreObserver = null;
 let filteredInventario = [];
 let adminInventorySearchQuery = '';
+let isEditingProduct = false;
+
+function updateLivePreview() {
+    const nombre = document.getElementById('prod-nombre')?.value || 'Nombre del Producto';
+    const categoria = document.getElementById('prod-categoria')?.value || 'CATEGORÍA';
+    const precio = document.getElementById('prod-precio')?.value || '0';
+    const precioMayorista = document.getElementById('prod-precio-mayorista')?.value || '';
+    const imagenUrl = document.getElementById('prod-imagen')?.value || 'Logo2.png';
+    const estado = document.getElementById('prod-estado')?.value || 'Activo';
+    var idVar = document.getElementById('prod-id')?.value || '';
+    var idProd = document.getElementById('prod-id-producto')?.value || '';
+
+    var idBadge = document.getElementById('preview-id-badge');
+    if (!idBadge) {
+        idBadge = document.getElementById('preview-badge-el');
+    }
+    if (idBadge && (idProd || idVar)) {
+        var idText = idProd ? 'ID: ' + idProd : '';
+        if (idVar && idVar !== idProd) idText += ' | VAR: ' + idVar;
+        if (idText) {
+            idBadge.textContent = idText;
+            idBadge.style.display = 'block';
+            idBadge.style.background = 'rgba(0,0,0,0.6)';
+            idBadge.style.fontSize = '9px';
+            idBadge.style.right = '10px';
+            idBadge.style.left = 'auto';
+        }
+    }
+
+    const titleEl = document.getElementById('preview-title-el');
+    const catEl = document.getElementById('preview-cat-el');
+    if (titleEl) titleEl.textContent = nombre;
+    if (catEl) catEl.textContent = categoria;
+    
+    const parsedPrecio = parseAmount(precio);
+    const parsedMayorista = parseAmount(precioMayorista);
+    
+    let priceHtml = '';
+    if (parsedPrecio > 0) {
+        priceHtml = `$${parsedPrecio.toLocaleString('es-CO')}`;
+        if (parsedMayorista > 0) {
+            priceHtml += ` <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:8px; border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: $${parsedMayorista.toLocaleString('es-CO')}</span>`;
+        }
+    } else {
+        priceHtml = '$0';
+    }
+    const priceEl = document.getElementById('preview-price-el');
+    if (priceEl) priceEl.innerHTML = priceHtml;
+    
+    const imgEl = document.getElementById('preview-img-el');
+    if (imgEl && imgEl.src !== imagenUrl) {
+        imgEl.src = imagenUrl;
+    }
+    
+    const badgeEl = document.getElementById('preview-badge-el');
+    if (badgeEl) {
+        if (estado === 'Agotado') {
+            badgeEl.textContent = 'AGOTADO';
+            badgeEl.style.display = 'block';
+            badgeEl.style.background = 'rgba(239,68,68,0.85)';
+        } else if (estado === 'Inactivo') {
+            badgeEl.textContent = 'OCULTO';
+            badgeEl.style.display = 'block';
+            badgeEl.style.background = 'rgba(100,100,100,0.85)';
+        } else {
+            badgeEl.style.display = 'none';
+        }
+    }
+}
 
 function getProductField(product, fields, fallback = '') {
     const names = Array.isArray(fields) ? fields : [fields];
+    
+    // Exact match first
     for (const name of names) {
         if (product && product[name] !== undefined && product[name] !== null && product[name] !== '') {
             return product[name];
         }
     }
+    
+    // Fuzzy match for broken keys (spaces, accents, etc.)
+    if (product) {
+        for (const key in product) {
+            const cleanKey = key.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            for (const name of names) {
+                const cleanName = name.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+                if (cleanKey === cleanName && product[key] !== undefined && product[key] !== null && product[key] !== '') {
+                    return product[key];
+                }
+            }
+        }
+    }
+    
     return fallback;
 }
 
@@ -116,8 +201,8 @@ function scoreInventorySearch(product, query) {
     return score;
 }
 
-async function postProductToGoogleSheets(data) {
-    const isEditing = Boolean(data['ID Variacion'] || data.id || data.editId);
+async function postProductToGoogleSheets(data, isEditingOverride = null) {
+    const isEditing = isEditingOverride !== null ? isEditingOverride : Boolean(data['ID Variacion'] || data.id || data.editId);
     const payloads = [
         {
             resource: 'productos',
@@ -152,12 +237,89 @@ function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
     const indexed = inventario.map((product, index) => ({ product, index }));
 
-    if (!query) return indexed;
+    function getMid(p) {
+        var id = String(p.idProducto || p['ID Producto'] || p.idVariacion || p.ID || p['ID Variacion'] || '').trim();
+        if (!id) {
+            if (!p._fallbackId) p._fallbackId = 'no-id-' + Math.random().toString(36).substr(2, 9);
+            id = p._fallbackId;
+        }
+        return id;
+    }
 
-    return indexed
-        .map(item => ({ ...item, score: scoreInventorySearch(item.product, query) }))
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score);
+    function isMother(p) {
+        var idv = String(p.idVariacion || p.ID || p['ID Variacion'] || '').trim();
+        var idp = String(p.idProducto || p['ID Producto'] || '').trim();
+        return !idp || !idv || idv === idp;
+    }
+
+    let resultList = indexed;
+    if (query) {
+        var scored = indexed
+            .map(function(item) { return { product: item.product, index: item.index, score: scoreInventorySearch(item.product, query) }; })
+            .filter(function(item) { return item.score > 0; })
+            .sort(function(a, b) { return b.score - a.score; });
+        
+        var matchedMids = new Set();
+        scored.forEach(function(item) { matchedMids.add(getMid(item.product)); });
+        
+        var seen = new Set();
+        resultList = [];
+        scored.forEach(function(item) {
+            var mid = getMid(item.product);
+            indexed.forEach(function(sib) {
+                var sibMid = getMid(sib.product);
+                var key = sibMid + '|' + sib.index;
+                if (mid === sibMid && !seen.has(key)) {
+                    seen.add(key);
+                    resultList.push(sib);
+                }
+            });
+        });
+        indexed.forEach(function(item) {
+            var mid = getMid(item.product);
+            var key = mid + '|' + item.index;
+            if (matchedMids.has(mid) && !seen.has(key)) {
+                seen.add(key);
+                resultList.push(item);
+            }
+        });
+    }
+
+    var grouped = new Map();
+    resultList.forEach(function(item) {
+        var mid = getMid(item.product);
+        if (!grouped.has(mid)) grouped.set(mid, []);
+        grouped.get(mid).push(item);
+    });
+
+    var finalFlatList = [];
+    grouped.forEach(function(items, motherId) {
+        items.sort(function(a, b) {
+            var aIsMother = isMother(a.product) ? 1 : 0;
+            var bIsMother = isMother(b.product) ? 1 : 0;
+            return bIsMother - aIsMother;
+        });
+
+        var totalStock = items.reduce(function(s, item) { return s + (Number(item.product.Stock || item.product.Cantidad) || 0); }, 0);
+        var prices = items.map(function(i) { return Number(i.product.Precio || 0); }).filter(function(p) { return p > 0; });
+        var minPrice = prices.length ? Math.min.apply(null, prices) : 0;
+        var maxPrice = prices.length ? Math.max.apply(null, prices) : 0;
+
+        items.forEach(function(item, idx) {
+            finalFlatList.push({
+                product: item.product,
+                index: item.index,
+                isChild: idx > 0,
+                groupSize: items.length,
+                motherId: motherId,
+                totalStock: totalStock,
+                minPrice: minPrice,
+                maxPrice: maxPrice
+            });
+        });
+    });
+
+    return finalFlatList;
 }
 
 function el(id) {
@@ -210,6 +372,7 @@ function buildProductPayload() {
 }
 
 function setProductFormMode(isEditing) {
+    isEditingProduct = isEditing;
     const title = el('product-form-title');
     const mode = el('product-form-mode');
     const btn = el('btn-save');
@@ -229,6 +392,13 @@ function resetProductForm() {
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
     setProductFormMode(false);
+    updateLivePreview();
+    var badge = document.getElementById('variant-editing-badge');
+    if (badge) badge.style.display = 'none';
+    var vc = document.getElementById('variants-container');
+    if (vc) vc.innerHTML = '';
+    var grpBtn = document.getElementById('btn-save-group');
+    if (grpBtn) grpBtn.remove();
 }
 
 function updateCategoryOptions() {
@@ -255,6 +425,33 @@ document.addEventListener('DOMContentLoaded', () => {
     initRetailPriceToggle();
     initInventorySearch();
     initCarouselImageAdmin();
+
+    // Configurar Drag & Drop para Productos y Variantes
+    setupDragAndDrop('prod-image-drop-zone', (url) => {
+        const input = document.getElementById('prod-imagen');
+        if (input) {
+            input.value = url;
+            input.dispatchEvent(new Event('input')); // Para actualizar preview
+        }
+    });
+
+    setupDragAndDrop('var-image-drop-zone', (url) => {
+        const input = document.getElementById('var-imagen');
+        if (input) {
+            input.value = url;
+        }
+    });
+    
+    // Configurar listeners para la Vista Previa
+    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-estado'];
+    inputsToWatch.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', updateLivePreview);
+            el.addEventListener('change', updateLivePreview);
+        }
+    });
+    updateLivePreview(); // Actualización inicial
     
     // --- LOGIN LOGIC ---
     const loginForm = document.getElementById('admin-login-form');
@@ -289,7 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             loginScreen.style.opacity = '0';
                             setTimeout(() => {
                                 loginScreen.style.display = 'none';
-                                mainContent.style.display = 'block';
+                                mainContent.style.display = ''; // Permite que actúe el CSS grid (dashboard-layout)
                                 cargarInventario(); // Load only after login
                             }, 500);
                         }, 400);
@@ -315,13 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         btn.textContent = 'Enviando...';
 
-        // Evitar corrupción de datos (Precio vs Stock) usando parseAmount
         const rawPrecio = document.getElementById('prod-precio').value;
         const cleanPrecio = parseAmount(rawPrecio);
         const rawPrecioMayorista = document.getElementById('prod-precio-mayorista').value;
         const cleanPrecioMayorista = parseAmount(rawPrecioMayorista);
         
         const stock = Number(document.getElementById('prod-stock').value || 0);
+        const estado = document.getElementById('prod-estado').value;
+        
         const data = {
             'Nombre del Producto': document.getElementById('prod-nombre').value,
             Categoria: document.getElementById('prod-categoria').value,
@@ -333,57 +531,161 @@ document.addEventListener('DOMContentLoaded', () => {
             'Imagen Principal': document.getElementById('prod-imagen').value,
             Color: document.getElementById('prod-color').value,
             Estilo: document.getElementById('prod-catalogo').value,
-            Estado: 'Activo'
+            Estado: estado
         };
-
         Object.assign(data, buildProductPayload());
 
-        try {
-            // Se envía mediante POST formData porque App Script lo recibe mejor
-            await postProductToGoogleSheets(data);
-
-            showToast('Producto guardado en Google Sheets');
-            resetProductForm();
-            
-            // Recargamos el inventario tras 2 segundos para dar tiempo a que Google Sheets actualice
-            setTimeout(() => {
-                cargarInventario();
-            }, 2000);
-
-        } catch (error) {
-            console.error(error);
-            showToast('Ocurrió un error en la red. Intenta nuevamente.');
-        } finally {
+        async function proceedSubmit(finalData) {
+            try {
+                await postProductToGoogleSheets(finalData, isEditingProduct);
+                showToast('Producto guardado en Google Sheets', 'success');
+                resetProductForm();
+                if (document.getElementById('edit-product-modal')?.style.display === 'flex') {
+                    cerrarModalEdicion();
+                }
+                setTimeout(function() { cargarInventario(); }, 1000);
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Guardar / Enviar';
+            }
+        }
+        
+        if (stock === 0 && estado === 'Activo') {
+            showModal('Stock en Cero', 'El stock es 0. ¿Marcar como "Agotado"?', 'Sí, marcar Agotado',
+                function() {
+                    closeModal();
+                    data['Estado'] = 'Agotado';
+                    document.getElementById('prod-estado').value = 'Agotado';
+                    proceedSubmit(data);
+                },
+                function() {
+                    proceedSubmit(data);
+                }
+            );
             btn.disabled = false;
             btn.textContent = 'Guardar / Enviar';
+            return;
         }
+        
+        proceedSubmit(data);
     });
 
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
 
     document.getElementById('btn-add-variant')?.addEventListener('click', () => {
-        // Keep: Nombre, Categoria, Precio, Precio Mayorista, Catalogo, Estado, ID Producto
-        const idVariacion = getInputValue('prod-id');
-        const idProducto = getInputValue('prod-id-producto');
-        
-        // If it doesn't have an ID Producto yet, use the ID Variacion of the current product as the parent ID
-        if (!idProducto && idVariacion) {
-            setInputValue('prod-id-producto', idVariacion);
+        const container = document.getElementById('variants-container');
+        if (!container) return;
+
+        // Asegurar ID Madre
+        if (!getInputValue('prod-id-producto') && getInputValue('prod-id')) {
+            setInputValue('prod-id-producto', getInputValue('prod-id'));
         }
-        
-        // Clear variation specific fields to allow entering a new variation quickly
-        setInputValue('prod-id', '');
-        setInputValue('prod-color', '');
-        setInputValue('prod-tamano', '');
-        setInputValue('prod-estilo', '');
-        setInputValue('prod-imagen', '');
-        setInputValue('prod-galeria', '');
-        setInputValue('prod-sku', '');
-        setInputValue('prod-stock', '0');
-        setInputValue('prod-stock-inicial', '0');
-        
-        setProductFormMode(false); // Switch back to 'Creating' mode
-        showToast('Listo para nueva variante (Nombre, precio e ID Producto mantenidos)');
+
+        const cardId = Date.now();
+        const card = document.createElement('div');
+        card.className = 'admin-panel';
+        card.id = `variant-card-${cardId}`;
+        card.style.cssText = `
+            border-top: 4px solid var(--primary);
+            padding: 24px;
+            animation: fadeIn 0.4s ease;
+            position: relative;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 20px;
+        `;
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--primary); font-weight:800;">🛠 Nueva Variante</h4>
+                <button type="button" class="admin-btn secondary" style="width:auto; padding:6px 12px; font-size:10px; border-radius:10px;" onclick="this.closest('.admin-panel').remove()">Cerrar / Quitar</button>
+            </div>
+            <div class="admin-form-grid">
+                <div class="form-group">
+                    <label>ID Variable</label>
+                    <input type="text" class="form-control var-id" placeholder="Auto">
+                </div>
+                <div class="form-group">
+                    <label>SKU Variante</label>
+                    <input type="text" class="form-control var-sku">
+                </div>
+                <div class="form-group">
+                    <label>Tamaño / Medida</label>
+                    <input type="text" class="form-control var-tamano">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="text" class="form-control var-color">
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" class="form-control var-stock" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Imagen (URL)</label>
+                    <input type="text" class="form-control var-imagen" placeholder="URL específica">
+                </div>
+            </div>
+            <button type="button" class="admin-btn btn-save-individual-variant" style="background:linear-gradient(135deg, #6C5CE7, #9B2CFA); margin-top:10px;">Guardar esta Variante</button>
+        `;
+
+        container.appendChild(card);
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Evento de guardado para esta tarjeta específica
+        card.querySelector('.btn-save-individual-variant').addEventListener('click', async (e) => {
+            const btn = e.target;
+            var motherId = getInputValue('prod-id-producto') || getInputValue('prod-id');
+            if (!motherId) {
+                showToast('Error: Debes especificar un ID Producto (Madre) antes de guardar una variante');
+                btn.disabled = false;
+                return;
+            }
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.textContent = 'Guardando...';
+
+            const data = {
+                'ID Variacion': card.querySelector('.var-id').value,
+                'ID Producto': getInputValue('prod-id-producto') || getInputValue('prod-id'),
+                'Nombre del Producto': getInputValue('prod-nombre'),
+                Nombre: getInputValue('prod-nombre'),
+                Categoria: getInputValue('prod-categoria'),
+                'Categoría': getInputValue('prod-categoria'),
+                Precio: parseAmount(getInputValue('prod-precio')),
+                'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+                Cantidad: Number(card.querySelector('.var-stock').value || 0),
+                'Stock Inicial': Number(card.querySelector('.var-stock').value || 0),
+                Descripcion: getInputValue('prod-descripcion'),
+                'Caracteristicas del producto': getInputValue('prod-descripcion'),
+                Tamano: card.querySelector('.var-tamano').value,
+                Color: card.querySelector('.var-color').value,
+                SKU: card.querySelector('.var-sku').value,
+                Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
+                'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
+                Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+                'Galeria JSON': getInputValue('prod-galeria'),
+                Estado: getInputValue('prod-estado') || 'Activo'
+            };
+
+            try {
+                await postProductToGoogleSheets(data, false);
+                showToast('¡Variante guardada!');
+                btn.style.background = '#00c853';
+                btn.textContent = '✅ Guardado';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.style.background = 'linear-gradient(135deg, #6C5CE7, #9B2CFA)';
+                    btn.textContent = originalText;
+                }, 3000);
+                setTimeout(() => cargarInventario(), 1500);
+            } catch (err) {
+                console.error(err);
+                showToast('Error al guardar');
+                btn.disabled = false;
+                btn.textContent = 'Reintentar';
+            }
+        });
     });
 });
 
@@ -483,6 +785,48 @@ async function uploadCarouselImage(file) {
     return normalizeImageUrl(result.url || result.data?.url || '');
 }
 
+/**
+ * Configura el comportamiento de Arrastrar y Soltar en un elemento
+ */
+function setupDragAndDrop(containerId, onFileProcessed) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        container.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        container.addEventListener(eventName, () => container.classList.add('drag-over'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        container.addEventListener(eventName, () => container.classList.remove('drag-over'), false);
+    });
+
+    container.addEventListener('drop', async (e) => {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+
+        if (file && file.type.startsWith('image/')) {
+            try {
+                showToast('Procesando imagen arrastrada...');
+                const imageUrl = await uploadCarouselImage(file);
+                onFileProcessed(imageUrl, file);
+                showToast('Imagen subida con éxito');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al subir imagen: ' + err.message);
+            }
+        } else {
+            showToast('Por favor, arrastra solo archivos de imagen');
+        }
+    }, false);
+}
+
 function initCarouselImageAdmin() {
     const form = document.getElementById('carousel-image-form');
     const fileInput = document.getElementById('carousel-file');
@@ -564,6 +908,16 @@ function initCarouselImageAdmin() {
             btn.textContent = originalText;
         }
     });
+
+    // Configurar Drag & Drop para Banner
+    setupDragAndDrop('carousel-preview', (url, file) => {
+        imageUrlInput.value = url;
+        const reader = new FileReader();
+        reader.onload = () => {
+            preview.innerHTML = `<img src="${reader.result}" alt="Preview carrusel">`;
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
 function initInventorySearch() {
@@ -584,7 +938,7 @@ async function cargarInventario() {
     const tbody = document.getElementById('inventory-tbody');
     try {
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Cargando inventario de Google Sheets...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
         }
 
         const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL);
@@ -593,34 +947,20 @@ async function cargarInventario() {
             throw new Error(data.message || data.error || 'Error del Apps Script');
         }
         inventario = (Array.isArray(data) ? data : (data.data || data.productos || []))
-            .map(normalizeGoogleProduct);
+            .map(normalizeGoogleProduct)
+            .reverse();
         updateCategoryOptions();
         
         if (inventario.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay productos en el inventario.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay productos en el inventario.</td></tr>';
             return;
         }
 
         renderInventoryInBatches();
         return;
-
-        tbody.innerHTML = inventario.map((p, i) => `
-            <tr>
-                <td><img src="${p.Imagen || 'Logo2.png'}" width="40" height="40" style="border-radius:6px; object-fit:cover;" onerror="this.src='Logo2.png'"></td>
-                <td style="font-weight:600;">${p.Nombre || p.Producto || ''}</td>
-                <td><span style="background:rgba(155,44,250,0.15); color:var(--secondary); padding:4px 8px; border-radius:10px; font-size:10px;">${p.Categoria || ''}</span></td>
-                <td>${p.Catalogo || p.catalogo || 'Ambos'}</td>
-                <td>$${Number(p.Precio || 0).toLocaleString('es-CO')}</td>
-                <td>$${Number(p.Precio_Mayorista || p.precio_mayorista || p.Mayorista || 0).toLocaleString('es-CO')}</td>
-                <td>${p.Stock || p.Cantidad || 0}</td>
-                <td>
-                    <button class="action-btn" onclick="editarProducto(${i})" title="Cargar al formulario">✏️</button>
-                </td>
-            </tr>
-        `).join('');
     } catch (err) {
         console.error("Error al cargar datos:", err);
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
     }
 }
 
@@ -639,7 +979,7 @@ function renderInventoryInBatches() {
     }
 
     if (!filteredInventario.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No se encontraron productos${adminInventorySearchQuery ? ' para tu busqueda' : ''}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No se encontraron productos${adminInventorySearchQuery ? ' para tu busqueda' : ''}.</td></tr>`;
         return;
     }
 
@@ -656,7 +996,7 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
     const end = Math.min(start + INVENTORY_BATCH_SIZE, filteredInventario.length);
     const rows = filteredInventario
         .slice(start, end)
-        .map(item => inventoryRowTemplate(item.product, item.index))
+        .map(item => inventoryRowTemplate(item.product, item.index, item))
         .join('');
 
     tbody.insertAdjacentHTML('beforeend', rows);
@@ -665,7 +1005,7 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
     if (inventoryRenderedRows < filteredInventario.length) {
         tbody.insertAdjacentHTML('beforeend', `
             <tr class="inventory-load-more-row">
-                <td colspan="8" style="text-align:center;padding:18px;">
+                <td colspan="7" style="text-align:center;padding:18px;">
                     <button class="admin-btn" type="button" onclick="loadMoreInventoryBatch()" style="max-width:240px;">Cargar mas productos</button>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
                         Mostrando ${inventoryRenderedRows} de ${filteredInventario.length}
@@ -677,25 +1017,84 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
     }
 }
 
-function inventoryRowTemplate(p, index) {
-    return `
-        <tr>
-            <td><img src="${p.Imagen || 'Logo2.png'}" width="40" height="40" loading="lazy" style="border-radius:6px; object-fit:cover;" onerror="this.src='Logo2.png'"></td>
-            <td style="font-weight:600;">${p.Nombre || p.Producto || ''}</td>
-            <td><span style="background:rgba(155,44,250,0.15); color:var(--secondary); padding:4px 8px; border-radius:10px; font-size:10px;">${p.Categoria || ''}</span></td>
-            <td>${p.Catalogo || p.catalogo || 'Ambos'}</td>
-            <td>$${Number(p.Precio || 0).toLocaleString('es-CO')}</td>
-            <td>$${Number(p.Precio_Mayorista || p.precio_mayorista || p.Mayorista || 0).toLocaleString('es-CO')}</td>
-            <td>${p.Stock || p.Cantidad || 0}</td>
-            <td>
-                <button class="action-btn" onclick="editarProducto(${index})" title="Cargar al formulario">Editar</button>
-            </td>
-        </tr>
-    `;
+function inventoryRowTemplate(p, index, itemMeta) {
+    if (!itemMeta) itemMeta = {};
+    const isChild = itemMeta.isChild;
+    const groupSize = itemMeta.groupSize || 1;
+    const motherId = itemMeta.motherId || (p.idProducto || p['ID Producto'] || 'desconocido');
+    
+    const isSearching = !!adminInventorySearchQuery;
+    const displayStyle = (isChild && !isSearching) ? 'none' : 'table-row';
+    const cleanMotherId = String(motherId).replace(/[^a-zA-Z0-9_-]/g, '');
+    const rowClass = isChild ? 'variant-row mother-' + cleanMotherId : 'mother-row';
+
+    if (!isChild) {
+        var minP = itemMeta.minPrice || 0;
+        var maxP = itemMeta.maxPrice || 0;
+        if (!minP && !maxP) { minP = Number(p.Precio || 0); maxP = minP; }
+        var priceStr = minP === maxP
+            ? '$' + minP.toLocaleString('es-CO')
+            : '$' + minP.toLocaleString('es-CO') + ' - $' + maxP.toLocaleString('es-CO');
+                        
+        var stockTotal = itemMeta.totalStock;
+        if (stockTotal === undefined) stockTotal = Number(p.Stock || p.Cantidad) || 0;
+        var stockClass = stockTotal > 0 ? 'stock-positive' : 'stock-negative';
+        var toggleBtnHtml = groupSize > 1
+            ? '<button class="toggle-vars-btn" onclick="toggleVariants(\'' + cleanMotherId + '\', this)">Ver ' + (groupSize - 1) + ' Variantes ▼</button>'
+            : '<span class="variant-count-badge">Producto Único</span>';
+
+        var catStyle = 'background:rgba(155,44,250,0.15);color:#d946ef;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;';
+
+        var pIdVar = p.idVariacion || p.ID || p['ID Variacion'] || '';
+        var badgeHtml = '<span class="mother-badge-id" title="ID Producto (Familia)">ID Prod: ' + motherId + '</span>';
+        if (pIdVar && pIdVar !== motherId) {
+            badgeHtml += ' <span class="variant-badge-id" title="ID Variación" style="margin-left:4px;">Var: ' + pIdVar + '</span>';
+        }
+
+        return '<tr class="' + rowClass + '">'
+            + '<td><img src="' + (p.Imagen || 'Logo2.png') + '" width="46" height="46" loading="lazy" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><div style="font-weight:800;font-size:14px;color:#fff;">' + (p.Nombre || p.Producto || 'Producto General') + '</div>'
+            + '<div style="font-size:10px;margin-top:5px;">' + badgeHtml
+            + (groupSize > 1 ? ' <span class="variant-count-badge" style="margin-left:4px;">' + groupSize + ' variantes</span>' : '')
+            + '</div></td>'
+            + '<td><span style="' + catStyle + '">' + (p.Categoria || '-') + '</span></td>'
+            + '<td style="font-weight:800;color:#fff;font-size:14px;">' + priceStr + '</td>'
+            + '<td><div class="' + stockClass + '">' + stockTotal + '</div><div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase;letter-spacing:1px;">en stock</div></td>'
+            + '<td>' + toggleBtnHtml + '</td>'
+            + '<td style="white-space:nowrap;"><button class="action-btn-edit" onclick="editarProducto(' + index + ')">Editar</button>'
+            + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">🗑️</button>'
+            + (groupSize > 1 ? ' <button class="action-btn-delete-sm" onclick="eliminarGrupo(\'' + cleanMotherId + '\')">Grupo</button>' : '')
+            + '</td>'
+            + '</tr>';
+    } else {
+        var stockVal = Number(p.Stock || p.Cantidad || 0);
+        var catInfo = p.Color ? '<span style="font-size:11px;color:#9B2CFA;font-weight:600;">' + p.Color + '</span>' : '<span style="color:rgba(255,255,255,0.3);font-weight:500;">-</span>';
+        var stockColor = stockVal > 0 ? '#10B981' : '#EF4444';
+
+        return '<tr class="' + rowClass + '" style="display:' + displayStyle + ';">'
+            + '<td><span class="tree-connector"></span><img src="' + (p.Imagen || 'Logo2.png') + '" width="30" height="30" loading="lazy" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);">' + (p.Nombre || p.Producto || '') + '</div>'
+            + '<div style="font-size:10px;margin-top:3px;"><span class="mother-badge-id" style="font-size:9px;">' + motherId + '</span>'
+            + ' <span class="variant-badge-id">' + (p.idVariacion || p.ID || '-') + '</span>'
+            + '</div></td>'
+            + '<td>' + catInfo + '</td>'
+            + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + Number(p.Precio || 0).toLocaleString('es-CO') + '</td>'
+            + '<td><span style="font-size:12px;font-weight:700;color:' + stockColor + ';">' + stockVal + ' und.</span></td>'
+            + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + (p.Catalogo || 'Ambos') + '</span></td>'
+            + '<td><button class="action-btn-edit-sm" onclick="editarProducto(' + index + ')">Editar</button>'
+            + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">Borrar</button></td>'
+            + '</tr>';
+    }
 }
 
+var inventoryLoadingMore = false;
 function loadMoreInventoryBatch() {
+    if (inventoryLoadingMore) return;
+    inventoryLoadingMore = true;
+    var btn = document.querySelector('.inventory-load-more-row .admin-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Cargando...'; }
     renderNextInventoryBatch();
+    inventoryLoadingMore = false;
 }
 
 function observeInventoryLoadMore(renderToken) {
@@ -721,10 +1120,161 @@ function observeInventoryLoadMore(renderToken) {
     inventoryLoadMoreObserver.observe(marker);
 }
 
+function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
+    var container = document.getElementById('variants-container');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!idProducto) return;
+
+    var variantes = inventario.filter(function(prod) {
+        var mid = prod.idProducto || prod['ID Producto'] || '';
+        var vid = prod.idVariacion || prod.ID || prod['ID Variacion'] || '';
+        return mid === idProducto && vid !== idVariacionActual;
+    });
+
+    if (!variantes.length) {
+        container.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:rgba(255,255,255,0.3);border:1px dashed rgba(255,165,0,0.2);border-radius:12px;">Este producto no tiene variantes aún</div>';
+        return;
+    }
+
+    var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">🔸 VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
+    tableHtml += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:11px;">';
+    tableHtml += '<thead><tr style="color:rgba(255,255,255,0.25);font-size:9px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">';
+    tableHtml += '<th style="padding:4px 8px;text-align:left;">ID Var</th><th style="padding:4px 8px;text-align:left;">Color</th><th style="padding:4px 8px;text-align:left;">Stock</th><th style="padding:4px 8px;text-align:left;">Precio</th><th style="padding:4px 8px;text-align:left;">SKU</th><th style="padding:4px 8px;text-align:center;">Acción</th>';
+    tableHtml += '</tr></thead><tbody>';
+
+    variantes.forEach(function(v) {
+        var vid = v.idVariacion || v.ID || '-';
+        var vColor = v.Color || '-';
+        var vStock = v.Stock || v.Cantidad || 0;
+        var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
+        var vSku = v.SKU || '-';
+        tableHtml += '<tr class="var-edit-row" data-varid="' + vid + '">';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:6px 0 0 6px;font-weight:700;color:#FFA500;white-space:nowrap;">' + vid + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#fff;">' + vColor + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);font-weight:700;color:' + (vStock > 0 ? '#10B981' : '#EF4444') + ';">' + vStock + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#9B2CFA;font-weight:700;">$' + vPrecio + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.5);">' + vSku + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:0 6px 6px 0;text-align:center;"><button class="admin-btn secondary" style="width:auto;padding:3px 10px;font-size:9px;border-radius:6px;" onclick="expandirVarianteEdicion(\'' + vid + '\')">Editar</button></td>';
+        tableHtml += '</tr>';
+
+        // Hidden expanded edit row
+        tableHtml += '<tr class="var-edit-expanded" id="var-expand-' + vid + '" style="display:none;"><td colspan="6" style="padding:12px 16px;background:rgba(255,165,0,0.03);border-radius:8px;border-left:2px solid #FFA500;">';
+        tableHtml += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">ID</label><input class="form-control ve-id" value="' + vid + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Color</label><input class="form-control ve-color" value="' + (vColor !== '-' ? vColor : '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Stock</label><input type="number" class="form-control ve-stock" value="' + vStock + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio</label><input class="form-control ve-precio" value="' + (v.Precio || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '</div>';
+        tableHtml += '<div style="display:flex;gap:8px;"><button class="admin-btn" onclick="guardarVarianteEditada(\'' + vid + '\',\'' + idProducto + '\')" style="width:auto;padding:6px 16px;font-size:10px;background:linear-gradient(135deg,#FFA500,#FF6347);">Guardar cambios</button>';
+        tableHtml += '<button class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:6px 16px;font-size:10px;">Cancelar</button></div>';
+        tableHtml += '</td></tr>';
+    });
+
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+}
+
+window.expandirVarianteEdicion = function(vid) {
+    var row = document.getElementById('var-expand-' + vid);
+    if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+};
+window.cerrarVarianteEdicion = function(vid) {
+    var row = document.getElementById('var-expand-' + vid);
+    if (row) row.style.display = 'none';
+};
+window.guardarVarianteEditada = async function(vid, idProducto) {
+    var row = document.getElementById('var-expand-' + vid);
+    if (!row) return;
+    var data = {
+        'ID Variacion': row.querySelector('.ve-id').value,
+        'ID Producto': idProducto,
+        'Nombre del Producto': getInputValue('prod-nombre'),
+        Nombre: getInputValue('prod-nombre'),
+        Categoria: getInputValue('prod-categoria'),
+        'Categoría': getInputValue('prod-categoria'),
+        Precio: parseAmount(row.querySelector('.ve-precio').value || getInputValue('prod-precio')),
+        'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+        Cantidad: Number(row.querySelector('.ve-stock').value || 0),
+        'Stock Inicial': Number(row.querySelector('.ve-stock').value || 0),
+        Descripcion: getInputValue('prod-descripcion'),
+        Color: row.querySelector('.ve-color').value,
+        SKU: row.querySelector('.ve-sku').value,
+        Imagen: row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
+        'Imagen Principal': row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
+        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+        Estado: getInputValue('prod-estado') || 'Activo'
+    };
+    try {
+        await postProductToGoogleSheets(data, true);
+        showToast('Variante actualizada', 'success');
+        cerrarVarianteEdicion(vid);
+        setTimeout(function() { cargarInventario(); }, 1000);
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+    }
+};
+
+window.guardarGrupoCompleto = async function(idProducto) {
+    showToast('Guardando grupo completo...');
+    
+    // 1. Save mother product
+    var motherData = buildProductPayload();
+    try {
+        await postProductToGoogleSheets(motherData, Boolean(motherData['ID Variacion']));
+    } catch (err) {
+        showToast('Error guardando producto madre: ' + err.message, 'error');
+        return;
+    }
+
+    // 2. Save all visible expanded variants
+    var expandedRows = document.querySelectorAll('.var-edit-expanded[style*="table-row"]');
+    var saved = 0;
+    var errors = 0;
+    for (var i = 0; i < expandedRows.length; i++) {
+        var row = expandedRows[i];
+        var vid = row.querySelector('.ve-id')?.value || '';
+        var vdata = {
+            'ID Variacion': vid,
+            'ID Producto': idProducto,
+            'Nombre del Producto': getInputValue('prod-nombre'),
+            Nombre: getInputValue('prod-nombre'),
+            Categoria: getInputValue('prod-categoria'),
+            'Categoría': getInputValue('prod-categoria'),
+            Precio: parseAmount(row.querySelector('.ve-precio')?.value || getInputValue('prod-precio')),
+            'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+            Cantidad: Number(row.querySelector('.ve-stock')?.value || 0),
+            'Stock Inicial': Number(row.querySelector('.ve-stock')?.value || 0),
+            Descripcion: getInputValue('prod-descripcion'),
+            Color: row.querySelector('.ve-color')?.value || '',
+            SKU: row.querySelector('.ve-sku')?.value || '',
+            Imagen: row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
+            'Imagen Principal': row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
+            Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+            Estado: getInputValue('prod-estado') || 'Activo'
+        };
+        try {
+            await postProductToGoogleSheets(vdata, true);
+            saved++;
+        } catch (e) {
+            errors++;
+        }
+    }
+    
+    showToast('Grupo guardado: madre + ' + saved + ' variante(s)' + (errors ? ' (' + errors + ' error(es))' : ''), errors ? 'error' : 'success');
+    setTimeout(function() { cargarInventario(); }, 1500);
+};
+
 function editarProducto(index) {
-    const p = inventario[index];
-    setInputValue('prod-id', p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '');
-    setInputValue('prod-id-producto', p.idProducto || p['ID Producto'] || '');
+    var p = inventario[index];
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '';
+    var idProd = p.idProducto || p['ID Producto'] || '';
+    var isVariant = idProd && idVar && idProd !== idVar;
+    
+    setInputValue('prod-id', idVar);
+    setInputValue('prod-id-producto', idProd);
     document.getElementById('prod-nombre').value = p.Nombre || p.Producto || '';
     document.getElementById('prod-categoria').value = p.Categoria || '';
     document.getElementById('prod-precio').value = p.Precio || '';
@@ -742,12 +1292,92 @@ function editarProducto(index) {
     setInputValue('prod-estado', p.Estado || 'Activo');
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
     setProductFormMode(true);
+    updateLivePreview();
     
-    // Si manejas edición real, aquí cargarías el id
-    // document.getElementById('prod-id').value = p.id || p.fila || '';
+    var variantBadge = document.getElementById('variant-editing-badge');
+    if (!variantBadge) {
+        var titleRow = document.querySelector('.admin-title-row');
+        if (titleRow) {
+            variantBadge = document.createElement('span');
+            variantBadge.id = 'variant-editing-badge';
+            variantBadge.style.cssText = 'font-size:10px;padding:4px 10px;border-radius:8px;font-weight:700;margin-left:8px;';
+            titleRow.querySelector('h2')?.after(variantBadge);
+        }
+    }
+    if (variantBadge) {
+        if (isVariant) {
+            variantBadge.textContent = '⚡ VARIANTE (' + idVar + ')';
+            variantBadge.style.background = 'rgba(255,165,0,0.2)';
+            variantBadge.style.color = '#FFA500';
+            variantBadge.style.display = 'inline';
+        } else {
+            variantBadge.textContent = '⭐ PRODUCTO PRINCIPAL (' + idProd + ')';
+            variantBadge.style.background = 'rgba(155,44,250,0.2)';
+            variantBadge.style.color = '#9B2CFA';
+            variantBadge.style.display = 'inline';
+        }
+    }
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (idProd) {
+        cargarVariantesAlFormulario(idProd, idVar);
+        // Add "Guardar Grupo" button if not already present
+        var saveGroupBtn = document.getElementById('btn-save-group');
+        if (!saveGroupBtn) {
+            var formFooter = document.querySelector('#product-form > div:last-child');
+            if (formFooter) {
+                var newBtn = document.createElement('button');
+                newBtn.type = 'button';
+                newBtn.className = 'admin-btn';
+                newBtn.id = 'btn-save-group';
+                newBtn.style.cssText = 'background:linear-gradient(135deg,#FFA500,#FF6347);margin-top:12px;';
+                newBtn.textContent = '💾 Guardar Grupo Completo (Madre + Variantes)';
+                newBtn.addEventListener('click', function() { guardarGrupoCompleto(idProd); });
+                formFooter.parentNode.insertBefore(newBtn, formFooter.nextSibling);
+            }
+        }
+    } else {
+        var oldBtn = document.getElementById('btn-save-group');
+        if (oldBtn) oldBtn.remove();
+    }
+    
+    // MOVER EL FORMULARIO AL MODAL INDEPENDIENTE EN LUGAR DE CAMBIAR DE VISTA
+    var modal = document.getElementById('edit-product-modal');
+    var contentArea = document.getElementById('edit-modal-content-area');
+    var viewProducts = document.getElementById('view-products');
+    var gridSplit = viewProducts?.querySelector('.grid-split');
+    
+    if (modal && contentArea && gridSplit) {
+        contentArea.appendChild(gridSplit);
+        modal.style.display = 'flex';
+        // Desplazarse arriba del modal
+        modal.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        // Fallback al comportamiento original si no hay modal
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (typeof switchDashboardView === 'function') {
+            switchDashboardView('products', 'Gestión de Productos');
+        }
+    }
 }
+
+window.cerrarModalEdicion = function() {
+    var modal = document.getElementById('edit-product-modal');
+    if (modal) modal.style.display = 'none';
+    var contentArea = document.getElementById('edit-modal-content-area');
+    var viewProducts = document.getElementById('view-products');
+    if (contentArea && viewProducts && contentArea.firstElementChild) {
+        viewProducts.appendChild(contentArea.firstElementChild);
+    }
+    resetProductForm();
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('edit-product-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            cerrarModalEdicion();
+        }
+    });
+});
 
 // Limpiar formato de dinero para que la DB no se corrompa entre Precio y Stock
 function parseAmount(val) {
@@ -755,9 +1385,180 @@ function parseAmount(val) {
     return parseInt(String(val).replace(/[^0-9]/g, ''), 10) || 0;
 }
 
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3000);
+
+// Modal de confirmación
+var modalConfirmCallback = null;
+var modalCancelCallback = null;
+function showModal(title, body, confirmText, onConfirm, onCancel) {
+    var el = document.getElementById('confirm-modal');
+    if (!el) return;
+    document.getElementById('modal-title').textContent = title || 'Confirmar';
+    document.getElementById('modal-body').textContent = body || '¿Estás seguro?';
+    var btn = document.getElementById('modal-confirm-btn');
+    btn.textContent = confirmText || 'Eliminar';
+    modalConfirmCallback = onConfirm || null;
+    modalCancelCallback = onCancel || null;
+    el.style.display = 'flex';
 }
+function closeModal() {
+    var el = document.getElementById('confirm-modal');
+    if (el) el.style.display = 'none';
+    modalConfirmCallback = null;
+    modalCancelCallback = null;
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('modal-confirm-btn')?.addEventListener('click', function() {
+        if (modalConfirmCallback) { modalConfirmCallback(); closeModal(); }
+        else closeModal();
+    });
+    document.getElementById('modal-cancel-btn')?.addEventListener('click', function() {
+        if (modalCancelCallback) modalCancelCallback();
+        closeModal();
+    });
+    document.getElementById('confirm-modal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            if (modalCancelCallback) modalCancelCallback();
+            closeModal();
+        }
+    });
+});
+
+async function delFromSheet(id, idProd, rowMeta) {
+    var payload = { resource: 'productos', action: 'delete_product', id: id, ID_Producto: idProd || id, 'ID Variacion': id, nombre: rowMeta?.nombre, _rowIndex: rowMeta?.rowIndex };
+    var res = await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    var text = await res.text();
+    var result;
+    try { result = JSON.parse(text); } catch (e) { result = null; }
+    if (result && (result.status === 'success' || result.ok)) return true;
+    var msg = result?.message || result?.error || text.slice(0, 100);
+    throw new Error(msg || 'Error desconocido');
+}
+
+async function eliminarProducto(index) {
+    var p = inventario[index];
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || '';
+    var idProd = p.idProducto || p['ID Producto'] || idVar;
+    var nombre = p.Nombre || p.Producto || 'este producto';
+    if (!idVar && !nombre) { showToast('Error: producto sin ID ni Nombre', 'error'); return; }
+
+    showModal(
+        'Eliminar Producto',
+        '¿Eliminar permanentemente "' + nombre + '"' + (idVar ? ' (ID: ' + idVar + ')' : '') + '?',
+        'Sí, eliminar',
+        async function() {
+            showToast('Eliminando...');
+            try {
+                await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: p._rowIndex });
+                showToast('Producto eliminado', 'success');
+                setTimeout(function() { cargarInventario(); }, 1000);
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+                // Fallback: intentar con form data
+                try {
+                    var fd = new FormData();
+                    fd.append('resource', 'productos');
+                    fd.append('action', 'delete_product');
+                    fd.append('id', idVar);
+                    fd.append('ID_Producto', idProd);
+                    fd.append('ID Variacion', idVar);
+                    if (nombre) fd.append('nombre', nombre);
+                    if (p._rowIndex) fd.append('_rowIndex', p._rowIndex);
+                    var r2 = await fetch(GOOGLE_SHEET_API, { method: 'POST', body: fd });
+                    var t2 = await r2.text();
+                    var j2;
+                    try { j2 = JSON.parse(t2); } catch (e) { j2 = null; }
+                    if (j2 && (j2.status === 'success' || j2.ok)) {
+                        showToast('Producto eliminado (fallback)', 'success');
+                        setTimeout(function() { cargarInventario(); }, 1000);
+                    } else {
+                        showToast('No se pudo eliminar. Revisa consola (F12)', 'error');
+                    }
+                } catch (e2) {
+                    showToast('Error total de conexión. ¿URL del script correcta?', 'error');
+                }
+            }
+        }
+    );
+}
+
+async function eliminarGrupo(motherIdClean) {
+    showModal(
+        'Eliminar Grupo Completo',
+        '¿Eliminar TODAS las variantes de este grupo (ID: ' + motherIdClean + ')?',
+        'Sí, eliminar grupo',
+        async function() {
+            showToast('Eliminando grupo...');
+            var variants = inventario.filter(function(p) {
+                var mid = p.idProducto || p['ID Producto'] || '';
+                var vid = p.idVariacion || p.ID || p['ID Variacion'] || '';
+                return mid === motherIdClean || vid === motherIdClean;
+            });
+            if (variants.length === 0) { showToast('No se encontraron productos del grupo', 'error'); return; }
+            var errors = 0;
+            var lastErr = '';
+            for (var i = 0; i < variants.length; i++) {
+                try {
+                    var v = variants[i];
+                    var vId = v.idVariacion || v.ID || v['ID Variacion'] || '';
+                    if (!vId) continue;
+                    await delFromSheet(vId, motherIdClean);
+                } catch (e) { errors++; lastErr = e.message; }
+            }
+            if (errors === 0) {
+                showToast('Grupo eliminado (' + variants.length + ' productos)', 'success');
+            } else if (errors === variants.length) {
+                showToast('Error en todo el grupo: ' + lastErr, 'error');
+            } else {
+                showToast('Grupo: ' + (variants.length - errors) + ' ok, ' + errors + ' error(es)', 'warning');
+            }
+            if (errors < variants.length) setTimeout(function() { cargarInventario(); }, 1000);
+        }
+    );
+}
+
+function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.className = 'toast';
+    if (type) t.classList.add(type);
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function switchDashboardView(viewId, title) {
+    document.querySelectorAll('.dashboard-section').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.sidebar-btn').forEach(function(el) { el.classList.remove('active'); });
+    var target = document.getElementById('view-' + viewId);
+    if (target) target.classList.add('active');
+    var btn = document.querySelector('.sidebar-btn[onclick*="' + viewId + '"]');
+    if (btn) btn.classList.add('active');
+    var titleEl = document.getElementById('current-section-title');
+    if (titleEl) titleEl.textContent = title || 'Panel';
+    var area = document.querySelector('.dashboard-content-area');
+    if (area) area.scrollTop = 0;
+}
+
+window.toggleVariants = function(motherIdClass, btnEl) {
+    var rows = document.querySelectorAll('.variant-row.mother-' + motherIdClass);
+    var total = rows.length;
+    var anyVisible = false;
+    rows.forEach(function(row) {
+        if (row.style.display !== 'none') anyVisible = true;
+    });
+    rows.forEach(function(row) {
+        row.style.display = anyVisible ? 'none' : 'table-row';
+    });
+    if (btnEl) {
+        if (anyVisible) {
+            btnEl.innerHTML = 'Ver ' + total + ' Variantes ▼';
+            btnEl.style.background = 'rgba(155,44,250,0.1)';
+        } else {
+            btnEl.innerHTML = 'Ocultar ▲';
+            btnEl.style.background = 'rgba(155,44,250,0.25)';
+        }
+    }
+};
