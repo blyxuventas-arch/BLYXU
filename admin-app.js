@@ -58,10 +58,10 @@ function updateLivePreview() {
     const catEl = document.getElementById('preview-cat-el');
     if (titleEl) titleEl.textContent = nombre;
     if (catEl) catEl.textContent = categoria;
-    
+
     const parsedPrecio = parseAmount(precio);
     const parsedMayorista = parseAmount(precioMayorista);
-    
+
     let priceHtml = '';
     if (parsedPrecio > 0) {
         priceHtml = `$${parsedPrecio.toLocaleString('es-CO')}`;
@@ -73,7 +73,7 @@ function updateLivePreview() {
     }
     const priceEl = document.getElementById('preview-price-el');
     if (priceEl) priceEl.innerHTML = priceHtml;
-    
+
     const imgEl = document.getElementById('preview-img-el');
     if (imgEl) {
         const currentSrc = imgEl.getAttribute('src');
@@ -81,7 +81,7 @@ function updateLivePreview() {
             // Evitar parpadeo: solo actualizar si el origen realmente cambió
             imgEl.style.transition = 'opacity 0.2s';
             imgEl.style.opacity = '0.4';
-            
+
             const tempImg = new Image();
             tempImg.onload = () => {
                 imgEl.src = imagenUrl;
@@ -94,7 +94,7 @@ function updateLivePreview() {
             tempImg.src = imagenUrl;
         }
     }
-    
+
     const badgeEl = document.getElementById('preview-badge-el');
     if (badgeEl) {
         if (estado === 'Agotado') {
@@ -113,14 +113,14 @@ function updateLivePreview() {
 
 function getProductField(product, fields, fallback = '') {
     const names = Array.isArray(fields) ? fields : [fields];
-    
+
     // Exact match first
     for (const name of names) {
         if (product && product[name] !== undefined && product[name] !== null && product[name] !== '') {
             return product[name];
         }
     }
-    
+
     // Fuzzy match for broken keys (spaces, accents, etc.)
     if (product) {
         for (const key in product) {
@@ -133,7 +133,7 @@ function getProductField(product, fields, fallback = '') {
             }
         }
     }
-    
+
     return fallback;
 }
 
@@ -286,18 +286,18 @@ function getFilteredInventory() {
     let resultList = indexed;
     if (query) {
         var scored = indexed
-            .map(function(item) { return { product: item.product, index: item.index, score: scoreInventorySearch(item.product, query) }; })
-            .filter(function(item) { return item.score > 0; })
-            .sort(function(a, b) { return b.score - a.score; });
-        
+            .map(function (item) { return { product: item.product, index: item.index, score: scoreInventorySearch(item.product, query) }; })
+            .filter(function (item) { return item.score > 0; })
+            .sort(function (a, b) { return b.score - a.score; });
+
         var matchedMids = new Set();
-        scored.forEach(function(item) { matchedMids.add(getMid(item.product)); });
-        
+        scored.forEach(function (item) { matchedMids.add(getMid(item.product)); });
+
         var seen = new Set();
         resultList = [];
-        scored.forEach(function(item) {
+        scored.forEach(function (item) {
             var mid = getMid(item.product);
-            indexed.forEach(function(sib) {
+            indexed.forEach(function (sib) {
                 var sibMid = getMid(sib.product);
                 var key = sibMid + '|' + sib.index;
                 if (mid === sibMid && !seen.has(key)) {
@@ -306,7 +306,7 @@ function getFilteredInventory() {
                 }
             });
         });
-        indexed.forEach(function(item) {
+        indexed.forEach(function (item) {
             var mid = getMid(item.product);
             var key = mid + '|' + item.index;
             if (matchedMids.has(mid) && !seen.has(key)) {
@@ -317,26 +317,26 @@ function getFilteredInventory() {
     }
 
     var grouped = new Map();
-    resultList.forEach(function(item) {
+    resultList.forEach(function (item) {
         var mid = getMid(item.product);
         if (!grouped.has(mid)) grouped.set(mid, []);
         grouped.get(mid).push(item);
     });
 
     var finalFlatList = [];
-    grouped.forEach(function(items, motherId) {
-        items.sort(function(a, b) {
+    grouped.forEach(function (items, motherId) {
+        items.sort(function (a, b) {
             var aIsMother = isMother(a.product) ? 1 : 0;
             var bIsMother = isMother(b.product) ? 1 : 0;
             return bIsMother - aIsMother;
         });
 
-        var totalStock = items.reduce(function(s, item) { return s + (Number(item.product.Stock || item.product.Cantidad) || 0); }, 0);
-        var prices = items.map(function(i) { return Number(i.product.Precio || 0); }).filter(function(p) { return p > 0; });
+        var totalStock = items.reduce(function (s, item) { return s + (Number(item.product.Stock || item.product.Cantidad) || 0); }, 0);
+        var prices = items.map(function (i) { return Number(i.product.Precio || 0); }).filter(function (p) { return p > 0; });
         var minPrice = prices.length ? Math.min.apply(null, prices) : 0;
         var maxPrice = prices.length ? Math.max.apply(null, prices) : 0;
 
-        items.forEach(function(item, idx) {
+        items.forEach(function (item, idx) {
             finalFlatList.push({
                 product: item.product,
                 index: item.index,
@@ -502,14 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (file && file.type.startsWith('image/')) {
                 const input = zone.querySelector('.var-imagen');
                 const imgPreview = zone.querySelector('.var-preview-thumb');
-                
+
                 // Preview local
                 if (imgPreview) {
                     const localUrl = URL.createObjectURL(file);
                     imgPreview.src = localUrl;
                     imgPreview.style.display = 'block';
                 }
-                
+
                 try {
                     showToast('Subiendo variante...');
                     const url = await uploadCarouselImage(file);
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // Configurar listeners para la Vista Previa
     const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-estado'];
     inputsToWatch.forEach(id => {
@@ -532,29 +532,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     updateLivePreview(); // Actualización inicial
-    
+
     // --- LOGIN LOGIC ---
     const loginForm = document.getElementById('admin-login-form');
     const loginError = document.getElementById('login-error');
     const loginScreen = document.getElementById('admin-login-screen');
     const mainContent = document.getElementById('admin-main-content');
-    
-    if(loginForm) {
+
+    if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const pass = document.getElementById('admin-password').value;
-            
+
             if (pass === '2015690') {
                 loginError.style.display = 'none';
                 loginForm.style.display = 'none';
-                
+
                 const loader = document.getElementById('login-loader');
                 const loaderBar = document.getElementById('login-loader-bar');
                 const loaderText = document.getElementById('login-loader-text');
-                
+
                 loader.style.display = 'block';
                 loaderText.style.display = 'block';
-                
+
                 // Animate loader
                 let progress = 0;
                 const interval = setInterval(() => {
@@ -577,9 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 loginError.style.display = 'block';
                 // Shake effect
                 document.getElementById('login-box').style.transform = 'translateX(10px)';
-                setTimeout(()=>document.getElementById('login-box').style.transform = 'translateX(-10px)', 100);
-                setTimeout(()=>document.getElementById('login-box').style.transform = 'translateX(10px)', 200);
-                setTimeout(()=>document.getElementById('login-box').style.transform = 'translateX(0)', 300);
+                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(-10px)', 100);
+                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(10px)', 200);
+                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(0)', 300);
             }
         });
     }
@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('product-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const btn = document.getElementById('btn-save');
         btn.disabled = true;
         btn.textContent = 'Enviando...';
@@ -596,10 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const cleanPrecio = parseAmount(rawPrecio);
         const rawPrecioMayorista = document.getElementById('prod-precio-mayorista').value;
         const cleanPrecioMayorista = parseAmount(rawPrecioMayorista);
-        
+
         const stock = Number(document.getElementById('prod-stock').value || 0);
         const estado = document.getElementById('prod-estado').value;
-        
+
         const data = {
             'Nombre del Producto': document.getElementById('prod-nombre').value,
             Categoria: document.getElementById('prod-categoria').value,
@@ -623,23 +623,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.getElementById('edit-product-modal')?.style.display === 'flex') {
                     cerrarModalEdicion();
                 }
-                setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
+                setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
             } catch (err) {
                 showToast('Error: ' + err.message, 'error');
                 btn.disabled = false;
                 btn.textContent = 'Guardar / Enviar';
             }
         }
-        
+
         if (stock === 0 && estado === 'Activo') {
             showModal('Stock en Cero', 'El stock es 0. ¿Marcar como "Agotado"?', 'Sí, marcar Agotado',
-                function() {
+                function () {
                     closeModal();
                     data['Estado'] = 'Agotado';
                     document.getElementById('prod-estado').value = 'Agotado';
                     proceedSubmit(data);
                 },
-                function() {
+                function () {
                     proceedSubmit(data);
                 }
             );
@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = 'Guardar / Enviar';
             return;
         }
-        
+
         proceedSubmit(data);
     });
 
@@ -1074,7 +1074,7 @@ function initInventoryActions() {
     if (!tbody || tbody.dataset.actionsReady === 'true') return;
     tbody.dataset.actionsReady = 'true';
 
-    tbody.addEventListener('click', function(e) {
+    tbody.addEventListener('click', function (e) {
         const btn = e.target.closest('[data-inventory-action]');
         if (!btn) return;
 
@@ -1116,7 +1116,7 @@ function initInventoryActions() {
 function normalizeInventoryList(rawProducts) {
     return (Array.isArray(rawProducts) ? rawProducts : [])
         .map(normalizeGoogleProduct)
-        .filter(function(p) {
+        .filter(function (p) {
             var estado = (p.Estado || '').toUpperCase();
             var nombre = (p.Nombre || p.Producto || '').toUpperCase();
             return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
@@ -1280,7 +1280,7 @@ function getInventoryProductKey(product) {
 
 function getInventoryIndexByKey(key) {
     key = String(key || '');
-    return inventario.findIndex(function(product) {
+    return inventario.findIndex(function (product) {
         return getInventoryProductKey(product) === key;
     });
 }
@@ -1295,7 +1295,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     const isChild = itemMeta.isChild;
     const groupSize = itemMeta.groupSize || 1;
     const motherId = itemMeta.motherId || (p.idProducto || p['ID Producto'] || 'desconocido');
-    
+
     const isSearching = !!adminInventorySearchQuery;
     const displayStyle = (isChild && !isSearching) ? 'none' : 'table-row';
     const cleanMotherId = String(motherId).replace(/[^a-zA-Z0-9_-]/g, '');
@@ -1308,7 +1308,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         var priceStr = minP === maxP
             ? '$' + minP.toLocaleString('es-CO')
             : '$' + minP.toLocaleString('es-CO') + ' - $' + maxP.toLocaleString('es-CO');
-                        
+
         var stockTotal = itemMeta.totalStock;
         if (stockTotal === undefined) stockTotal = Number(p.Stock || p.Cantidad) || 0;
         var stockClass = stockTotal > 0 ? 'stock-positive' : 'stock-negative';
@@ -1462,7 +1462,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     container.innerHTML = '';
     if (!idProducto) return;
 
-    var variantes = inventario.filter(function(prod) {
+    var variantes = inventario.filter(function (prod) {
         var mid = prod.idProducto || prod['ID Producto'] || '';
         var vid = prod.idVariacion || prod.ID || prod['ID Variacion'] || '';
         return mid === idProducto && vid !== idVariacionActual;
@@ -1479,7 +1479,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     tableHtml += '<th style="padding:4px 8px;text-align:left;">ID Var</th><th style="padding:4px 8px;text-align:left;">Color</th><th style="padding:4px 8px;text-align:left;">Stock</th><th style="padding:4px 8px;text-align:left;">Precio</th><th style="padding:4px 8px;text-align:left;">SKU</th><th style="padding:4px 8px;text-align:center;">Acción</th>';
     tableHtml += '</tr></thead><tbody>';
 
-    variantes.forEach(function(v) {
+    variantes.forEach(function (v) {
         var vid = v.idVariacion || v.ID || '-';
         var vColor = v.Color || '-';
         var vStock = v.Stock || v.Cantidad || 0;
@@ -1513,15 +1513,15 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     container.innerHTML = tableHtml;
 }
 
-window.expandirVarianteEdicion = function(vid) {
+window.expandirVarianteEdicion = function (vid) {
     var row = document.getElementById('var-expand-' + vid);
     if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
 };
-window.cerrarVarianteEdicion = function(vid) {
+window.cerrarVarianteEdicion = function (vid) {
     var row = document.getElementById('var-expand-' + vid);
     if (row) row.style.display = 'none';
 };
-window.guardarVarianteEditada = async function(vid, idProducto) {
+window.guardarVarianteEditada = async function (vid, idProducto) {
     var row = document.getElementById('var-expand-' + vid);
     if (!row) return;
     var data = {
@@ -1547,15 +1547,15 @@ window.guardarVarianteEditada = async function(vid, idProducto) {
         await postProductToGoogleSheets(data, true);
         showToast('Variante actualizada', 'success');
         cerrarVarianteEdicion(vid);
-        setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
+        setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     }
 };
 
-window.guardarGrupoCompleto = async function(idProducto) {
+window.guardarGrupoCompleto = async function (idProducto) {
     showToast('Guardando grupo completo...');
-    
+
     // 1. Save mother product
     var motherData = buildProductPayload();
     try {
@@ -1598,9 +1598,9 @@ window.guardarGrupoCompleto = async function(idProducto) {
             errors++;
         }
     }
-    
+
     showToast('Grupo guardado: madre + ' + saved + ' variante(s)' + (errors ? ' (' + errors + ' error(es))' : ''), errors ? 'error' : 'success');
-    setTimeout(function() { cargarInventario({ silent: true }); }, 1500);
+    setTimeout(function () { cargarInventario({ silent: true }); }, 1500);
 };
 
 function editarProducto(index) {
@@ -1608,7 +1608,7 @@ function editarProducto(index) {
     var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '';
     var idProd = p.idProducto || p['ID Producto'] || '';
     var isVariant = idProd && idVar && idProd !== idVar;
-    
+
     setInputValue('prod-id', idVar);
     setInputValue('prod-id-producto', idProd);
     document.getElementById('prod-nombre').value = p.Nombre || p.Producto || '';
@@ -1629,7 +1629,7 @@ function editarProducto(index) {
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
     setProductFormMode(true);
     updateLivePreview();
-    
+
     var variantBadge = document.getElementById('variant-editing-badge');
     if (!variantBadge) {
         var titleRow = document.querySelector('.admin-title-row');
@@ -1653,7 +1653,7 @@ function editarProducto(index) {
             variantBadge.style.display = 'inline';
         }
     }
-    
+
     if (idProd) {
         cargarVariantesAlFormulario(idProd, idVar);
         // Add "Guardar Grupo" button if not already present
@@ -1667,7 +1667,7 @@ function editarProducto(index) {
                 newBtn.id = 'btn-save-group';
                 newBtn.style.cssText = 'background:linear-gradient(135deg,#FFA500,#FF6347);margin-top:12px;';
                 newBtn.textContent = '💾 Guardar Grupo Completo (Madre + Variantes)';
-                newBtn.addEventListener('click', function() { guardarGrupoCompleto(idProd); });
+                newBtn.addEventListener('click', function () { guardarGrupoCompleto(idProd); });
                 formFooter.parentNode.insertBefore(newBtn, formFooter.nextSibling);
             }
         }
@@ -1675,13 +1675,13 @@ function editarProducto(index) {
         var oldBtn = document.getElementById('btn-save-group');
         if (oldBtn) oldBtn.remove();
     }
-    
+
     // MOVER EL FORMULARIO AL MODAL INDEPENDIENTE EN LUGAR DE CAMBIAR DE VISTA
     var modal = document.getElementById('edit-product-modal');
     var contentArea = document.getElementById('edit-modal-content-area');
     var viewProducts = document.getElementById('view-products');
     var gridSplit = viewProducts?.querySelector('.grid-split');
-    
+
     if (modal && contentArea && gridSplit) {
         contentArea.appendChild(gridSplit);
         modal.style.display = 'flex';
@@ -1696,7 +1696,7 @@ function editarProducto(index) {
     }
 }
 
-window.cerrarModalEdicion = function() {
+window.cerrarModalEdicion = function () {
     var modal = document.getElementById('edit-product-modal');
     if (modal) modal.style.display = 'none';
     var contentArea = document.getElementById('edit-modal-content-area');
@@ -1707,8 +1707,8 @@ window.cerrarModalEdicion = function() {
     resetProductForm();
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('edit-product-modal')?.addEventListener('click', function(e) {
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('edit-product-modal')?.addEventListener('click', function (e) {
         if (e.target === this) {
             cerrarModalEdicion();
         }
@@ -1742,17 +1742,17 @@ function closeModal() {
     modalConfirmCallback = null;
     modalCancelCallback = null;
 }
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('modal-confirm-btn')?.addEventListener('click', function() {
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('modal-confirm-btn')?.addEventListener('click', function () {
         var cb = modalConfirmCallback;
         closeModal();
         if (cb) cb();
     });
-    document.getElementById('modal-cancel-btn')?.addEventListener('click', function() {
+    document.getElementById('modal-cancel-btn')?.addEventListener('click', function () {
         if (modalCancelCallback) modalCancelCallback();
         closeModal();
     });
-    document.getElementById('confirm-modal')?.addEventListener('click', function(e) {
+    document.getElementById('confirm-modal')?.addEventListener('click', function (e) {
         if (e.target === this) {
             if (modalCancelCallback) modalCancelCallback();
             closeModal();
@@ -1793,7 +1793,7 @@ async function delFromSheet(id, idProd, rowMeta) {
     ];
 
     if (rowMeta) {
-        deleteStrategies.forEach(function(p) {
+        deleteStrategies.forEach(function (p) {
             if (rowMeta.nombre) p.nombre = rowMeta.nombre;
             if (!id && rowMeta.rowIndex) p._rowIndex = rowMeta.rowIndex;
         });
@@ -1834,7 +1834,7 @@ async function eliminarProducto(index) {
         'Eliminar Producto',
         '¿Eliminar permanentemente "' + nombre + '"' + (idVar ? ' (ID: ' + idVar + ')' : '') + '?',
         'Sí, eliminar',
-        async function() {
+        async function () {
             showToast('Eliminando "' + nombre + '"...');
             try {
                 await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: rowIndex });
@@ -1844,7 +1844,7 @@ async function eliminarProducto(index) {
                 writeInventoryCache(inventario);
                 renderInventoryInBatches();
                 // Reload from server to sync
-                setTimeout(function() { cargarInventario({ silent: true }); }, 2000);
+                setTimeout(function () { cargarInventario({ silent: true }); }, 2000);
             } catch (err) {
                 console.error('Error eliminando producto:', err);
                 showToast('❌ Error al eliminar: ' + err.message, 'error');
@@ -1875,17 +1875,17 @@ async function eliminarProductoPorClave(key) {
         'Eliminar Producto',
         'Eliminar permanentemente "' + nombre + '"' + (idVar ? ' (ID: ' + idVar + ')' : '') + '?',
         'Si, eliminar',
-        async function() {
+        async function () {
             showToast('Eliminando "' + nombre + '"...');
             try {
                 await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: rowIndex });
-                inventario = inventario.filter(function(item) {
+                inventario = inventario.filter(function (item) {
                     return getInventoryProductKey(item) !== productKey;
                 });
                 writeInventoryCache(inventario);
                 renderInventoryInBatches();
                 showToast('Producto "' + nombre + '" eliminado correctamente', 'success');
-                setTimeout(function() { cargarInventario({ silent: true }); }, 1200);
+                setTimeout(function () { cargarInventario({ silent: true }); }, 1200);
             } catch (err) {
                 console.error('Error eliminando producto:', err);
                 showToast('Error al eliminar: ' + err.message, 'error');
@@ -1899,9 +1899,9 @@ async function eliminarGrupo(motherIdClean) {
         'Eliminar Grupo Completo',
         '¿Eliminar TODAS las variantes de este grupo (ID: ' + motherIdClean + ')?',
         'Sí, eliminar grupo',
-        async function() {
+        async function () {
             showToast('Eliminando grupo...');
-            var variants = inventario.filter(function(p) {
+            var variants = inventario.filter(function (p) {
                 var mid = p.idProducto || p['ID Producto'] || '';
                 var vid = p.idVariacion || p.ID || p['ID Variacion'] || '';
                 return cleanInventoryId(mid) === motherIdClean || cleanInventoryId(vid) === motherIdClean;
@@ -1925,13 +1925,13 @@ async function eliminarGrupo(motherIdClean) {
                 showToast('Grupo: ' + (variants.length - errors) + ' ok, ' + errors + ' error(es)', 'warning');
             }
             if (errors < variants.length) {
-                var deletedKeys = new Set(variants.map(function(item) { return getInventoryProductKey(item); }));
-                inventario = inventario.filter(function(item) {
+                var deletedKeys = new Set(variants.map(function (item) { return getInventoryProductKey(item); }));
+                inventario = inventario.filter(function (item) {
                     return !deletedKeys.has(getInventoryProductKey(item));
                 });
                 writeInventoryCache(inventario);
                 renderInventoryInBatches();
-                setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
+                setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
             }
         }
     );
@@ -1944,12 +1944,12 @@ function showToast(msg, type) {
     t.className = 'toast';
     if (type) t.classList.add(type);
     t.classList.add('show');
-    setTimeout(function() { t.classList.remove('show'); }, 3000);
+    setTimeout(function () { t.classList.remove('show'); }, 3000);
 }
 
 function switchDashboardView(viewId, title) {
-    document.querySelectorAll('.dashboard-section').forEach(function(el) { el.classList.remove('active'); });
-    document.querySelectorAll('.sidebar-btn').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.dashboard-section').forEach(function (el) { el.classList.remove('active'); });
+    document.querySelectorAll('.sidebar-btn').forEach(function (el) { el.classList.remove('active'); });
     var target = document.getElementById('view-' + viewId);
     if (target) target.classList.add('active');
     var btn = document.querySelector('.sidebar-btn[onclick*="' + viewId + '"]');
@@ -1960,14 +1960,14 @@ function switchDashboardView(viewId, title) {
     if (area) area.scrollTop = 0;
 }
 
-window.toggleVariants = function(motherIdClass, btnEl) {
+window.toggleVariants = function (motherIdClass, btnEl) {
     var rows = document.querySelectorAll('.variant-row.mother-' + motherIdClass);
     var total = rows.length;
     var anyVisible = false;
-    rows.forEach(function(row) {
+    rows.forEach(function (row) {
         if (row.style.display !== 'none') anyVisible = true;
     });
-    rows.forEach(function(row) {
+    rows.forEach(function (row) {
         row.style.display = anyVisible ? 'none' : 'table-row';
     });
     if (btnEl) {
