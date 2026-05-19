@@ -19,15 +19,14 @@
     <!-- ===== NAVBAR ===== -->
     <nav class="navbar" id="navbar">
         <a href="#" class="nav-logo">
-            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
-            <span class="nav-logo-text">BLYXU</span>
+            <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
         </a>
 
         <ul class="nav-links" id="nav-links">
             <li><a href="#inicio" class="active">Inicio</a></li>
             <li><a href="#coleccion">Catálogo</a></li>
             <li><a href="#mayorista">Mayorista</a></li>
-            <li><a href="#contacto">Contacto</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
             <li><a href="administrativo.html">Administrativo</a></li>
         </ul>
 
@@ -76,6 +75,24 @@
     </section>
 
 
+    <!-- ===== ALIADOS ===== -->
+    <section class="allies-section" aria-label="Aliados">
+        <div class="allies-header">
+            <span>Aliados</span>
+            <strong>Marcas que brillan con BLYXU</strong>
+        </div>
+        <div class="allies-track">
+            <article class="ally-card ally-card-blyxu">
+                <span class="ally-glow"></span>
+                <img src="Logo2-nav.png" alt="BLYXU">
+            </article>
+            <article class="ally-card ally-card-original">
+                <span class="ally-glow"></span>
+                <img src="original-store-logo.png" alt="Original Store">
+            </article>
+        </div>
+    </section>
+
     <!-- ===== CAROUSEL DE IMAGENES ===== -->
     <section class="image-marquee-section" id="image-carousel">
         <div class="image-marquee" id="image-marquee-container">
@@ -116,12 +133,37 @@
         <div class="products-grid" id="products-grid"></div>
     </section>
 
+    <!-- ===== WHOLESALE CATALOG ===== -->
+    <section class="collection-section wholesale-catalog-section" id="catalogo-mayorista" aria-hidden="true">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">CATÁLOGO MAYORISTA</h2>
+                <div class="smart-search">
+                    <input type="search" id="wholesale-catalog-search"
+                        placeholder="Buscar producto mayorista, categoría, color o SKU" autocomplete="off">
+                </div>
+            </div>
+            <div class="catalog-filter-bar" style="justify-content: flex-end;">
+                <label class="category-select-wrap" for="wholesale-category-select">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        aria-hidden="true">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    <select id="wholesale-category-select" aria-label="Filtrar catálogo mayorista por categoría">
+                        <option value="todos">Todas las categorías</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div class="products-grid" id="wholesale-products-grid"></div>
+    </section>
+
     <!-- ===== FOOTER ===== -->
     <footer class="footer" id="contacto">
         <div class="footer-brand">
             <a href="#" class="nav-logo">
-                <img src="Logo2.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
-                <span class="nav-logo-text" style="font-size:20px">BLYXU</span>
+                <img src="Logo2-nav.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
             </a>
             <p>Joyería y accesorios premium con diseños exclusivos. Cada pieza refleja elegancia, calidad y estilo
                 único.</p>
@@ -132,7 +174,7 @@
                 <li><a href="#inicio">Inicio</a></li>
                 <li><a href="#coleccion">Catálogo</a></li>
                 <li><a href="#mayorista">Mayorista</a></li>
-                <li><a href="#contacto">Contacto</a></li>
+                <li><a href="contacto.html">Contacto</a></li>
             </ul>
         </div>
         <div>

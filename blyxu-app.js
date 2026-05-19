@@ -11,6 +11,8 @@
 const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 const BLYXU_WHATSAPP_PHONE = '573112368622';
+const BLYXU_DEFAULT_MAP_URL = 'https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6';
+const LOW_STOCK_THRESHOLD = 3;
 
 // Columnas esperadas en tu Google Sheet:
 // Nombre | Categoria | Catalogo | Precio | Precio_Mayorista | Stock | Imagen | Color | Descripcion
@@ -34,6 +36,8 @@ let configLoadPromise = null;
 let catalogRenderToken = 0;
 let catalogBatchState = null;
 let activeSearchQuery = '';
+let activeWholesaleFilter = 'todos';
+let activeWholesaleSearchQuery = '';
 let heroProductCarouselTimer = null;
 let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
@@ -73,9 +77,27 @@ function initNavbar() {
     const navbar = document.getElementById('navbar');
     const toggle = document.getElementById('nav-toggle');
     const navLinks = document.getElementById('nav-links');
+    const links = navLinks ? [...navLinks.querySelectorAll('a')] : [];
+    const sectionLinks = links.filter(link => {
+        const href = link.getAttribute('href') || '';
+        return href.startsWith('#') && href.length > 1;
+    });
+
+    function setActiveLink(activeLink) {
+        links.forEach(link => link.classList.toggle('active', link === activeLink));
+    }
 
     window.addEventListener('scroll', () => {
         if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
+
+        let currentLink = null;
+        sectionLinks.forEach(link => {
+            const section = document.querySelector(link.getAttribute('href'));
+            if (!section) return;
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 120 && rect.bottom > 120) currentLink = link;
+        });
+        if (currentLink) setActiveLink(currentLink);
     });
 
     if (toggle && navLinks) {
@@ -83,8 +105,9 @@ function initNavbar() {
             toggle.classList.toggle('open');
             navLinks.classList.toggle('open');
         });
-        navLinks.querySelectorAll('a').forEach(a => {
+        links.forEach(a => {
             a.addEventListener('click', () => {
+                setActiveLink(a);
                 toggle.classList.remove('open');
                 navLinks.classList.remove('open');
             });
@@ -327,8 +350,8 @@ function scoreProductSearch(product, query) {
     return score;
 }
 
-function applySmartProductSearch(products) {
-    const q = normalizeSearchText(activeSearchQuery);
+function applySmartProductSearch(products, query = activeSearchQuery) {
+    const q = normalizeSearchText(query);
     if (!q) return products;
 
     return products
@@ -529,11 +552,13 @@ function renderInventorySpotlightProducts(products) {
         const details = getSpotlightProductDetails(product, index);
         const priceText = details.showPrice ? formatMoney(details.price) : 'Por consultar';
         const toneClass = index % 3 === 1 ? 'neon-aqua' : index % 3 === 2 ? 'neon-gold' : '';
+        const stockBadge = getProductBadgeMarkup(product, index);
         return `
             <article class="hero-carousel-slide product-glass-card ${index === 0 ? 'active' : ''}" data-detail-url="${escapeHtml(details.detailUrl)}">
                 <div class="product-glass-media ${toneClass}">
                     <img src="${escapeHtml(details.image)}" alt="${escapeHtml(details.name)}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback')">
                     <span class="product-glass-badge">${escapeHtml(details.category)}</span>
+                    ${stockBadge}
                 </div>
                 <div class="product-glass-info">
                     <span>${String(index + 1).padStart(2, '0')}</span>
@@ -573,8 +598,10 @@ function renderInventorySpotlight() {
     const imagesHtml = candidates.map(p => {
         const img = getProductImageSet(p)[0];
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
+        const stockBadge = getProductBadgeMarkup(p);
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
                     <img src="${escapeHtml(img)}" alt="${escapeHtml(p.Nombre || '')}" loading="lazy" onerror="this.parentElement.style.display='none'">
+                    ${stockBadge}
                 </div>`;
     }).join('');
 
@@ -652,6 +679,135 @@ async function fetchSiteConfig() {
     return siteConfig;
 }
 
+function getSiteConfigValue(key, fallback = '') {
+    const value = siteConfig[key];
+    return value === undefined || value === null || value === '' ? fallback : String(value);
+}
+
+function setTextById(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function setLinkById(id, href, label) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.href = href || '#';
+    if (label) el.textContent = label;
+    el.style.display = href ? '' : 'none';
+}
+
+function renderContactTimeline(hours) {
+    const timeline = document.getElementById('contact-hours-timeline');
+    if (!timeline) return;
+
+    const parts = String(hours || '').split(/\s*-\s*|\s+a\s+/i).map(part => part.trim()).filter(Boolean);
+    const open = parts[0] || '10:00 AM';
+    const close = parts[1] || '7:00 PM';
+
+    timeline.innerHTML = [
+        ['Apertura', open, true],
+        ['Pedidos', 'Disponible', false],
+        ['Cierre', close, false]
+    ].map(([label, value, active]) => `
+        <div class="contact-time-node ${active ? 'active' : ''}">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>
+    `).join('');
+}
+
+function startContactClock(city) {
+    const clock = document.getElementById('contact-live-clock');
+    if (!clock) return;
+
+    const cityEl = document.getElementById('contact-clock-city');
+    if (cityEl) cityEl.textContent = city || 'Bogota, Colombia';
+
+    function tick() {
+        clock.textContent = new Intl.DateTimeFormat('es-CO', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+            timeZone: 'America/Bogota'
+        }).format(new Date());
+    }
+
+    tick();
+    setInterval(tick, 1000);
+}
+
+function initContactRequestForm(whatsapp) {
+    const form = document.getElementById('contact-request-form');
+    if (!form) return;
+
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        const name = document.getElementById('contact-request-name')?.value.trim() || '';
+        const email = document.getElementById('contact-request-email')?.value.trim() || '';
+        const topic = document.getElementById('contact-request-topic')?.value || 'Solicitud concierge';
+        const message = document.getElementById('contact-request-message')?.value.trim() || '';
+        const phone = String(whatsapp || BLYXU_WHATSAPP_PHONE).replace(/\D/g, '');
+
+        const text = [
+            '*Solicitud Concierge BLYXU*',
+            '',
+            `*Nombre:* ${name}`,
+            email ? `*Correo:* ${email}` : '',
+            `*Interes:* ${topic}`,
+            message ? `*Mensaje:* ${message}` : ''
+        ].filter(Boolean).join('\n');
+
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+    });
+}
+
+function renderContactPage() {
+    if (document.body?.dataset.page !== 'contact') return;
+
+    const address = getSiteConfigValue('Contacto_Direccion', 'Bogota, Colombia');
+    const city = getSiteConfigValue('Contacto_Ciudad', 'Atencion nacional desde Bogota');
+    const days = getSiteConfigValue('Contacto_Dias', 'Lunes a Sabado');
+    const hours = getSiteConfigValue('Contacto_Horarios', '10:00 a.m. - 7:00 p.m.');
+    const note = getSiteConfigValue('Contacto_Nota', 'Coordina tu visita, consulta disponibilidad de piezas y recibe atencion directa para tus pedidos BLYXU.');
+    const serviceTitle = getSiteConfigValue('Contacto_Titulo_Atencion', 'Pedidos privados');
+    const serviceDetail = getSiteConfigValue('Contacto_Detalle_Atencion', 'Escribenos para coordinar compras, confirmar disponibilidad y programar atencion en boutique.');
+    const whatsapp = getSiteConfigValue('Contacto_WhatsApp', BLYXU_WHATSAPP_PHONE);
+    const instagram = getSiteConfigValue('Contacto_Instagram', '');
+    const email = getSiteConfigValue('Contacto_Email', '');
+    const mapUrl = getSiteConfigValue('Contacto_Mapa_URL', BLYXU_DEFAULT_MAP_URL);
+    const mapFrame = document.getElementById('contact-map-frame');
+    if (mapFrame) {
+        mapFrame.src = `https://www.google.com/maps?q=${encodeURIComponent(`${address} ${city}`)}&output=embed`;
+    }
+
+    setTextById('contact-address', address);
+    setTextById('contact-city', city);
+    setTextById('contact-map-title', city || 'BLYXU Boutique');
+    setTextById('contact-days', days);
+    setTextById('contact-hours', hours);
+    setTextById('contact-note', note);
+    setTextById('contact-service-title', serviceTitle);
+    setTextById('contact-service-detail', serviceDetail);
+
+    const whatsappHref = whatsapp ? `https://wa.me/${String(whatsapp).replace(/\D/g, '')}` : '';
+    const instagramHref = instagram && instagram.startsWith('http') ? instagram : (instagram ? `https://instagram.com/${instagram.replace('@', '')}` : '');
+    const emailHref = email ? `mailto:${email}` : '';
+
+    setLinkById('contact-map-link', mapUrl, 'Ver en Google Maps');
+    setLinkById('contact-whatsapp', whatsappHref, 'WhatsApp');
+    setLinkById('contact-instagram', instagramHref, 'Instagram');
+    setLinkById('contact-email', emailHref, 'Correo');
+    setLinkById('footer-whatsapp', whatsappHref, 'WhatsApp');
+    setLinkById('footer-instagram', instagramHref, 'Instagram');
+    setLinkById('footer-email', emailHref, 'Correo');
+
+    renderContactTimeline(hours);
+    startContactClock(city);
+    initContactRequestForm(whatsapp);
+}
+
 // -- RENDER BANNERS --
 function renderBanners(banners) {
     const track = document.getElementById('main-banner-track');
@@ -724,11 +880,12 @@ function getCatalogScope(product) {
 
 function getCurrentCatalogProducts() {
     if (activeCatalogMode === 'wholesale') {
-        const explicitWholesale = allProducts.filter(p => {
+        return allProducts.filter(p => {
             const scope = getCatalogScope(p);
-            return scope && (scope.includes('mayorista') || scope.includes('ambos') || scope.includes('wholesale'));
+            const hasWholesaleScope = scope && (scope.includes('mayorista') || scope.includes('ambos') || scope.includes('wholesale'));
+            const wholesalePrice = getProductField(p, ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'], '');
+            return hasWholesaleScope || parseFloat(wholesalePrice) > 0;
         });
-        return explicitWholesale.length ? explicitWholesale : allProducts;
     }
 
     return allProducts.filter(p => {
@@ -742,6 +899,24 @@ function getProductPrice(product, mode = activeCatalogMode) {
     const retailPrice = getProductField(product, ['Precio', 'precio', 'Precio_Publico'], 0);
     const wholesalePrice = getProductField(product, ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'], retailPrice);
     return parseFloat(mode === 'wholesale' ? wholesalePrice : retailPrice) || 0;
+}
+
+function getProductStock(product) {
+    return parseInt(product?.Stock || product?.stock || product?.Cantidad || 0, 10) || 0;
+}
+
+function getProductStockStatus(stock) {
+    if (stock <= 0) return { type: 'out', label: 'Agotado por ahora' };
+    if (stock <= LOW_STOCK_THRESHOLD) return { type: 'low', label: `Quedan ${stock}` };
+    return null;
+}
+
+function getProductBadgeMarkup(product, index = -1) {
+    const status = getProductStockStatus(getProductStock(product));
+    if (status) {
+        return `<span class="product-card-badge badge-${status.type}">${escapeHtml(status.label)}</span>`;
+    }
+    return index >= 0 && index < 3 ? '<span class="product-card-badge badge-new">Nuevo</span>' : '';
 }
 
 function shouldShowProductPrices(mode = activeCatalogMode) {
@@ -772,21 +947,26 @@ function getCatalogCategories(products) {
     return Array.from(categoryMap.values()).sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-function renderCategoryFilters(products) {
-    const select = document.getElementById('catalog-category-select');
+function renderCategoryFilters(products, options = {}) {
+    const {
+        selectId = 'catalog-category-select',
+        currentFilter = activeFilter,
+        onChange = value => setFilter(value)
+    } = options;
+    const select = document.getElementById(selectId);
     if (!select) return;
 
     const categories = getCatalogCategories(products);
-    const activeCategory = activeFilter === 'todos' ? '' : categories.find(cat => isSameCategory(cat, activeFilter));
-    if (activeFilter !== 'todos' && !activeCategory) activeFilter = 'todos';
+    const activeCategory = currentFilter === 'todos' ? '' : categories.find(cat => isSameCategory(cat, currentFilter));
+    const normalizedFilter = currentFilter !== 'todos' && !activeCategory ? 'todos' : currentFilter;
 
     if (select) {
         select.innerHTML = [
             '<option value="todos">Todas las categor\u00edas</option>',
             ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
         ].join('');
-        select.value = activeFilter === 'todos' ? 'todos' : (activeCategory || 'todos');
-        select.onchange = () => setFilter(select.value);
+        select.value = normalizedFilter === 'todos' ? 'todos' : (activeCategory || 'todos');
+        select.onchange = () => onChange(select.value);
     }
 }
 
@@ -805,18 +985,51 @@ function renderCatalogProducts() {
     renderProducts(products, { mode: activeCatalogMode });
 }
 
+function renderWholesaleCatalogProducts() {
+    const grid = document.getElementById('wholesale-products-grid');
+    if (!grid) return;
+
+    const previousMode = activeCatalogMode;
+    activeCatalogMode = 'wholesale';
+    const products = getCurrentCatalogProducts();
+    activeCatalogMode = previousMode;
+
+    renderCategoryFilters(products, {
+        selectId: 'wholesale-category-select',
+        currentFilter: activeWholesaleFilter,
+        onChange: value => setWholesaleFilter(value)
+    });
+    if (productsLoadError) {
+        grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">Error conectando Google Sheets: ${productsLoadError}</div>`;
+        return;
+    }
+    renderProducts(products, {
+        mode: 'wholesale',
+        gridId: 'wholesale-products-grid',
+        filter: activeWholesaleFilter,
+        searchQuery: activeWholesaleSearchQuery,
+        featuredFirst: false
+    });
+}
+
 // -- RENDER PRODUCTS --
 function renderProducts(products, options = {}) {
-    const grid = document.getElementById('products-grid');
+    const {
+        featuredFirst = !document.getElementById('product-detail'),
+        mode = activeCatalogMode,
+        gridId = 'products-grid',
+        filter = activeFilter,
+        searchQuery = activeSearchQuery
+    } = options;
+    const grid = document.getElementById(gridId);
     if (!grid) return;
-    const { featuredFirst = !document.getElementById('product-detail'), mode = activeCatalogMode } = options;
     const showPrices = shouldShowProductPrices(mode);
     const renderToken = ++catalogRenderToken;
 
-    const filteredByCategory = activeFilter === 'todos' ? products :
-        products.filter(p => isSameCategory(getProductCategory(p), activeFilter));
+    const filteredByCategory = filter === 'todos' ? products :
+        products.filter(p => isSameCategory(getProductCategory(p), filter));
     
-    const searched = applySmartProductSearch(filteredByCategory);
+    const searched = applySmartProductSearch(filteredByCategory, searchQuery);
 
     // Agrupar por idProducto (referencia madre)
     const groupedMap = new Map();
@@ -835,7 +1048,7 @@ function renderProducts(products, options = {}) {
     const filtered = getShuffledProducts(Array.from(groupedMap.values()));
 
     if (!filtered.length) {
-        grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${activeSearchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
+        grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
         return;
     }
 
@@ -848,14 +1061,13 @@ function renderProducts(products, options = {}) {
         const oldPrice = parseFloat(p.Precio_Anterior || 0);
         const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '');
         const cat = p.Categoria || p.categoria || '';
-        const stock = parseInt(p.Stock || p.stock || p.Cantidad || 0);
+        const stock = getProductStock(p);
         const colors = (p.Color || p.color || '').split(',').map(c => c.trim()).filter(Boolean);
         const originalIndex = allProducts.indexOf(p);
         const productIndex = originalIndex >= 0 ? originalIndex : i;
         const isFeatured = featuredFirst && i === 0;
         const detailUrl = `producto.html?id=${productIndex}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`;
-        const badge = stock <= 0 ? '<span class="product-card-badge badge-out">Agotado</span>' :
-                       i < 3 ? '<span class="product-card-badge badge-new">Nuevo</span>' : '';
+        const badge = getProductBadgeMarkup(p, i);
 
         return `
         <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}">
@@ -863,7 +1075,7 @@ function renderProducts(products, options = {}) {
                 ${img ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
-                ${stock > 0 && showPrices ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="Agregar al carrito">
+                ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${showPrices ? 'Agregar al carrito' : 'Agregar a consulta general'}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
             </div>
@@ -874,7 +1086,8 @@ function renderProducts(products, options = {}) {
                 ${showPrices ? `<div class="product-card-price">
                     ${formatMoney(price)}
                     ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span>` : ''}
-                </div>` : `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>`}
+                </div>` : stock > 0 ? `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>` :
+                `<button class="product-card-price price-hidden price-consult-btn" type="button" disabled>Agotado por ahora</button>`}
             </div>
         </div>`;
     }
@@ -929,9 +1142,14 @@ function addToCart(idx, sourceButton, mode = activeCatalogMode) {
     const img = normalizeImageUrl(p.Imagen || p.imagen || (p.Galeria && p.Galeria[0]) || '');
     const idVariacion = p.idVariacion || p['ID Variaci\u00f3n'] || p['ID Variacion'] || p.SKU || name;
     const sku = p.SKU || p.sku || '';
+    const stock = parseInt(p.Stock || p.stock || p.Cantidad || 0, 10) || 0;
+    const priceVisible = shouldShowProductPrices(mode);
     const existing = cart.find(c => (c.idVariacion || c.name) === idVariacion && c.mode === mode);
-    if (existing) { existing.qty++; }
-    else { cart.push({ idVariacion, sku, name, price, img, qty: 1, mode }); }
+    if (existing) {
+        existing.qty = Math.min((existing.qty || 1) + 1, stock || 999);
+        existing.priceVisible = priceVisible;
+    }
+    else { cart.push({ idVariacion, sku, name, price, priceVisible, img, qty: 1, mode, stock }); }
     saveCart();
     updateCartUI();
     openCart();
@@ -946,18 +1164,38 @@ function removeFromCart(idx) {
     updateCartUI();
 }
 
+function updateCartQty(idx, qty) {
+    const item = cart[idx];
+    if (!item) return;
+    const max = parseInt(item.stock || 0, 10) || 999;
+    const nextQty = Math.max(1, Math.min(max, parseInt(qty, 10) || 1));
+    item.qty = nextQty;
+    saveCart();
+    updateCartUI();
+}
+
+function incrementCartQty(idx, delta) {
+    const item = cart[idx];
+    if (!item) return;
+    updateCartQty(idx, (item.qty || 1) + delta);
+}
+
 function saveCart() { localStorage.setItem('blyxu_cart', JSON.stringify(cart)); }
 
 function updateCartUI() {
     const badge = document.getElementById('cart-count');
     const itemsEl = document.getElementById('cart-items');
     const totalEl = document.getElementById('cart-total');
+    const consultNoteEl = document.getElementById('cart-consult-note');
     const count = cart.reduce((s, c) => s + c.qty, 0);
     if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
     if (!itemsEl) return;
     if (!cart.length) {
         itemsEl.innerHTML = '<div class="cart-empty">Tu carrito est&aacute; vac&iacute;o</div>';
         if (totalEl) totalEl.textContent = '$0';
+        if (consultNoteEl) consultNoteEl.textContent = '';
+        const checkoutBtn = document.getElementById('btn-checkout');
+        if (checkoutBtn) checkoutBtn.textContent = 'Enviar consulta por WhatsApp';
         return;
     }
     itemsEl.innerHTML = cart.map((c, i) => `
@@ -965,13 +1203,30 @@ function updateCartUI() {
             ${c.img ? `<img src="${c.img}" class="cart-item-img" alt="">` : '<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">?</div>'}
             <div class="cart-item-info">
                 <div class="cart-item-name">${c.name}</div>
-                <div class="cart-item-price">${formatMoney(c.price)} x ${c.qty}</div>
+                <div class="cart-item-price">${c.priceVisible === false ? 'Precio por consultar' : `${formatMoney(c.price)} unidad`}</div>
+                <div class="cart-item-qty">
+                    <button type="button" onclick="incrementCartQty(${i}, -1)" aria-label="Restar cantidad">-</button>
+                    <input type="number" min="1" ${c.stock ? `max="${c.stock}"` : ''} value="${c.qty}" onchange="updateCartQty(${i}, this.value)" aria-label="Cantidad">
+                    <button type="button" onclick="incrementCartQty(${i}, 1)" aria-label="Sumar cantidad">+</button>
+                </div>
+                <div class="cart-item-subtotal">${c.priceVisible === false ? 'Por consultar' : formatMoney(c.price * c.qty)}</div>
             </div>
             <button class="cart-item-remove" onclick="removeFromCart(${i})">&times;</button>
         </div>
     `).join('');
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    if (totalEl) totalEl.textContent = formatMoney(total);
+    const hasHiddenPrices = cart.some(c => c.priceVisible === false);
+    if (totalEl) totalEl.textContent = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
+    if (consultNoteEl) {
+        consultNoteEl.textContent = hasHiddenPrices
+            ? 'Este carrito se enviara como consulta general por WhatsApp. Para consultar un solo producto, usa el boton "Precio por consultar" del producto.'
+            : 'Al finalizar, se enviara el listado del carrito por WhatsApp.';
+    }
+    const checkoutBtn = document.getElementById('btn-checkout');
+    if (checkoutBtn) {
+        const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
+        checkoutBtn.textContent = isWholesaleOrder ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
+    }
 }
 
 function openCart() {
@@ -1051,23 +1306,51 @@ function setFilter(cat) {
     renderCatalogProducts();
 }
 
+function setWholesaleFilter(cat) {
+    activeWholesaleFilter = cat || 'todos';
+    const select = document.getElementById('wholesale-category-select');
+    if (select) {
+        const option = Array.from(select.options).find(opt => activeWholesaleFilter === 'todos' ? opt.value === 'todos' : isSameCategory(opt.value, activeWholesaleFilter));
+        select.value = option ? option.value : 'todos';
+    }
+    renderWholesaleCatalogProducts();
+}
+
 function initCatalogSearch() {
     const input = document.getElementById('catalog-search');
-    if (!input) return;
+    const wholesaleInput = document.getElementById('wholesale-catalog-search');
 
     let searchTimer = null;
-    input.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-            activeSearchQuery = input.value.trim();
-            if (activeSearchQuery && activeFilter !== 'todos') {
-                activeFilter = 'todos';
-                const select = document.getElementById('catalog-category-select');
-                if (select) select.value = 'todos';
-            }
-            renderCatalogProducts();
-        }, 180);
-    });
+    if (input) {
+        input.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                activeSearchQuery = input.value.trim();
+                if (activeSearchQuery && activeFilter !== 'todos') {
+                    activeFilter = 'todos';
+                    const select = document.getElementById('catalog-category-select');
+                    if (select) select.value = 'todos';
+                }
+                renderCatalogProducts();
+            }, 180);
+        });
+    }
+
+    let wholesaleSearchTimer = null;
+    if (wholesaleInput) {
+        wholesaleInput.addEventListener('input', () => {
+            clearTimeout(wholesaleSearchTimer);
+            wholesaleSearchTimer = setTimeout(() => {
+                activeWholesaleSearchQuery = wholesaleInput.value.trim();
+                if (activeWholesaleSearchQuery && activeWholesaleFilter !== 'todos') {
+                    activeWholesaleFilter = 'todos';
+                    const select = document.getElementById('wholesale-category-select');
+                    if (select) select.value = 'todos';
+                }
+                renderWholesaleCatalogProducts();
+            }, 180);
+        });
+    }
 }
 
 // -- WHOLESALE ACCESS --
@@ -1079,6 +1362,7 @@ function initWholesaleAccess() {
     const closeBtn = document.getElementById('wholesale-close');
     const triggers = document.querySelectorAll('a[href="#mayorista"]');
     const retailTriggers = document.querySelectorAll('a[href="#coleccion"]');
+    const wholesaleSection = document.getElementById('catalogo-mayorista');
 
     if (!overlay || !form || !input) return;
 
@@ -1105,6 +1389,8 @@ function initWholesaleAccess() {
     retailTriggers.forEach(trigger => trigger.addEventListener('click', () => {
         activeCatalogMode = 'retail';
         activeFilter = 'todos';
+        wholesaleSection?.classList.remove('open');
+        wholesaleSection?.setAttribute('aria-hidden', 'true');
         renderCatalogProducts();
     }));
     closeBtn?.addEventListener('click', closeWholesale);
@@ -1122,17 +1408,9 @@ function initWholesaleAccess() {
         }
 
         closeWholesale();
-        activeCatalogMode = 'wholesale';
-        activeFilter = 'todos';
-        await Promise.all([
-            showBrandLoader(),
-            loadProducts({ renderCatalog: false })
-        ]);
-        renderCatalogProducts();
-        document.querySelectorAll('.section-tags span').forEach(s => {
-            s.classList.toggle('active', s.dataset.cat === 'todos');
-        });
-        document.getElementById('coleccion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        sessionStorage.setItem('blyxu_wholesale_access', '1');
+        await showBrandLoader();
+        window.location.href = 'mayorista.html';
     });
 }
 
@@ -1156,6 +1434,31 @@ function showBrandLoader() {
 
 function openWhatsAppMessage(message) {
     window.open(`https://wa.me/${BLYXU_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
+}
+
+function renderFloatingWhatsApp() {
+    const phone = String(getSiteConfigValue('Contacto_WhatsApp', BLYXU_WHATSAPP_PHONE)).replace(/\D/g, '');
+    if (!phone) return;
+
+    let button = document.getElementById('floating-whatsapp');
+    if (!button) {
+        button = document.createElement('a');
+        button.id = 'floating-whatsapp';
+        button.className = 'floating-whatsapp';
+        button.target = '_blank';
+        button.rel = 'noopener';
+        button.setAttribute('aria-label', 'Abrir WhatsApp de BLYXU');
+        button.innerHTML = `
+            <span class="floating-whatsapp-logo">
+                <img src="Logo2-nav.png" alt="" loading="lazy">
+            </span>
+            <span>WhatsApp</span>
+        `;
+        document.body.appendChild(button);
+    }
+
+    const message = 'Hola BLYXU, quiero hacer una consulta sobre sus productos.';
+    button.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
@@ -1191,40 +1494,53 @@ function getDemoProducts() {
 // -- INIT --
 async function saveOrderToGoogleSheets(cliente, total) {
     const productos = cart.map(item => ({
+        idVariacion: item.idVariacion || item.sku || item.name,
         id: item.idVariacion || item.sku || item.name,
         nombre: item.name,
         cantidad: item.qty,
         precio: item.price,
+        subtotal: item.price * item.qty,
         sku: item.sku || '',
         modo: item.mode || activeCatalogMode
     }));
 
-    const response = await fetch(GOOGLE_SHEET_API, {
-        method: 'POST',
-        body: JSON.stringify({
-            resource: 'pedidos',
-            action: 'crear',
-            data: {
-                nombre: cliente.nombre,
-                telefono: cliente.telefono,
-                email: cliente.email || '',
-                direccion: cliente.direccion,
-                ciudad: cliente.ciudad,
-                productos,
-                'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
-                subtotal: total,
-                metodoContacto: 'WhatsApp',
-                nota: cliente.nota || ''
-            }
-        })
-    });
-    const result = await response.json();
+    const orderId = `MAY-${Date.now()}`;
+    const payload = {
+        action: 'add_order',
+        'ID Pedido': orderId,
+        'Nombre Cliente': cliente.nombre,
+        'Telefono': cliente.telefono,
+        'Email': cliente.email || '',
+        'Direccion': cliente.direccion,
+        'Ciudad': cliente.ciudad,
+        'Productos JSON': JSON.stringify(productos),
+        'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
+        'Subtotal': total,
+        'Estado Pedido': 'Mayorista Pendiente',
+        'Metodo Contacto': 'Sistema Mayorista',
+        'Nota Cliente': cliente.nota || ''
+    };
 
-    if (!result.ok) {
-        throw new Error(result.error || 'No se pudo guardar el pedido');
+    try {
+        const response = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (result && result.status === 'success') {
+            return { ...payload, 'ID Pedido': result.id || orderId };
+        }
+        throw new Error(result?.message || result?.error || 'No se pudo guardar el pedido');
+    } catch (error) {
+        const formData = new FormData();
+        Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
+        await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: formData,
+            mode: 'no-cors'
+        });
+        return payload;
     }
-
-    return result.data;
 }
 
 function askCustomerInfo() {
@@ -1241,49 +1557,87 @@ function askCustomerInfo() {
     return { nombre, telefono, direccion, ciudad, nota };
 }
 
+function askRetailQuestion() {
+    return prompt('Pregunta o nota para enviar por WhatsApp (opcional)') || '';
+}
+
+function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder = null, total = 0, note = '' }) {
+    const hasHiddenPrices = cart.some(item => item.priceVisible === false);
+    let msg = isWholesaleOrder ? '*Pedido Mayorista BLYXU*\n\n' : '*Consulta BLYXU*\n\n';
+
+    if (savedOrder && savedOrder['ID Pedido']) {
+        msg += `*ID Pedido:* ${savedOrder['ID Pedido']}\n`;
+    }
+
+    if (cliente) {
+        msg += `*Cliente:* ${cliente.nombre}\n`;
+        msg += `*Telefono:* ${cliente.telefono}\n`;
+        msg += `*Direccion:* ${cliente.direccion}, ${cliente.ciudad}\n\n`;
+    } else {
+        msg += 'Hola, quiero consultar estos productos:\n\n';
+    }
+
+    cart.forEach(c => {
+        const lineTotal = c.priceVisible === false ? 'Precio por consultar' : formatMoney(c.price * c.qty);
+        msg += `- ${c.name} x ${c.qty} - ${lineTotal}\n`;
+        if (c.sku) msg += `  Ref: ${c.sku}\n`;
+    });
+
+    msg += hasHiddenPrices ? '\n*Total:* Por consultar' : `\n*Total: ${formatMoney(total)}*`;
+    const finalNote = cliente?.nota || note;
+    if (finalNote) msg += `\n\n*Nota:* ${finalNote}`;
+
+    return msg;
+}
+
 async function checkout() {
     if (!cart.length) return;
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    const cliente = askCustomerInfo();
-    if (!cliente) return;
+    const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
+    const cliente = isWholesaleOrder ? askCustomerInfo() : null;
+    if (isWholesaleOrder && !cliente) return;
+    const retailNote = isWholesaleOrder ? '' : askRetailQuestion();
 
     const btn = document.getElementById('btn-checkout');
     const originalText = btn ? btn.textContent : '';
     if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Guardando pedido...';
+        btn.textContent = isWholesaleOrder ? 'Registrando pedido...' : 'Preparando WhatsApp...';
     }
 
     let savedOrder = null;
-    try {
-        savedOrder = await saveOrderToGoogleSheets(cliente, total);
-    } catch (error) {
-        console.error('Error guardando pedido:', error);
-        alert(`No se pudo guardar el pedido en Google Sheets: ${error.message}`);
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = originalText;
+    if (isWholesaleOrder) {
+        try {
+            savedOrder = await saveOrderToGoogleSheets(cliente, total);
+        } catch (error) {
+            console.error('Error guardando pedido:', error);
+            alert(`No se pudo guardar el pedido en el sistema: ${error.message}`);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            return;
         }
-        return;
     }
 
-    let msg = '*Pedido BLYXU*\n\n';
-    if (savedOrder && savedOrder['ID Pedido']) {
-        msg += `*ID Pedido:* ${savedOrder['ID Pedido']}\n`;
-    }
-    msg += `*Cliente:* ${cliente.nombre}\n`;
-    msg += `*Telefono:* ${cliente.telefono}\n`;
-    msg += `*Direccion:* ${cliente.direccion}, ${cliente.ciudad}\n\n`;
-    cart.forEach(c => { msg += `- ${c.name} x ${c.qty} - ${formatMoney(c.price * c.qty)}\n`; });
-    msg += `\n*Total: ${formatMoney(total)}*`;
-    if (cliente.nota) msg += `\n\n*Nota:* ${cliente.nota}`;
+    const msg = buildCartWhatsAppMessage({
+        isWholesaleOrder,
+        cliente,
+        savedOrder,
+        total,
+        note: retailNote
+    });
 
     cart = [];
     saveCart();
     updateCartUI();
     closeCart();
 
-    openWhatsAppMessage(msg);
+    if (isWholesaleOrder) {
+        alert(`Pedido mayorista registrado en el sistema.${savedOrder?.['ID Pedido'] ? `\nID: ${savedOrder['ID Pedido']}` : ''}`);
+    } else {
+        openWhatsAppMessage(msg);
+    }
 
     if (btn) {
         btn.disabled = false;
@@ -1292,6 +1646,10 @@ async function checkout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (document.body?.dataset.catalogMode === 'wholesale') {
+        activeCatalogMode = 'wholesale';
+    }
+
     initParticles();
     initNavbar();
     initReveal();
@@ -1299,7 +1657,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initCatalogSearch();
     initWholesaleAccess();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
-    loadProducts({ renderCatalog: !isProductDetailPage });
+    const isContactPage = document.body?.dataset.page === 'contact';
+    renderFloatingWhatsApp();
+    if (isContactPage) {
+        fetchSiteConfig().then(() => {
+            renderContactPage();
+            renderFloatingWhatsApp();
+        });
+    } else {
+        loadProducts({ renderCatalog: !isProductDetailPage }).then(renderFloatingWhatsApp);
+    }
     updateCartUI();
 
     // Cart events

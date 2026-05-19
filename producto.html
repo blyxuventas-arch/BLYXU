@@ -16,14 +16,13 @@
     <nav class="navbar scrolled" id="navbar">
         <div class="nav-container">
             <a href="index.html" class="nav-logo">
-                <img src="Logo2.png" alt="BLYXU">
-                <span class="nav-logo-text">BLYXU</span>
+                <img src="Logo2-nav.png" alt="BLYXU">
             </a>
 
             <ul class="nav-links" id="nav-links">
                 <li><a href="index.html#inicio">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catálogo</a></li>
-                <li><a href="index.html#contacto">Contacto</a></li>
+                <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="administrativo.html">Administrativo</a></li>
             </ul>
 
@@ -46,6 +45,7 @@
         </section>
 
         <section class="product-info">
+            <div class="product-stock-alert" id="detail-stock-alert" style="display:none;"></div>
             <div class="product-info-cat" id="detail-cat">Categoría</div>
             <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
             
@@ -85,6 +85,8 @@
 
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
+                <button class="btn-consult-direct" id="btn-consult-product-detail" type="button" style="display:none;">Consultar este producto por WhatsApp</button>
+                <p class="cart-consult-note" id="detail-cart-note" style="display:none;">Añadir al carrito sirve para hacer una consulta general de varios productos.</p>
             </div>
         </section>
     </main>
@@ -117,6 +119,7 @@
                 <span>Total</span>
                 <span id="cart-total">$0</span>
             </div>
+            <p class="cart-consult-note" id="cart-consult-note"></p>
             <button class="btn-checkout" id="btn-checkout">Finalizar Compra vía WhatsApp</button>
         </div>
     </div>
@@ -129,7 +132,16 @@
             const productId = Number.parseInt(urlParams.get('id'), 10);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
             const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
+            const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
             activeCatalogMode = detailCatalogMode;
+
+            if (detailCatalogMode === 'wholesale') {
+                const catalogLink = document.querySelector('.nav-links a[href="index.html#coleccion"]');
+                if (catalogLink) {
+                    catalogLink.href = 'mayorista.html';
+                    catalogLink.textContent = 'Mayorista';
+                }
+            }
 
             // Esperar a que los productos carguen en blyxu-app.js
             // Como loadProducts es asíncrona, necesitamos asegurarnos de que terminó
@@ -142,7 +154,7 @@
                 document.getElementById('product-detail').innerHTML = `
                     <div class="product-not-found">
                         <h2>Producto no encontrado</h2>
-                        <a href="index.html#coleccion" class="main-banner-btn">Volver al catálogo</a>
+                        <a href="${catalogBackUrl}" class="main-banner-btn">Volver al catálogo</a>
                     </div>
                 `;
                 return;
@@ -155,17 +167,32 @@
             const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
             const cat = product.Categoria || product.categoria || '';
             const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
-            const stock = parseInt(product.Stock || product.stock || 0);
+            const stock = getProductStock(product);
             const colors = product.Color || product.color || 'Único';
             const sku = product.SKU || product.idVariacion || '';
             const size = product.Tamano || product.tamano || '';
             const style = product.Estilo || product.estilo || '';
 
             document.getElementById('detail-name').textContent = name;
+            const stockAlert = document.getElementById('detail-stock-alert');
+            if (stockAlert) {
+                stockAlert.className = 'product-stock-alert';
+                if (stock <= 0) {
+                    stockAlert.textContent = 'Agotado por ahora';
+                    stockAlert.classList.add('is-out');
+                    stockAlert.style.display = 'inline-flex';
+                } else if (stock <= LOW_STOCK_THRESHOLD) {
+                    stockAlert.textContent = `Bajo stock: quedan ${stock} unidades`;
+                    stockAlert.classList.add('is-low');
+                    stockAlert.style.display = 'inline-flex';
+                } else {
+                    stockAlert.style.display = 'none';
+                }
+            }
             document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
             document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
             document.getElementById('detail-desc').textContent = desc;
-            document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado';
+            document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado por ahora';
             document.getElementById('detail-colors').textContent = colors;
 
             if (sku) {
@@ -274,18 +301,24 @@
             }
 
             const detailCartBtn = document.getElementById('btn-add-to-cart-detail');
-            detailCartBtn.disabled = detailShowsPrices && stock <= 0;
-            if (!detailShowsPrices) detailCartBtn.textContent = 'Consultar por WhatsApp';
-            detailCartBtn.textContent = !detailShowsPrices ? 'Precio por consultar' : (stock > 0 ? 'Añadir al Carrito' : 'Producto Agotado');
-            if (!detailShowsPrices) detailCartBtn.textContent = 'Consultar por WhatsApp';
+            const detailConsultBtn = document.getElementById('btn-consult-product-detail');
+            const detailCartNote = document.getElementById('detail-cart-note');
+            detailCartBtn.disabled = stock <= 0;
+            detailCartBtn.textContent = stock > 0
+                ? (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general')
+                : 'Agotado por ahora';
             detailCartBtn.onclick = () => {
-                if (!detailShowsPrices) {
-                    consultProductByWhatsApp(product);
-                    return;
-                }
                 if (stock <= 0) return;
                 addToCart(productId, null, detailCatalogMode);
             };
+            if (!detailShowsPrices && stock > 0) {
+                detailCartBtn.closest('.product-info-actions')?.classList.add('has-consult-actions');
+                if (detailConsultBtn) {
+                    detailConsultBtn.style.display = 'inline-flex';
+                    detailConsultBtn.onclick = () => consultProductByWhatsApp(product);
+                }
+                if (detailCartNote) detailCartNote.style.display = 'block';
+            }
 
             // Renderizar recomendados (otros productos de la misma categoría o aleatorios)
             const normalizedCat = cat.toLowerCase();

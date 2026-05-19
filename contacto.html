@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacto - BLYXU</title>
+    <meta name="description" content="Informacion de contacto, ubicacion y horarios de atencion de BLYXU.">
+    <link rel="stylesheet" href="blyxu-style.css">
+</head>
+
+<body data-page="contact">
+    <div class="bg-animation"></div>
+    <canvas id="particles-canvas"></canvas>
+
+    <nav class="navbar scrolled" id="navbar">
+        <a href="index.html" class="nav-logo">
+            <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
+        </a>
+
+        <ul class="nav-links" id="nav-links">
+            <li><a href="index.html#inicio">Inicio</a></li>
+            <li><a href="index.html#coleccion">Catalogo</a></li>
+            <li><a href="#mayorista">Mayorista</a></li>
+            <li><a href="contacto.html" class="active">Contacto</a></li>
+            <li><a href="administrativo.html">Administrativo</a></li>
+        </ul>
+
+        <div class="nav-actions">
+            <div class="nav-icon" id="cart-btn" style="position:relative">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
+                </svg>
+                <span class="cart-badge" id="cart-count" style="display:none">0</span>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="contact-page contact-concierge">
+        <section class="contact-hero contact-hero-luxury">
+            <div class="contact-hero-bg"></div>
+            <div class="contact-hero-content">
+                <span class="contact-kicker">Exclusividad garantizada</span>
+                <h1>BLYXU Concierge</h1>
+                <p id="contact-note">Coordina tu visita, consulta disponibilidad de piezas y recibe atencion directa para tus pedidos BLYXU.</p>
+                <a class="contact-hero-btn" href="#contact-request">Programar visita</a>
+            </div>
+        </section>
+
+        <section class="contact-grid contact-grid-luxury">
+            <article class="contact-card contact-card-main reveal">
+                <span class="contact-card-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1116 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </span>
+                <span class="contact-card-label">Sede boutique</span>
+                <h2 id="contact-address">Bogota, Colombia</h2>
+                <p id="contact-city">Atencion nacional desde Bogota</p>
+                <a class="contact-action" id="contact-map-link" href="https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6" target="_blank" rel="noopener">Ver en Google Maps</a>
+            </article>
+
+            <article class="contact-card contact-schedule-card reveal">
+                <span class="contact-card-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                </span>
+                <span class="contact-card-label">Horarios VIP</span>
+                <h2 id="contact-days">Lunes a Sabado</h2>
+                <p id="contact-hours">10:00 a.m. - 7:00 p.m.</p>
+                <div class="contact-hours-timeline" id="contact-hours-timeline">
+                    <div class="contact-time-node active"><span>Apertura</span><strong>10:00 AM</strong></div>
+                    <div class="contact-time-node"><span>Pedidos</span><strong>Disponible</strong></div>
+                    <div class="contact-time-node"><span>Cierre</span><strong>7:00 PM</strong></div>
+                </div>
+            </article>
+
+            <article class="contact-card contact-clock-card reveal">
+                <span class="contact-card-label">Reloj de la maison</span>
+                <div class="contact-live-clock" id="contact-live-clock">00:00:00</div>
+                <p id="contact-clock-city">Bogota, Colombia</p>
+            </article>
+
+            <article class="contact-card contact-channel-card reveal">
+                <span class="contact-card-label">Canales concierge</span>
+                <div class="contact-links">
+                    <a id="contact-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+                    <a id="contact-instagram" href="#" target="_blank" rel="noopener">Instagram</a>
+                    <a id="contact-email" href="#">Correo</a>
+                </div>
+            </article>
+        </section>
+
+        <section class="contact-experience-grid">
+            <article class="contact-map-panel reveal">
+                <div class="contact-map-surface">
+                    <iframe id="contact-map-frame" title="Mapa de Bogota"
+                        src="https://www.google.com/maps?q=Bogota%2C%20Colombia&output=embed"
+                        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                    <div class="contact-map-card">
+                        <span>Ubicacion actual</span>
+                        <strong id="contact-map-title">BLYXU Boutique</strong>
+                    </div>
+                    <div class="contact-map-pin pin-one"></div>
+                    <div class="contact-map-pin pin-two"></div>
+                    <div class="contact-map-pin pin-three"></div>
+                </div>
+            </article>
+
+            <article class="contact-card contact-request-card reveal" id="contact-request">
+                <span class="contact-card-label">Solicitud privada</span>
+                <h2 id="contact-service-title">Pedidos privados</h2>
+                <p id="contact-service-detail">Escribenos para coordinar compras, confirmar disponibilidad y programar atencion en boutique.</p>
+                <form class="contact-request-form" id="contact-request-form">
+                    <input type="text" id="contact-request-name" placeholder="Nombre completo" required>
+                    <input type="email" id="contact-request-email" placeholder="Correo electronico">
+                    <select id="contact-request-topic">
+                        <option value="Visita boutique">Visita boutique</option>
+                        <option value="Compra mayorista">Compra mayorista</option>
+                        <option value="Disponibilidad de piezas">Disponibilidad de piezas</option>
+                        <option value="Programar recogida">Programar recogida</option>
+                    </select>
+                    <textarea id="contact-request-message" placeholder="Mensaje o requerimientos especiales"></textarea>
+                    <button type="submit">Enviar solicitud concierge</button>
+                </form>
+            </article>
+        </section>
+    </main>
+
+    <footer class="footer" id="contacto">
+        <div class="footer-brand">
+            <a href="index.html" class="nav-logo">
+                <img src="Logo2-nav.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
+            </a>
+            <p>Joyeria y accesorios premium con disenos exclusivos.</p>
+        </div>
+        <div>
+            <h4>Navegacion</h4>
+            <ul>
+                <li><a href="index.html#inicio">Inicio</a></li>
+                <li><a href="index.html#coleccion">Catalogo</a></li>
+                <li><a href="#mayorista">Mayorista</a></li>
+                <li><a href="contacto.html">Contacto</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Contacto</h4>
+            <ul>
+                <li><a id="footer-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a></li>
+                <li><a id="footer-instagram" href="#" target="_blank" rel="noopener">Instagram</a></li>
+                <li><a id="footer-email" href="#">Correo</a></li>
+            </ul>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 BLYXU - Todos los derechos reservados</span>
+            <span>Hecho en Colombia</span>
+        </div>
+    </footer>
+
+    <div class="cart-overlay" id="cart-overlay"></div>
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h3>Tu Carrito</h3>
+            <button class="cart-close" id="cart-close">Cerrar</button>
+        </div>
+        <div class="cart-items" id="cart-items">
+            <div class="cart-empty">Tu carrito esta vacio</div>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total</span>
+                <span id="cart-total">$0</span>
+            </div>
+            <button class="btn-checkout" id="btn-checkout">Finalizar Pedido por WhatsApp</button>
+        </div>
+    </div>
+
+    <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
+        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
+            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">Cerrar</button>
+            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
+            <div class="wholesale-kicker">Vault Access</div>
+            <h2 id="wholesale-title">Ingresa tu clave</h2>
+            <form class="wholesale-form" id="wholesale-form">
+                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave de acceso" autocomplete="off" required>
+                <button type="submit">Autenticar</button>
+            </form>
+            <div class="wholesale-error" id="wholesale-error">Clave incorrecta</div>
+        </div>
+    </div>
+
+    <div class="brand-loader" id="brand-loader" aria-hidden="true">
+        <div class="brand-loader-card">
+            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
+            <span>BLYXU</span>
+            <div class="brand-loader-bar">
+                <div class="brand-loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="blyxu-app.js"></script>
+</body>
+
+</html>

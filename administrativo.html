@@ -451,7 +451,7 @@
 
                 <!-- VISTA 4: AJUSTES -->
                 <div id="view-settings" class="dashboard-section">
-                    <div class="admin-panel" style="max-width: 600px;">
+                    <div class="admin-panel" style="max-width: 860px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:24px; margin-bottom:32px;">
                             <div>
                                 <h3 style="margin:0; font-size:15px; font-weight:800; color:#fff;">Precios Minoristas</h3>
@@ -459,6 +459,57 @@
                             </div>
                             <button class="admin-btn" id="toggle-retail-prices" style="width:100px; padding:10px; border-radius:99px; background:#fff; color:#111;">OFF</button>
                         </div>
+
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Informacion de Contacto</h3>
+                        <form id="contact-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div class="admin-form-grid">
+                                <div class="form-group">
+                                    <label>Direccion</label>
+                                    <input type="text" class="form-control" id="contact-config-address" placeholder="Bogota, Colombia">
+                                </div>
+                                <div class="form-group">
+                                    <label>Ciudad / Sector</label>
+                                    <input type="text" class="form-control" id="contact-config-city" placeholder="Atencion nacional desde Bogota">
+                                </div>
+                                <div class="form-group">
+                                    <label>Dias de Atencion</label>
+                                    <input type="text" class="form-control" id="contact-config-days" placeholder="Ej: Lunes a Sabado">
+                                </div>
+                                <div class="form-group">
+                                    <label>Horarios</label>
+                                    <input type="text" class="form-control" id="contact-config-hours" placeholder="Ej: 10:00 a.m. - 7:00 p.m.">
+                                </div>
+                                <div class="form-group">
+                                    <label>WhatsApp</label>
+                                    <input type="text" class="form-control" id="contact-config-whatsapp" placeholder="Ej: 573112368622">
+                                </div>
+                                <div class="form-group">
+                                    <label>Instagram</label>
+                                    <input type="text" class="form-control" id="contact-config-instagram" placeholder="@blyxu o URL">
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo</label>
+                                    <input type="email" class="form-control" id="contact-config-email" placeholder="ventas@blyxu.com">
+                                </div>
+                                <div class="form-group">
+                                    <label>URL Google Maps</label>
+                                    <input type="url" class="form-control" id="contact-config-map" placeholder="https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6">
+                                </div>
+                                <div class="form-group admin-form-wide">
+                                    <label>Nota Principal</label>
+                                    <textarea class="form-control" id="contact-config-note" rows="2" placeholder="Texto principal de la pagina de contacto"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Titulo de Atencion</label>
+                                    <input type="text" class="form-control" id="contact-config-service-title" placeholder="Pedidos privados">
+                                </div>
+                                <div class="form-group">
+                                    <label>Detalle de Atencion</label>
+                                    <textarea class="form-control" id="contact-config-service-detail" rows="2" placeholder="Escribenos para coordinar compras, confirmar disponibilidad y programar atencion en boutique."></textarea>
+                                </div>
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-contact-config">Guardar Contacto</button>
+                        </form>
                         
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Carrusel de Inicio</h3>
                         <form id="carousel-image-form">

@@ -3,6 +3,19 @@ const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
+const CONTACT_CONFIG_FIELDS = [
+    ['Contacto_Direccion', 'contact-config-address'],
+    ['Contacto_Ciudad', 'contact-config-city'],
+    ['Contacto_Dias', 'contact-config-days'],
+    ['Contacto_Horarios', 'contact-config-hours'],
+    ['Contacto_WhatsApp', 'contact-config-whatsapp'],
+    ['Contacto_Instagram', 'contact-config-instagram'],
+    ['Contacto_Email', 'contact-config-email'],
+    ['Contacto_Mapa_URL', 'contact-config-map'],
+    ['Contacto_Nota', 'contact-config-note'],
+    ['Contacto_Titulo_Atencion', 'contact-config-service-title'],
+    ['Contacto_Detalle_Atencion', 'contact-config-service-detail']
+];
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -442,6 +455,7 @@ function updateCategoryOptions() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initRetailPriceToggle();
+    initContactConfigAdmin();
     initInventorySearch();
     initInventoryActions();
     initCarouselImageAdmin();
@@ -794,12 +808,16 @@ async function loadSiteConfigForAdmin() {
         const data = await res.json();
         return data && data.status === 'success' ? (data.config || {}) : {};
     } catch (err) {
+        clearTimeout(timeout);
+        clearTimeout(timeout);
         console.warn('No se pudo cargar configuración:', err);
         return {};
     }
 }
 
 async function saveSiteConfig(key, value) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 9000);
     try {
         const formData = new FormData();
         formData.append('action', 'set_config');
@@ -809,12 +827,55 @@ async function saveSiteConfig(key, value) {
         await fetch(GOOGLE_SHEET_API, {
             method: 'POST',
             body: formData,
-            mode: 'no-cors'
+            mode: 'no-cors',
+            signal: controller.signal
         });
+        clearTimeout(timeout);
     } catch (err) {
+        clearTimeout(timeout);
         console.error('No se pudo guardar configuración:', err);
         showToast('No se pudo guardar configuración en Google Sheets');
     }
+}
+
+function fillContactConfigForm(config) {
+    CONTACT_CONFIG_FIELDS.forEach(([key, id]) => {
+        const input = document.getElementById(id);
+        if (input) input.value = config?.[key] || '';
+    });
+}
+
+function initContactConfigAdmin() {
+    const form = document.getElementById('contact-config-form');
+    if (!form) return;
+
+    loadSiteConfigForAdmin().then(fillContactConfigForm);
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-contact-config');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            await Promise.all(CONTACT_CONFIG_FIELDS.map(([key, id]) => {
+                const value = document.getElementById(id)?.value?.trim() || '';
+                return saveSiteConfig(key, value);
+            }));
+            showToast('Contacto actualizado');
+        } catch (err) {
+            console.error('No se pudo guardar contacto:', err);
+            showToast('No se pudo guardar contacto');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText || 'Guardar Contacto';
+            }
+        }
+    });
 }
 
 function fileToBase64(file) {

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat&aacute;logo Mayorista - BLYXU</title>
+    <meta name="description" content="Cat&aacute;logo mayorista BLYXU. Acceso exclusivo para clientes mayoristas.">
+    <link rel="stylesheet" href="blyxu-style.css">
+</head>
+
+<body data-catalog-mode="wholesale">
+    <div class="bg-animation"></div>
+    <canvas id="particles-canvas"></canvas>
+
+    <nav class="navbar scrolled" id="navbar">
+        <a href="index.html" class="nav-logo">
+            <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
+        </a>
+
+        <ul class="nav-links" id="nav-links">
+            <li><a href="index.html#inicio">Inicio</a></li>
+            <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
+            <li><a href="mayorista.html" class="active">Mayorista</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="administrativo.html">Administrativo</a></li>
+        </ul>
+
+        <div class="nav-actions">
+            <div class="nav-icon" id="cart-btn" style="position:relative">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
+                </svg>
+                <span class="cart-badge" id="cart-count" style="display:none">0</span>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <section class="collection-section wholesale-page-section" id="coleccion">
+        <div class="section-header">
+            <div>
+                <h2 class="section-title">CAT&Aacute;LOGO MAYORISTA</h2>
+                <div class="smart-search">
+                    <input type="search" id="catalog-search" placeholder="Buscar producto mayorista, categor&iacute;a, color o SKU"
+                        autocomplete="off">
+                </div>
+            </div>
+            <div class="catalog-filter-bar" style="justify-content: flex-end;">
+                <label class="category-select-wrap" for="catalog-category-select">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        aria-hidden="true">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    <select id="catalog-category-select" aria-label="Filtrar por categor&iacute;a">
+                        <option value="todos">Todas las categor&iacute;as</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <div class="loading-container" id="loading-products">
+            <div class="spinner"></div>
+            <span class="loading-text">Cargando productos mayoristas...</span>
+        </div>
+
+        <div class="products-grid" id="products-grid"></div>
+    </section>
+
+    <footer class="footer" id="contacto">
+        <div class="footer-brand">
+            <a href="index.html" class="nav-logo">
+                <img src="Logo2-nav.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
+            </a>
+            <p>Cat&aacute;logo exclusivo para compras mayoristas BLYXU.</p>
+        </div>
+        <div>
+            <h4>Navegaci&oacute;n</h4>
+            <ul>
+                <li><a href="index.html#inicio">Inicio</a></li>
+                <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
+                <li><a href="mayorista.html">Mayorista</a></li>
+                <li><a href="contacto.html">Contacto</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Categor&iacute;as</h4>
+            <ul>
+                <li><a href="#" onclick="setFilter('collares')">Collares</a></li>
+                <li><a href="#" onclick="setFilter('pulseras')">Pulseras</a></li>
+                <li><a href="#" onclick="setFilter('aretes')">Aretes</a></li>
+                <li><a href="#" onclick="setFilter('anillos')">Anillos</a></li>
+            </ul>
+        </div>
+        <div>
+            <h4>Contacto</h4>
+            <ul>
+                <li><a href="#">WhatsApp</a></li>
+                <li><a href="#">Instagram</a></li>
+                <li><a href="#">Facebook</a></li>
+            </ul>
+        </div>
+        <div class="footer-bottom">
+            <span>&copy; 2026 BLYXU&trade; - Todos los derechos reservados</span>
+            <span>Hecho en Colombia</span>
+        </div>
+    </footer>
+
+    <div class="cart-overlay" id="cart-overlay"></div>
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-header">
+            <h3>Tu Carrito</h3>
+            <button class="cart-close" id="cart-close">Cerrar</button>
+        </div>
+        <div class="cart-items" id="cart-items">
+            <div class="cart-empty">Tu carrito est&aacute; vac&iacute;o</div>
+        </div>
+        <div class="cart-footer">
+            <div class="cart-total">
+                <span>Total</span>
+                <span id="cart-total">$0</span>
+            </div>
+            <button class="btn-checkout" id="btn-checkout">Finalizar Pedido por WhatsApp</button>
+        </div>
+    </div>
+
+    <div class="brand-loader" id="brand-loader" aria-hidden="true">
+        <div class="brand-loader-card">
+            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
+            <span>BLYXU</span>
+            <div class="brand-loader-bar">
+                <div class="brand-loader-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="blyxu-app.js"></script>
+</body>
+
+</html>
