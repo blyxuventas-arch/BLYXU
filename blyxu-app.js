@@ -1353,6 +1353,37 @@ function initCatalogSearch() {
     }
 }
 
+function launchWholesaleConfetti() {
+    const colors = ['#9b2cfa', '#d946ef', '#ffd969', '#ffffff'];
+    const container = document.createElement('div');
+    container.className = 'wholesale-confetti';
+    document.body.appendChild(container);
+
+    const pieces = 80;
+    for (let i = 0; i < pieces; i += 1) {
+        const piece = document.createElement('span');
+        const angle = (Math.random() * 120) - 60;
+        const distance = 120 + Math.random() * 260;
+        const x = Math.sin(angle * Math.PI / 180) * distance;
+        const y = -(120 + Math.random() * 280);
+        piece.style.setProperty('--x', `${x}px`);
+        piece.style.setProperty('--y', `${y}px`);
+        piece.style.setProperty('--r', `${Math.random() * 720 - 360}deg`);
+        piece.style.setProperty('--c', colors[i % colors.length]);
+        piece.style.left = `${10 + Math.random() * 80}%`;
+        piece.style.animationDelay = `${Math.random() * 0.2}s`;
+        piece.style.animationDuration = `${1.15 + Math.random() * 0.75}s`;
+        container.appendChild(piece);
+    }
+
+    return new Promise(resolve => {
+        setTimeout(() => {
+            container.remove();
+            resolve();
+        }, 1700);
+    });
+}
+
 // -- WHOLESALE ACCESS --
 function initWholesaleAccess() {
     const overlay = document.getElementById('wholesale-overlay');
@@ -1410,6 +1441,7 @@ function initWholesaleAccess() {
         closeWholesale();
         sessionStorage.setItem('blyxu_wholesale_access', '1');
         await showBrandLoader();
+        await launchWholesaleConfetti();
         window.location.href = 'mayorista.html';
     });
 }
@@ -1459,6 +1491,48 @@ function renderFloatingWhatsApp() {
 
     const message = 'Hola BLYXU, quiero hacer una consulta sobre sus productos.';
     button.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+}
+
+function initCustomCursor() {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (document.getElementById('blyxu-cursor')) return;
+
+    const cursor = document.createElement('div');
+    cursor.id = 'blyxu-cursor';
+    cursor.innerHTML = '<span class="cursor-dot"></span><span class="cursor-ring"></span>';
+    document.body.appendChild(cursor);
+
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    let ringX = x;
+    let ringY = y;
+
+    function move() {
+        ringX += (x - ringX) * 0.2;
+        ringY += (y - ringY) * 0.2;
+        cursor.style.setProperty('--cursor-x', `${x}px`);
+        cursor.style.setProperty('--cursor-y', `${y}px`);
+        cursor.style.setProperty('--ring-x', `${ringX}px`);
+        cursor.style.setProperty('--ring-y', `${ringY}px`);
+        requestAnimationFrame(move);
+    }
+
+    window.addEventListener('mousemove', event => {
+        x = event.clientX;
+        y = event.clientY;
+        cursor.classList.add('is-visible');
+    }, { passive: true });
+
+    window.addEventListener('mouseout', event => {
+        if (!event.relatedTarget) cursor.classList.remove('is-visible');
+    });
+
+    document.addEventListener('mouseover', event => {
+        const target = event.target;
+        cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .marquee-item')));
+    });
+
+    move();
 }
 
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
@@ -1656,6 +1730,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderInventorySpotlightLoading();
     initCatalogSearch();
     initWholesaleAccess();
+    initCustomCursor();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
     const isContactPage = document.body?.dataset.page === 'contact';
     renderFloatingWhatsApp();

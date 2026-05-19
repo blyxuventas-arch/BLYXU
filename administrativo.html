@@ -160,15 +160,20 @@
         .login-box { background:var(--glass-bg); backdrop-filter:blur(20px); padding:40px; border-radius:20px; text-align:center; width:90%; max-width:360px; border:1px solid rgba(168,85,247,0.08); box-shadow:0 40px 80px rgba(0,0,0,0.5); }
         .login-box h2 { color:var(--text-dim); letter-spacing:2px; font-size:11px; font-weight:600; margin-bottom:18px; text-transform:uppercase; }
         #admin-login-screen { background:#050009; }
-        .login-box { background:#221b2d; padding:44px 48px 36px; border-radius:10px; max-width:430px; border:1px solid rgba(244,196,65,0.22); border-top-color:rgba(244,196,65,0.58); box-shadow:0 36px 90px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06); }
+        .login-box { background:radial-gradient(circle at 50% -12%,rgba(244,196,65,0.12),transparent 34%),linear-gradient(180deg,rgba(26,18,38,0.94),rgba(14,8,24,0.96)); padding:38px 42px 34px; border-radius:18px; max-width:410px; border:1px solid rgba(244,196,65,0.18); box-shadow:0 34px 92px rgba(0,0,0,0.74),0 0 44px rgba(155,44,250,0.18),inset 0 1px 0 rgba(255,255,255,0.08); overflow:hidden; }
         .login-box img { display:none!important; }
-        .login-box::before { content:'BLYXU'; display:block; color:#fff; font-family:Georgia,'Times New Roman',serif; font-size:32px; font-weight:800; letter-spacing:1px; text-shadow:2px 0 #a855f7,-2px 0 #f4c441; margin-bottom:6px; }
-        .login-box h2 { color:#f4c441; letter-spacing:6px; font-size:10px; font-weight:800; margin-bottom:28px; }
+        .login-box::before { content:'BLYXU'; display:block; color:#fff; font-family:Georgia,'Times New Roman',serif; font-size:30px; font-weight:800; letter-spacing:1px; text-shadow:2px 0 #a855f7,-2px 0 #f4c441,0 12px 28px rgba(0,0,0,0.45); margin-bottom:6px; }
+        .login-box h2 { color:#f4c441; letter-spacing:5px; font-size:10px; font-weight:800; margin-bottom:24px; }
         .login-box h2 { font-size:0; }
         .login-box h2::before { content:'VAULT ACCESS'; font-size:10px; }
-        .login-box .form-control { height:56px; border-radius:8px; background:#151020; border:1px solid rgba(255,255,255,0.05); color:#fff; letter-spacing:8px!important; text-align:center; font-size:14px; }
-        .login-box .form-control::placeholder { color:rgba(255,255,255,0.42); letter-spacing:8px; }
-        .login-box .admin-btn { height:44px; border-radius:8px; background:linear-gradient(135deg,#ffd95c,#b89610); color:#09030f; text-transform:uppercase; letter-spacing:.8px; font-size:11px; font-weight:800; box-shadow:0 14px 32px rgba(244,196,65,0.18); }
+        .login-box .form-control { height:58px; border-radius:12px; background:rgba(7,3,16,0.72); border:1px solid rgba(168,85,247,0.45); color:#fff; letter-spacing:7px!important; text-align:center; font-size:14px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02),0 0 22px rgba(168,85,247,0.14); transition:border-color .25s ease,box-shadow .25s ease,background .25s ease; }
+        .login-box .form-control:focus { border-color:rgba(244,196,65,0.74); background:rgba(9,4,19,0.9); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 0 0 3px rgba(244,196,65,0.1),0 0 32px rgba(168,85,247,0.26); }
+        .login-box .form-control::placeholder { color:rgba(255,255,255,0.34); letter-spacing:7px; }
+        .login-box .admin-btn { position:relative; height:48px; overflow:hidden; border-radius:12px; background:linear-gradient(135deg,#ffe477,#d8ac16 52%,#f4c441); color:#09030f; text-transform:uppercase; letter-spacing:.8px; font-size:11px; font-weight:800; box-shadow:0 16px 34px rgba(244,196,65,0.2); transition:transform .22s ease,box-shadow .22s ease,filter .22s ease; }
+        .login-box .admin-btn::before { content:''; position:absolute; inset:0; background:linear-gradient(110deg,transparent 0 35%,rgba(255,255,255,0.55) 48%,transparent 62% 100%); transform:translateX(-120%); animation:adminButtonSheen 2.8s ease-in-out infinite; }
+        .login-box .admin-btn:hover { transform:translateY(-2px); filter:saturate(1.08); box-shadow:0 20px 42px rgba(244,196,65,0.3); }
+        .login-box .admin-btn:active { transform:translateY(0)scale(0.98); }
+        @keyframes adminButtonSheen { 0%,48%{transform:translateX(-120%)} 78%,100%{transform:translateX(120%)} }
         #login-error { color:var(--danger); font-size:11px; margin-bottom:12px; display:none; font-weight:500; }
         .loader-container { width:100%; height:2.5px; background:rgba(255,255,255,0.04); border-radius:99px; overflow:hidden; margin-top:24px; display:none; }
         .loader-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:99px; transition:width 0.1s linear; }
@@ -181,6 +186,137 @@
         .empty-state span { font-size:32px; display:block; margin-bottom:12px; }
         .empty-state p { font-size:12px; color:var(--text-muted); }
         .inventory-load-more-row td { background:rgba(13,10,26,0.4)!important; }
+
+        /* PRODUCT + SETTINGS VISUAL POLISH */
+        #view-products .grid-split { grid-template-columns:minmax(420px,560px) minmax(280px,1fr); gap:24px; }
+        #view-products .admin-panel.gradient-bg,
+        #view-settings > .admin-panel {
+            position:relative;
+            overflow:hidden;
+            border-radius:20px!important;
+            border:1px solid rgba(168,85,247,0.13)!important;
+            background:
+                radial-gradient(circle at 16% 0%,rgba(168,85,247,0.14),transparent 32%),
+                radial-gradient(circle at 92% 8%,rgba(244,196,65,0.07),transparent 30%),
+                linear-gradient(180deg,rgba(25,19,39,0.88),rgba(13,10,26,0.96))!important;
+            box-shadow:0 26px 70px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.04)!important;
+        }
+        #view-products .admin-panel.gradient-bg::before,
+        #view-settings > .admin-panel::before {
+            content:'';
+            position:absolute;
+            inset:0;
+            pointer-events:none;
+            background:linear-gradient(135deg,rgba(255,255,255,0.05),transparent 34%,rgba(168,85,247,0.04));
+            opacity:.8;
+        }
+        #view-products .admin-title-row {
+            position:relative;
+            margin-bottom:22px;
+            padding-bottom:16px;
+            border-bottom:1px solid rgba(255,255,255,0.055);
+        }
+        #view-products .admin-title-row h2,
+        #view-settings h3 {
+            letter-spacing:-0.2px;
+        }
+        #product-form,
+        #contact-config-form,
+        #carousel-image-form {
+            position:relative;
+            z-index:1;
+        }
+        #view-products .form-group label,
+        #view-settings .form-group label {
+            margin-bottom:6px;
+            color:rgba(216,180,254,0.72);
+            font-size:9.5px;
+            letter-spacing:.7px;
+            text-transform:uppercase;
+        }
+        #view-products .form-control,
+        #view-settings .form-control {
+            min-height:42px;
+            border-radius:12px!important;
+            border-color:rgba(168,85,247,0.1)!important;
+            background:rgba(4,2,10,0.34)!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.025);
+        }
+        #view-products .form-control:hover,
+        #view-settings .form-control:hover {
+            border-color:rgba(168,85,247,0.22)!important;
+            background:rgba(4,2,10,0.42)!important;
+        }
+        #view-products .form-control:focus,
+        #view-settings .form-control:focus {
+            border-color:rgba(244,196,65,0.58)!important;
+            box-shadow:0 0 0 3px rgba(244,196,65,0.08),0 0 24px rgba(168,85,247,0.16)!important;
+        }
+        #prod-image-drop-zone,
+        #carousel-preview {
+            border-radius:16px!important;
+            border-color:rgba(168,85,247,0.24)!important;
+            background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(0,0,0,0.18))!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        #prod-image-drop-zone:hover,
+        #carousel-preview:hover {
+            border-color:rgba(244,196,65,0.36)!important;
+            background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(244,196,65,0.04))!important;
+        }
+        #product-form > div[style*="grid-column"] {
+            border-color:rgba(244,196,65,0.18)!important;
+            background:linear-gradient(135deg,rgba(244,196,65,0.06),rgba(168,85,247,0.055))!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.035);
+        }
+        #product-form > div:last-child {
+            padding-top:18px;
+            border-top:1px solid rgba(255,255,255,0.055);
+        }
+        #btn-add-variant {
+            background:linear-gradient(135deg,#6c5ce7,#a855f7)!important;
+            box-shadow:0 12px 26px rgba(108,92,231,0.2)!important;
+        }
+        #btn-save,
+        #btn-save-contact-config,
+        #btn-save-carousel {
+            background:linear-gradient(135deg,#a855f7,#7c3aed)!important;
+            box-shadow:0 14px 30px rgba(168,85,247,0.2)!important;
+        }
+        #view-products .preview-card {
+            border-radius:18px;
+            border-color:rgba(244,196,65,0.16);
+            background:linear-gradient(180deg,rgba(24,16,38,0.9),rgba(10,6,18,0.94));
+        }
+        #view-products .preview-img-wrapper {
+            background:radial-gradient(circle at 50% 36%,rgba(244,196,65,0.12),transparent 34%),linear-gradient(135deg,#12081f,#07030f);
+        }
+        #view-settings > .admin-panel {
+            max-width:920px!important;
+            padding:28px!important;
+        }
+        #view-settings > .admin-panel > div:first-child {
+            border-radius:18px!important;
+            border-color:rgba(244,196,65,0.14)!important;
+            background:linear-gradient(135deg,rgba(244,196,65,0.08),rgba(168,85,247,0.06))!important;
+        }
+        #toggle-retail-prices {
+            color:#100718!important;
+            background:linear-gradient(135deg,#fff,#f4c441)!important;
+            box-shadow:0 12px 26px rgba(244,196,65,0.18)!important;
+        }
+        #contact-config-form {
+            padding:22px!important;
+            border:1px solid rgba(255,255,255,0.055)!important;
+            border-radius:18px;
+            background:rgba(0,0,0,0.12);
+        }
+        #carousel-image-form {
+            padding:22px;
+            border:1px solid rgba(255,255,255,0.055);
+            border-radius:18px;
+            background:rgba(0,0,0,0.12);
+        }
 
         @media(max-width:1100px) { .grid-split{grid-template-columns:1fr} .dashboard-layout{grid-template-columns:1fr} .sub-sidebar{display:none} }
         @media(max-width:768px) { .dashboard-header{padding:14px 18px 8px;flex-direction:column;align-items:flex-start;gap:4px} .dashboard-content-area{padding:0 14px 20px} .admin-panel{padding:16px;border-radius:12px} .dashboard-header h1{font-size:17px} }
