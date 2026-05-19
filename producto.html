@@ -37,15 +37,15 @@
     </nav>
 
     <!-- ===== PRODUCT DETAIL ===== -->
-    <main class="product-detail-container" id="product-detail">
-        <div class="product-gallery">
+    <main class="product-detail-container product-detail-luxury" id="product-detail">
+        <section class="product-gallery">
             <div class="product-main-img" id="detail-img-container">
                 <img src="" alt="" id="detail-img" style="transition: opacity 0.2s ease-in-out;">
             </div>
-            <div class="product-thumbnails" id="detail-thumbnails" style="display: flex; gap: 10px; margin-top: 15px; overflow-x: auto; padding-bottom: 5px;"></div>
-        </div>
+            <div class="product-thumbnails" id="detail-thumbnails"></div>
+        </section>
 
-        <div class="product-info">
+        <section class="product-info">
             <div class="product-info-cat" id="detail-cat">Categoría</div>
             <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
             
@@ -86,18 +86,23 @@
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
             </div>
-        </div>
+        </section>
     </main>
 
     <!-- ===== RECOMMENDED PRODUCTS ===== -->
     <section class="recommended-section">
-        <div class="section-header" style="margin-bottom: 40px;">
-            <h2 class="section-title">Productos <span class="gradient">Recomendados</span></h2>
+        <div class="section-header recommended-header">
+            <h2 class="section-title">Completa la Colecci&oacute;n</h2>
         </div>
         <div class="products-grid" id="products-grid">
             <!-- Cargado por JS -->
         </div>
     </section>
+
+    <div class="product-zoom-overlay" id="product-zoom-overlay" aria-hidden="true">
+        <button class="product-zoom-close" id="product-zoom-close" type="button" aria-label="Cerrar zoom">×</button>
+        <img src="" alt="" id="product-zoom-img">
+    </div>
 
     <!-- ===== CART SIDEBAR (Shared) ===== -->
     <div class="cart-overlay" id="cart-overlay"></div>
@@ -182,7 +187,7 @@
             
             if (siblings.length > 1) {
                 const varContainer = document.getElementById('product-variations');
-                let html = '<h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px;">Variantes Disponibles</h3><div style="display: flex; gap: 8px; flex-wrap: wrap;">';
+                let html = '<h3>Variantes disponibles</h3><div class="detail-variant-list">';
                 
                 siblings.forEach((sib, index) => {
                     const sibIndex = allProducts.indexOf(sib);
@@ -198,10 +203,7 @@
                         label = sib.idVariacion || `Opción ${index + 1}`;
                     }
 
-                    html += `<button onclick="window.location.href='producto.html?id=${sibIndex}${detailCatalogMode==='wholesale'?'&catalogo=mayorista':''}'" 
-                                style="padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid ${isActive ? 'var(--primary)' : 'rgba(255,255,255,0.1)'}; background: ${isActive ? 'rgba(155,44,250,0.1)' : 'rgba(255,255,255,0.03)'}; color: ${isActive ? '#fff' : 'var(--text-muted)'}; cursor: pointer; transition: all 0.2s;"
-                                onmouseover="this.style.borderColor='var(--primary)'; this.style.color='#fff';"
-                                onmouseout="if(!${isActive}){ this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='var(--text-muted)'; }">
+                    html += `<button class="detail-variant-chip ${isActive ? 'active' : ''}" onclick="window.location.href='producto.html?id=${sibIndex}${detailCatalogMode==='wholesale'?'&catalogo=mayorista':''}'">
                                 ${escapeHtml(label)}
                              </button>`;
                 });
@@ -219,6 +221,24 @@
                 document.getElementById('detail-img-container').classList.add('is-fallback');
             };
             detailImg.src = img || 'Logo2.png';
+            const zoomOverlay = document.getElementById('product-zoom-overlay');
+            const zoomImg = document.getElementById('product-zoom-img');
+            const closeZoom = () => {
+                zoomOverlay.classList.remove('open', 'zoomed');
+                zoomOverlay.setAttribute('aria-hidden', 'true');
+            };
+            document.getElementById('detail-img-container').addEventListener('click', () => {
+                zoomImg.src = detailImg.src;
+                zoomImg.alt = name;
+                zoomOverlay.classList.add('open');
+                zoomOverlay.setAttribute('aria-hidden', 'false');
+            });
+            zoomImg.addEventListener('click', (e) => {
+                e.stopPropagation();
+                zoomOverlay.classList.toggle('zoomed');
+            });
+            zoomOverlay.addEventListener('click', closeZoom);
+            document.getElementById('product-zoom-close').addEventListener('click', closeZoom);
 
             // Generar galería de miniaturas si el producto tiene más imágenes
             const allImages = getProductImageSet(product);
@@ -227,7 +247,6 @@
                 thumbsContainer.innerHTML = allImages.map(imgUrl => `
                     <img src="${escapeHtml(imgUrl)}" 
                          class="gallery-thumb" 
-                         style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.3s; flex-shrink: 0;"
                          onclick="
                              const mainImg = document.getElementById('detail-img');
                              if(mainImg.src === '${escapeHtml(imgUrl)}') return;
@@ -236,13 +255,13 @@
                                  mainImg.src='${escapeHtml(imgUrl)}';
                                  mainImg.onload = () => mainImg.style.opacity = 1;
                              }, 150);
-                             document.querySelectorAll('.gallery-thumb').forEach(t=>t.style.borderColor='transparent'); 
-                             this.style.borderColor='var(--primary)';
+                             document.querySelectorAll('.gallery-thumb').forEach(t=>t.classList.remove('active')); 
+                             this.classList.add('active');
                          "
                          onerror="this.style.display='none'">
                 `).join('');
                 const firstThumb = thumbsContainer.querySelector('.gallery-thumb');
-                if (firstThumb) firstThumb.style.borderColor = 'var(--primary)';
+                if (firstThumb) firstThumb.classList.add('active');
                 thumbsContainer.style.display = 'flex';
             } else {
                 if (thumbsContainer) thumbsContainer.style.display = 'none';
@@ -255,10 +274,16 @@
             }
 
             const detailCartBtn = document.getElementById('btn-add-to-cart-detail');
-            detailCartBtn.disabled = stock <= 0 || !detailShowsPrices;
+            detailCartBtn.disabled = detailShowsPrices && stock <= 0;
+            if (!detailShowsPrices) detailCartBtn.textContent = 'Consultar por WhatsApp';
             detailCartBtn.textContent = !detailShowsPrices ? 'Precio por consultar' : (stock > 0 ? 'Añadir al Carrito' : 'Producto Agotado');
+            if (!detailShowsPrices) detailCartBtn.textContent = 'Consultar por WhatsApp';
             detailCartBtn.onclick = () => {
-                if (stock <= 0 || !detailShowsPrices) return;
+                if (!detailShowsPrices) {
+                    consultProductByWhatsApp(product);
+                    return;
+                }
+                if (stock <= 0) return;
                 addToCart(productId, null, detailCatalogMode);
             };
 

@@ -14,21 +14,21 @@ var HEADERS_VARIANTES = [
   'ID Variacion',
   'ID Producto',
   'Nombre del Producto',
-  'Categoria',
-  'Catalogo',
+  'Categoría',
+  'Catálogo',
   'Precio',
   'Precio Mayor',
   'Stock Inicial',
   'Cantidad',
-  'Caracteristicas del producto',
-  'Tamano',
+  'Características del producto',
+  'Tamaño',
   'Color',
   'Estilo',
   'Imagen Principal',
-  'Galeria JSON',
+  'Galería JSON',
   'SKU',
   'Estado',
-  'Fecha de Creacion'
+  'Fecha de Creación'
 ];
 
 var HEADERS_PEDIDOS = [
@@ -146,6 +146,8 @@ function doPost(e) {
 
     // Alias usado por tu admin actual.
     if (action === 'agregar') action = 'add_product';
+    if (action === 'crear') action = 'add_product';
+    if (action === 'editar') action = 'edit_product';
 
     // 1. INVENTARIO / VARIANTES
     if (action === 'add_product' || action === 'edit_product') {
@@ -168,33 +170,35 @@ function doPost(e) {
 
     if (action === 'delete_product') {
       var sheetDelete = doc.getSheetByName(HOJA_VARIANTES);
-      var deleted = false;
+      var deletedCount = 0;
       
       // Try by ID Variacion
-      if (data.id) {
-        deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Variacion', data.id);
-      }
-      
-      // Try by ID Producto
-      if (!deleted && data.ID_Producto) {
-        deleted = deleteRowsByColumnMatch(sheetDelete, 'ID Producto', data.ID_Producto);
+      if (data.id || data['ID Variacion']) {
+        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'ID Variacion', data.id || data['ID Variacion']);
       }
 
       // Try by _rowIndex as fallback if provided
-      if (!deleted && data._rowIndex) {
+      if (!deletedCount && data._rowIndex) {
         try {
           sheetDelete.deleteRow(data._rowIndex);
-          deleted = true;
+          deletedCount = 1;
         } catch(e) {}
       }
 
+      // Delete by family only when explicitly requested.
+      if (!deletedCount && data.deleteGroup === true && data.ID_Producto) {
+        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'ID Producto', data.ID_Producto);
+      }
+
       // Try by Name as last resort
-      if (!deleted && data.nombre) {
-        deleted = deleteRowsByColumnMatch(sheetDelete, 'Nombre del Producto', data.nombre);
+      if (!deletedCount && data.nombre) {
+        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'Nombre del Producto', data.nombre);
       }
 
       return createJsonResponse({
-        status: deleted ? 'success' : 'error'
+        status: deletedCount > 0 ? 'success' : 'error',
+        deleted: deletedCount,
+        message: deletedCount > 0 ? 'Producto eliminado' : 'No se encontro el producto para eliminar'
       });
     }
 
@@ -326,36 +330,54 @@ function getOrCreateSheet(doc, name, headers) {
 function ensureHeaders_(sheet, headers) {
   if (!headers || !headers.length) return;
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(headers);
+  var lastCol = sheet.getLastColumn();
+  var currentHeaders = [];
+  
+  if (lastCol > 0) {
+    currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+      return String(h || '').trim();
+    });
   }
 
-  var lastColumn = Math.max(sheet.getLastColumn(), headers.length);
-  var currentHeaders = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(header) {
-    return String(header || '').trim();
-  });
+  // Normalización agresiva: minúsculas, sin tildes, solo letras y números
+  var normalize = function(txt) {
+    if (!txt) return "";
+    return txt.toString().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+      .replace(/[^a-z0-9]/g, "") // Solo alfanumérico
+      .trim();
+  };
 
-  if (currentHeaders.join('') === '') {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    currentHeaders = headers.slice();
-  }
-
+  var normalizedCurrent = currentHeaders.map(normalize);
   var changed = false;
+  var newHeaders = currentHeaders.slice();
+
   headers.forEach(function(header) {
-    if (currentHeaders.indexOf(header) === -1) {
-      currentHeaders.push(header);
+    var normHeader = normalize(header);
+    // Si no encontramos el header normalizado en la lista actual
+    if (normalizedCurrent.indexOf(normHeader) === -1) {
+      newHeaders.push(header);
+      normalizedCurrent.push(normHeader);
       changed = true;
     }
   });
 
-  if (changed) {
-    sheet.getRange(1, 1, 1, currentHeaders.length).setValues([currentHeaders]);
+  if (changed || lastCol === 0) {
+    if (newHeaders.length > 0) {
+      sheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
+    }
   }
 
-  sheet.getRange(1, 1, 1, currentHeaders.length)
-    .setFontWeight('bold')
-    .setBackground('#d9d2e9');
-  sheet.setFrozenRows(1);
+  // Dar formato siempre para asegurar legibilidad
+  var finalColCount = sheet.getLastColumn();
+  if (finalColCount > 0) {
+    sheet.getRange(1, 1, 1, finalColCount)
+      .setFontWeight('bold')
+      .setBackground('#d9d2e9')
+      .setVerticalAlignment('middle')
+      .setHorizontalAlignment('center');
+    sheet.setFrozenRows(1);
+  }
 }
 
 function sheetToObjects_(sheet) {
@@ -475,22 +497,48 @@ function upsertRow(sheet, keyColumnName, keyValue, payload) {
 }
 
 function deleteRowsByColumnMatch(sheet, columnName, valueToMatch) {
-  if (!sheet || !valueToMatch) return false;
+  return deleteRowsByColumnMatchCount(sheet, columnName, valueToMatch) > 0;
+}
+
+function deleteRowsByColumnMatchCount(sheet, columnName, valueToMatch) {
+  if (!sheet || !valueToMatch) return 0;
 
   var values = sheet.getDataRange().getValues();
-  if (!values.length) return false;
+  if (!values.length) return 0;
 
   var headers = values[0].map(function(header) {
     return String(header || '').trim();
   });
-  var colIndex = headers.indexOf(columnName);
-  if (colIndex === -1) return false;
 
-  var deleted = false;
+  // Fuzzy column matching: normalize accents, case, and non-alphanumeric chars
+  var normalize = function(txt) {
+    if (!txt) return "";
+    return txt.toString().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/g, "")
+      .trim();
+  };
+
+  var colIndex = headers.indexOf(columnName);
+  if (colIndex === -1) {
+    // Fallback: fuzzy match
+    var normTarget = normalize(columnName);
+    for (var h = 0; h < headers.length; h++) {
+      if (normalize(headers[h]) === normTarget) {
+        colIndex = h;
+        break;
+      }
+    }
+  }
+  if (colIndex === -1) return 0;
+
+  var normValue = String(valueToMatch).trim();
+  var deleted = 0;
   for (var i = values.length - 1; i >= 1; i--) {
-    if (values[i][colIndex] == valueToMatch) {
+    var cellVal = String(values[i][colIndex] || '').trim();
+    if (cellVal == normValue || cellVal === normValue) {
       sheet.deleteRow(i + 1);
-      deleted = true;
+      deleted++;
     }
   }
   return deleted;

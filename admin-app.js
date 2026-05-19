@@ -3,6 +3,7 @@ const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
+const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 let inventoryRenderedRows = 0;
@@ -11,6 +12,7 @@ let inventoryLoadMoreObserver = null;
 let filteredInventario = [];
 let adminInventorySearchQuery = '';
 let isEditingProduct = false;
+let inventoryFetchToken = 0;
 
 function updateLivePreview() {
     const nombre = document.getElementById('prod-nombre')?.value || 'Nombre del Producto';
@@ -60,8 +62,24 @@ function updateLivePreview() {
     if (priceEl) priceEl.innerHTML = priceHtml;
     
     const imgEl = document.getElementById('preview-img-el');
-    if (imgEl && imgEl.src !== imagenUrl) {
-        imgEl.src = imagenUrl;
+    if (imgEl) {
+        const currentSrc = imgEl.getAttribute('src');
+        if (currentSrc !== imagenUrl) {
+            // Evitar parpadeo: solo actualizar si el origen realmente cambió
+            imgEl.style.transition = 'opacity 0.2s';
+            imgEl.style.opacity = '0.4';
+            
+            const tempImg = new Image();
+            tempImg.onload = () => {
+                imgEl.src = imagenUrl;
+                imgEl.style.opacity = '1';
+            };
+            tempImg.onerror = () => {
+                imgEl.src = 'hero_necklace.png';
+                imgEl.style.opacity = '0.3';
+            };
+            tempImg.src = imagenUrl;
+        }
     }
     
     const badgeEl = document.getElementById('preview-badge-el');
@@ -135,8 +153,8 @@ function normalizeImageUrl(value) {
 function normalizeGoogleProduct(product) {
     return {
         ...product,
-        ID: getProductField(product, ['ID Variacion', 'ID VariaciÃ³n', 'ID', 'id'], ''),
-        idVariacion: getProductField(product, ['ID Variacion', 'ID VariaciÃ³n', 'ID', 'id'], ''),
+        ID: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
+        idVariacion: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
         idProducto: getProductField(product, ['ID Producto', 'ID_Producto', 'idProducto'], ''),
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'Producto'], ''),
         Categoria: getProductField(product, ['Categoría', 'Categoria'], ''),
@@ -147,13 +165,13 @@ function normalizeGoogleProduct(product) {
         Imagen: normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen'], '')),
         Color: getProductField(product, ['Color'], ''),
         Stock_Inicial: getProductField(product, ['Stock Inicial', 'Stock_Inicial'], 0),
-        Galeria: getProductField(product, ['Galeria JSON', 'GalerÃ­a JSON', 'Galeria'], ''),
-        Descripcion: getProductField(product, ['Caracteristicas del producto', 'CaracterÃ­sticas del producto', 'Descripcion'], ''),
-        Tamano: getProductField(product, ['Tamano', 'TamaÃ±o', 'Talla'], ''),
+        Galeria: getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], ''),
+        Descripcion: getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion'], ''),
+        Tamano: getProductField(product, ['Tamano', 'Tamaño', 'Talla'], ''),
         Estilo: getProductField(product, ['Estilo'], ''),
         SKU: getProductField(product, ['SKU'], ''),
         Estado: getProductField(product, ['Estado'], 'Activo'),
-        Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de CreaciÃ³n'], '')
+        Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de Creación'], '')
     };
 }
 
@@ -351,23 +369,24 @@ function buildProductPayload() {
         'Nombre del Producto': nombre,
         Nombre: nombre,
         Categoria: categoria,
-        'CategorÃ­a': categoria,
-        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+        'Categoría': categoria,
+        'Catálogo': getInputValue('prod-catalogo') || 'Ambos',
         Precio: parseAmount(getInputValue('prod-precio')),
         'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
         'Stock Inicial': stockInicial,
         Cantidad: stock,
-        'Caracteristicas del producto': descripcion,
+        'Características del producto': descripcion,
         Descripcion: descripcion,
         Tamano: getInputValue('prod-tamano'),
+        'Tamaño': getInputValue('prod-tamano'),
         Color: getInputValue('prod-color'),
         Estilo: getInputValue('prod-estilo'),
         'Imagen Principal': imagen,
         Imagen: imagen,
-        'Galeria JSON': getInputValue('prod-galeria'),
+        'Galería JSON': getInputValue('prod-galeria'),
         SKU: getInputValue('prod-sku'),
         Estado: getInputValue('prod-estado') || 'Activo',
-        'Fecha de Creacion': getInputValue('prod-fecha-creacion')
+        'Fecha de Creación': getInputValue('prod-fecha-creacion')
     };
 }
 
@@ -424,21 +443,68 @@ function updateCategoryOptions() {
 document.addEventListener('DOMContentLoaded', () => {
     initRetailPriceToggle();
     initInventorySearch();
+    initInventoryActions();
     initCarouselImageAdmin();
+    const adminPasswordInput = document.getElementById('admin-password');
+    if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
+    const adminLoginButton = document.querySelector('#admin-login-form .admin-btn');
+    if (adminLoginButton) adminLoginButton.textContent = 'Autenticar';
 
-    // Configurar Drag & Drop para Productos y Variantes
+    // Configurar Drag & Drop para Productos
     setupDragAndDrop('prod-image-drop-zone', (url) => {
         const input = document.getElementById('prod-imagen');
         if (input) {
             input.value = url;
-            input.dispatchEvent(new Event('input')); // Para actualizar preview
+            input.dispatchEvent(new Event('input')); // Para actualizar preview con URL final
         }
+    }, (localUrl) => {
+        // Vista previa local inmediata antes de que termine de subir
+        const imgEl = document.getElementById('preview-img-el');
+        if (imgEl) {
+            imgEl.src = localUrl;
+            imgEl.style.opacity = '0.7';
+        }
+        showToast('Subiendo imagen a Google Drive...');
     });
 
-    setupDragAndDrop('var-image-drop-zone', (url) => {
-        const input = document.getElementById('var-imagen');
-        if (input) {
-            input.value = url;
+    // Delegación de eventos para drag & drop en variantes dinámicas
+    document.addEventListener('dragover', (e) => {
+        if (e.target.closest('.var-drop-zone')) {
+            e.preventDefault();
+            e.target.closest('.var-drop-zone').classList.add('drag-over');
+        }
+    });
+    document.addEventListener('dragleave', (e) => {
+        if (e.target.closest('.var-drop-zone')) {
+            e.target.closest('.var-drop-zone').classList.remove('drag-over');
+        }
+    });
+    document.addEventListener('drop', async (e) => {
+        const zone = e.target.closest('.var-drop-zone');
+        if (zone) {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const input = zone.querySelector('.var-imagen');
+                const imgPreview = zone.querySelector('.var-preview-thumb');
+                
+                // Preview local
+                if (imgPreview) {
+                    const localUrl = URL.createObjectURL(file);
+                    imgPreview.src = localUrl;
+                    imgPreview.style.display = 'block';
+                }
+                
+                try {
+                    showToast('Subiendo variante...');
+                    const url = await uploadCarouselImage(file);
+                    if (input) input.value = url;
+                    showToast('Imagen de variante lista', 'success');
+                } catch (err) {
+                    showToast('Error: ' + err.message, 'error');
+                }
+            }
         }
     });
     
@@ -543,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (document.getElementById('edit-product-modal')?.style.display === 'flex') {
                     cerrarModalEdicion();
                 }
-                setTimeout(function() { cargarInventario(); }, 1000);
+                setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
             } catch (err) {
                 showToast('Error: ' + err.message, 'error');
                 btn.disabled = false;
@@ -621,9 +687,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Stock</label>
                     <input type="number" class="form-control var-stock" value="0">
                 </div>
-                <div class="form-group">
-                    <label>Imagen (URL)</label>
-                    <input type="text" class="form-control var-imagen" placeholder="URL específica">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label>Imagen de Variante (Arrastra o URL)</label>
+                    <div class="var-drop-zone" style="background:rgba(0,0,0,0.2); border:1px dashed rgba(255,255,255,0.1); border-radius:12px; padding:8px; display:flex; gap:10px; align-items:center; min-height:45px;">
+                        <img class="var-preview-thumb" src="" style="width:30px; height:30px; border-radius:4px; object-fit:cover; display:none; border:1px solid rgba(255,255,255,0.1);">
+                        <input type="text" class="form-control var-imagen" placeholder="URL o Arrastra aquí..." style="margin:0; border:none; background:transparent; flex:1;">
+                    </div>
                 </div>
             </div>
             <button type="button" class="admin-btn btn-save-individual-variant" style="background:linear-gradient(135deg, #6C5CE7, #9B2CFA); margin-top:10px;">Guardar esta Variante</button>
@@ -678,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.style.background = 'linear-gradient(135deg, #6C5CE7, #9B2CFA)';
                     btn.textContent = originalText;
                 }, 3000);
-                setTimeout(() => cargarInventario(), 1500);
+                setTimeout(() => cargarInventario({ silent: true }), 1500);
             } catch (err) {
                 console.error(err);
                 showToast('Error al guardar');
@@ -813,16 +882,21 @@ function setupDragAndDrop(containerId, onFileProcessed) {
 
         if (file && file.type.startsWith('image/')) {
             try {
-                showToast('Procesando imagen arrastrada...');
+                // Notificar preview local inmediata si existe el callback
+                if (arguments[2] && typeof arguments[2] === 'function') {
+                    const localUrl = URL.createObjectURL(file);
+                    arguments[2](localUrl);
+                }
+
                 const imageUrl = await uploadCarouselImage(file);
                 onFileProcessed(imageUrl, file);
-                showToast('Imagen subida con éxito');
+                showToast('Imagen subida con éxito', 'success');
             } catch (err) {
                 console.error(err);
-                showToast('Error al subir imagen: ' + err.message);
+                showToast('Error al subir imagen: ' + err.message, 'error');
             }
         } else {
-            showToast('Por favor, arrastra solo archivos de imagen');
+            showToast('Por favor, arrastra solo archivos de imagen', 'warning');
         }
     }, false);
 }
@@ -899,7 +973,7 @@ function initCarouselImageAdmin() {
             showToast('Banner guardado para el carrusel de inicio');
             form.reset();
             preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
-            setTimeout(() => cargarInventario(), 2000);
+            setTimeout(() => cargarInventario({ silent: true }), 2000);
         } catch (error) {
             console.error(error);
             showToast(error.message || 'No se pudo guardar el banner');
@@ -934,33 +1008,136 @@ function initInventorySearch() {
     });
 }
 
-async function cargarInventario() {
+function initInventoryActions() {
     const tbody = document.getElementById('inventory-tbody');
-    try {
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
-        }
+    if (!tbody || tbody.dataset.actionsReady === 'true') return;
+    tbody.dataset.actionsReady = 'true';
 
-        const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL);
-        const data = await res.json();
-        if (data && (data.status === 'error' || data.ok === false)) {
-            throw new Error(data.message || data.error || 'Error del Apps Script');
-        }
-        inventario = (Array.isArray(data) ? data : (data.data || data.productos || []))
-            .map(normalizeGoogleProduct)
-            .reverse();
-        updateCategoryOptions();
-        
-        if (inventario.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay productos en el inventario.</td></tr>';
+    tbody.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-inventory-action]');
+        if (!btn) return;
+
+        const action = btn.dataset.inventoryAction;
+        const key = btn.dataset.productKey || '';
+        const motherId = btn.dataset.motherId || '';
+
+        if (action === 'load-more') {
+            loadMoreInventoryBatch();
             return;
         }
 
-        renderInventoryInBatches();
+        if (action === 'toggle') {
+            toggleVariants(motherId, btn);
+            return;
+        }
+
+        if (action === 'edit') {
+            const index = getInventoryIndexByKey(key);
+            if (index === -1) {
+                showToast('No se encontro el producto para editar', 'error');
+                return;
+            }
+            editarProducto(index);
+            return;
+        }
+
+        if (action === 'delete') {
+            eliminarProductoPorClave(key);
+            return;
+        }
+
+        if (action === 'delete-group') {
+            eliminarGrupo(motherId);
+        }
+    });
+}
+
+function normalizeInventoryList(rawProducts) {
+    return (Array.isArray(rawProducts) ? rawProducts : [])
+        .map(normalizeGoogleProduct)
+        .filter(function(p) {
+            var estado = (p.Estado || '').toUpperCase();
+            var nombre = (p.Nombre || p.Producto || '').toUpperCase();
+            return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
+        })
+        .reverse();
+}
+
+function readInventoryCache() {
+    try {
+        var cached = JSON.parse(localStorage.getItem(INVENTORY_CACHE_KEY) || 'null');
+        return cached && Array.isArray(cached.data) ? cached.data : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeInventoryCache(list) {
+    try {
+        localStorage.setItem(INVENTORY_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            data: list
+        }));
+    } catch (e) {
+        console.warn('No se pudo guardar cache de inventario:', e.message);
+    }
+}
+
+function paintInventory(list) {
+    const tbody = document.getElementById('inventory-tbody');
+    inventario = Array.isArray(list) ? list : [];
+    updateCategoryOptions();
+
+    if (!tbody) return;
+
+    if (inventario.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay productos en el inventario.</td></tr>';
+        return;
+    }
+
+    renderInventoryInBatches();
+}
+
+async function cargarInventario(options) {
+    options = options || {};
+    const tbody = document.getElementById('inventory-tbody');
+    const currentToken = ++inventoryFetchToken;
+    const canKeepCurrentRows = inventario.length > 0 || options.silent === true;
+
+    try {
+        if (!canKeepCurrentRows) {
+            var cachedList = readInventoryCache();
+            if (cachedList.length) {
+                paintInventory(cachedList);
+            }
+        }
+
+        if (tbody && !canKeepCurrentRows && inventario.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
+        }
+
+        const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), {
+            cache: 'no-store'
+        });
+        const data = await res.json();
+        if (currentToken !== inventoryFetchToken) return;
+
+        if (data && (data.status === 'error' || data.ok === false)) {
+            throw new Error(data.message || data.error || 'Error del Apps Script');
+        }
+
+        var rawProducts = Array.isArray(data) ? data : (data.data || data.productos || []);
+        var nextInventory = normalizeInventoryList(rawProducts);
+        writeInventoryCache(nextInventory);
+        paintInventory(nextInventory);
         return;
     } catch (err) {
         console.error("Error al cargar datos:", err);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
+        if (tbody && inventario.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
+        } else {
+            showToast('No se pudo actualizar inventario: ' + err.message, 'error');
+        }
     }
 }
 
@@ -1006,7 +1183,7 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
         tbody.insertAdjacentHTML('beforeend', `
             <tr class="inventory-load-more-row">
                 <td colspan="7" style="text-align:center;padding:18px;">
-                    <button class="admin-btn" type="button" onclick="loadMoreInventoryBatch()" style="max-width:240px;">Cargar mas productos</button>
+                    <button class="admin-btn" type="button" data-inventory-action="load-more" style="max-width:240px;">Cargar mas productos</button>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
                         Mostrando ${inventoryRenderedRows} de ${filteredInventario.length}
                     </div>
@@ -1015,6 +1192,41 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
         `);
         observeInventoryLoadMore(renderToken);
     }
+}
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function cleanInventoryId(value) {
+    return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function getInventoryProductKey(product) {
+    if (!product) return '';
+    var key = product.idVariacion || product.ID || product['ID Variacion'] || product['ID Variación'] || product._rowIndex || '';
+    if (!key) {
+        if (!product._inventoryKey) product._inventoryKey = 'tmp-' + Math.random().toString(36).slice(2);
+        key = product._inventoryKey;
+    }
+    return String(key);
+}
+
+function getInventoryIndexByKey(key) {
+    key = String(key || '');
+    return inventario.findIndex(function(product) {
+        return getInventoryProductKey(product) === key;
+    });
+}
+
+function getInventoryProductByKey(key) {
+    var index = getInventoryIndexByKey(key);
+    return index === -1 ? null : inventario[index];
 }
 
 function inventoryRowTemplate(p, index, itemMeta) {
@@ -1085,6 +1297,69 @@ function inventoryRowTemplate(p, index, itemMeta) {
             + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">Borrar</button></td>'
             + '</tr>';
     }
+}
+
+function inventoryRowTemplate(p, index, itemMeta) {
+    if (!itemMeta) itemMeta = {};
+    var isChild = !!itemMeta.isChild;
+    var groupSize = itemMeta.groupSize || 1;
+    var motherId = itemMeta.motherId || p.idProducto || p['ID Producto'] || p.idVariacion || p.ID || 'sin-id';
+    var cleanMotherId = cleanInventoryId(motherId);
+    var rowClass = isChild ? 'variant-row mother-' + cleanMotherId : 'mother-row';
+    var productKey = escapeHtml(getInventoryProductKey(p));
+    var displayStyle = isChild && !adminInventorySearchQuery ? 'none' : 'table-row';
+    var stockVal = Number(p.Stock || p.Cantidad || 0) || 0;
+    var stockTotal = itemMeta.totalStock === undefined ? stockVal : itemMeta.totalStock;
+    var stockClass = stockTotal > 0 ? 'stock-positive' : 'stock-negative';
+    var image = escapeHtml(p.Imagen || 'Logo2.png');
+    var name = escapeHtml(p.Nombre || p.Producto || 'Producto General');
+    var category = escapeHtml(p.Categoria || p.Color || '-');
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
+    var price = Number(p.Precio || 0) || 0;
+    var minP = Number(itemMeta.minPrice || price) || 0;
+    var maxP = Number(itemMeta.maxPrice || price) || 0;
+    var priceStr = minP && maxP && minP !== maxP
+        ? '$' + minP.toLocaleString('es-CO') + ' - $' + maxP.toLocaleString('es-CO')
+        : '$' + (maxP || minP || price).toLocaleString('es-CO');
+    var catStyle = 'background:rgba(155,44,250,0.15);color:#d946ef;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;';
+
+    if (!isChild) {
+        var toggleBtnHtml = groupSize > 1
+            ? '<button class="toggle-vars-btn" type="button" data-inventory-action="toggle" data-mother-id="' + escapeHtml(cleanMotherId) + '">Ver ' + (groupSize - 1) + ' Variantes</button>'
+            : '<span class="variant-count-badge">Producto Unico</span>';
+        var badgeHtml = '<span class="mother-badge-id" title="ID Producto">ID Prod: ' + escapeHtml(motherId) + '</span>';
+        if (idVar && idVar !== motherId) {
+            badgeHtml += ' <span class="variant-badge-id" title="ID Variacion" style="margin-left:4px;">Var: ' + escapeHtml(idVar) + '</span>';
+        }
+
+        return '<tr class="' + rowClass + '" data-product-key="' + productKey + '">'
+            + '<td><img src="' + image + '" width="46" height="46" loading="lazy" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><div style="font-weight:800;font-size:14px;color:#fff;">' + name + '</div>'
+            + '<div style="font-size:10px;margin-top:5px;">' + badgeHtml
+            + (groupSize > 1 ? ' <span class="variant-count-badge" style="margin-left:4px;">' + groupSize + ' variantes</span>' : '')
+            + '</div></td>'
+            + '<td><span style="' + catStyle + '">' + category + '</span></td>'
+            + '<td style="font-weight:800;color:#fff;font-size:14px;">' + priceStr + '</td>'
+            + '<td><div class="' + stockClass + '">' + stockTotal + '</div><div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase;letter-spacing:1px;">en stock</div></td>'
+            + '<td>' + toggleBtnHtml + '</td>'
+            + '<td style="white-space:nowrap;"><button class="action-btn-edit" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
+            + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button>'
+            + (groupSize > 1 ? ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete-group" data-mother-id="' + escapeHtml(cleanMotherId) + '">Grupo</button>' : '')
+            + '</td></tr>';
+    }
+
+    return '<tr class="' + rowClass + '" data-product-key="' + productKey + '" style="display:' + displayStyle + ';">'
+        + '<td><span class="tree-connector"></span><img src="' + image + '" width="30" height="30" loading="lazy" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+        + '<td><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);">' + name + '</div>'
+        + '<div style="font-size:10px;margin-top:3px;"><span class="mother-badge-id" style="font-size:9px;">' + escapeHtml(motherId) + '</span>'
+        + ' <span class="variant-badge-id">' + escapeHtml(idVar || '-') + '</span></div></td>'
+        + '<td><span style="font-size:11px;color:#9B2CFA;font-weight:600;">' + category + '</span></td>'
+        + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + price.toLocaleString('es-CO') + '</td>'
+        + '<td><span style="font-size:12px;font-weight:700;color:' + (stockVal > 0 ? '#10B981' : '#EF4444') + ';">' + stockVal + ' und.</span></td>'
+        + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(p.Catalogo || 'Ambos') + '</span></td>'
+        + '<td><button class="action-btn-edit-sm" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
+        + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button></td>'
+        + '</tr>';
 }
 
 var inventoryLoadingMore = false;
@@ -1211,7 +1486,7 @@ window.guardarVarianteEditada = async function(vid, idProducto) {
         await postProductToGoogleSheets(data, true);
         showToast('Variante actualizada', 'success');
         cerrarVarianteEdicion(vid);
-        setTimeout(function() { cargarInventario(); }, 1000);
+        setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
     }
@@ -1264,7 +1539,7 @@ window.guardarGrupoCompleto = async function(idProducto) {
     }
     
     showToast('Grupo guardado: madre + ' + saved + ' variante(s)' + (errors ? ' (' + errors + ' error(es))' : ''), errors ? 'error' : 'success');
-    setTimeout(function() { cargarInventario(); }, 1500);
+    setTimeout(function() { cargarInventario({ silent: true }); }, 1500);
 };
 
 function editarProducto(index) {
@@ -1408,8 +1683,9 @@ function closeModal() {
 }
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modal-confirm-btn')?.addEventListener('click', function() {
-        if (modalConfirmCallback) { modalConfirmCallback(); closeModal(); }
-        else closeModal();
+        var cb = modalConfirmCallback;
+        closeModal();
+        if (cb) cb();
     });
     document.getElementById('modal-cancel-btn')?.addEventListener('click', function() {
         if (modalCancelCallback) modalCancelCallback();
@@ -1424,24 +1700,73 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function delFromSheet(id, idProd, rowMeta) {
-    var payload = { resource: 'productos', action: 'delete_product', id: id, ID_Producto: idProd || id, 'ID Variacion': id, nombre: rowMeta?.nombre, _rowIndex: rowMeta?.rowIndex };
-    var res = await fetch(GOOGLE_SHEET_API, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    });
-    var text = await res.text();
-    var result;
-    try { result = JSON.parse(text); } catch (e) { result = null; }
-    if (result && (result.status === 'success' || result.ok)) return true;
-    var msg = result?.message || result?.error || text.slice(0, 100);
-    throw new Error(msg || 'Error desconocido');
+    var rowIndex = rowMeta && rowMeta.rowIndex ? rowMeta.rowIndex : 0;
+    if (!id && !idProd && !rowIndex) throw new Error('No hay ID para eliminar');
+    var lastError = 'Google Sheets no confirmo el borrado fisico';
+
+    var deleteStrategies = [
+        {
+            resource: 'productos',
+            action: 'delete_product',
+            id: id,
+            ID_Producto: idProd,
+            'ID Variacion': id,
+            'ID Variación': id
+        },
+        {
+            resource: 'productos',
+            action: 'delete',
+            id: id,
+            ID_Producto: idProd,
+            'ID Variacion': id,
+            'ID Variación': id
+        },
+        {
+            resource: 'productos',
+            action: 'eliminar',
+            id: id,
+            ID_Producto: idProd,
+            'ID Variacion': id,
+            'ID Variación': id
+        }
+    ];
+
+    if (rowMeta) {
+        deleteStrategies.forEach(function(p) {
+            if (rowMeta.nombre) p.nombre = rowMeta.nombre;
+            if (!id && rowMeta.rowIndex) p._rowIndex = rowMeta.rowIndex;
+        });
+    }
+
+    for (var i = 0; i < deleteStrategies.length; i++) {
+        try {
+            var res = await fetch(GOOGLE_SHEET_API, {
+                method: 'POST',
+                body: JSON.stringify(deleteStrategies[i])
+            });
+            var result = await res.json();
+            if (result && (result.deleted > 0 || result.status === 'success' || result.ok === true)) {
+                console.log('Producto eliminado fisicamente de Google Sheets');
+                return true;
+            }
+            lastError = result?.error || result?.message || lastError;
+        } catch (e) {
+            lastError = e.message || lastError;
+            console.warn('Delete strategy ' + i + ' failed:', e.message);
+        }
+    }
+
+    throw new Error('No se pudo borrar fisicamente de Google Sheets: ' + lastError);
 }
 
 async function eliminarProducto(index) {
     var p = inventario[index];
-    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || '';
+    if (!p) { showToast('Error: producto no encontrado en el índice ' + index, 'error'); return; }
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
     var idProd = p.idProducto || p['ID Producto'] || idVar;
     var nombre = p.Nombre || p.Producto || 'este producto';
+    var rowIndex = p._rowIndex || 0;
+
     if (!idVar && !nombre) { showToast('Error: producto sin ID ni Nombre', 'error'); return; }
 
     showModal(
@@ -1449,36 +1774,60 @@ async function eliminarProducto(index) {
         '¿Eliminar permanentemente "' + nombre + '"' + (idVar ? ' (ID: ' + idVar + ')' : '') + '?',
         'Sí, eliminar',
         async function() {
-            showToast('Eliminando...');
+            showToast('Eliminando "' + nombre + '"...');
             try {
-                await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: p._rowIndex });
-                showToast('Producto eliminado', 'success');
-                setTimeout(function() { cargarInventario(); }, 1000);
+                await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: rowIndex });
+                showToast('✅ Producto "' + nombre + '" eliminado correctamente', 'success');
+                // Remove the row visually immediately for better UX
+                inventario.splice(index, 1);
+                writeInventoryCache(inventario);
+                renderInventoryInBatches();
+                // Reload from server to sync
+                setTimeout(function() { cargarInventario({ silent: true }); }, 2000);
             } catch (err) {
-                showToast('Error: ' + err.message, 'error');
-                // Fallback: intentar con form data
-                try {
-                    var fd = new FormData();
-                    fd.append('resource', 'productos');
-                    fd.append('action', 'delete_product');
-                    fd.append('id', idVar);
-                    fd.append('ID_Producto', idProd);
-                    fd.append('ID Variacion', idVar);
-                    if (nombre) fd.append('nombre', nombre);
-                    if (p._rowIndex) fd.append('_rowIndex', p._rowIndex);
-                    var r2 = await fetch(GOOGLE_SHEET_API, { method: 'POST', body: fd });
-                    var t2 = await r2.text();
-                    var j2;
-                    try { j2 = JSON.parse(t2); } catch (e) { j2 = null; }
-                    if (j2 && (j2.status === 'success' || j2.ok)) {
-                        showToast('Producto eliminado (fallback)', 'success');
-                        setTimeout(function() { cargarInventario(); }, 1000);
-                    } else {
-                        showToast('No se pudo eliminar. Revisa consola (F12)', 'error');
-                    }
-                } catch (e2) {
-                    showToast('Error total de conexión. ¿URL del script correcta?', 'error');
-                }
+                console.error('Error eliminando producto:', err);
+                showToast('❌ Error al eliminar: ' + err.message, 'error');
+            }
+        }
+    );
+}
+
+async function eliminarProductoPorClave(key) {
+    var p = getInventoryProductByKey(key);
+    if (!p) {
+        showToast('Error: producto no encontrado para borrar', 'error');
+        return;
+    }
+
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
+    var idProd = p.idProducto || p['ID Producto'] || idVar;
+    var nombre = p.Nombre || p.Producto || 'este producto';
+    var rowIndex = p._rowIndex || 0;
+    var productKey = getInventoryProductKey(p);
+
+    if (!idVar && !rowIndex && !nombre) {
+        showToast('Error: producto sin ID para eliminar', 'error');
+        return;
+    }
+
+    showModal(
+        'Eliminar Producto',
+        'Eliminar permanentemente "' + nombre + '"' + (idVar ? ' (ID: ' + idVar + ')' : '') + '?',
+        'Si, eliminar',
+        async function() {
+            showToast('Eliminando "' + nombre + '"...');
+            try {
+                await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: rowIndex });
+                inventario = inventario.filter(function(item) {
+                    return getInventoryProductKey(item) !== productKey;
+                });
+                writeInventoryCache(inventario);
+                renderInventoryInBatches();
+                showToast('Producto "' + nombre + '" eliminado correctamente', 'success');
+                setTimeout(function() { cargarInventario({ silent: true }); }, 1200);
+            } catch (err) {
+                console.error('Error eliminando producto:', err);
+                showToast('Error al eliminar: ' + err.message, 'error');
             }
         }
     );
@@ -1494,7 +1843,7 @@ async function eliminarGrupo(motherIdClean) {
             var variants = inventario.filter(function(p) {
                 var mid = p.idProducto || p['ID Producto'] || '';
                 var vid = p.idVariacion || p.ID || p['ID Variacion'] || '';
-                return mid === motherIdClean || vid === motherIdClean;
+                return cleanInventoryId(mid) === motherIdClean || cleanInventoryId(vid) === motherIdClean;
             });
             if (variants.length === 0) { showToast('No se encontraron productos del grupo', 'error'); return; }
             var errors = 0;
@@ -1502,9 +1851,9 @@ async function eliminarGrupo(motherIdClean) {
             for (var i = 0; i < variants.length; i++) {
                 try {
                     var v = variants[i];
-                    var vId = v.idVariacion || v.ID || v['ID Variacion'] || '';
+                    var vId = v.idVariacion || v.ID || v['ID Variacion'] || v['ID Variación'] || '';
                     if (!vId) continue;
-                    await delFromSheet(vId, motherIdClean);
+                    await delFromSheet(vId, motherIdClean, { nombre: v.Nombre || v.Producto || '', rowIndex: v._rowIndex || 0 });
                 } catch (e) { errors++; lastErr = e.message; }
             }
             if (errors === 0) {
@@ -1514,7 +1863,15 @@ async function eliminarGrupo(motherIdClean) {
             } else {
                 showToast('Grupo: ' + (variants.length - errors) + ' ok, ' + errors + ' error(es)', 'warning');
             }
-            if (errors < variants.length) setTimeout(function() { cargarInventario(); }, 1000);
+            if (errors < variants.length) {
+                var deletedKeys = new Set(variants.map(function(item) { return getInventoryProductKey(item); }));
+                inventario = inventario.filter(function(item) {
+                    return !deletedKeys.has(getInventoryProductKey(item));
+                });
+                writeInventoryCache(inventario);
+                renderInventoryInBatches();
+                setTimeout(function() { cargarInventario({ silent: true }); }, 1000);
+            }
         }
     );
 }

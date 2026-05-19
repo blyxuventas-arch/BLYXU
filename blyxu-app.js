@@ -10,6 +10,7 @@
 // 5. Pega la URL aqui abajo:
 const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
+const BLYXU_WHATSAPP_PHONE = '573112368622';
 
 // Columnas esperadas en tu Google Sheet:
 // Nombre | Categoria | Catalogo | Precio | Precio_Mayorista | Stock | Imagen | Color | Descripcion
@@ -873,7 +874,7 @@ function renderProducts(products, options = {}) {
                 ${showPrices ? `<div class="product-card-price">
                     ${formatMoney(price)}
                     ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span>` : ''}
-                </div>` : '<div class="product-card-price price-hidden">Precio por consultar</div>'}
+                </div>` : `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>`}
             </div>
         </div>`;
     }
@@ -1153,6 +1154,26 @@ function showBrandLoader() {
     });
 }
 
+function openWhatsAppMessage(message) {
+    window.open(`https://wa.me/${BLYXU_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
+}
+
+function consultProductByWhatsApp(product, pageUrl = window.location.href) {
+    const name = product?.Nombre || product?.nombre || product?.Producto || 'Producto BLYXU';
+    const category = product?.Categoria || product?.categoria || '';
+    const sku = product?.SKU || product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '';
+    const stock = product?.Stock || product?.stock || product?.Cantidad || '';
+
+    let msg = '*Consulta de precio BLYXU*\n\n';
+    msg += `Hola, quiero consultar el precio de:\n*${name}*\n`;
+    if (category) msg += `Categoría: ${category}\n`;
+    if (sku) msg += `SKU / Ref: ${sku}\n`;
+    if (stock) msg += `Disponibilidad vista: ${stock} unidades\n`;
+    if (pageUrl) msg += `\nLink: ${pageUrl}`;
+
+    openWhatsAppMessage(msg);
+}
+
 // -- DEMO PRODUCTS --
 function getDemoProducts() {
     return [
@@ -1262,8 +1283,7 @@ async function checkout() {
     updateCartUI();
     closeCart();
 
-    const phone = '573000000000'; // Reemplaza con tu numero
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    openWhatsAppMessage(msg);
 
     if (btn) {
         btn.disabled = false;
