@@ -16,6 +16,14 @@ const CONTACT_CONFIG_FIELDS = [
     ['Contacto_Titulo_Atencion', 'contact-config-service-title'],
     ['Contacto_Detalle_Atencion', 'contact-config-service-detail']
 ];
+const INVOICE_CONFIG_FIELDS = [
+    ['Factura_Logo', 'inv-config-logo'],
+    ['Factura_Empresa', 'inv-config-empresa'],
+    ['Factura_NIT', 'inv-config-nit'],
+    ['Factura_Direccion', 'inv-config-direccion'],
+    ['Factura_Telefono', 'inv-config-telefono'],
+    ['Factura_Email', 'inv-config-email']
+];
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -532,6 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAdminCustomCursor();
     initRetailPriceToggle();
     initContactConfigAdmin();
+    initInvoiceConfigAdmin();
     initInventorySearch();
     initInventoryActions();
     initCarouselImageAdmin();
@@ -963,6 +972,52 @@ function initContactConfigAdmin() {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText || 'Guardar Contacto';
+            }
+        }
+    });
+}
+
+function fillInvoiceConfigForm(config) {
+    INVOICE_CONFIG_FIELDS.forEach(([key, id]) => {
+        const input = document.getElementById(id);
+        if (input) input.value = config?.[key] || '';
+    });
+}
+
+function initInvoiceConfigAdmin() {
+    const form = document.getElementById('invoice-config-form');
+    if (!form) return;
+
+    loadSiteConfigForAdmin().then(fillInvoiceConfigForm);
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-invoice-config');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            await Promise.all(INVOICE_CONFIG_FIELDS.map(([key, id]) => {
+                const value = document.getElementById(id)?.value?.trim() || '';
+                return saveSiteConfig(key, value);
+            }));
+            
+            window.storeConfig = window.storeConfig || {};
+            INVOICE_CONFIG_FIELDS.forEach(([key, id]) => {
+                window.storeConfig[key] = document.getElementById(id)?.value?.trim() || '';
+            });
+            
+            showToast('Configuración de factura actualizada');
+        } catch (err) {
+            console.error('No se pudo guardar configuración de factura:', err);
+            showToast('No se pudo guardar la configuración');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText || 'Guardar Ajustes de Factura';
             }
         }
     });
@@ -2113,7 +2168,349 @@ function switchDashboardView(viewId, title) {
     if (titleEl) titleEl.textContent = title || 'Panel';
     var area = document.querySelector('.dashboard-content-area');
     if (area) area.scrollTop = 0;
+
+    if (viewId === 'orders') {
+        cargarPedidos();
+    }
 }
+
+// === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
+window.pedidosList = [];
+
+async function cargarPedidos() {
+    const tbody = document.getElementById('orders-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">Sincronizando pedidos...</td></tr>';
+    
+    try {
+        const response = await fetch(GOOGLE_SHEET_API + "?resource=pedidos&action=get");
+        const result = await response.json();
+        if (result && result.status === 'success' && result.data) {
+            window.pedidosList = result.data.reverse(); // Más recientes primero
+            renderPedidos();
+        } else {
+            throw new Error(result.error || 'Error al cargar los pedidos');
+        }
+    } catch (err) {
+        console.error(err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`;
+        showToast('Error cargando pedidos', 'error');
+    }
+}
+
+function renderPedidos() {
+    const tbody = document.getElementById('orders-tbody');
+    if (!tbody) return;
+
+    if (window.pedidosList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">No hay pedidos registrados.</td></tr>';
+        return;
+    }
+
+    const html = window.pedidosList.map((p, idx) => {
+        const id = p['ID Pedido'] || p.ID || '-';
+        const fecha = p.Fecha || '-';
+        const cliente = p['Nombre Cliente'] || p.Nombre || '-';
+        const total = parseFloat(p.Subtotal || p.Total || 0);
+        const estado = p['Estado Pedido'] || p.Estado || 'Pendiente';
+        
+        let colorEstado = '#9ca3af';
+        if(estado.toLowerCase().includes('completado') || estado.toLowerCase().includes('enviado')) colorEstado = '#10B981';
+        if(estado.toLowerCase().includes('cancelado')) colorEstado = '#EF4444';
+
+        return `
+            <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="font-weight:700;">${id}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${new Date(fecha).toLocaleDateString()}</td>
+                <td style="font-weight:600;">${cliente} <br><span style="font-size:10px; color:var(--primary);">${p['Teléfono'] || p.Telefono || ''}</span></td>
+                <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+                <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${estado}</span></td>
+                <td>
+                    <button class="action-btn" onclick="abrirEditorFactura(${idx})" style="background:rgba(155,44,250,0.8); color:#fff; width:100%; justify-content:center;">Ver / Editar Factura</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = html;
+}
+
+// === CREADOR Y EDITOR DE FACTURAS ===
+window.invoiceItems = [];
+window.invoiceEditIndex = null; // null si es nueva, o el index de pedidosList
+
+window.abrirEditorFactura = function(idx = null) {
+    window.invoiceItems = [];
+    window.invoiceEditIndex = idx;
+    
+    document.getElementById('inv-edit-nombre').value = '';
+    document.getElementById('inv-edit-tel').value = '';
+    document.getElementById('inv-edit-dir').value = '';
+    document.getElementById('inv-edit-ciudad').value = '';
+    document.getElementById('inv-product-search').value = '';
+    document.getElementById('inv-search-results').classList.remove('active');
+    
+    if (idx !== null) {
+        // Editando existente
+        const p = window.pedidosList[idx];
+        document.getElementById('inv-editor-title').textContent = 'Editar Factura: ' + (p['ID Pedido'] || p.ID);
+        document.getElementById('inv-edit-id').value = p['ID Pedido'] || p.ID;
+        
+        document.getElementById('inv-edit-nombre').value = p['Nombre Cliente'] || p.Nombre || '';
+        document.getElementById('inv-edit-tel').value = p['Teléfono'] || p.Telefono || '';
+        document.getElementById('inv-edit-dir').value = p['Dirección'] || p.Direccion || '';
+        document.getElementById('inv-edit-ciudad').value = p.Ciudad || '';
+        
+        try {
+            const jsonStr = p['Productos JSON'] || p.Productos;
+            let items = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (Array.isArray(jsonStr) ? jsonStr : []);
+            window.invoiceItems = items.map(i => ({
+                idVariacion: i.idVariacion || i.id || i.sku || Date.now(),
+                nombre: i.nombre || i.Nombre || i.Producto || 'Producto',
+                sku: i.sku || i.id || '',
+                cantidad: parseInt(i.cantidad || i.Cantidad || i.qty || 1),
+                precio: parseFloat(i.precio || i.Precio || 0)
+            }));
+        } catch(e) { console.error("Error cargando ítems", e); }
+    } else {
+        // Nueva
+        document.getElementById('inv-editor-title').textContent = 'Nueva Factura';
+        document.getElementById('inv-edit-id').value = '';
+    }
+    
+    renderItemsFactura();
+    document.getElementById('invoice-editor-modal').classList.add('open');
+};
+
+// Buscador Inteligente
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('inv-product-search');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase().trim();
+        const resultsContainer = document.getElementById('inv-search-results');
+        
+        if (q.length < 2) {
+            resultsContainer.classList.remove('active');
+            return;
+        }
+        
+        const results = inventario.filter(p => {
+            if (String(p.Categoria || '').toLowerCase() === 'banner') return false;
+            const str = (p.Nombre + ' ' + (p.SKU || '') + ' ' + (p.Categoria || '')).toLowerCase();
+            return str.includes(q);
+        }).slice(0, 10);
+        
+        if (results.length > 0) {
+            resultsContainer.innerHTML = results.map(p => {
+                const img = normalizeImageUrl(p.Imagen || (p.Galeria && p.Galeria[0]));
+                const price = getProductPrice(p, 'wholesale'); // Usa precio mayorista como default, ajustable después
+                const idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || p.Producto || '';
+                // Escapando comillas simples en el nombre
+                const safeName = (p.Nombre || '').replace(/'/g, "\\'");
+                return `
+                    <div class="inv-search-item" onclick="agregarItemBusqueda('${idVar}', '${safeName}', '${p.SKU || ''}', ${price})">
+                        <img src="${img || 'Logo2.png'}" alt="">
+                        <div class="inv-search-item-info">
+                            <div class="inv-search-item-title">${p.Nombre}</div>
+                            <div class="inv-search-item-sub">
+                                <span style="background:rgba(168,85,247,0.15); color:var(--primary-light); padding:2px 6px; border-radius:4px; font-weight:600; margin-right:6px;">Ref: ${p.SKU || 'S/N'}</span>
+                                <span style="color:#10B981; font-weight:700;">$${price.toLocaleString('es-CO')}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            resultsContainer.classList.add('active');
+        } else {
+            resultsContainer.innerHTML = `
+                <div style="padding:32px 16px; color:rgba(255,255,255,0.4); text-align:center;">
+                    <div style="font-size:24px; margin-bottom:8px;">🔍</div>
+                    <div>No encontramos productos que coincidan con "${q}"</div>
+                </div>`;
+            resultsContainer.classList.add('active');
+        }
+    });
+
+    // Cerrar resultados si hace clic afuera
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.inv-search-container')) {
+            const rc = document.getElementById('inv-search-results');
+            if (rc) rc.classList.remove('active');
+        }
+    });
+});
+
+window.agregarItemBusqueda = function(idVar, nombre, sku, precio) {
+    const existing = window.invoiceItems.find(i => i.idVariacion === idVar);
+    if (existing) {
+        existing.cantidad += 1;
+    } else {
+        window.invoiceItems.push({
+            idVariacion: idVar,
+            nombre: nombre,
+            sku: sku,
+            cantidad: 1,
+            precio: parseFloat(precio)
+        });
+    }
+    
+    document.getElementById('inv-product-search').value = '';
+    document.getElementById('inv-search-results').classList.remove('active');
+    renderItemsFactura();
+};
+
+window.modificarCantidadFactura = function(index, qty) {
+    const val = parseInt(qty);
+    if (val > 0) {
+        window.invoiceItems[index].cantidad = val;
+    } else {
+        window.invoiceItems[index].cantidad = 1;
+    }
+    renderItemsFactura();
+};
+
+window.modificarPrecioFactura = function(index, price) {
+    const val = parseFloat(price);
+    if (!isNaN(val)) {
+        window.invoiceItems[index].precio = val;
+    }
+    renderItemsFactura();
+};
+
+window.eliminarItemFactura = function(index) {
+    window.invoiceItems.splice(index, 1);
+    renderItemsFactura();
+};
+
+function renderItemsFactura() {
+    const tbody = document.getElementById('inv-edit-items');
+    let total = 0;
+    
+    if (window.invoiceItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Busca y añade productos para comenzar</td></tr>';
+        document.getElementById('inv-edit-total').textContent = '$0';
+        return;
+    }
+    
+    tbody.innerHTML = window.invoiceItems.map((item, i) => {
+        const subtotal = item.precio * item.cantidad;
+        total += subtotal;
+        return `
+            <tr>
+                <td>${item.nombre} <br><small style="color:#666;">Ref: ${item.sku || 'S/N'}</small></td>
+                <td style="text-align:center;">
+                    <input type="number" class="inv-qty-input" value="${item.cantidad}" min="1" onchange="modificarCantidadFactura(${i}, this.value)">
+                </td>
+                <td style="text-align:right;">
+                    <input type="number" class="inv-qty-input" style="width:90px;" value="${item.precio}" onchange="modificarPrecioFactura(${i}, this.value)">
+                </td>
+                <td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td>
+                <td style="text-align:right;">
+                    <button class="action-btn" style="background:rgba(239,68,68,0.2); color:#ef4444;" onclick="eliminarItemFactura(${i})">✕</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    document.getElementById('inv-edit-total').textContent = '$' + total.toLocaleString('es-CO');
+}
+
+window.imprimirFacturaEditor = function() {
+    // Pasar los datos del modal a la plantilla oculta de la factura
+    const pId = document.getElementById('inv-edit-id').value || `PED-${Date.now().toString().slice(-6)}`;
+    const nombre = document.getElementById('inv-edit-nombre').value || 'Cliente Generico';
+    const tel = document.getElementById('inv-edit-tel').value || '-';
+    const dir = document.getElementById('inv-edit-dir').value || '-';
+    const ciudad = document.getElementById('inv-edit-ciudad').value || '-';
+    
+    document.getElementById('inv-id').textContent = pId;
+    document.getElementById('inv-date').textContent = new Date().toLocaleDateString();
+    document.getElementById('inv-cliente-nombre').textContent = nombre;
+    document.getElementById('inv-cliente-tel').textContent = tel;
+    document.getElementById('inv-cliente-dir').textContent = dir;
+    document.getElementById('inv-cliente-ciudad').textContent = ciudad;
+    
+    // Asignar datos dinámicos de empresa a la factura
+    const cfg = window.storeConfig || {};
+    const logoImg = document.getElementById('inv-company-logo');
+    if (cfg['Factura_Logo']) logoImg.src = cfg['Factura_Logo'];
+    
+    document.getElementById('inv-company-name').textContent = cfg['Factura_Empresa'] || 'Mi Empresa';
+    document.getElementById('inv-company-nit').textContent = cfg['Factura_NIT'] || '000.000.000-0';
+    document.getElementById('inv-company-contact').textContent = cfg['Factura_Telefono'] || '-';
+    document.getElementById('inv-company-email').textContent = cfg['Factura_Email'] || '-';
+    
+    const itemsTbody = document.getElementById('inv-items');
+    let total = 0;
+    itemsTbody.innerHTML = window.invoiceItems.map(item => {
+        const sub = item.precio * item.cantidad;
+        total += sub;
+        return `
+            <tr>
+                <td style="text-align:center;">${item.cantidad}</td>
+                <td>${item.nombre} <br><small style="color:#666;">Ref: ${item.sku || '-'}</small></td>
+                <td style="text-align:right;">$${item.precio.toLocaleString('es-CO')}</td>
+                <td style="text-align:right;">$${sub.toLocaleString('es-CO')}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    document.getElementById('inv-total').textContent = '$' + total.toLocaleString('es-CO');
+    
+    setTimeout(() => window.print(), 200);
+};
+
+window.guardarFacturaDB = async function() {
+    if (window.invoiceItems.length === 0) return alert("Añade al menos un producto a la factura.");
+    
+    const btn = document.getElementById('btn-save-invoice');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    
+    const isUpdate = document.getElementById('inv-edit-id').value !== '';
+    const idPedido = document.getElementById('inv-edit-id').value || `PED-${Date.now()}`;
+    const total = window.invoiceItems.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    const cantTotal = window.invoiceItems.reduce((sum, item) => sum + item.cantidad, 0);
+    
+    const payload = {
+        resource: 'pedidos',
+        action: isUpdate ? 'actualizar' : 'crear',
+        'ID Pedido': idPedido,
+        'Nombre Cliente': document.getElementById('inv-edit-nombre').value,
+        'Telefono': document.getElementById('inv-edit-tel').value,
+        'Direccion': document.getElementById('inv-edit-dir').value,
+        'Ciudad': document.getElementById('inv-edit-ciudad').value,
+        'Productos JSON': JSON.stringify(window.invoiceItems),
+        'Cantidad Total': cantTotal,
+        'Subtotal': total,
+        'Estado Pedido': isUpdate ? undefined : 'Completado', // Si es nueva, la damos por completada
+        'Metodo Contacto': 'Mostrador / Manual'
+    };
+    
+    try {
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        
+        if (result && result.status === 'success') {
+            showToast('Factura guardada exitosamente', 'success');
+            document.getElementById('invoice-editor-modal').classList.remove('open');
+            cargarPedidos();
+        } else {
+            throw new Error(result.error || 'Error al guardar');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        console.error(err);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar Factura';
+    }
+};
+
 
 window.toggleVariants = function (motherIdClass, btnEl) {
     var rows = document.querySelectorAll('.variant-row.mother-' + motherIdClass);

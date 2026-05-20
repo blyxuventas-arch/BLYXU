@@ -830,7 +830,10 @@ function renderBanners(banners) {
             <div class="main-banner-content">
                 <h1 class="main-banner-title">${b.Nombre || b.nombre || ''}</h1>
                 <p class="main-banner-desc">${b.Descripcion || b.Color || 'Descubre nuestras \u00faltimas colecciones'}</p>
-                <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
+                <div style="display:flex; gap:16px; margin-top:24px; flex-wrap:wrap;">
+                    <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
+                    <a href="javascript:void(0)" onclick="openWholesaleOverlay()" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
+                </div>
             </div>
         </div>
     `).join('');
@@ -1226,6 +1229,90 @@ function updateCartUI() {
     if (checkoutBtn) {
         const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
         checkoutBtn.textContent = isWholesaleOrder ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
+
+        // Manejo del form inline para mayoristas
+        let formContainer = document.getElementById('cart-wholesale-form');
+        if (!formContainer) {
+            formContainer = document.createElement('div');
+            formContainer.id = 'cart-wholesale-form';
+            formContainer.style.display = 'none';
+            formContainer.style.marginTop = '16px';
+            formContainer.innerHTML = `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:12px;">
+                    <h4 style="margin:0 0 12px; font-size:14px; font-weight:800; color:#fff;">Datos de Envío</h4>
+                    <input type="text" id="ws-nombre" class="form-control" placeholder="Nombre completo" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <input type="tel" id="ws-telefono" class="form-control" placeholder="Número de celular" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <input type="text" id="ws-direccion" class="form-control" placeholder="Dirección de entrega" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <input type="text" id="ws-ciudad" class="form-control" placeholder="Ciudad" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <textarea id="ws-nota" class="form-control" placeholder="Nota adicional (opcional)" style="margin-bottom:12px; min-height:50px; font-size:13px; padding:8px 12px; border-radius:8px; resize:vertical;"></textarea>
+                    
+                    <button class="btn-checkout" id="btn-confirm-ws" type="button" style="background:linear-gradient(135deg, #10B981, #059669); margin-bottom:8px;">Confirmar y Enviar Pedido</button>
+                    <button class="btn-filter" id="btn-cancel-ws" type="button" style="width:100%; border:1px solid rgba(255,255,255,0.2);">Cancelar</button>
+                </div>
+            `;
+            const footer = document.querySelector('.cart-footer');
+            if (footer) footer.insertBefore(formContainer, checkoutBtn);
+
+            document.getElementById('btn-cancel-ws').addEventListener('click', () => {
+                formContainer.style.display = 'none';
+                checkoutBtn.style.display = 'block';
+            });
+
+            document.getElementById('btn-confirm-ws').addEventListener('click', () => {
+                const n = document.getElementById('ws-nombre').value.trim();
+                const t = document.getElementById('ws-telefono').value.trim();
+                const d = document.getElementById('ws-direccion').value.trim();
+                const c = document.getElementById('ws-ciudad').value.trim();
+                
+                let errorBox = document.getElementById('ws-form-error');
+                if (!errorBox) {
+                    errorBox = document.createElement('div');
+                    errorBox.id = 'ws-form-error';
+                    errorBox.style.cssText = 'color:#ef4444; font-size:12px; margin-bottom:12px; font-weight:600; display:none; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:6px;';
+                    const nameInput = document.getElementById('ws-nombre');
+                    if (nameInput && nameInput.parentNode) {
+                        nameInput.parentNode.insertBefore(errorBox, nameInput);
+                    } else {
+                        formContainer.appendChild(errorBox);
+                    }
+                }
+                
+                if(!n || !t || !d || !c) {
+                    errorBox.textContent = '✦ Por favor completa todos los campos obligatorios.';
+                    errorBox.style.display = 'block';
+                    return;
+                }
+                
+                errorBox.style.display = 'none';
+                window.wsClienteTemp = { nombre: n, telefono: t, direccion: d, ciudad: c, nota: document.getElementById('ws-nota').value.trim() };
+                
+                // Mostrar loader premium inmediatamente
+                formContainer.innerHTML = `
+                    <div style="text-align:center; padding:32px 16px;">
+                        <div class="loader-bar" style="height:4px; width:100%; background:rgba(255,255,255,0.1); border-radius:4px; margin-bottom:16px; overflow:hidden;">
+                            <div style="height:100%; width:50%; background:linear-gradient(90deg,var(--primary),#d946ef); border-radius:4px; animation:loadSlide 1s infinite ease-in-out;"></div>
+                        </div>
+                        <style>@keyframes loadSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }</style>
+                        <h4 style="margin:0 0 8px; font-size:16px; font-weight:800; color:#fff;">Registrando Pedido...</h4>
+                        <p style="margin:0; font-size:12px; color:rgba(255,255,255,0.5);">Sincronizando con el inventario central</p>
+                    </div>
+                `;
+                checkout(true); // true indica que ya tenemos los datos y pasamos al flujo
+            });
+        }
+
+        // Remover event listener previo limpiando el elemento
+        const newBtn = checkoutBtn.cloneNode(true);
+        checkoutBtn.parentNode.replaceChild(newBtn, checkoutBtn);
+        
+        newBtn.addEventListener('click', () => {
+            if (isWholesaleOrder) {
+                formContainer.style.display = 'block';
+                newBtn.style.display = 'none';
+            } else {
+                checkout(false);
+            }
+        });
     }
 }
 
@@ -1384,7 +1471,7 @@ function launchWholesaleConfetti() {
     });
 }
 
-// -- WHOLESALE ACCESS --
+// -- WHOLESALE --
 function initWholesaleAccess() {
     const overlay = document.getElementById('wholesale-overlay');
     const form = document.getElementById('wholesale-form');
@@ -1392,6 +1479,23 @@ function initWholesaleAccess() {
     const error = document.getElementById('wholesale-error');
     const closeBtn = document.getElementById('wholesale-close');
     const triggers = document.querySelectorAll('a[href="#mayorista"]');
+
+    window.openWholesaleOverlay = function() {
+        if(overlay) {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            if(input) setTimeout(() => input.focus(), 100);
+        }
+    };
+
+    triggers.forEach(t => {
+        t.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.openWholesaleOverlay();
+        });
+    });
+    
     const retailTriggers = document.querySelectorAll('a[href="#coleccion"]');
     const wholesaleSection = document.getElementById('catalogo-mayorista');
 
@@ -1580,7 +1684,8 @@ async function saveOrderToGoogleSheets(cliente, total) {
 
     const orderId = `MAY-${Date.now()}`;
     const payload = {
-        action: 'add_order',
+        resource: 'pedidos',
+        action: 'crear',
         'ID Pedido': orderId,
         'Nombre Cliente': cliente.nombre,
         'Telefono': cliente.telefono,
@@ -1590,7 +1695,7 @@ async function saveOrderToGoogleSheets(cliente, total) {
         'Productos JSON': JSON.stringify(productos),
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
         'Subtotal': total,
-        'Estado Pedido': 'Mayorista Pendiente',
+        'Estado Pedido': 'Pendiente',
         'Metodo Contacto': 'Sistema Mayorista',
         'Nota Cliente': cliente.nota || ''
     };
@@ -1618,17 +1723,8 @@ async function saveOrderToGoogleSheets(cliente, total) {
 }
 
 function askCustomerInfo() {
-    const nombre = prompt('Nombre del cliente');
-    if (!nombre) return null;
-    const telefono = prompt('Telefono / WhatsApp');
-    if (!telefono) return null;
-    const direccion = prompt('Direccion de entrega');
-    if (!direccion) return null;
-    const ciudad = prompt('Ciudad');
-    if (!ciudad) return null;
-    const nota = prompt('Nota para el pedido (opcional)') || '';
-
-    return { nombre, telefono, direccion, ciudad, nota };
+    // Función deprecada: ahora el formulario está incrustado en el carrito
+    return window.wsClienteTemp || null;
 }
 
 function askRetailQuestion() {
@@ -1664,15 +1760,17 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
     return msg;
 }
 
-async function checkout() {
+async function checkout(skipPrompt = false) {
     if (!cart.length) return;
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
     const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
-    const cliente = isWholesaleOrder ? askCustomerInfo() : null;
+    
+    const cliente = isWholesaleOrder ? window.wsClienteTemp : null;
     if (isWholesaleOrder && !cliente) return;
+    
     const retailNote = isWholesaleOrder ? '' : askRetailQuestion();
 
-    const btn = document.getElementById('btn-checkout');
+    const btn = document.getElementById('btn-confirm-ws') || document.getElementById('btn-checkout');
     const originalText = btn ? btn.textContent : '';
     if (btn) {
         btn.disabled = true;
@@ -1685,7 +1783,17 @@ async function checkout() {
             savedOrder = await saveOrderToGoogleSheets(cliente, total);
         } catch (error) {
             console.error('Error guardando pedido:', error);
-            alert(`No se pudo guardar el pedido en el sistema: ${error.message}`);
+            const formContainer = document.getElementById('cart-wholesale-form');
+            if (formContainer) {
+                formContainer.innerHTML = `
+                    <div style="text-align:center; padding:24px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px;">
+                        <div style="font-size:32px; margin-bottom:12px;">⚠️</div>
+                        <h4 style="margin:0 0 8px; color:#ef4444; font-size:15px;">Error al registrar</h4>
+                        <p style="margin:0 0 16px; color:rgba(255,255,255,0.6); font-size:12px;">${error.message}</p>
+                        <button class="btn-checkout" onclick="closeCart()" style="background:transparent; border:1px solid rgba(255,255,255,0.2);">Cerrar</button>
+                    </div>
+                `;
+            }
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -1705,11 +1813,26 @@ async function checkout() {
     cart = [];
     saveCart();
     updateCartUI();
-    closeCart();
 
     if (isWholesaleOrder) {
-        alert(`Pedido mayorista registrado en el sistema.${savedOrder?.['ID Pedido'] ? `\nID: ${savedOrder['ID Pedido']}` : ''}`);
+        // Mostrar mensaje de éxito en lugar de cerrar el carrito y hacer alert
+        const formContainer = document.getElementById('cart-wholesale-form');
+        if (formContainer) {
+            const idText = savedOrder?.['ID Pedido'] ? `<div style="display:inline-block; margin-top:12px; padding:4px 12px; background:rgba(16,185,129,0.1); border-radius:99px; font-weight:800; color:#10B981; font-size:11px; letter-spacing:1px;">ID: ${savedOrder['ID Pedido']}</div>` : '';
+            formContainer.innerHTML = `
+                <div style="text-align:center; padding:32px 16px;">
+                    <div style="width:64px; height:64px; background:linear-gradient(135deg, #10B981, #059669); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; box-shadow:0 12px 24px rgba(16,185,129,0.3);">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <h4 style="margin:0 0 8px; font-size:18px; font-weight:800; color:#fff;">¡Registro Exitoso!</h4>
+                    <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.5); line-height:1.5;">Tu pedido mayorista ha sido guardado correctamente en el sistema.</p>
+                    ${idText}
+                    <button class="btn-checkout" onclick="closeCart()" style="margin-top:24px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar Panel</button>
+                </div>
+            `;
+        }
     } else {
+        closeCart();
         openWhatsAppMessage(msg);
     }
 
@@ -1748,7 +1871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cart-btn')?.addEventListener('click', openCart);
     document.getElementById('cart-overlay')?.addEventListener('click', closeCart);
     document.getElementById('cart-close')?.addEventListener('click', closeCart);
-    document.getElementById('btn-checkout')?.addEventListener('click', checkout);
+    // El event listener general de checkout se asigna dinámicamente en updateCartUI()
 
     // Hero sizes interaction
     document.querySelectorAll('.hero-sizes span').forEach(s => {

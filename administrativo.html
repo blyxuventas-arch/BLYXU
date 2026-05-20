@@ -578,10 +578,262 @@
 
                 <!-- VISTA 3: PEDIDOS -->
                 <div id="view-orders" class="dashboard-section">
-                    <div class="admin-panel" style="text-align: center; padding: 80px 20px;">
-                        <span style="font-size:50px; display:block; margin-bottom:24px;">💳</span>
-                        <h2 style="font-size:24px; font-weight:800; margin-bottom:12px; color:#fff;">Gestión de Pedidos</h2>
-                        <p style="color:rgba(255,255,255,0.4); max-width:400px; margin:0 auto; font-size:14px; line-height:1.6;">Este módulo de facturación y seguimiento de pedidos te permitirá controlar tus envíos como todo un profesional. Próximamente.</p>
+                    <div class="admin-panel gradient-bg" style="padding:0; overflow:hidden;">
+                        <div style="padding:32px 32px 0; display:flex; justify-content:space-between; align-items:center;">
+                            <h2 style="margin:0; font-size:20px; font-weight:800; color:#fff;">Historial de Pedidos</h2>
+                            <div style="display:flex; gap:12px;">
+                                <button class="admin-btn" onclick="abrirEditorFactura(null)" style="width:auto; padding:8px 16px; background:var(--primary); color:#fff;">+ Nueva Factura</button>
+                                <button class="admin-btn secondary" onclick="cargarPedidos()" style="width:auto; padding:8px 16px;">🔄 Actualizar</button>
+                            </div>
+                        </div>
+                        <div style="padding:16px 32px 0;">
+                            <input type="search" class="form-control" id="admin-orders-search" placeholder="🔍 Buscar por ID, Cliente, Teléfono o Estado..." autocomplete="off">
+                        </div>
+                        <div class="table-wrapper" style="padding: 24px 32px;">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID Pedido</th>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Total</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-tbody">
+                                    <tr><td colspan="6" style="text-align:center; padding: 40px;">Cargando pedidos...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <style>
+                        .invoice-editor-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5,0,10,0.85); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(12px); }
+                        .invoice-editor-modal.open { display: flex; animation: invModalFadeIn 0.3s ease; }
+                        @keyframes invModalFadeIn { from{opacity:0;transform:scale(0.98)} to{opacity:1;transform:scale(1)} }
+                        .inv-modal-content { background: radial-gradient(circle at 50% 0%, rgba(155,44,250,0.1), transparent 40%), linear-gradient(180deg, rgba(20,15,30,0.95), rgba(10,5,20,0.98)); width: 95%; max-width: 960px; max-height: 90vh; border-radius: 24px; border: 1px solid rgba(155,44,250,0.15); box-shadow: 0 40px 80px -12px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+                        .inv-modal-header { padding: 24px 36px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%); }
+                        .inv-modal-header h3 { margin: 0; font-size: 22px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 12px; letter-spacing: -0.5px; }
+                        .inv-modal-body { padding: 36px; overflow-y: auto; flex: 1; }
+                        .inv-modal-footer { padding: 24px 36px; border-top: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.4); display: flex; justify-content: flex-end; gap: 16px; align-items: center; backdrop-filter: blur(10px); }
+                        .inv-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 36px; }
+                        
+                        .inv-section-title { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; font-size: 13px; color: var(--primary-light); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
+                        .inv-section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(168,85,247,0.2), transparent); }
+
+                        /* Inputs premium */
+                        .inv-input-wrapper { position: relative; }
+                        .inv-input-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; color: rgba(255,255,255,0.3); pointer-events: none; }
+                        .invoice-editor-modal .form-control { background: rgba(0,0,0,0.3)!important; border: 1px solid rgba(168,85,247,0.1)!important; padding-left: 44px; height: 50px; border-radius: 12px!important; color: #fff; font-size: 14px; transition: all 0.3s; }
+                        .invoice-editor-modal .form-control:focus { background: rgba(168,85,247,0.05)!important; border-color: var(--primary)!important; box-shadow: 0 0 0 3px rgba(168,85,247,0.1)!important; }
+                        
+                        /* Autocomplete Search */
+                        .inv-search-container { position: relative; margin-bottom: 36px; }
+                        .inv-search-results { display: none; position: absolute; top: calc(100% + 12px); left: 0; width: 100%; background: #161022; border: 1px solid rgba(168,85,247,0.2); border-radius: 16px; max-height: 400px; overflow-y: auto; z-index: 100; box-shadow: 0 25px 50px rgba(0,0,0,0.8); }
+                        .inv-search-results.active { display: block; animation: invModalFadeIn 0.2s ease; }
+                        .inv-search-item { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; gap: 16px; align-items: center; cursor: pointer; transition: all 0.2s; }
+                        .inv-search-item:hover { background: rgba(168,85,247,0.08); padding-left: 24px; }
+                        .inv-search-item img { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+                        .inv-search-item-info { flex: 1; }
+                        .inv-search-item-title { font-weight: 700; font-size: 15px; color: #fff; margin-bottom: 6px; }
+                        .inv-search-item-sub { font-size: 12px; display: flex; gap: 8px; align-items: center; }
+                        
+                        /* Tabla de ítems del editor */
+                        .inv-items-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-bottom: 36px; }
+                        .inv-items-table th { text-align: left; padding: 0 16px 12px; font-size: 11px; color: rgba(255,255,255,0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+                        .inv-items-table td { padding: 16px; background: rgba(255,255,255,0.02); font-size: 14px; vertical-align: middle; border-top: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02); }
+                        .inv-items-table tr td:first-child { border-left: 1px solid rgba(255,255,255,0.02); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+                        .inv-items-table tr td:last-child { border-right: 1px solid rgba(255,255,255,0.02); border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+                        .inv-items-table tbody tr:hover td { background: rgba(168,85,247,0.04); }
+                        
+                        .inv-qty-input { width: 80px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: var(--primary-light); border-radius: 8px; text-align: center; font-weight: 800; font-size: 16px; transition: all 0.2s; }
+                        .inv-qty-input:focus { border-color: var(--primary); outline: none; background: rgba(168,85,247,0.1); }
+                        
+                        .inv-total-section { display: flex; justify-content: flex-end; align-items: center; gap: 32px; margin-top: 40px; padding: 32px; border-radius: 20px; background: radial-gradient(circle at 100% 50%, rgba(16,185,129,0.1), transparent 60%), rgba(0,0,0,0.2); border: 1px solid rgba(16,185,129,0.2); }
+                        .inv-total-label { font-size: 14px; color: rgba(255,255,255,0.5); font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+                        .inv-total-value { font-size: 42px; font-weight: 900; color: #10B981; text-shadow: 0 0 30px rgba(16, 185, 129, 0.3); letter-spacing: -1px; }
+                        
+                        /* Botones del editor */
+                        .btn-inv-print { background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 14px 28px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+                        .btn-inv-print:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+                        .btn-inv-cancel { background: transparent; color: rgba(255,255,255,0.4); border: none; padding: 14px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+                        .btn-inv-cancel:hover { color: #fff; background: rgba(255,255,255,0.05); }
+                        .btn-inv-save { background: linear-gradient(135deg, var(--primary), #d946ef); color: #fff; border: none; padding: 14px 36px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; box-shadow: 0 8px 25px rgba(155,44,250,0.4); font-size: 15px; }
+                        .btn-inv-save:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 35px rgba(155,44,250,0.6); }
+                    </style>
+
+                    <div class="invoice-editor-modal" id="invoice-editor-modal">
+                        <div class="inv-modal-content">
+                            <div class="inv-modal-header">
+                                <h3 id="inv-editor-title">🧾 Nueva Factura</h3>
+                                <button type="button" class="action-btn" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')" style="background:transparent; border:none; color:#999; font-size:24px; padding:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:50%; transition:all 0.2s;">✕</button>
+                            </div>
+                            
+                            <div class="inv-modal-body">
+                                <input type="hidden" id="inv-edit-id">
+                                
+                                <div class="inv-section-title"><span>1.</span> Datos del Cliente</div>
+                                <div class="inv-grid-2">
+                                    <div class="inv-input-wrapper">
+                                        <div class="inv-input-icon">👤</div>
+                                        <input type="text" id="inv-edit-nombre" class="form-control" placeholder="Nombre completo">
+                                    </div>
+                                    <div class="inv-input-wrapper">
+                                        <div class="inv-input-icon">📱</div>
+                                        <input type="tel" id="inv-edit-tel" class="form-control" placeholder="Teléfono / WhatsApp">
+                                    </div>
+                                    <div class="inv-input-wrapper">
+                                        <div class="inv-input-icon">📍</div>
+                                        <input type="text" id="inv-edit-dir" class="form-control" placeholder="Dirección de envío">
+                                    </div>
+                                    <div class="inv-input-wrapper">
+                                        <div class="inv-input-icon">🏙️</div>
+                                        <input type="text" id="inv-edit-ciudad" class="form-control" placeholder="Ciudad">
+                                    </div>
+                                </div>
+
+                                <div class="inv-section-title"><span>2.</span> Añadir Productos</div>
+                                <div class="inv-search-container">
+                                    <div class="inv-input-wrapper">
+                                        <div class="inv-input-icon">🔍</div>
+                                        <input type="text" id="inv-product-search" class="form-control" placeholder="Busca un producto por nombre o SKU..." autocomplete="off">
+                                    </div>
+                                    <div class="inv-search-results" id="inv-search-results">
+                                        <!-- Resultados de búsqueda -->
+                                    </div>
+                                </div>
+
+                                <table class="inv-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th style="width: 80px; text-align: center;">Cant.</th>
+                                            <th style="text-align: right;">Precio Unit.</th>
+                                            <th style="text-align: right;">Subtotal</th>
+                                            <th style="width: 50px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inv-edit-items">
+                                        <tr><td colspan="5" style="text-align:center; color:#666; padding: 40px;">Busca y añade productos para comenzar</td></tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="inv-total-section">
+                                    <div class="inv-total-label">TOTAL FACTURA</div>
+                                    <div class="inv-total-value" id="inv-edit-total">$0</div>
+                                </div>
+                            </div>
+                            
+                            <div class="inv-modal-footer">
+                                <button type="button" class="btn-inv-print" onclick="imprimirFacturaEditor()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                    Imprimir
+                                </button>
+                                <button type="button" class="btn-inv-cancel" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')">Cancelar</button>
+                                <button type="button" class="btn-inv-save" id="btn-save-invoice" onclick="guardarFacturaDB()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    Guardar Factura
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENEDOR FACTURA DIGITAL (OCULTO, SOLO PARA IMPRESIÓN) -->
+                <style>
+                    #invoice-print-container {
+                        display: none;
+                    }
+                    @media print {
+                        body * {
+                            visibility: hidden;
+                        }
+                        body {
+                            background: white !important;
+                            color: black !important;
+                        }
+                        #invoice-print-container, #invoice-print-container * {
+                            visibility: visible;
+                        }
+                        #invoice-print-container {
+                            display: block;
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                            padding: 20px;
+                            background: white;
+                            color: black;
+                            font-family: 'Outfit', sans-serif;
+                        }
+                        .invoice-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 20px;
+                            margin-bottom: 20px;
+                        }
+                        .invoice-header img {
+                            height: 60px;
+                            object-fit: contain;
+                        }
+                        .invoice-meta { text-align: right; }
+                        .invoice-title { font-size: 28px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+                        .invoice-details { display: flex; justify-content: space-between; margin-bottom: 40px; padding: 20px; background: #f9fafb; border-radius: 12px; }
+                        .invoice-details strong { font-weight: 800; color: #111; }
+                        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+                        .invoice-table th { border-bottom: 3px solid #000; text-align: left; padding: 12px 8px; font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
+                        .invoice-table td { padding: 16px 8px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+                        .invoice-total { text-align: right; font-size: 24px; font-weight: 900; border-top: 3px solid #000; padding-top: 16px; margin-top: 16px; }
+                        .invoice-footer { text-align: center; margin-top: 60px; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+                    }
+                </style>
+                <div id="invoice-print-container">
+                    <div class="invoice-header">
+                        <img src="Logo2.png" alt="Logo" id="inv-company-logo">
+                        <div class="invoice-meta">
+                            <h1 class="invoice-title">Factura Digital</h1>
+                            <p style="margin:5px 0 0; font-size: 16px; font-weight: 600;" id="inv-id">PED-0000</p>
+                            <p style="margin:5px 0 0; color: #666;" id="inv-date">01/01/2026</p>
+                        </div>
+                    </div>
+                    <div class="invoice-details">
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 10px; font-size: 14px; color: #666; text-transform: uppercase;">Facturar a:</h3>
+                            <strong style="font-size: 18px;" id="inv-cliente-nombre">Nombre del Cliente</strong><br>
+                            <span id="inv-cliente-tel">000000000</span><br>
+                            <span id="inv-cliente-dir">Dirección</span><br>
+                            <span id="inv-cliente-ciudad">Ciudad</span>
+                        </div>
+                        <div style="flex: 1; text-align: right;">
+                            <h3 style="margin: 0 0 10px; font-size: 14px; color: #666; text-transform: uppercase;">Emitido por:</h3>
+                            <strong style="font-size: 18px;" id="inv-company-name">BLYXU Joyería & Accesorios</strong><br>
+                            NIT / DOC: <span id="inv-company-nit">000000000-0</span><br>
+                            <span id="inv-company-contact">WhatsApp: +57 000 0000000</span><br>
+                            <span id="inv-company-email">contacto@blyxu.online</span>
+                        </div>
+                    </div>
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>CANT.</th>
+                                <th>DESCRIPCIÓN</th>
+                                <th style="text-align:right;">P. UNIT</th>
+                                <th style="text-align:right;">SUBTOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-items">
+                            <!-- Items dinámicos -->
+                        </tbody>
+                    </table>
+                    <div class="invoice-total">
+                        TOTAL: <span id="inv-total">$0</span>
+                    </div>
+                    <div class="invoice-footer">
+                        <p><strong>¡Gracias por tu compra!</strong></p>
+                        <p>Si tienes alguna duda con tu pedido, contáctanos a nuestro WhatsApp.</p>
                     </div>
                 </div>
 
@@ -645,6 +897,37 @@
                                 </div>
                             </div>
                             <button type="submit" class="admin-btn" id="btn-save-contact-config">Guardar Contacto</button>
+                        </form>
+
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Configuración de Factura y Remisión</h3>
+                        <form id="invoice-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div class="admin-form-grid">
+                                <div class="form-group admin-form-wide">
+                                    <label>URL del Logo (Fondo transparente)</label>
+                                    <input type="text" class="form-control" id="inv-config-logo" placeholder="https://...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombre Comercial / Empresa</label>
+                                    <input type="text" class="form-control" id="inv-config-empresa" placeholder="Ej: BLYXU Joyería">
+                                </div>
+                                <div class="form-group">
+                                    <label>NIT / RUT / Documento</label>
+                                    <input type="text" class="form-control" id="inv-config-nit" placeholder="Ej: 900.000.000-1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Dirección Física</label>
+                                    <input type="text" class="form-control" id="inv-config-direccion" placeholder="Ej: Calle 123 # 45-67">
+                                </div>
+                                <div class="form-group">
+                                    <label>Teléfono Comercial</label>
+                                    <input type="text" class="form-control" id="inv-config-telefono" placeholder="Ej: WhatsApp: +57 300 000 0000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo o Sitio Web</label>
+                                    <input type="text" class="form-control" id="inv-config-email" placeholder="Ej: www.blyxu.online">
+                                </div>
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-invoice-config" style="background:linear-gradient(135deg, #10B981, #059669);">Guardar Ajustes de Factura</button>
                         </form>
                         
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Carrusel de Inicio</h3>
