@@ -19,6 +19,8 @@ const CONTACT_CONFIG_FIELDS = [
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
+const IMAGE_UPLOAD_MAX_EDGE = 1800;
+const IMAGE_UPLOAD_QUALITY = 0.82;
 let inventoryRenderedRows = 0;
 let inventoryRenderToken = 0;
 let inventoryLoadMoreObserver = null;
@@ -82,16 +84,21 @@ function updateLivePreview() {
             imgEl.style.transition = 'opacity 0.2s';
             imgEl.style.opacity = '0.4';
 
-            const tempImg = new Image();
-            tempImg.onload = () => {
+            loadImageWithRetry(imagenUrl, 3, 700).then(() => {
+                const localPreviewSrc = imgEl.dataset.localPreviewSrc;
                 imgEl.src = imagenUrl;
                 imgEl.style.opacity = '1';
-            };
-            tempImg.onerror = () => {
+                delete imgEl.dataset.localPreviewSrc;
+                if (localPreviewSrc) URL.revokeObjectURL(localPreviewSrc);
+            }).catch(() => {
+                if (imgEl.dataset.localPreviewSrc) {
+                    imgEl.src = imgEl.dataset.localPreviewSrc;
+                    imgEl.style.opacity = '0.85';
+                    return;
+                }
                 imgEl.src = 'hero_necklace.png';
                 imgEl.style.opacity = '0.3';
-            };
-            tempImg.src = imagenUrl;
+            });
         }
     }
 
@@ -109,6 +116,32 @@ function updateLivePreview() {
             badgeEl.style.display = 'none';
         }
     }
+}
+
+function loadImageWithRetry(src, attempts = 2, delayMs = 500) {
+    return new Promise((resolve, reject) => {
+        if (!src) {
+            reject(new Error('Imagen vacia'));
+            return;
+        }
+
+        let attempt = 0;
+        const tryLoad = () => {
+            const tempImg = new Image();
+            tempImg.onload = () => resolve(src);
+            tempImg.onerror = () => {
+                attempt += 1;
+                if (attempt >= attempts) {
+                    reject(new Error('No se pudo cargar la imagen'));
+                    return;
+                }
+                setTimeout(tryLoad, delayMs);
+            };
+            tempImg.src = src;
+        };
+
+        tryLoad();
+    });
 }
 
 function getProductField(product, fields, fallback = '') {
@@ -519,9 +552,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const imgEl = document.getElementById('preview-img-el');
         if (imgEl) {
             imgEl.src = localUrl;
+            imgEl.dataset.localPreviewSrc = localUrl;
             imgEl.style.opacity = '0.7';
         }
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Subiendo imagen...';
+        }
         showToast('Subiendo imagen a Google Drive...');
+    }, () => {
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar producto';
+            delete saveBtn.dataset.readyText;
+        }
     });
 
     // Delegación de eventos para drag & drop en variantes dinámicas
@@ -930,22 +977,78 @@ function fileToBase64(file) {
     });
 }
 
+function loadImageFile(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(img);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('No se pudo preparar la imagen'));
+        };
+        img.src = url;
+    });
+}
+
+function canvasToBlob(canvas, type, quality) {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error('No se pudo comprimir la imagen'));
+        }, type, quality);
+    });
+}
+
+async function prepareImageForUpload(file) {
+    if (file.size <= MAX_CAROUSEL_IMAGE_SIZE || file.type === 'image/gif') {
+        return file;
+    }
+
+    const img = await loadImageFile(file);
+    const scale = Math.min(1, IMAGE_UPLOAD_MAX_EDGE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+    canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('No se pudo preparar la imagen');
+    }
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    let blob = await canvasToBlob(canvas, 'image/jpeg', IMAGE_UPLOAD_QUALITY);
+    if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
+        blob = await canvasToBlob(canvas, 'image/jpeg', 0.68);
+    }
+    if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
+        throw new Error('La imagen sigue pesando mas de 5 MB despues de comprimirla');
+    }
+
+    const cleanName = String(file.name || 'imagen').replace(/\.[^.]+$/, '') || 'imagen';
+    return new File([blob], `${cleanName}.jpg`, { type: 'image/jpeg' });
+}
+
 async function uploadCarouselImage(file) {
     if (!file) return '';
     if (!file.type.startsWith('image/')) {
         throw new Error('Selecciona un archivo de imagen valido');
     }
-    if (file.size > MAX_CAROUSEL_IMAGE_SIZE) {
+
+    const uploadFile = await prepareImageForUpload(file);
+    if (uploadFile.size > MAX_CAROUSEL_IMAGE_SIZE) {
         throw new Error('La imagen pesa mas de 5 MB');
     }
 
-    const base64Data = await fileToBase64(file);
+    const base64Data = await fileToBase64(uploadFile);
     const res = await fetch(GOOGLE_SHEET_API, {
         method: 'POST',
         body: JSON.stringify({
             action: 'upload_image',
-            fileName: file.name,
-            mimeType: file.type,
+            fileName: uploadFile.name,
+            mimeType: uploadFile.type,
             base64Data
         })
     });
@@ -955,13 +1058,18 @@ async function uploadCarouselImage(file) {
         throw new Error(result?.error || result?.message || 'No se pudo subir la imagen');
     }
 
-    return normalizeImageUrl(result.url || result.data?.url || '');
+    const uploadedUrl = normalizeImageUrl(result.url || result.data?.url || '');
+    if (!uploadedUrl) {
+        throw new Error('Google Drive no devolvio la URL de la imagen');
+    }
+
+    return uploadedUrl;
 }
 
 /**
  * Configura el comportamiento de Arrastrar y Soltar en un elemento
  */
-function setupDragAndDrop(containerId, onFileProcessed) {
+function setupDragAndDrop(containerId, onFileProcessed, onLocalPreview, onUploadEnd) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -987,9 +1095,9 @@ function setupDragAndDrop(containerId, onFileProcessed) {
         if (file && file.type.startsWith('image/')) {
             try {
                 // Notificar preview local inmediata si existe el callback
-                if (arguments[2] && typeof arguments[2] === 'function') {
+                if (typeof onLocalPreview === 'function') {
                     const localUrl = URL.createObjectURL(file);
-                    arguments[2](localUrl);
+                    onLocalPreview(localUrl, file);
                 }
 
                 const imageUrl = await uploadCarouselImage(file);
@@ -998,6 +1106,10 @@ function setupDragAndDrop(containerId, onFileProcessed) {
             } catch (err) {
                 console.error(err);
                 showToast('Error al subir imagen: ' + err.message, 'error');
+            } finally {
+                if (typeof onUploadEnd === 'function') {
+                    onUploadEnd(file);
+                }
             }
         } else {
             showToast('Por favor, arrastra solo archivos de imagen', 'warning');

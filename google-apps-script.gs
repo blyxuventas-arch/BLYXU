@@ -1,650 +1,810 @@
-// CONFIGURACION GENERAL
-// Si el Apps Script NO esta creado desde la hoja, pega aqui el ID del Google Sheet.
-// Si si esta creado desde la hoja, dejalo vacio.
-var SPREADSHEET_ID = '';
+/***************
+ * CONFIGURACION
+ ***************/
+const SPREADSHEET_ID = '';
 
-// CONFIGURACION DE PESTANAS
-var HOJA_VARIANTES = 'VARIANTES';
-var HOJA_PEDIDOS = 'PEDIDOS';
-var HOJA_CLIENTES = 'CLIENTES';
-var HOJA_FACTURAS = 'FACTURAS';
-var HOJA_CONFIG = 'CONFIGURACION';
+const SHEETS = {
+  Productos: {
+    primary: 'ID Variación',
+    headers: [
+      'ID Variación',
+      'ID Producto',
+      'Nombre del Producto',
+      'Categoría',
+      'Precio',
+      'Precio Mayor',
+      'Stock Inicial',
+      'Cantidad',
+      'Características del producto',
+      'Tamaño',
+      'Color',
+      'Estilo',
+      'Imagen Principal',
+      'Galería JSON',
+      'SKU',
+      'Estado',
+      'Fecha de Creación'
+    ]
+  },
 
-var HEADERS_VARIANTES = [
-  'ID Variacion',
-  'ID Producto',
-  'Nombre del Producto',
-  'Categoría',
-  'Catálogo',
-  'Precio',
-  'Precio Mayor',
-  'Stock Inicial',
-  'Cantidad',
-  'Características del producto',
-  'Tamaño',
-  'Color',
-  'Estilo',
-  'Imagen Principal',
-  'Galería JSON',
-  'SKU',
-  'Estado',
-  'Fecha de Creación'
-];
+  Pedidos: {
+    primary: 'ID Pedido',
+    headers: [
+      'ID Pedido',
+      'Fecha',
+      'ID Cliente',
+      'Nombre Cliente',
+      'Teléfono',
+      'Dirección',
+      'Ciudad',
+      'Productos JSON',
+      'Cantidad Total',
+      'Subtotal',
+      'Estado Pedido',
+      'Método Contacto',
+      'Nota Cliente',
+      'Fecha Actualización'
+    ]
+  },
 
-var HEADERS_PEDIDOS = [
-  'ID Pedido',
-  'Fecha',
-  'ID Cliente',
-  'Nombre Cliente',
-  'Telefono',
-  'Direccion',
-  'Ciudad',
-  'Productos JSON',
-  'Cantidad Total',
-  'Subtotal',
-  'Estado Pedido',
-  'Metodo Contacto',
-  'Nota Cliente',
-  'Fecha Actualizacion'
-];
+  Clientes: {
+    primary: 'Teléfono',
+    headers: [
+      'Nombre',
+      'Teléfono',
+      'Email',
+      'Dirección',
+      'Ciudad',
+      'Total Pedidos',
+      'Total Gastado',
+      'Último Pedido',
+      'Estado Cliente',
+      'Fecha Registro'
+    ]
+  },
 
-var HEADERS_CLIENTES = [
-  'ID Cliente',
-  'Nombre',
-  'Telefono',
-  'Email',
-  'Direccion',
-  'Ciudad',
-  'Total Pedidos',
-  'Total Gastado',
-  'Ultimo Pedido',
-  'Estado Cliente',
-  'Fecha Registro'
-];
-
-var HEADERS_FACTURAS = [
-  'ID Factura',
-  'ID Pedido',
-  'ID Cliente',
-  'Fecha',
-  'Productos JSON',
-  'Cantidad Total',
-  'Subtotal',
-  'Estado Factura',
-  'Metodo Pago',
-  'Metodo Entrega',
-  'Observaciones',
-  'Fecha Actualizacion'
-];
-
-var HEADERS_CONFIG = [
-  'Clave',
-  'Valor',
-  'Fecha Actualizacion'
-];
-
-function doOptions(e) {
-  return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
-}
-
-function doGet(e) {
-  try {
-    var doc = getSpreadsheet_();
-    var action = getParam_(e, 'action') || '';
-
-    if (action === 'get_config') {
-      return createJsonResponse({
-        status: 'success',
-        config: getConfig_(doc)
-      });
-    }
-
-    var sheetName = getParam_(e, 'sheet') || getParam_(e, 'resource') || HOJA_VARIANTES;
-    if (sheetName === 'productos') sheetName = HOJA_VARIANTES;
-    var headers = getHeadersForSheet_(sheetName);
-    var sheet = headers
-      ? getOrCreateSheet(doc, sheetName, headers)
-      : doc.getSheetByName(sheetName);
-
-    if (!sheet) {
-      return createJsonResponse({
-        status: 'error',
-        message: 'Hoja no encontrada: ' + sheetName
-      });
-    }
-
-    var rows = sheetToObjects_(sheet);
-
-    if (sheetName === HOJA_VARIANTES) {
-      rows = rows.map(normalizeVariantForStore_);
-    }
-
-    return createJsonResponse({
-      status: 'success',
-      data: rows.reverse()
-    });
-  } catch (error) {
-    return createJsonResponse({
-      status: 'error',
-      message: String(error && error.message ? error.message : error)
-    });
+  Facturas: {
+    primary: 'ID Factura',
+    headers: [
+      'Nombre',
+      'ID Factura',
+      'ID Pedido',
+      'ID Cliente',
+      'Fecha',
+      'Productos JSON',
+      'Cantidad Total',
+      'Subtotal',
+      'Estado Factura',
+      'Método Pago',
+      'Método Entrega',
+      'Observaciones',
+      'Fecha Actualización'
+    ]
+  },
+  
+  Configuracion: {
+    primary: 'Clave',
+    headers: [
+      'Clave',
+      'Valor',
+      'Fecha Actualización'
+    ]
   }
+};
+
+/***************
+ * WEB APP
+ ***************/
+function doGet(e) {
+  return handleRequest_(e, 'GET');
 }
 
 function doPost(e) {
+  return handleRequest_(e, 'POST');
+}
+
+function handleRequest_(e, method) {
   try {
-    var doc = getSpreadsheet_();
-    var data = parsePayload_(e);
-    var action = data.action || '';
+    ensureSheets_();
 
-    if (data.resource === 'productos' && data.data && (action === 'crear' || action === 'editar')) {
-      var nestedProductData = data.data;
-      nestedProductData.action = action === 'editar' ? 'edit_product' : 'add_product';
-      data = nestedProductData;
-      action = data.action;
+    const params = e.parameter || {};
+    const body = parseBody_(e);
+
+    const action = normalizeKey_(body.action || params.action || '');
+    const resource = body.resource || body.recurso || body.sheet || body.hoja ||
+      params.resource || params.recurso || params.sheet || params.hoja;
+
+    if (action === 'setup') {
+      ensureSheets_();
+      return json_({ ok: true, status: 'success', message: 'Hojas verificadas correctamente.' });
     }
 
-    // Alias usado por tu admin actual.
-    if (action === 'agregar') action = 'add_product';
-    if (action === 'crear') action = 'add_product';
-    if (action === 'editar') action = 'edit_product';
-
-    // 1. INVENTARIO / VARIANTES
-    if (action === 'add_product' || action === 'edit_product') {
-      var sheetVariantes = getOrCreateSheet(doc, HOJA_VARIANTES, HEADERS_VARIANTES);
-      var productData = normalizeProductPayload_(data);
-      var searchId = productData['ID Variacion'] || data.editId || data.id;
-
-      if (!searchId) searchId = Utilities.getUuid();
-      productData['ID Variacion'] = searchId;
-      if (!productData['ID Producto']) productData['ID Producto'] = searchId;
-      if (!productData['Fecha de Creacion']) productData['Fecha de Creacion'] = new Date().toISOString();
-      if (!productData['Estado']) productData['Estado'] = 'Activo';
-
-      upsertRow(sheetVariantes, 'ID Variacion', searchId, productData);
-      return createJsonResponse({
-        status: 'success',
-        id: searchId
-      });
-    }
-
-    if (action === 'delete_product') {
-      var sheetDelete = doc.getSheetByName(HOJA_VARIANTES);
-      var deletedCount = 0;
+    // ==========================================
+    // 1) LÓGICA DE SUBIDA DE IMÁGENES
+    // ==========================================
+    if (method === 'POST' && action === 'uploadimage') {
+      const folders = DriveApp.getFoldersByName('PRODUCTOS_Images');
+      const folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('PRODUCTOS_Images');
       
-      // Try by ID Variacion
-      if (data.id || data['ID Variacion']) {
-        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'ID Variacion', data.id || data['ID Variacion']);
-      }
-
-      // Try by _rowIndex as fallback if provided
-      if (!deletedCount && data._rowIndex) {
-        try {
-          sheetDelete.deleteRow(data._rowIndex);
-          deletedCount = 1;
-        } catch(e) {}
-      }
-
-      // Delete by family only when explicitly requested.
-      if (!deletedCount && data.deleteGroup === true && data.ID_Producto) {
-        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'ID Producto', data.ID_Producto);
-      }
-
-      // Try by Name as last resort
-      if (!deletedCount && data.nombre) {
-        deletedCount = deleteRowsByColumnMatchCount(sheetDelete, 'Nombre del Producto', data.nombre);
-      }
-
-      return createJsonResponse({
-        status: deletedCount > 0 ? 'success' : 'error',
-        deleted: deletedCount,
-        message: deletedCount > 0 ? 'Producto eliminado' : 'No se encontro el producto para eliminar'
-      });
-    }
-
-    // 2. PEDIDOS Y CLIENTES
-    if (action === 'add_order' || action === 'edit_order') {
-      var sheetPedidos = getOrCreateSheet(doc, HOJA_PEDIDOS, HEADERS_PEDIDOS);
-      var orderId = data['ID Pedido'] || Utilities.getUuid();
-      data['ID Pedido'] = orderId;
-      data['Fecha Actualizacion'] = new Date().toISOString();
-      if (!data['Fecha']) data['Fecha'] = new Date().toISOString();
-      if (!data['Estado Pedido']) data['Estado Pedido'] = 'Pendiente';
-      upsertRow(sheetPedidos, 'ID Pedido', orderId, data);
-
-      saveOrUpdateClient_(doc, data);
-      discountStockFromOrder_(doc, data);
-
-      return createJsonResponse({
-        status: 'success',
-        id: orderId
-      });
-    }
-
-    if (action === 'update_order_status') {
-      var updated = updateOrderStatus_(doc, data);
-      return createJsonResponse({
-        status: updated ? 'success' : 'error'
-      });
-    }
-
-    // 3. FACTURAS
-    if (action === 'add_invoice') {
-      var sheetFacturas = getOrCreateSheet(doc, HOJA_FACTURAS, HEADERS_FACTURAS);
-      var invoiceId = data['ID Factura'] || Utilities.getUuid();
-      data['ID Factura'] = invoiceId;
-      if (!data['Fecha']) data['Fecha'] = new Date().toISOString();
-      data['Fecha Actualizacion'] = new Date().toISOString();
-      upsertRow(sheetFacturas, 'ID Factura', invoiceId, data);
-      return createJsonResponse({
-        status: 'success',
-        id: invoiceId
-      });
-    }
-
-    // 4. CONFIGURACION
-    if (action === 'set_config') {
-      var sheetConfig = getOrCreateSheet(doc, HOJA_CONFIG, HEADERS_CONFIG);
-      var key = data.Clave || data.key;
-      var value = data.Valor || data.value;
-      if (!key) throw new Error('Falta Clave en set_config');
-      upsertRow(sheetConfig, 'Clave', key, {
-        Clave: key,
-        Valor: value,
-        'Fecha Actualizacion': new Date().toISOString()
-      });
-      return createJsonResponse({
-        status: 'success'
-      });
-    }
-
-    // 5. IMAGENES
-    if (action === 'upload_image') {
-      var folders = DriveApp.getFoldersByName('PRODUCTOS_Images');
-      var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder('PRODUCTOS_Images');
-      var file = folder.createFile(Utilities.newBlob(Utilities.base64Decode(data.base64Data), data.mimeType, data.fileName));
+      const blob = Utilities.newBlob(Utilities.base64Decode(body.base64Data), body.mimeType, body.fileName);
+      const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      return createJsonResponse({
+      
+      return json_({
+        ok: true,
         status: 'success',
         url: 'https://drive.google.com/uc?export=view&id=' + file.getId()
       });
     }
 
-    return createJsonResponse({
-      status: 'error',
-      message: 'Accion no valida: ' + action
-    });
+    // ==========================================
+    // 2) LÓGICA DE CONFIGURACIÓN (Panel Admin)
+    // ==========================================
+    if (action === 'getconfig') {
+      const rows = listRows_('Configuracion', {});
+      const configObj = {};
+      rows.forEach(r => { if (r.Clave) configObj[r.Clave] = r.Valor; });
+      return json_({ ok: true, status: 'success', config: configObj });
+    }
+    
+    if (method === 'POST' && action === 'setconfig') {
+      const key = body.Clave || params.Clave;
+      const val = body.Valor || params.Valor;
+      upsertConfig_(key, val);
+      return json_({ ok: true, status: 'success' });
+    }
+
+    const sheetName = sheetFromResource_(resource || action);
+
+    if (!sheetName) {
+      return json_({
+        ok: false,
+        status: 'error',
+        error: 'Debes enviar resource: productos, pedidos, clientes o facturas.'
+      });
+    }
+
+    if (method === 'GET' || action === 'listar' || action === 'list' || action === 'get') {
+      const id = params.id || params.ID || params.codigo || '';
+
+      if (id) {
+        const row = getById_(sheetName, id);
+        return json_({ ok: true, status: 'success', data: row });
+      }
+
+      const rows = listRows_(sheetName, params);
+      return json_({ ok: true, status: 'success', data: rows });
+    }
+
+    if (method === 'POST') {
+      const data = body.data || body;
+
+      if (
+        action === 'crear' ||
+        action === 'create' ||
+        action === 'agregar' ||
+        action === 'addproduct' ||
+        action === ''
+      ) {
+        if (sheetName === 'Pedidos') {
+          const pedido = createOrder_(data);
+          return json_({ ok: true, status: 'success', data: pedido });
+        }
+
+        const created = appendRow_(sheetName, data);
+        return json_({ ok: true, status: 'success', data: created });
+      }
+
+      if (
+        action === 'actualizar' ||
+        action === 'update' ||
+        action === 'editar' ||
+        action === 'editproduct'
+      ) {
+        const id = body.id || data.id || data['ID Variación'] || data['ID Variacion'] || data[SHEETS[sheetName].primary];
+        const updated = updateRow_(sheetName, id, data);
+        return json_({ ok: true, status: 'success', data: updated });
+      }
+
+      if (action === 'estado' || action === 'updateestado') {
+        const id = body.id || data.id;
+        const estado = body.estado || data.estado;
+        const updated = updateStatus_(sheetName, id, estado);
+        return json_({ ok: true, status: 'success', data: updated });
+      }
+
+      if (
+        action === 'deleteproduct' ||
+        action === 'delete' ||
+        action === 'eliminar' ||
+        action === 'borrar'
+      ) {
+        const id =
+          body.id ||
+          data.id ||
+          data['ID Variación'] ||
+          data['ID Variacion'] ||
+          data[SHEETS[sheetName].primary];
+
+        const deleted = deleteRow_(sheetName, id, body._rowIndex || data._rowIndex);
+
+        return json_({
+          ok: deleted > 0,
+          status: deleted > 0 ? 'success' : 'error',
+          deleted: deleted,
+          message: deleted > 0 ? 'Producto eliminado.' : 'No se encontro el producto.'
+        });
+      }
+
+      return json_({ ok: false, status: 'error', error: 'Accion no reconocida.' });
+    }
+
+    return json_({ ok: false, status: 'error', error: 'Metodo no soportado.' });
+
   } catch (error) {
-    return createJsonResponse({
+    return json_({
+      ok: false,
       status: 'error',
-      message: String(error && error.message ? error.message : error)
+      error: error.message,
+      stack: error.stack
     });
   }
+}
+
+/***************
+ * OPERACIONES PRINCIPALES
+ ***************/
+function upsertConfig_(key, val) {
+  if (!key) return;
+  const sheet = getSheet_('Configuracion');
+  const rowIndex = findRowIndex_(sheet, 'Clave', key);
+  const now = new Date();
+  
+  if (!rowIndex) {
+    appendRow_('Configuracion', {
+      Clave: key,
+      Valor: val,
+      'Fecha Actualización': now
+    });
+  } else {
+    updateRow_('Configuracion', key, {
+      Valor: val,
+      'Fecha Actualización': now
+    });
+  }
+}
+
+function createOrder_(data) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const pedido = appendRow_('Pedidos', data);
+
+    upsertClientFromOrder_(pedido);
+    updateStockFromOrder_(pedido['Productos JSON']);
+
+    return pedido;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function appendRow_(sheetName, inputData) {
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const rowObject = normalizeDataForSheet_(sheetName, inputData);
+  const now = new Date();
+
+  if (sheetName === 'Productos') {
+    rowObject['ID Variación'] = rowObject['ID Variación'] || rowObject['ID Variacion'] || makeId_('VAR');
+    rowObject['ID Producto'] = rowObject['ID Producto'] || rowObject['ID Variación'];
+    rowObject['Estado'] = rowObject['Estado'] || 'Activo';
+    rowObject['Fecha de Creación'] = rowObject['Fecha de Creación'] || now;
+  }
+
+  if (sheetName === 'Pedidos') {
+    rowObject['ID Pedido'] = rowObject['ID Pedido'] || makeId_('PED');
+    rowObject['Fecha'] = rowObject['Fecha'] || now;
+    rowObject['Fecha Actualización'] = now;
+    rowObject['Estado Pedido'] = rowObject['Estado Pedido'] || 'Nuevo';
+
+    if (!rowObject['ID Cliente'] && rowObject['Teléfono']) {
+      rowObject['ID Cliente'] = cleanPhone_(rowObject['Teléfono']);
+    }
+
+    fillOrderTotals_(rowObject);
+  }
+
+  if (sheetName === 'Clientes') {
+    rowObject['Fecha Registro'] = rowObject['Fecha Registro'] || now;
+    rowObject['Estado Cliente'] = rowObject['Estado Cliente'] || 'Activo';
+    rowObject['Total Pedidos'] = rowObject['Total Pedidos'] || 0;
+    rowObject['Total Gastado'] = rowObject['Total Gastado'] || 0;
+  }
+
+  if (sheetName === 'Facturas') {
+    rowObject['ID Factura'] = rowObject['ID Factura'] || makeId_('FAC');
+    rowObject['Fecha'] = rowObject['Fecha'] || now;
+    rowObject['Fecha Actualización'] = now;
+    rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
+  }
+
+  const row = headers.map(header => rowObject[header] !== undefined ? rowObject[header] : '');
+
+  if (sheetName === 'Productos' && rowObject['ID Variación']) {
+    const existingRow = findRowIndex_(sheet, 'ID Variación', rowObject['ID Variación']);
+
+    if (existingRow) {
+      const current = rowToObject_(headers, sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0]);
+
+      headers.forEach(header => {
+        if (rowObject[header] !== undefined && rowObject[header] !== '') {
+          current[header] = rowObject[header];
+        }
+      });
+
+      const mergedRow = headers.map(header => current[header] !== undefined ? current[header] : '');
+      sheet.getRange(existingRow, 1, 1, headers.length).setValues([mergedRow]);
+      return current;
+    }
+  }
+
+  sheet.appendRow(row);
+  return rowObject;
+}
+
+function updateRow_(sheetName, id, inputData) {
+  if (!id) throw new Error('Falta el id para actualizar.');
+
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const primary = SHEETS[sheetName].primary;
+  const rowIndex = findRowIndex_(sheet, primary, id);
+
+  if (!rowIndex) throw new Error('No se encontro registro con id: ' + id);
+
+  const current = rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
+  const changes = normalizeDataForSheet_(sheetName, inputData);
+
+  Object.keys(changes).forEach(key => {
+    current[key] = changes[key];
+  });
+
+  if (headers.includes('Fecha Actualización')) {
+    current['Fecha Actualización'] = new Date();
+  }
+
+  const row = headers.map(header => current[header] !== undefined ? current[header] : '');
+  sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+
+  return current;
+}
+
+function deleteRow_(sheetName, id, rowIndex) {
+  const sheet = getSheet_(sheetName);
+
+  if (rowIndex && Number(rowIndex) > 1) {
+    sheet.deleteRow(Number(rowIndex));
+    return 1;
+  }
+
+  if (!id) throw new Error('Falta el id para eliminar.');
+
+  const primary = SHEETS[sheetName].primary;
+  const foundRow = findRowIndex_(sheet, primary, id);
+
+  if (!foundRow) return 0;
+
+  sheet.deleteRow(foundRow);
+  return 1;
+}
+
+function updateStatus_(sheetName, id, estado) {
+  if (!estado) throw new Error('Falta el estado.');
+
+  const statusHeader = getStatusHeader_(sheetName);
+  const data = {};
+  data[statusHeader] = estado;
+
+  return updateRow_(sheetName, id, data);
+}
+
+function getById_(sheetName, id) {
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const primary = SHEETS[sheetName].primary;
+  const rowIndex = findRowIndex_(sheet, primary, id);
+
+  if (!rowIndex) return null;
+
+  const values = sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0];
+  return parseJsonFields_(rowToObject_(headers, values));
+}
+
+function listRows_(sheetName, filters) {
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return [];
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+
+  let rows = values
+    .filter(row => row.some(cell => cell !== ''))
+    .map(row => parseJsonFields_(rowToObject_(headers, row)));
+
+  if (filters.estado) {
+    const statusHeader = getStatusHeader_(sheetName);
+    rows = rows.filter(row => normalizeKey_(row[statusHeader]) === normalizeKey_(filters.estado));
+  }
+
+  if (filters.categoria && sheetName === 'Productos') {
+    rows = rows.filter(row => normalizeKey_(row['Categoría']) === normalizeKey_(filters.categoria));
+  }
+
+  if (filters.q) {
+    const q = normalizeKey_(filters.q);
+    rows = rows.filter(row => normalizeKey_(JSON.stringify(row)).includes(q));
+  }
+
+  return rows;
+}
+
+/***************
+ * CLIENTES Y STOCK
+ ***************/
+function upsertClientFromOrder_(pedido) {
+  const telefono = pedido['Teléfono'];
+  if (!telefono) return;
+
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const rowIndex = findRowIndex_(sheet, 'Teléfono', telefono);
+  const now = new Date();
+  const subtotal = toNumber_(pedido['Subtotal']);
+
+  if (!rowIndex) {
+    appendRow_('Clientes', {
+      Nombre: pedido['Nombre Cliente'],
+      Teléfono: telefono,
+      Dirección: pedido['Dirección'],
+      Ciudad: pedido['Ciudad'],
+      'Total Pedidos': 1,
+      'Total Gastado': subtotal,
+      'Último Pedido': pedido['Fecha'] || now,
+      'Estado Cliente': 'Activo',
+      'Fecha Registro': now
+    });
+    return;
+  }
+
+  const current = rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
+
+  current['Nombre'] = pedido['Nombre Cliente'] || current['Nombre'];
+  current['Dirección'] = pedido['Dirección'] || current['Dirección'];
+  current['Ciudad'] = pedido['Ciudad'] || current['Ciudad'];
+  current['Total Pedidos'] = toNumber_(current['Total Pedidos']) + 1;
+  current['Total Gastado'] = toNumber_(current['Total Gastado']) + subtotal;
+  current['Último Pedido'] = pedido['Fecha'] || now;
+  current['Estado Cliente'] = current['Estado Cliente'] || 'Activo';
+
+  const row = headers.map(header => current[header] !== undefined ? current[header] : '');
+  sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+}
+
+function updateStockFromOrder_(productosJson) {
+  const productos = parseMaybeJson_(productosJson);
+  if (!Array.isArray(productos)) return;
+
+  const sheet = getSheet_('Productos');
+  const headers = getHeaders_(sheet);
+  const idCol = headers.indexOf('ID Variación') + 1;
+  const qtyCol = headers.indexOf('Cantidad') + 1;
+
+  if (!idCol || !qtyCol) return;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+
+  productos.forEach(item => {
+    const id = item['ID Variación'] || item['ID Variacion'] || item.idVariacion || item.id || item.variationId || item.sku;
+    const cantidad = toNumber_(item.cantidad || item.Cantidad || item.qty || item.quantity || 1);
+
+    if (!id || cantidad <= 0) return;
+
+    for (let i = 0; i < values.length; i++) {
+      const currentId = values[i][idCol - 1];
+      if (String(currentId) === String(id)) {
+        const currentQty = toNumber_(values[i][qtyCol - 1]);
+        const newQty = Math.max(0, currentQty - cantidad);
+        sheet.getRange(i + 2, qtyCol).setValue(newQty);
+        break;
+      }
+    }
+  });
+}
+
+/***************
+ * HELPERS
+ ***************/
+function ensureSheets_() {
+  const ss = getSpreadsheet_();
+
+  Object.keys(SHEETS).forEach(sheetName => {
+    let sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    const expectedHeaders = SHEETS[sheetName].headers;
+    const lastCol = Math.max(sheet.getLastColumn(), expectedHeaders.length);
+
+    let currentHeaders = [];
+    if (sheet.getLastRow() >= 1 && sheet.getLastColumn() >= 1) {
+      currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].filter(String);
+    }
+
+    if (currentHeaders.length === 0) {
+      sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+      sheet.setFrozenRows(1);
+      return;
+    }
+
+    expectedHeaders.forEach(header => {
+      if (!currentHeaders.includes(header)) {
+        sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+      }
+    });
+
+    sheet.setFrozenRows(1);
+  });
 }
 
 function getSpreadsheet_() {
-  var doc = SPREADSHEET_ID
+  return SPREADSHEET_ID
     ? SpreadsheetApp.openById(SPREADSHEET_ID)
     : SpreadsheetApp.getActiveSpreadsheet();
-
-  if (!doc) {
-    throw new Error('No se pudo abrir el Google Sheet. Pega el ID en SPREADSHEET_ID o crea el Apps Script desde la hoja.');
-  }
-
-  return doc;
 }
 
-function getParam_(e, name) {
-  return e && e.parameter && e.parameter[name] ? e.parameter[name] : '';
-}
-
-function parsePayload_(e) {
-  if (e && e.postData && e.postData.contents) {
-    try {
-      return JSON.parse(e.postData.contents);
-    } catch (err) {
-      // Si no era JSON, Apps Script igual puede traer e.parameter.
-    }
-  }
-  return e && e.parameter ? e.parameter : {};
-}
-
-function getHeadersForSheet_(sheetName) {
-  if (sheetName === HOJA_VARIANTES) return HEADERS_VARIANTES;
-  if (sheetName === HOJA_PEDIDOS) return HEADERS_PEDIDOS;
-  if (sheetName === HOJA_CLIENTES) return HEADERS_CLIENTES;
-  if (sheetName === HOJA_FACTURAS) return HEADERS_FACTURAS;
-  if (sheetName === HOJA_CONFIG) return HEADERS_CONFIG;
-  return null;
-}
-
-function getOrCreateSheet(doc, name, headers) {
-  var sheet = doc.getSheetByName(name);
-  if (!sheet) {
-    sheet = doc.insertSheet(name);
-  }
-  ensureHeaders_(sheet, headers);
+function getSheet_(sheetName) {
+  const sheet = getSpreadsheet_().getSheetByName(sheetName);
+  if (!sheet) throw new Error('No existe la hoja: ' + sheetName);
   return sheet;
 }
 
-function ensureHeaders_(sheet, headers) {
-  if (!headers || !headers.length) return;
+function getHeaders_(sheet) {
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].filter(String);
+}
 
-  var lastCol = sheet.getLastColumn();
-  var currentHeaders = [];
-  
-  if (lastCol > 0) {
-    currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
-      return String(h || '').trim();
-    });
-  }
+function rowToObject_(headers, row) {
+  const obj = {};
+  headers.forEach((header, index) => {
+    obj[header] = row[index];
+  });
+  return obj;
+}
 
-  // Normalización agresiva: minúsculas, sin tildes, solo letras y números
-  var normalize = function(txt) {
-    if (!txt) return "";
-    return txt.toString().toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
-      .replace(/[^a-z0-9]/g, "") // Solo alfanumérico
-      .trim();
+function normalizeDataForSheet_(sheetName, data) {
+  const headers = SHEETS[sheetName].headers;
+  const output = {};
+
+  Object.keys(data || {}).forEach(key => {
+    if (['action', 'resource', 'recurso', 'sheet', 'hoja', 'data', 'id'].includes(key)) return;
+
+    const header = findHeader_(headers, key, sheetName);
+    if (!header) return;
+
+    let value = data[key];
+
+    if ((header === 'Productos JSON' || header === 'Galería JSON') && typeof value !== 'string') {
+      value = JSON.stringify(value || []);
+    }
+
+    output[header] = value;
+  });
+
+  return output;
+}
+
+function findHeader_(headers, key, sheetName) {
+  const normalizedKey = normalizeKey_(key);
+
+  const direct = headers.find(header => normalizeKey_(header) === normalizedKey);
+  if (direct) return direct;
+
+  const aliases = {
+    Productos: {
+      id: 'ID Variación',
+      idvariacion: 'ID Variación',
+      idvariación: 'ID Variación',
+      idproducto: 'ID Producto',
+      galeria: 'Galería JSON',
+      galeriajson: 'Galería JSON',
+      imagenes: 'Galería JSON',
+      imagenPrincipal: 'Imagen Principal',
+      imagenprincipal: 'Imagen Principal',
+      imagen: 'Imagen Principal',
+      nombre: 'Nombre del Producto',
+      producto: 'Nombre del Producto',
+      categoria: 'Categoría',
+      catalogo: 'Estilo',
+      descripcion: 'Características del producto',
+      caracteristicas: 'Características del producto',
+      tamano: 'Tamaño',
+      tamaño: 'Tamaño',
+      talla: 'Tamaño',
+      stock: 'Cantidad',
+      cantidad: 'Cantidad',
+      precioMayorista: 'Precio Mayor',
+      preciomayorista: 'Precio Mayor',
+      precioMayor: 'Precio Mayor',
+      preciomayor: 'Precio Mayor'
+    },
+    Pedidos: {
+      nombre: 'Nombre Cliente',
+      cliente: 'Nombre Cliente',
+      telefono: 'Teléfono',
+      direccion: 'Dirección',
+      productos: 'Productos JSON',
+      carrito: 'Productos JSON',
+      items: 'Productos JSON',
+      total: 'Subtotal',
+      nota: 'Nota Cliente'
+    },
+    Clientes: {
+      telefono: 'Teléfono',
+      direccion: 'Dirección',
+      email: 'Email',
+      nombre: 'Nombre'
+    },
+    Facturas: {
+      productos: 'Productos JSON',
+      items: 'Productos JSON',
+      total: 'Subtotal',
+      pago: 'Método Pago',
+      entrega: 'Método Entrega'
+    }
   };
 
-  var normalizedCurrent = currentHeaders.map(normalize);
-  var changed = false;
-  var newHeaders = currentHeaders.slice();
+  const sheetAliases = aliases[sheetName] || {};
+  const aliasKey = Object.keys(sheetAliases).find(alias => normalizeKey_(alias) === normalizedKey);
 
-  headers.forEach(function(header) {
-    var normHeader = normalize(header);
-    // Si no encontramos el header normalizado en la lista actual
-    if (normalizedCurrent.indexOf(normHeader) === -1) {
-      newHeaders.push(header);
-      normalizedCurrent.push(normHeader);
-      changed = true;
+  return aliasKey ? sheetAliases[aliasKey] : null;
+}
+
+function findRowIndex_(sheet, keyHeader, value) {
+  const headers = getHeaders_(sheet);
+  const normalizedTarget = normalizeKey_(keyHeader);
+  let col = headers.indexOf(keyHeader) + 1;
+
+  if (!col) {
+    const idx = headers.findIndex(header => normalizeKey_(header) === normalizedTarget);
+    col = idx + 1;
+  }
+
+  if (!col) throw new Error('No existe la columna: ' + keyHeader);
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const values = sheet.getRange(2, col, lastRow - 1, 1).getValues();
+
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === String(value)) {
+      return i + 2;
+    }
+  }
+
+  return null;
+}
+
+function fillOrderTotals_(pedido) {
+  const productos = parseMaybeJson_(pedido['Productos JSON']);
+
+  if (!Array.isArray(productos)) return;
+
+  if (!pedido['Cantidad Total']) {
+    pedido['Cantidad Total'] = productos.reduce((sum, item) => {
+      return sum + toNumber_(item.cantidad || item.Cantidad || item.qty || item.quantity || 1);
+    }, 0);
+  }
+
+  if (!pedido['Subtotal']) {
+    pedido['Subtotal'] = productos.reduce((sum, item) => {
+      const qty = toNumber_(item.cantidad || item.Cantidad || item.qty || item.quantity || 1);
+      const price = toNumber_(item.precio || item.Precio || item.price || 0);
+      return sum + qty * price;
+    }, 0);
+  }
+}
+
+function parseJsonFields_(obj) {
+  ['Productos JSON', 'Galería JSON'].forEach(key => {
+    if (obj[key]) {
+      obj[key] = parseMaybeJson_(obj[key]);
     }
   });
 
-  if (changed || lastCol === 0) {
-    if (newHeaders.length > 0) {
-      sheet.getRange(1, 1, 1, newHeaders.length).setValues([newHeaders]);
-    }
-  }
-
-  // Dar formato siempre para asegurar legibilidad
-  var finalColCount = sheet.getLastColumn();
-  if (finalColCount > 0) {
-    sheet.getRange(1, 1, 1, finalColCount)
-      .setFontWeight('bold')
-      .setBackground('#d9d2e9')
-      .setVerticalAlignment('middle')
-      .setHorizontalAlignment('center');
-    sheet.setFrozenRows(1);
-  }
+  return obj;
 }
 
-function sheetToObjects_(sheet) {
-  var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return [];
-
-  var headers = data[0].map(function(header) {
-    return String(header || '').trim();
-  });
-  var result = [];
-
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    var obj = {};
-    var empty = true;
-
-    for (var j = 0; j < headers.length; j++) {
-      var key = headers[j];
-      if (!key) continue;
-      obj[key] = row[j];
-      if (row[j] !== '' && row[j] !== null) empty = false;
-    }
-
-    if (!empty) {
-      obj['_rowIndex'] = i + 1;
-      result.push(obj);
-    }
-  }
-
-  return result;
-}
-
-function normalizeProductPayload_(data) {
-  var product = {};
-
-  product['ID Variacion'] = pick_(data, ['ID Variacion', 'ID Variación', 'id', 'editId']);
-  product['ID Producto'] = pick_(data, ['ID Producto', 'ID_Producto']);
-  product['Nombre del Producto'] = pick_(data, ['Nombre del Producto', 'Nombre', 'Producto', 'nombre']);
-  product['Categoria'] = pick_(data, ['Categoria', 'Categoría', 'categoria']);
-  product['Catalogo'] = pick_(data, ['Catalogo', 'Catálogo', 'catalogo']) || 'Ambos';
-  product['Precio'] = pick_(data, ['Precio', 'precio', 'Precio_Publico']);
-  product['Precio Mayor'] = pick_(data, ['Precio Mayor', 'Precio_Mayorista', 'PrecioMayorista', 'Mayorista', 'precio_mayorista']);
-  product['Stock Inicial'] = pick_(data, ['Stock Inicial', 'Stock', 'stock', 'Cantidad']);
-  product['Cantidad'] = pick_(data, ['Cantidad', 'Stock', 'stock', 'Stock Inicial']);
-  product['Caracteristicas del producto'] = pick_(data, ['Caracteristicas del producto', 'Características del producto', 'Descripcion', 'Descripción', 'descripcion']);
-  product['Tamano'] = pick_(data, ['Tamano', 'Tamaño', 'Talla', 'Size']);
-  product['Color'] = pick_(data, ['Color', 'color']);
-  product['Estilo'] = pick_(data, ['Estilo', 'estilo']);
-  product['Imagen Principal'] = pick_(data, ['Imagen Principal', 'Imagen', 'imagen', 'Foto']);
-  product['Galeria JSON'] = pick_(data, ['Galeria JSON', 'Galería JSON', 'Galeria', 'Galería']);
-  product['SKU'] = pick_(data, ['SKU', 'sku']);
-  product['Estado'] = pick_(data, ['Estado', 'estado']) || 'Activo';
-  product['Fecha de Creacion'] = pick_(data, ['Fecha de Creacion', 'Fecha de Creación']);
-
-  return product;
-}
-
-function normalizeVariantForStore_(row) {
-  var normalized = {};
-
-  // Conserva tambien las columnas originales para paneles avanzados.
-  Object.keys(row).forEach(function(key) {
-    normalized[key] = row[key];
-  });
-
-  normalized.ID = pick_(row, ['ID Variacion', 'ID Variación']);
-  normalized.Nombre = pick_(row, ['Nombre', 'Nombre del Producto', 'Producto']);
-  normalized.Categoria = pick_(row, ['Categoria', 'Categoría']);
-  normalized.Catalogo = pick_(row, ['Catalogo', 'Catálogo']) || 'Ambos';
-  normalized.Precio = pick_(row, ['Precio']);
-  normalized.Precio_Mayorista = pick_(row, ['Precio_Mayorista', 'Precio Mayor', 'PrecioMayorista', 'Mayorista']);
-  normalized.Stock = pick_(row, ['Stock', 'Cantidad', 'Stock Inicial']);
-  normalized.Imagen = pick_(row, ['Imagen', 'Imagen Principal', 'Foto']);
-  normalized.Color = pick_(row, ['Color']);
-  normalized.Descripcion = pick_(row, ['Descripcion', 'Descripción', 'Caracteristicas del producto', 'Características del producto']);
-  normalized.Estado = pick_(row, ['Estado']) || 'Activo';
-
-  return normalized;
-}
-
-function pick_(obj, keys) {
-  for (var i = 0; i < keys.length; i++) {
-    if (obj[keys[i]] !== undefined && obj[keys[i]] !== null && obj[keys[i]] !== '') {
-      return obj[keys[i]];
-    }
-  }
-  return '';
-}
-
-function upsertRow(sheet, keyColumnName, keyValue, payload) {
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(header) {
-    return String(header || '').trim();
-  });
-  var keyColIndex = headers.indexOf(keyColumnName);
-  var rowIndex = -1;
-
-  if (keyColIndex !== -1 && keyValue) {
-    for (var i = 1; i < values.length; i++) {
-      if (values[i][keyColIndex] == keyValue) {
-        rowIndex = i + 1;
-        break;
-      }
-    }
-  }
-
-  var rowData = new Array(headers.length);
-  for (var j = 0; j < headers.length; j++) {
-    var colName = headers[j];
-    if (payload[colName] !== undefined) rowData[j] = payload[colName];
-    else if (rowIndex !== -1) rowData[j] = values[rowIndex - 1][j];
-    else rowData[j] = '';
-  }
-
-  if (rowIndex !== -1) sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
-  else sheet.appendRow(rowData);
-}
-
-function deleteRowsByColumnMatch(sheet, columnName, valueToMatch) {
-  return deleteRowsByColumnMatchCount(sheet, columnName, valueToMatch) > 0;
-}
-
-function deleteRowsByColumnMatchCount(sheet, columnName, valueToMatch) {
-  if (!sheet || !valueToMatch) return 0;
-
-  var values = sheet.getDataRange().getValues();
-  if (!values.length) return 0;
-
-  var headers = values[0].map(function(header) {
-    return String(header || '').trim();
-  });
-
-  // Fuzzy column matching: normalize accents, case, and non-alphanumeric chars
-  var normalize = function(txt) {
-    if (!txt) return "";
-    return txt.toString().toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/g, "")
-      .trim();
-  };
-
-  var colIndex = headers.indexOf(columnName);
-  if (colIndex === -1) {
-    // Fallback: fuzzy match
-    var normTarget = normalize(columnName);
-    for (var h = 0; h < headers.length; h++) {
-      if (normalize(headers[h]) === normTarget) {
-        colIndex = h;
-        break;
-      }
-    }
-  }
-  if (colIndex === -1) return 0;
-
-  var normValue = String(valueToMatch).trim();
-  var deleted = 0;
-  for (var i = values.length - 1; i >= 1; i--) {
-    var cellVal = String(values[i][colIndex] || '').trim();
-    if (cellVal == normValue || cellVal === normValue) {
-      sheet.deleteRow(i + 1);
-      deleted++;
-    }
-  }
-  return deleted;
-}
-
-function saveOrUpdateClient_(doc, data) {
-  var phone = pick_(data, ['Telefono', 'Teléfono']);
-  if (!phone) return;
-
-  var sheetClientes = getOrCreateSheet(doc, HOJA_CLIENTES, HEADERS_CLIENTES);
-  var rows = sheetToObjects_(sheetClientes);
-  var clientId = data['ID Cliente'];
-
-  if (!clientId) {
-    for (var i = 0; i < rows.length; i++) {
-      if (rows[i]['Telefono'] == phone || rows[i]['Teléfono'] == phone) {
-        clientId = rows[i]['ID Cliente'];
-        break;
-      }
-    }
-  }
-
-  var clientData = {
-    'ID Cliente': clientId || Utilities.getUuid(),
-    'Nombre': data['Nombre Cliente'] || '',
-    'Telefono': phone,
-    'Email': data.Email || '',
-    'Direccion': pick_(data, ['Direccion', 'Dirección']),
-    'Ciudad': data.Ciudad || '',
-    'Ultimo Pedido': data.Fecha || new Date().toISOString(),
-    'Estado Cliente': clientId ? 'Activo' : 'Nuevo',
-    'Fecha Registro': clientId ? '' : new Date().toISOString()
-  };
-
-  upsertRow(sheetClientes, 'ID Cliente', clientData['ID Cliente'], clientData);
-}
-
-function discountStockFromOrder_(doc, data) {
-  if (!data['Productos JSON']) return;
+function parseMaybeJson_(value) {
+  if (!value) return [];
+  if (Array.isArray(value) || typeof value === 'object') return value;
 
   try {
-    var items = JSON.parse(data['Productos JSON']);
-    var sheetVar = doc.getSheetByName(HOJA_VARIANTES);
-    if (!sheetVar) return;
-
-    var values = sheetVar.getDataRange().getValues();
-    var headers = values[0].map(function(header) {
-      return String(header || '').trim();
-    });
-    var idCol = headers.indexOf('ID Variacion');
-    var stockCol = headers.indexOf('Cantidad');
-
-    if (idCol === -1 || stockCol === -1) return;
-
-    items.forEach(function(item) {
-      if (!item.idVariacion) return;
-      for (var i = 1; i < values.length; i++) {
-        if (values[i][idCol] == item.idVariacion) {
-          var currentStock = Number(values[i][stockCol]) || 0;
-          var newStock = currentStock - (Number(item.cantidad) || 1);
-          sheetVar.getRange(i + 1, stockCol + 1).setValue(Math.max(0, newStock));
-          break;
-        }
-      }
-    });
-  } catch (err) {
-    // No se bloquea el pedido si falla el descuento de stock.
+    return JSON.parse(value);
+  } catch (error) {
+    return value;
   }
 }
 
-function updateOrderStatus_(doc, data) {
-  var sheet = doc.getSheetByName(HOJA_PEDIDOS);
-  if (!sheet) return false;
+function parseBody_(e) {
+  if (!e || !e.postData || !e.postData.contents) return {};
 
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0].map(function(header) {
-    return String(header || '').trim();
-  });
-  var statusIndex = headers.indexOf('Estado Pedido');
-  var idIndex = headers.indexOf('ID Pedido');
-
-  if (statusIndex === -1 || idIndex === -1) return false;
-
-  for (var i = 1; i < values.length; i++) {
-    if (values[i][idIndex] == data['ID Pedido']) {
-      sheet.getRange(i + 1, statusIndex + 1).setValue(data['Estado Pedido']);
-      return true;
-    }
+  try {
+    return JSON.parse(e.postData.contents);
+  } catch (error) {
+    throw new Error('El body enviado no es JSON valido.');
   }
-
-  return false;
 }
 
-function getConfig_(doc) {
-  var sheet = getOrCreateSheet(doc, HOJA_CONFIG, HEADERS_CONFIG);
-  var rows = sheetToObjects_(sheet);
-  var config = {};
+function sheetFromResource_(resource) {
+  const key = normalizeKey_(resource);
 
-  rows.forEach(function(row) {
-    if (row.Clave) config[row.Clave] = row.Valor;
-  });
+  const map = {
+    producto: 'Productos',
+    productos: 'Productos',
+    pedido: 'Pedidos',
+    pedidos: 'Pedidos',
+    cliente: 'Clientes',
+    clientes: 'Clientes',
+    factura: 'Facturas',
+    facturas: 'Facturas',
+    configuracion: 'Configuracion',
+    config: 'Configuracion'
+  };
 
-  return config;
+  return map[key] || null;
 }
 
-function createJsonResponse(data) {
+function getStatusHeader_(sheetName) {
+  if (sheetName === 'Productos') return 'Estado';
+  if (sheetName === 'Pedidos') return 'Estado Pedido';
+  if (sheetName === 'Clientes') return 'Estado Cliente';
+  if (sheetName === 'Facturas') return 'Estado Factura';
+  throw new Error('Hoja no valida.');
+}
+
+function makeId_(prefix) {
+  const date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMddHHmmss');
+  const random = Math.floor(Math.random() * 9000) + 1000;
+  return prefix + '-' + date + '-' + random;
+}
+
+function cleanPhone_(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function toNumber_(value) {
+  const n = Number(String(value || 0).replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function normalizeKey_(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+}
+
+function json_(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
