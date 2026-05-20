@@ -72,6 +72,146 @@ function initParticles() {
     })();
 }
 
+// -- WHOLESALE PARTICLES (ANTIGRAVITY STYLE) --
+function initWholesaleParticles() {
+    const canvas = document.getElementById('wholesale-particles');
+    if (!canvas) return;
+    
+    // Configurar estilos del canvas dinámicamente
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '0';
+    canvas.style.pointerEvents = 'none'; // Deja que los clics pasen al panel
+
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    
+    const mouse = { x: -9999, y: -9999, active: false };
+    
+    const overlay = document.getElementById('wholesale-overlay');
+    if(overlay) {
+        overlay.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            mouse.active = true;
+        });
+        overlay.addEventListener('mouseleave', () => { mouse.active = false; });
+        overlay.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = e.touches[0].clientX - rect.left;
+                mouse.y = e.touches[0].clientY - rect.top;
+                mouse.active = true;
+            }
+        });
+        overlay.addEventListener('touchend', () => { mouse.active = false; });
+    }
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        initNodes();
+    }
+
+    function initNodes() {
+        particles = [];
+        const isMobile = window.innerWidth < 768;
+        const count = isMobile ? 50 : 120; // Menos partículas en móvil por rendimiento
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                radius: Math.random() * 2 + 1,
+                color: Math.random() > 0.5 ? '#a855f7' : '#3b82f6' // Tonos morados y azules (Antigravity vibe)
+            });
+        }
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw() {
+        // Overlay semitransparente para efecto de estela (trail effect)
+        ctx.fillStyle = 'rgba(5, 0, 10, 0.3)';
+        ctx.fillRect(0, 0, width, height);
+
+        const connectionDistance = 120;
+        const mouseConnectionDistance = 180;
+
+        for (let i = 0; i < particles.length; i++) {
+            let p = particles[i];
+
+            // Movimiento
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Rebote en bordes
+            if (p.x < 0 || p.x > width) p.vx *= -1;
+            if (p.y < 0 || p.y > height) p.vy *= -1;
+
+            // Interacción con mouse
+            if (mouse.active) {
+                const dx = mouse.x - p.x;
+                const dy = mouse.y - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < mouseConnectionDistance) {
+                    // Atracción suave al mouse
+                    p.x += dx * 0.015;
+                    p.y += dy * 0.015;
+
+                    // Dibujar conexión con mouse
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(mouse.x, mouse.y);
+                    const opacity = 1 - (dist / mouseConnectionDistance);
+                    ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.5})`; // Azul brillante
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            // Dibujar conexiones entre partículas
+            for (let j = i + 1; j < particles.length; j++) {
+                let p2 = particles[j];
+                const dx = p.x - p2.x;
+                const dy = p.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < connectionDistance) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    const opacity = 1 - (dist / connectionDistance);
+                    ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.3})`; // Morado sutil
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                }
+            }
+
+            // Dibujar partícula
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // reset
+        }
+
+        // Si el modal está visible, animamos, sino nos saltamos frames o seguimos lento (usamos requestAnimationFrame siempre)
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+}
+
 // -- NAVBAR --
 function initNavbar() {
     const navbar = document.getElementById('navbar');
@@ -1479,6 +1619,8 @@ function initWholesaleAccess() {
     const error = document.getElementById('wholesale-error');
     const closeBtn = document.getElementById('wholesale-close');
     const triggers = document.querySelectorAll('a[href="#mayorista"]');
+
+    initWholesaleParticles(); // Iniciar partículas
 
     window.openWholesaleOverlay = function() {
         if(overlay) {
