@@ -1551,10 +1551,15 @@ body {
     position: relative;
 }
 
-.product-card:hover {
-    transform: translateY(-6px);
-    border-color: var(--glass-border);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, .4), 0 0 30px rgba(155, 44, 250, .12);
+@media (hover: hover) and (pointer: fine) {
+    .product-card:hover {
+        transform: translateY(-6px);
+        border-color: var(--glass-border);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, .4), 0 0 30px rgba(155, 44, 250, .12);
+    }
+    .product-card:hover .product-card-img img {
+        transform: scale(1.08);
+    }
 }
 
 .product-card-img {
@@ -1570,10 +1575,6 @@ body {
     height: 100%;
     object-fit: cover;
     transition: transform .6s ease;
-}
-
-.product-card:hover .product-card-img img {
-    transform: scale(1.08);
 }
 
 .product-card-badge {
@@ -1682,12 +1683,24 @@ body {
     font-weight: 700;
 }
 
+.product-card-price.discount-active {
+    color: #ffd969;
+    text-shadow: 0 0 12px rgba(255, 217, 105, 0.4);
+    animation: priceGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes priceGlow {
+    from { text-shadow: 0 0 8px rgba(255, 217, 105, 0.3); }
+    to { text-shadow: 0 0 16px rgba(255, 217, 105, 0.8), 0 0 4px rgba(255, 255, 255, 0.5); }
+}
+
 .product-card-price .old {
     text-decoration: line-through;
-    color: var(--text-dim);
+    color: rgba(255, 255, 255, 0.4);
     font-size: 13px;
     margin-left: 8px;
     font-weight: 400;
+    text-shadow: none;
 }
 
 .product-card-price.price-hidden {
@@ -1836,6 +1849,127 @@ body {
     .floating-whatsapp-logo {
         width: 25px;
         height: 25px;
+    }
+}
+
+/* ===== FLOATING PROMO ===== */
+.inline-promo-banner {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(155, 44, 250, 0.15), rgba(217, 70, 239, 0.15));
+    border: 1px solid rgba(217, 70, 239, 0.3);
+    border-radius: 16px;
+    padding: 12px 20px;
+    margin: 0 auto;
+    max-width: fit-content;
+    box-shadow: 0 0 24px rgba(217, 70, 239, 0.2), inset 0 0 12px rgba(155, 44, 250, 0.1);
+    animation: inlinePromoPulse 2s infinite alternate;
+    backdrop-filter: blur(8px);
+}
+
+@keyframes inlinePromoPulse {
+    0% { box-shadow: 0 0 16px rgba(217, 70, 239, 0.2), inset 0 0 8px rgba(155, 44, 250, 0.1); }
+    100% { box-shadow: 0 0 32px rgba(217, 70, 239, 0.5), inset 0 0 16px rgba(155, 44, 250, 0.3); border-color: rgba(217, 70, 239, 0.6); }
+}
+
+.inline-promo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #9b2cfa, #d946ef);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(155, 44, 250, 0.4);
+    animation: iconBounce 3s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-4px) rotate(5deg); }
+}
+
+.inline-promo-number {
+    font-size: 16px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+}
+
+.inline-promo-content {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    margin-right: 24px;
+}
+
+.inline-promo-title {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.inline-promo-msg {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.inline-promo-timer-wrap {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.inline-promo-timer-icon {
+    margin-right: 8px;
+    font-size: 14px;
+    animation: spinSlow 4s linear infinite;
+}
+
+@keyframes spinSlow {
+    100% { transform: rotate(360deg); }
+}
+
+.inline-promo-timer {
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffd969;
+    letter-spacing: 1px;
+}
+
+@media(max-width: 600px) {
+    .inline-promo-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px;
+    }
+    
+    .inline-promo-icon {
+        margin-right: 0;
+        margin-bottom: 12px;
+    }
+    
+    .inline-promo-content {
+        margin-right: 0;
+        margin-bottom: 16px;
+        align-items: center;
+    }
+    
+    .inline-promo-title {
+        font-size: 15px;
+    }
+    
+    .inline-promo-msg {
+        font-size: 12px;
     }
 }
 
@@ -2044,7 +2178,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(5, 2, 12, .78);
+    background: rgba(10, 2, 20, .85);
     backdrop-filter: blur(18px);
     opacity: 0;
     pointer-events: none;
@@ -2160,7 +2294,7 @@ body {
 
 /* Vault-style access panels */
 .wholesale-overlay {
-    background: rgba(5, 0, 9, .86);
+    background: rgba(10, 2, 20, .96);
 }
 
 .wholesale-panel {

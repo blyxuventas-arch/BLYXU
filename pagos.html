@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagos QR - BLYXU</title>
+    <meta name="description" content="Página de pagos por QR de BLYXU.">
+    <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
+    <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
+    <link rel="stylesheet" href="blyxu-style.css">
+    <style>
+        /* Estilos específicos para la página de Pagos QR */
+        .qr-page-section {
+            padding: 120px 24px 60px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .qr-card {
+            background: rgba(13, 10, 26, 0.6);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 32px rgba(168, 85, 247, 0.05);
+            backdrop-filter: blur(12px);
+            display: none; /* Se muestra solo al autenticarse */
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .qr-card h2 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #fff, #ffd969);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .qr-card p {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-bottom: 24px;
+        }
+
+        .qr-image-container {
+            background: #fff;
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .qr-image-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 2px solid rgba(168, 85, 247, 0.5);
+            border-radius: 16px;
+            pointer-events: none;
+            animation: pulseBorder 2s infinite alternate;
+        }
+
+        @keyframes pulseBorder {
+            0% { border-color: rgba(168, 85, 247, 0.2); box-shadow: inset 0 0 0 rgba(168, 85, 247, 0); }
+            100% { border-color: rgba(244, 196, 65, 0.8); box-shadow: inset 0 0 20px rgba(244, 196, 65, 0.2); }
+        }
+
+        .qr-image-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .qr-empty-state {
+            color: var(--text-muted);
+            font-size: 14px;
+            padding: 24px 0;
+            display: none;
+        }
+
+        /* Overlay de Login para QR */
+        #qr-login-overlay {
+            position: fixed;
+            inset: 0;
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+
+        .qr-login-box {
+            background: rgba(13, 10, 26, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .qr-login-box h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .qr-login-box .form-control {
+            height: 54px;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            color: #fff;
+            text-align: center;
+            letter-spacing: 4px;
+            font-size: 16px;
+            margin-bottom: 24px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .qr-login-box .form-control:focus {
+            border-color: #ffd969;
+            box-shadow: 0 0 16px rgba(255, 217, 105, 0.2);
+            outline: none;
+        }
+
+        .qr-login-btn {
+            background: linear-gradient(135deg, #a855f7, #f4c441);
+            color: #09030f;
+            font-weight: 800;
+            border: none;
+            border-radius: 12px;
+            height: 50px;
+            width: 100%;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.2s, filter 0.2s;
+        }
+
+        .qr-login-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .qr-error-msg {
+            color: var(--danger);
+            font-size: 12px;
+            margin-top: -12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        .loading-qr-data {
+            color: #fff;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body data-page="pagos">
+    <div class="bg-animation"></div>
+    <canvas id="particles-canvas"></canvas>
+
+    <nav class="navbar scrolled" id="navbar">
+        <a href="index.html" class="nav-logo">
+            <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
+        </a>
+
+        <ul class="nav-links" id="nav-links">
+            <li><a href="index.html#inicio">Inicio</a></li>
+            <li><a href="index.html#coleccion">Catálogo</a></li>
+            <li><a href="mayorista.html">Mayorista</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="pagos.html" class="active">Pagos</a></li>
+            <li><a href="administrativo.html">Administrativo</a></li>
+        </ul>
+
+        <div class="nav-actions">
+            <div class="nav-toggle" id="nav-toggle" style="margin-left: auto;">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Overlay de Login -->
+    <div class="wholesale-overlay open" id="qr-login-overlay" style="opacity: 1; pointer-events: auto; display: flex; z-index: 1000;">
+        <canvas id="wholesale-particles" class="wholesale-particles-canvas"></canvas>
+        <div class="wholesale-panel">
+            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
+            <div class="wholesale-kicker">ZONA SEGURA</div>
+            <h2 id="qr-title">ZONA DE PAGOS</h2>
+            <form class="wholesale-form" id="qr-login-form">
+                <input type="password" id="qr-password-input" placeholder="Clave de acceso" autocomplete="off" required>
+                <button type="submit">Acceder a Pagos</button>
+            </form>
+            <div class="wholesale-error" id="qr-error-msg" style="display:none;">Contraseña incorrecta</div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal -->
+    <section class="qr-page-section">
+        <div id="qr-loading" class="loading-qr-data" style="display:none;">
+            <svg class="spinner" viewBox="0 0 50 50" style="width: 24px; height: 24px; animation: spin 2s linear infinite;">
+                <circle cx="25" cy="25" r="20" fill="none" stroke="#a855f7" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="60"></circle>
+            </svg>
+            Cargando código QR...
+        </div>
+
+        <div class="qr-card" id="qr-card-content">
+            <h2>PAGOS BLYXU</h2>
+            <p>Escanea el siguiente código QR desde tu aplicación bancaria para realizar el pago.</p>
+            
+            <div class="qr-image-container" id="qr-image-wrapper">
+                <img id="qr-display" src="" alt="Código QR de Pago">
+            </div>
+            
+            <div class="qr-empty-state" id="qr-empty-state">
+                El administrador aún no ha configurado un código QR.
+            </div>
+
+            <a href="index.html" class="main-banner-btn" style="width: 100%; justify-content: center;">Volver a la tienda</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <img src="Logo2.png" alt="BLYXU" class="footer-logo">
+                <p>Joyería artesanal con piedras naturales. Elegancia, exclusividad y diseño en cada pieza.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Enlaces</h4>
+                <a href="index.html#inicio">Inicio</a>
+                <a href="index.html#coleccion">Colección</a>
+                <a href="contacto.html">Contacto</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 BLYXU. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="blyxu-app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('qr-login-form');
+            const input = document.getElementById('qr-password-input');
+            const errorMsg = document.getElementById('qr-error-msg');
+            const overlay = document.getElementById('qr-login-overlay');
+            const card = document.getElementById('qr-card-content');
+            const loading = document.getElementById('qr-loading');
+            const imgWrapper = document.getElementById('qr-image-wrapper');
+            const imgDisplay = document.getElementById('qr-display');
+            const emptyState = document.getElementById('qr-empty-state');
+
+            // Ocultamos el overlay temporalmente si se necesita cargar, pero blyxu-app ya llama a fetchSiteConfig
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                errorMsg.style.display = 'none';
+                
+                // Asegurar que la configuración esté cargada
+                if (Object.keys(siteConfig).length === 0) {
+                    const btn = form.querySelector('button');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Verificando...';
+                    btn.disabled = true;
+                    await fetchSiteConfig();
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+
+                const expectedPass = String(getSiteConfigValue('QR_Password', '')).trim();
+                const enteredPass = input.value.trim();
+
+                if (!expectedPass) {
+                    errorMsg.textContent = 'El administrador no ha configurado una contraseña.';
+                    errorMsg.style.display = 'block';
+                    return;
+                }
+
+                if (enteredPass === expectedPass) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.display = 'none';
+                        showQR();
+                    }, 400);
+                } else {
+                    errorMsg.textContent = 'Contraseña incorrecta';
+                    errorMsg.style.display = 'block';
+                }
+            });
+
+            function showQR() {
+                card.style.display = 'block';
+                const qrUrl = getSiteConfigValue('QR_Image', '');
+                if (qrUrl) {
+                    imgDisplay.src = qrUrl;
+                    imgWrapper.style.display = 'block';
+                    emptyState.style.display = 'none';
+                } else {
+                    imgWrapper.style.display = 'none';
+                    emptyState.style.display = 'block';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

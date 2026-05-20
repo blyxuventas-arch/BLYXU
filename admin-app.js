@@ -429,12 +429,13 @@ function buildProductPayload() {
         'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
         'Stock Inicial': stockInicial,
         Cantidad: stock,
-        'Características del producto': descripcion,
         Descripcion: descripcion,
+        'Caracteristicas del producto': descripcion,
         Tamano: getInputValue('prod-tamano'),
         'Tamaño': getInputValue('prod-tamano'),
         Color: getInputValue('prod-color'),
         Estilo: getInputValue('prod-estilo'),
+        Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
         'Imagen Principal': imagen,
         Imagen: imagen,
         'Galería JSON': getInputValue('prod-galeria'),
@@ -464,6 +465,8 @@ function resetProductForm() {
     setInputValue('prod-stock', '0');
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
+    const promoCheck = document.getElementById('prod-promocion');
+    if (promoCheck) promoCheck.checked = false;
     setProductFormMode(false);
     updateLivePreview();
     var badge = document.getElementById('variant-editing-badge');
@@ -536,11 +539,143 @@ function initAdminCustomCursor() {
     move();
 }
 
+// -- ADMIN LOGIN PARTICLES --
+function initAdminParticles() {
+    const canvas = document.getElementById('admin-particles');
+    if (!canvas) return;
+    
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '0';
+    canvas.style.pointerEvents = 'none';
+
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    
+    const mouse = { x: -9999, y: -9999, active: false };
+    
+    const loginScreen = document.getElementById('admin-login-screen');
+    if(loginScreen) {
+        loginScreen.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+            mouse.active = true;
+        });
+        loginScreen.addEventListener('mouseleave', () => { mouse.active = false; });
+        loginScreen.addEventListener('touchmove', (e) => {
+            if(e.touches.length > 0) {
+                const rect = canvas.getBoundingClientRect();
+                mouse.x = e.touches[0].clientX - rect.left;
+                mouse.y = e.touches[0].clientY - rect.top;
+                mouse.active = true;
+            }
+        });
+        loginScreen.addEventListener('touchend', () => { mouse.active = false; });
+    }
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+        initNodes();
+    }
+
+    function initNodes() {
+        particles = [];
+        const isMobile = window.innerWidth < 768;
+        const count = isMobile ? 50 : 120;
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: (Math.random() - 0.5) * 1.5,
+                radius: Math.random() * 2 + 1,
+                color: Math.random() > 0.5 ? '#a855f7' : '#3b82f6'
+            });
+        }
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function draw() {
+        ctx.fillStyle = 'rgba(10, 2, 20, 0.35)';
+        ctx.fillRect(0, 0, width, height);
+
+        const connectionDistance = 120;
+        const mouseConnectionDistance = 180;
+
+        for (let i = 0; i < particles.length; i++) {
+            let p = particles[i];
+
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0 || p.x > width) p.vx *= -1;
+            if (p.y < 0 || p.y > height) p.vy *= -1;
+
+            if (mouse.active) {
+                const dx = mouse.x - p.x;
+                const dy = mouse.y - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < mouseConnectionDistance) {
+                    p.x += dx * 0.015;
+                    p.y += dy * 0.015;
+
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(mouse.x, mouse.y);
+                    const opacity = 1 - (dist / mouseConnectionDistance);
+                    ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.5})`;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            for (let j = i + 1; j < particles.length; j++) {
+                let p2 = particles[j];
+                const dx = p.x - p2.x;
+                const dy = p.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < connectionDistance) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    const opacity = 1 - (dist / connectionDistance);
+                    ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.3})`;
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                }
+            }
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+        }
+
+        requestAnimationFrame(draw);
+    }
+
+    draw();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    initAdminParticles();
     initAdminCustomCursor();
     initRetailPriceToggle();
     initContactConfigAdmin();
     initInvoiceConfigAdmin();
+    initPromoConfigAdmin();
+    initQRConfigAdmin();
     initInventorySearch();
     initInventoryActions();
     initCarouselImageAdmin();
@@ -1018,6 +1153,135 @@ function initInvoiceConfigAdmin() {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText || 'Guardar Ajustes de Factura';
+            }
+        }
+    });
+}
+
+const PROMO_CONFIG_FIELDS = [
+    ['Promo_Enabled', 'promo-config-enabled'],
+    ['Promo_Title', 'promo-config-title'],
+    ['Promo_Date', 'promo-config-date'],
+    ['Promo_Message', 'promo-config-message']
+];
+
+function fillPromoConfigForm(config) {
+    if (!config) return;
+    PROMO_CONFIG_FIELDS.forEach(([key, id]) => {
+        const input = document.getElementById(id);
+        if (input) {
+            if (input.type === 'checkbox') {
+                input.checked = config[key] === 'true';
+            } else {
+                input.value = config[key] || '';
+            }
+        }
+    });
+}
+
+function initPromoConfigAdmin() {
+    const form = document.getElementById('promo-config-form');
+    if (!form) return;
+
+    loadSiteConfigForAdmin().then(fillPromoConfigForm);
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-promo-config');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            await Promise.all(PROMO_CONFIG_FIELDS.map(([key, id]) => {
+                const input = document.getElementById(id);
+                let value = '';
+                if (input) {
+                    if (input.type === 'checkbox') {
+                        value = input.checked ? 'true' : 'false';
+                    } else {
+                        value = input.value.trim();
+                    }
+                }
+                return saveSiteConfig(key, value);
+            }));
+            showToast('Banner promocional guardado correctamente');
+        } catch (error) {
+            console.error('Error guardando banner promocional:', error);
+            showToast('Error al guardar: ' + error.message, true);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+    });
+}
+
+const QR_CONFIG_FIELDS = [
+    ['QR_Password', 'qr-config-password'],
+    ['QR_Image', 'qr-config-image']
+];
+
+function initQRConfigAdmin() {
+    const form = document.getElementById('qr-config-form');
+    if (!form) return;
+
+    // Llenar campos con la config actual
+    loadSiteConfigForAdmin().then(config => {
+        if (!config) return;
+        QR_CONFIG_FIELDS.forEach(([key, id]) => {
+            const input = document.getElementById(id);
+            if (input) input.value = config[key] || '';
+        });
+        
+        // Vista previa si hay imagen
+        if (config['QR_Image']) {
+            const preview = document.getElementById('qr-preview');
+            if (preview) {
+                preview.innerHTML = `<img src="${config['QR_Image']}" style="width:100%; height:100%; object-fit:contain; border-radius:12px;">`;
+            }
+        }
+    });
+
+    // Configurar Drag & Drop para subir la imagen del QR
+    setupDragAndDrop('qr-preview', (url) => {
+        const input = document.getElementById('qr-config-image');
+        if (input) {
+            input.value = url;
+            input.dispatchEvent(new Event('input'));
+        }
+    }, (localUrl) => {
+        const preview = document.getElementById('qr-preview');
+        if (preview) {
+            preview.innerHTML = `<img src="${localUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:12px; opacity:0.7;">`;
+        }
+    });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-qr-config');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            await Promise.all(QR_CONFIG_FIELDS.map(([key, id]) => {
+                const input = document.getElementById(id);
+                return saveSiteConfig(key, input ? input.value.trim() : '');
+            }));
+            showToast('Configuración de QR guardada correctamente');
+        } catch (error) {
+            console.error('Error guardando QR:', error);
+            showToast('Error al guardar: ' + error.message, true);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
     });
@@ -1833,6 +2097,11 @@ function editarProducto(index) {
     setInputValue('prod-descripcion', p.Descripcion || p['Caracteristicas del producto'] || '');
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
     setInputValue('prod-estilo', p.Estilo || '');
+    
+    var isPromo = String(p.Promocion || '').toUpperCase() === 'VERDADERO' || String(p.Promocion || '').toLowerCase() === 'true';
+    var promoCheck = document.getElementById('prod-promocion');
+    if (promoCheck) promoCheck.checked = isPromo;
+
     setInputValue('prod-galeria', p.Galeria || p['Galeria JSON'] || '');
     setInputValue('prod-sku', p.SKU || '');
     setInputValue('prod-estado', p.Estado || 'Activo');

@@ -138,7 +138,7 @@ function initWholesaleParticles() {
 
     function draw() {
         // Overlay semitransparente para efecto de estela (trail effect)
-        ctx.fillStyle = 'rgba(5, 0, 10, 0.3)';
+        ctx.fillStyle = 'rgba(10, 2, 20, 0.35)';
         ctx.fillRect(0, 0, width, height);
 
         const connectionDistance = 120;
@@ -501,6 +501,39 @@ function applySmartProductSearch(products, query = activeSearchQuery) {
         .map(item => item.product);
 }
 
+function applyPromotionsToProducts() {
+    const isPromoEnabled = String(getSiteConfigValue('Promo_Enabled', 'false')).trim() === 'true';
+    if (!isPromoEnabled) return;
+    
+    const promoTitle = getSiteConfigValue('Promo_Title', '');
+    const match = promoTitle.match(/(\d+)%/);
+    if (!match) return; // Si no hay porcentaje en el título, no podemos aplicar descuento
+    
+    const discountPercentage = parseInt(match[1], 10);
+    if (discountPercentage <= 0 || discountPercentage >= 100) return;
+    
+    const factor = 1 - (discountPercentage / 100);
+    
+    allProducts.forEach(product => {
+        const isPromo = String(product.Promocion || '').toUpperCase() === 'VERDADERO' || String(product.Promocion || '').toLowerCase() === 'true';
+        if (isPromo) {
+            // Descuento en precio al detal
+            if (product.Precio > 0 && !product.PrecioOriginal) {
+                product.PrecioOriginal = product.Precio;
+                product.Precio = product.Precio * factor;
+                if (!product.Precio_Anterior) product.Precio_Anterior = product.PrecioOriginal;
+            }
+            
+            // Descuento en precio mayorista
+            const wholesaleKey = Object.keys(product).find(k => ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'].includes(k));
+            if (wholesaleKey && product[wholesaleKey] > 0 && !product.PrecioMayoristaOriginal) {
+                product.PrecioMayoristaOriginal = product[wholesaleKey];
+                product[wholesaleKey] = product[wholesaleKey] * factor;
+            }
+        }
+    });
+}
+
 // -- LOAD PRODUCTS FROM GOOGLE SHEETS --
 async function loadProducts(options = {}) {
     const { renderCatalog = true, useCache = true } = options;
@@ -511,6 +544,7 @@ async function loadProducts(options = {}) {
     }
 
     if (renderCatalog && usedProductCache) {
+        applyPromotionsToProducts();
         renderBanners(bannerProducts);
         renderInventorySpotlight();
         renderCatalogProducts();
@@ -525,6 +559,7 @@ async function loadProducts(options = {}) {
 
     if (usedProductCache) {
         Promise.all([productsLoadPromise, configLoadPromise]).then(() => {
+            applyPromotionsToProducts();
             if (renderCatalog) {
                 renderBanners(bannerProducts);
                 renderInventorySpotlight();
@@ -536,11 +571,14 @@ async function loadProducts(options = {}) {
 
     if (renderCatalog) {
         await Promise.all([productsLoadPromise, configLoadPromise]);
+        applyPromotionsToProducts();
         renderBanners(bannerProducts);
         renderInventorySpotlight();
         renderCatalogProducts();
     } else {
         await productsLoadPromise;
+        await configLoadPromise;
+        applyPromotionsToProducts();
     }
 
     return allProducts;
@@ -974,6 +1012,7 @@ function renderBanners(banners) {
                     <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
                     <a href="javascript:void(0)" onclick="openWholesaleOverlay()" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
                 </div>
+                <div class="hero-promo-inject" style="margin-top: 32px; width: 100%;"></div>
             </div>
         </div>
     `).join('');
@@ -1201,7 +1240,7 @@ function renderProducts(products, options = {}) {
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
         const price = getProductPrice(p, mode);
-        const oldPrice = parseFloat(p.Precio_Anterior || 0);
+        const oldPrice = parseFloat(mode === 'wholesale' ? (p.PrecioMayoristaOriginal || 0) : (p.Precio_Anterior || 0));
         const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '');
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
@@ -1226,7 +1265,7 @@ function renderProducts(products, options = {}) {
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${colors.length ? `<div class="product-card-colors">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" title="${c}"></span>`).join('')}</div>` : ''}
-                ${showPrices ? `<div class="product-card-price">
+                ${showPrices ? `<div class="product-card-price ${oldPrice > price ? 'discount-active' : ''}">
                     ${formatMoney(price)}
                     ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span>` : ''}
                 </div>` : stock > 0 ? `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>` :
@@ -1686,9 +1725,21 @@ function initWholesaleAccess() {
 
         closeWholesale();
         sessionStorage.setItem('blyxu_wholesale_access', '1');
-        await showBrandLoader();
-        await launchWholesaleConfetti();
-        window.location.href = 'mayorista.html';
+        sessionStorage.setItem('blyxu_just_logged_in', '1');
+        
+        const loader = document.getElementById('brand-loader');
+        if (loader) {
+            loader.classList.remove('open');
+            void loader.offsetWidth; // force reflow
+            loader.classList.add('open');
+            loader.setAttribute('aria-hidden', 'false');
+        }
+        
+        // Esperamos a que la barra del loader avance un poco y redirigimos
+        // El loader se quedará cubriendo la pantalla durante la navegación
+        setTimeout(() => {
+            window.location.href = 'mayorista.html';
+        }, 800);
     });
 }
 
@@ -1738,6 +1789,83 @@ function renderFloatingWhatsApp() {
     const message = 'Hola BLYXU, quiero hacer una consulta sobre sus productos.';
     button.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
+
+function renderPromoWidget() {
+    const isEnabled = String(getSiteConfigValue('Promo_Enabled', 'false')).trim() === 'true';
+    
+    // Si estaba habilitado y ahora no, limpiar todo
+    if (!isEnabled) {
+        document.getElementById('floating-promo')?.remove();
+        document.querySelectorAll('.hero-promo-inject').forEach(el => el.innerHTML = '');
+        if (window.blyxuPromoInterval) clearInterval(window.blyxuPromoInterval);
+        return;
+    }
+
+    const title = getSiteConfigValue('Promo_Title', '-20%');
+    const message = getSiteConfigValue('Promo_Message', 'Aprovecha nuestros descuentos especiales.');
+    const promoDate = getSiteConfigValue('Promo_Date', '');
+    const numberText = title.replace(/[^0-9%]/g, '');
+
+    // Eliminar globo antiguo si existiera
+    document.getElementById('floating-promo')?.remove();
+    if (window.blyxuPromoInterval) clearInterval(window.blyxuPromoInterval);
+
+    const injectContainers = document.querySelectorAll('.hero-promo-inject');
+    if (injectContainers.length === 0) return;
+
+    injectContainers.forEach((container, idx) => {
+        container.innerHTML = `
+            <div class="inline-promo-banner" id="inline-promo-${idx}">
+                <div class="inline-promo-icon">
+                    <span class="inline-promo-number">${numberText || '%'}</span>
+                </div>
+                <div class="inline-promo-content">
+                    <h4 class="inline-promo-title">${title}</h4>
+                    <p class="inline-promo-msg">${message}</p>
+                </div>
+                <div class="inline-promo-timer-wrap" style="${promoDate ? '' : 'display:none;'}">
+                    <span class="inline-promo-timer-icon">⏳</span>
+                    <span class="inline-promo-timer" id="inline-promo-timer-${idx}">--:--:--</span>
+                </div>
+            </div>
+        `;
+    });
+
+    if (promoDate) {
+        const targetDate = new Date(promoDate).getTime();
+        if (isNaN(targetDate)) return;
+
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const diff = targetDate - now;
+
+            if (diff <= 0) {
+                injectContainers.forEach((c, idx) => {
+                    const el = document.getElementById(`inline-promo-timer-${idx}`);
+                    if (el) el.textContent = '¡Promoción Terminada!';
+                });
+                clearInterval(window.blyxuPromoInterval);
+                return;
+            }
+
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            const timeStr = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+            
+            injectContainers.forEach((c, idx) => {
+                const el = document.getElementById(`inline-promo-timer-${idx}`);
+                if (el) el.textContent = timeStr;
+            });
+        };
+        
+        updateTimer();
+        window.blyxuPromoInterval = setInterval(updateTimer, 1000);
+    }
+}
+
 
 function initCustomCursor() {
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
@@ -1998,14 +2126,47 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomCursor();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
     const isContactPage = document.body?.dataset.page === 'contact';
+    const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
+    
     renderFloatingWhatsApp();
+    
+    if (isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') === '1') {
+        sessionStorage.removeItem('blyxu_just_logged_in');
+        
+        // Mantener el loader abierto desde el HTML (si no lo estaba, lo abrimos)
+        const loader = document.getElementById('brand-loader');
+        if(loader) {
+            loader.classList.add('open');
+            loader.setAttribute('aria-hidden', 'false');
+            
+            // Simular el final de la carga y cerrar
+            setTimeout(() => {
+                loader.classList.remove('open');
+                loader.setAttribute('aria-hidden', 'true');
+                launchWholesaleConfetti();
+            }, 800);
+        } else {
+            launchWholesaleConfetti();
+        }
+    } else if (isWholesalePage) {
+        // Si simplemente recargó la página, ocultar el loader inmediatamente si estuviera abierto
+        const loader = document.getElementById('brand-loader');
+        if (loader) {
+            loader.classList.remove('open');
+            loader.setAttribute('aria-hidden', 'true');
+        }
+    }
+
     if (isContactPage) {
         fetchSiteConfig().then(() => {
             renderContactPage();
-            renderFloatingWhatsApp();
+            renderPromoWidget();
         });
     } else {
-        loadProducts({ renderCatalog: !isProductDetailPage }).then(renderFloatingWhatsApp);
+        loadProducts({ renderCatalog: !isProductDetailPage }).then(() => {
+            renderFloatingWhatsApp();
+            renderPromoWidget();
+        });
     }
     updateCartUI();
 

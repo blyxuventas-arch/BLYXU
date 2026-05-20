@@ -31,6 +31,7 @@
                 <li><a href="index.html#inicio">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catálogo</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
+                <li><a href="pagos.html">Pagos</a></li>
                 <li><a href="administrativo.html">Administrativo</a></li>
             </ul>
 
@@ -171,7 +172,7 @@
             // Rellenar datos
             const name = product.Nombre || product.nombre || product.Producto || 'Producto';
             const price = getProductPrice(product, detailCatalogMode);
-            const oldPrice = parseFloat(product.Precio_Anterior || 0);
+            const oldPrice = parseFloat(detailCatalogMode === 'wholesale' ? (product.PrecioMayoristaOriginal || 0) : (product.Precio_Anterior || 0));
             const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
             const cat = product.Categoria || product.categoria || '';
             const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
@@ -306,6 +307,9 @@
                 const oldEl = document.getElementById('detail-old-price');
                 oldEl.textContent = formatMoney(oldPrice);
                 oldEl.style.display = 'inline';
+                document.getElementById('detail-price').classList.add('discount-active');
+            } else {
+                document.getElementById('detail-price').classList.remove('discount-active');
             }
 
             const detailCartBtn = document.getElementById('btn-add-to-cart-detail');

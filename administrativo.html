@@ -156,10 +156,10 @@
         .close-modal-btn:hover { background:rgba(255,255,255,0.06); color:#fff; }
 
         /* LOGIN */
-        #admin-login-screen { position:fixed; inset:0; z-index:9999; background:var(--bg-dark); display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        #admin-login-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; }
         .login-box { background:var(--glass-bg); backdrop-filter:blur(20px); padding:40px; border-radius:20px; text-align:center; width:90%; max-width:360px; border:1px solid rgba(168,85,247,0.08); box-shadow:0 40px 80px rgba(0,0,0,0.5); }
         .login-box h2 { color:var(--text-dim); letter-spacing:2px; font-size:11px; font-weight:600; margin-bottom:18px; text-transform:uppercase; }
-        #admin-login-screen { background:#050009; }
+
         .login-box { background:radial-gradient(circle at 50% -12%,rgba(244,196,65,0.12),transparent 34%),linear-gradient(180deg,rgba(26,18,38,0.94),rgba(14,8,24,0.96)); padding:38px 42px 34px; border-radius:18px; max-width:410px; border:1px solid rgba(244,196,65,0.18); box-shadow:0 34px 92px rgba(0,0,0,0.74),0 0 44px rgba(155,44,250,0.18),inset 0 1px 0 rgba(255,255,255,0.08); overflow:hidden; }
         .login-box img { display:none!important; }
         .login-box::before { content:'BLYXU'; display:block; color:#fff; font-family:Georgia,'Times New Roman',serif; font-size:30px; font-weight:800; letter-spacing:1px; text-shadow:2px 0 #a855f7,-2px 0 #f4c441,0 12px 28px rgba(0,0,0,0.45); margin-bottom:6px; }
@@ -330,18 +330,17 @@
     <!-- ---------------------------------------------------
          PANTALLA DE LOGIN
          --------------------------------------------------- -->
-    <div id="admin-login-screen">
-        <div class="login-box" id="login-box">
-            <img src="Logo2.png" alt="BLYXU" style="width:100%;max-width:160px;display:block;margin:0 auto 16px;">
-            <h2>INICIANDO ÁREA ADMINISTRATIVA</h2>
-            
-            <form id="admin-login-form">
-                <div id="login-error">Contraseña incorrecta</div>
-                <div class="form-group" style="margin-bottom: 24px;">
-                    <input type="password" class="form-control" id="admin-password" placeholder="Ingresa tu contraseña" required style="text-align:center;letter-spacing:4px;">
-                </div>
+    <div class="wholesale-overlay open" id="admin-login-screen" style="opacity: 1; pointer-events: auto; display: flex; z-index: 10000;">
+        <canvas id="admin-particles" class="wholesale-particles-canvas"></canvas>
+        <div class="wholesale-panel" id="login-box">
+            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
+            <div class="wholesale-kicker">Panel Seguro</div>
+            <h2>Administrador</h2>
+            <form class="wholesale-form" id="admin-login-form">
+                <input type="password" id="admin-password" placeholder="Clave de acceso" autocomplete="off" required>
                 <button type="submit" class="admin-btn">Desbloquear Sistema</button>
             </form>
+            <div class="wholesale-error" id="login-error" style="display:none;">Contraseña incorrecta</div>
             
             <div class="loader-container" id="login-loader">
                 <div class="loader-bar" id="login-loader-bar"></div>
@@ -499,6 +498,10 @@
                                             <option value="Agotado">Agotado</option>
                                             <option value="Inactivo">Inactivo</option>
                                         </select>
+                                    </div>
+                                    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                                        <input type="checkbox" id="prod-promocion" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+                                        <label for="prod-promocion" style="margin:0; cursor:pointer;">Aplica Promoción</label>
                                     </div>
                                     <div class="form-group admin-form-wide">
                                         <label>Caracteristicas</label>
@@ -928,6 +931,49 @@
                                 </div>
                             </div>
                             <button type="submit" class="admin-btn" id="btn-save-invoice-config" style="background:linear-gradient(135deg, #10B981, #059669);">Guardar Ajustes de Factura</button>
+                        </form>
+
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Banner Promocional Flotante</h3>
+                        <form id="promo-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                    <input type="checkbox" id="promo-config-enabled" style="width:20px; height:20px; accent-color:var(--primary);">
+                                    <span style="font-weight:700;">Activar Banner Promocional</span>
+                                </label>
+                            </div>
+                            <div class="admin-form-grid">
+                                <div class="form-group">
+                                    <label>Título / Porcentaje (Ej: -20%)</label>
+                                    <input type="text" class="form-control" id="promo-config-title" placeholder="-20%">
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha y hora límite (Temporizador)</label>
+                                    <input type="datetime-local" class="form-control" id="promo-config-date">
+                                </div>
+                                <div class="form-group admin-form-wide">
+                                    <label>Mensaje Corto</label>
+                                    <input type="text" class="form-control" id="promo-config-message" placeholder="Aprovecha nuestros descuentos en bolsos este fin de semana.">
+                                </div>
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-promo-config">Guardar Banner Promocional</button>
+                        </form>
+
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Gestión de Códigos QR (Pagos)</h3>
+                        <form id="qr-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div class="admin-form-grid">
+                                <div class="form-group admin-form-wide">
+                                    <label>Contraseña de Acceso a Pagos</label>
+                                    <input type="text" class="form-control" id="qr-config-password" placeholder="Ej: blyxu2026">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 16px;">
+                                <label>Imagen del Código QR</label>
+                                <div style="height:180px; background:rgba(0,0,0,0.2); border:2px dashed rgba(155,44,250,0.2); border-radius:24px; display:flex; align-items:center; justify-content:center; margin-bottom:24px; overflow:hidden; position:relative;" id="qr-preview" class="drop-zone">
+                                    <span style="font-size:13px; color:rgba(255,255,255,0.2); font-weight:600; z-index: 1;">Arrastra la imagen de tu QR aquí</span>
+                                </div>
+                                <input type="url" class="form-control" id="qr-config-image" placeholder="URL de la imagen del QR (Se llenará automáticamente si subes el archivo)" style="margin-bottom: 16px;">
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-qr-config" style="background:linear-gradient(135deg, #a855f7, #f4c441); color:#09030f;">Guardar Configuración de Pagos</button>
                         </form>
                         
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Carrusel de Inicio</h3>
