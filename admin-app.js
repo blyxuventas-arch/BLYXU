@@ -281,34 +281,23 @@ async function postProductToGoogleSheets(data, isEditingOverride = null) {
         throw new Error('Falta ID Producto Madre. No se puede enviar al inventario.');
     }
     const isEditing = isEditingOverride !== null ? isEditingOverride : Boolean(data['ID Variacion'] || data.id || data.editId);
-    const payloads = [
-        {
-            resource: 'productos',
-            action: isEditing ? 'editar' : 'crear',
-            data
-        },
-        {
-            action: isEditing ? 'edit_product' : 'add_product',
-            ...data
-        }
-    ];
-    let lastError = 'No se pudo guardar el producto';
+    const payload = {
+        resource: 'productos',
+        action: isEditing ? 'editar' : 'crear',
+        data
+    };
 
-    for (const payload of payloads) {
-        const res = await fetch(GOOGLE_SHEET_API, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        const result = await res.json();
+    const res = await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    const result = await res.json();
 
-        if (result && (result.ok || result.status === 'success')) {
-            return result.data || result;
-        }
-
-        lastError = result?.error || result?.message || lastError;
+    if (result && (result.ok || result.status === 'success')) {
+        return result.data || result;
     }
 
-    throw new Error(lastError);
+    throw new Error(result?.error || result?.message || 'No se pudo guardar el producto');
 }
 
 function getFilteredInventory() {
@@ -1007,12 +996,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function proceedSubmit(finalData) {
             try {
-                await postProductToGoogleSheets(finalData, isEditingProduct);
+                const savedProducts = [];
+                const savedMain = await postProductToGoogleSheets(finalData, isEditingProduct);
+                if (savedMain) savedProducts.push(savedMain);
                 const variants = collectVariantPayloads();
                 let savedVariants = 0;
                 for (const variantData of variants) {
-                    await postProductToGoogleSheets(variantData, isEditingProduct);
+                    const savedVariant = await postProductToGoogleSheets(variantData, isEditingProduct);
+                    if (savedVariant) savedProducts.push(savedVariant);
                     savedVariants++;
+                }
+                try {
+                    mergeSavedProductsIntoInventory(savedProducts);
+                } catch (renderError) {
+                    console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
                 }
                 showToast(savedVariants ? `Producto y ${savedVariants} variante(s) guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
                 resetProductForm();
@@ -1847,6 +1844,29 @@ function normalizeInventoryList(rawProducts) {
             return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
         })
         .reverse();
+}
+
+function mergeSavedProductsIntoInventory(savedProducts) {
+    var products = (Array.isArray(savedProducts) ? savedProducts : [savedProducts])
+        .filter(Boolean)
+        .map(normalizeGoogleProduct);
+
+    if (!products.length) return;
+
+    var byKey = new Map();
+    products.concat(inventario || []).forEach(function (product) {
+        var key = getInventoryProductKey(product);
+        if (key && !byKey.has(key)) {
+            byKey.set(key, product);
+        }
+    });
+
+    inventario = Array.from(byKey.values());
+    adminInventorySearchQuery = '';
+    var searchInput = document.getElementById('admin-inventory-search');
+    if (searchInput) searchInput.value = '';
+    writeInventoryCache(inventario);
+    renderInventoryInBatches();
 }
 
 function readInventoryCache() {

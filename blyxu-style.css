@@ -3359,6 +3359,22 @@ body.dark-mode {
     padding: 0;
 }
 
+.product-detail-luxury .product-main-img img {
+    opacity: 0;
+    transform: scale(1.012);
+    transition: opacity .28s ease, transform .34s ease;
+}
+
+.product-detail-luxury .product-main-img img.is-ready,
+.product-detail-luxury .product-main-img:not(.is-loading) img {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.product-detail-luxury .product-main-img.is-loading img {
+    opacity: .38;
+}
+
 .product-detail-luxury .product-main-img.is-fallback img {
     object-fit: contain;
     padding: 54px;

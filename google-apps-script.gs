@@ -330,7 +330,7 @@ function appendRow_(sheetName, inputData) {
     rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
   }
 
-  const row = headers.map(header => rowObject[header] !== undefined ? rowObject[header] : '');
+  const row = headers.map(header => getObjectValueByHeader_(rowObject, header, ''));
 
   if (sheetName === 'Productos' && rowObject['ID Variación']) {
     const existingRow = findRowIndex_(sheet, 'ID Variación', rowObject['ID Variación']);
@@ -339,12 +339,13 @@ function appendRow_(sheetName, inputData) {
       const current = rowToObject_(headers, sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0]);
 
       headers.forEach(header => {
-        if (rowObject[header] !== undefined && rowObject[header] !== '') {
-          current[header] = rowObject[header];
+        const value = getObjectValueByHeader_(rowObject, header);
+        if (value !== undefined && value !== '') {
+          current[header] = value;
         }
       });
 
-      const mergedRow = headers.map(header => current[header] !== undefined ? current[header] : '');
+      const mergedRow = headers.map(header => getObjectValueByHeader_(current, header, ''));
       sheet.getRange(existingRow, 1, 1, headers.length).setValues([mergedRow]);
       return current;
     }
@@ -375,7 +376,7 @@ function updateRow_(sheetName, id, inputData) {
     current['Fecha Actualización'] = new Date();
   }
 
-  const row = headers.map(header => current[header] !== undefined ? current[header] : '');
+  const row = headers.map(header => getObjectValueByHeader_(current, header, ''));
   sheet.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
 
   return current;
@@ -555,9 +556,11 @@ function ensureSheets_() {
       return;
     }
 
+    const normalizedCurrentHeaders = currentHeaders.map(header => normalizeKey_(header));
     expectedHeaders.forEach(header => {
-      if (!currentHeaders.includes(header)) {
+      if (!normalizedCurrentHeaders.includes(normalizeKey_(header))) {
         sheet.getRange(1, sheet.getLastColumn() + 1).setValue(header);
+        normalizedCurrentHeaders.push(normalizeKey_(header));
       }
     });
 
@@ -587,6 +590,15 @@ function rowToObject_(headers, row) {
     obj[header] = row[index];
   });
   return obj;
+}
+
+function getObjectValueByHeader_(obj, header, fallback) {
+  if (!obj) return fallback;
+  if (obj[header] !== undefined) return obj[header];
+
+  const normalizedHeader = normalizeKey_(header);
+  const matchingKey = Object.keys(obj).find(key => normalizeKey_(key) === normalizedHeader);
+  return matchingKey ? obj[matchingKey] : fallback;
 }
 
 function normalizeDataForSheet_(sheetName, data) {

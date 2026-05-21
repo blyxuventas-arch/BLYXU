@@ -349,5 +349,220 @@
             document.title = `${name} — BLYXU`;
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
+            const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
+            let currentDetailProductId = Number.parseInt(urlParams.get('id'), 10);
+
+            if (allProducts.length === 0) {
+                await loadProducts({ renderCatalog: false });
+            }
+
+            const detailImg = document.getElementById('detail-img');
+            const detailImgContainer = document.getElementById('detail-img-container');
+            const thumbsContainer = document.getElementById('detail-thumbnails');
+            const variationContainer = document.getElementById('product-variations');
+            const cartBtn = document.getElementById('btn-add-to-cart-detail');
+            const consultBtn = document.getElementById('btn-consult-product-detail');
+            const cartNote = document.getElementById('detail-cart-note');
+
+            function setSpec(rowId, valueId, value) {
+                const row = document.getElementById(rowId);
+                const target = document.getElementById(valueId);
+                if (!row || !target) return;
+                row.style.display = value ? 'flex' : 'none';
+                target.textContent = value || '';
+            }
+
+            function switchMainImage(src, alt) {
+                const nextSrc = src || 'Logo2.png';
+                if (detailImg.getAttribute('src') === nextSrc) return;
+
+                detailImgContainer.classList.add('is-loading');
+                detailImg.classList.remove('is-ready');
+                detailImg.alt = alt || '';
+
+                const preloader = new Image();
+                preloader.onload = () => {
+                    detailImg.onerror = () => {
+                        detailImg.onerror = null;
+                        detailImg.src = 'Logo2.png';
+                        detailImgContainer.classList.add('is-fallback');
+                        detailImgContainer.classList.remove('is-loading');
+                        detailImg.classList.add('is-ready');
+                    };
+                    detailImg.onload = () => {
+                        detailImgContainer.classList.remove('is-loading');
+                        detailImg.classList.add('is-ready');
+                    };
+                    detailImg.src = nextSrc;
+                };
+                preloader.onerror = () => {
+                    detailImg.src = 'Logo2.png';
+                    detailImgContainer.classList.add('is-fallback');
+                    detailImgContainer.classList.remove('is-loading');
+                    detailImg.classList.add('is-ready');
+                };
+                preloader.src = nextSrc;
+            }
+
+            function renderVariantThumbnails(product, name) {
+                const images = getProductImageSet(product);
+                thumbsContainer.innerHTML = '';
+
+                if (images.length <= 1) {
+                    thumbsContainer.style.display = 'none';
+                    return;
+                }
+
+                images.forEach((imgUrl, index) => {
+                    const thumb = document.createElement('img');
+                    thumb.src = imgUrl;
+                    thumb.alt = name;
+                    thumb.className = `gallery-thumb ${index === 0 ? 'active' : ''}`;
+                    thumb.onerror = () => { thumb.style.display = 'none'; };
+                    thumb.addEventListener('click', () => {
+                        thumbsContainer.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+                        thumb.classList.add('active');
+                        switchMainImage(imgUrl, name);
+                    });
+                    thumbsContainer.appendChild(thumb);
+                });
+
+                thumbsContainer.style.display = 'flex';
+            }
+
+            function renderVariantChips(productId, product) {
+                const parentId = product.idProducto;
+                const siblings = parentId ? allProducts.filter(p => p.idProducto === parentId && String(p.Categoria || p.categoria || '').toLowerCase() !== 'banner') : [];
+
+                if (!variationContainer || siblings.length <= 1) return;
+
+                variationContainer.innerHTML = '<h3>Variantes disponibles</h3><div class="detail-variant-list"></div>';
+                const list = variationContainer.querySelector('.detail-variant-list');
+
+                siblings.forEach((sib, index) => {
+                    const sibIndex = allProducts.indexOf(sib);
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = `detail-variant-chip ${sibIndex === productId ? 'active' : ''}`;
+                    chip.dataset.productIndex = String(sibIndex);
+
+                    const labelParts = [];
+                    if (sib.Color) labelParts.push(sib.Color);
+                    if (sib.Tamano || sib.tamano) labelParts.push(sib.Tamano || sib.tamano);
+                    if (sib.Estilo || sib.estilo) labelParts.push(sib.Estilo || sib.estilo);
+                    chip.textContent = labelParts.join(' - ') || sib.idVariacion || `Opcion ${index + 1}`;
+                    list.appendChild(chip);
+                });
+
+                variationContainer.style.display = 'block';
+            }
+
+            function renderVariantInPlace(productId, updateUrl = true) {
+                const product = allProducts[productId];
+                if (!product) return;
+
+                currentDetailProductId = productId;
+                const name = product.Nombre || product.nombre || product.Producto || 'Producto';
+                const price = getProductPrice(product, detailCatalogMode);
+                const oldPrice = parseFloat(detailCatalogMode === 'wholesale' ? (product.PrecioMayoristaOriginal || 0) : (product.Precio_Anterior || 0));
+                const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
+                const cat = product.Categoria || product.categoria || '';
+                const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
+                const stock = getProductStock(product);
+
+                document.getElementById('detail-name').textContent = name;
+                document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
+                document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
+                document.getElementById('detail-desc').textContent = desc;
+                document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado por ahora';
+                document.getElementById('detail-colors').textContent = product.Color || product.color || 'Único';
+
+                const stockAlert = document.getElementById('detail-stock-alert');
+                if (stockAlert) {
+                    stockAlert.className = 'product-stock-alert';
+                    if (stock <= 0) {
+                        stockAlert.textContent = 'Agotado por ahora';
+                        stockAlert.classList.add('is-out');
+                        stockAlert.style.display = 'inline-flex';
+                    } else if (stock <= LOW_STOCK_THRESHOLD) {
+                        stockAlert.textContent = `Bajo stock: quedan ${stock} unidades`;
+                        stockAlert.classList.add('is-low');
+                        stockAlert.style.display = 'inline-flex';
+                    } else {
+                        stockAlert.style.display = 'none';
+                    }
+                }
+
+                setSpec('spec-sku-row', 'detail-sku', product.SKU || product.idVariacion || '');
+                setSpec('spec-size-row', 'detail-size', product.Tamano || product.tamano || '');
+                setSpec('spec-style-row', 'detail-style', product.Estilo || product.estilo || '');
+
+                const oldEl = document.getElementById('detail-old-price');
+                if (detailShowsPrices && oldPrice > price) {
+                    oldEl.textContent = formatMoney(oldPrice);
+                    oldEl.style.display = 'inline';
+                    document.getElementById('detail-price').classList.add('discount-active');
+                } else {
+                    oldEl.style.display = 'none';
+                    document.getElementById('detail-price').classList.remove('discount-active');
+                }
+
+                switchMainImage(img, name);
+                renderVariantChips(productId, product);
+                renderVariantThumbnails(product, name);
+
+                cartBtn.disabled = stock <= 0;
+                cartBtn.textContent = stock > 0 ? (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general') : 'Agotado por ahora';
+                cartBtn.onclick = () => {
+                    if (stock <= 0) return;
+                    addToCart(productId, null, detailCatalogMode);
+                };
+
+                cartBtn.closest('.product-info-actions')?.classList.toggle('has-consult-actions', !detailShowsPrices && stock > 0);
+                if (consultBtn) {
+                    consultBtn.style.display = !detailShowsPrices && stock > 0 ? 'inline-flex' : 'none';
+                    consultBtn.onclick = !detailShowsPrices && stock > 0 ? () => consultProductByWhatsApp(product) : null;
+                }
+                if (cartNote) cartNote.style.display = !detailShowsPrices && stock > 0 ? 'block' : 'none';
+
+                document.title = `${name} - BLYXU`;
+
+                if (updateUrl) {
+                    const nextUrl = `producto.html?id=${productId}${detailCatalogMode === 'wholesale' ? '&catalogo=mayorista' : ''}`;
+                    history.replaceState({ productId }, '', nextUrl);
+                }
+            }
+
+            setTimeout(() => {
+                if (Number.isInteger(currentDetailProductId)) {
+                    renderVariantInPlace(currentDetailProductId, false);
+                }
+            }, 0);
+
+            variationContainer?.addEventListener('click', (event) => {
+                const chip = event.target.closest('.detail-variant-chip');
+                if (!chip) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                let nextId = Number.parseInt(chip.dataset.productIndex, 10);
+                if (!Number.isInteger(nextId)) {
+                    const inlineClick = chip.getAttribute('onclick') || '';
+                    const match = inlineClick.match(/id=(\d+)/);
+                    nextId = match ? Number.parseInt(match[1], 10) : NaN;
+                }
+
+                if (Number.isInteger(nextId) && nextId !== currentDetailProductId) {
+                    renderVariantInPlace(nextId, true);
+                }
+            }, true);
+        });
+    </script>
 </body>
 </html>
