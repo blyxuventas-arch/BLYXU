@@ -243,6 +243,8 @@ function inventorySearchBlob(product) {
         product.Categoria,
         product.Catalogo,
         product.Color,
+        product.Tamano,
+        product.Estilo,
         product.SKU,
         product.Estado,
         product.Stock,
@@ -274,6 +276,10 @@ function scoreInventorySearch(product, query) {
 }
 
 async function postProductToGoogleSheets(data, isEditingOverride = null) {
+    data = normalizeProductPayloadForSubmit(data);
+    if (!data['ID Producto']) {
+        throw new Error('Falta ID Producto Madre. No se puede enviar al inventario.');
+    }
     const isEditing = isEditingOverride !== null ? isEditingOverride : Boolean(data['ID Variacion'] || data.id || data.editId);
     const payloads = [
         {
@@ -403,15 +409,65 @@ function setInputValue(id, value = '') {
     if (input) input.value = value ?? '';
 }
 
+function setMotherProductId(value = '') {
+    setInputValue('prod-id-producto', value);
+    setInputValue('prod-id-producto-hidden', value);
+}
+
 function getInputValue(id) {
     return el(id)?.value?.trim() || '';
 }
 
+function generateMotherProductId() {
+    const shortTime = Date.now().toString(36).toUpperCase().slice(-6);
+    const randId = Math.floor(1000 + Math.random() * 9000);
+    return `PROD-${shortTime}${randId}`;
+}
+
+function ensureProductHierarchyIds() {
+    let idProducto = getInputValue('prod-id-producto');
+    if (!idProducto) {
+        idProducto = generateMotherProductId();
+        setMotherProductId(idProducto);
+    } else {
+        setMotherProductId(idProducto);
+    }
+
+    let idVariacion = getInputValue('prod-id');
+    if (!idVariacion || /^VAR-/i.test(idVariacion)) {
+        idVariacion = `${idProducto}-V01`;
+        setInputValue('prod-id', idVariacion);
+    }
+
+    return { idProducto, idVariacion };
+}
+
+function normalizeProductPayloadForSubmit(data) {
+    const payload = { ...(data || {}) };
+    const ids = ensureProductHierarchyIds();
+    const idProducto = payload['ID Producto'] || payload['ID Producto Madre'] || payload.ID_Producto || payload.ID_PRODUCTO || payload.IdProducto || payload.id_producto || payload.idProducto || ids.idProducto;
+    const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
+
+    payload['ID Producto'] = idProducto;
+    payload['ID Producto Madre'] = idProducto;
+    payload.ID_Producto = idProducto;
+    payload.ID_PRODUCTO = idProducto;
+    payload.IdProducto = idProducto;
+    payload.id_producto = idProducto;
+    payload.idProducto = idProducto;
+    payload['ID Variacion'] = idVariacion;
+    payload['ID Variación'] = idVariacion;
+    payload.idVariacion = idVariacion;
+
+    return payload;
+}
+
 function buildProductPayload() {
-    const stock = Number(getInputValue('prod-stock') || 0);
-    const stockInicial = Number(getInputValue('prod-stock-inicial') || stock || 0);
-    const idVariacion = getInputValue('prod-id');
-    const idProducto = getInputValue('prod-id-producto') || idVariacion;
+    const ids = ensureProductHierarchyIds();
+    const stock = Number(getInputValue('prod-stock-inicial') || 0);
+    const stockInicial = stock;
+    const idVariacion = ids.idVariacion;
+    const idProducto = ids.idProducto;
     const nombre = getInputValue('prod-nombre');
     const categoria = getInputValue('prod-categoria');
     const descripcion = getInputValue('prod-descripcion');
@@ -419,7 +475,9 @@ function buildProductPayload() {
 
     return {
         'ID Variacion': idVariacion,
+        'ID Variación': idVariacion,
         'ID Producto': idProducto,
+        ID_Producto: idProducto,
         'Nombre del Producto': nombre,
         Nombre: nombre,
         Categoria: categoria,
@@ -432,9 +490,10 @@ function buildProductPayload() {
         Descripcion: descripcion,
         'Caracteristicas del producto': descripcion,
         Tamano: getInputValue('prod-tamano'),
+        Talla: getInputValue('prod-tamano'),
         'Tamaño': getInputValue('prod-tamano'),
         Color: getInputValue('prod-color'),
-        Estilo: getInputValue('prod-estilo'),
+        Estilo: getInputValue('prod-estilo') || idVariacion,
         Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
         'Imagen Principal': imagen,
         Imagen: imagen,
@@ -445,6 +504,75 @@ function buildProductPayload() {
     };
 }
 
+function splitVariationOptions(value) {
+    const items = String(value || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    return items.length ? items : [''];
+}
+
+function makeVariantSlug(value) {
+    return String(value || 'VAR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .toUpperCase()
+        .slice(0, 18) || 'VAR';
+}
+
+function buildVariantPayloadFromCard(card) {
+    const ids = ensureProductHierarchyIds();
+    const variantId = card.querySelector('.var-id')?.value?.trim() || '';
+    if (!variantId) return null;
+    const stock = Number(card.querySelector('.var-stock')?.value || 0);
+    const imagen = card.querySelector('.var-imagen')?.value?.trim() || getInputValue('prod-imagen');
+    const tamano = card.querySelector('.var-tamano')?.value?.trim() || '';
+    const color = card.querySelector('.var-color')?.value?.trim() || '';
+    const estilo = card.querySelector('.var-estilo')?.value?.trim() || variantId;
+
+    return {
+        'ID Variacion': variantId,
+        'ID Variación': variantId,
+        'ID Producto': ids.idProducto,
+        ID_Producto: ids.idProducto,
+        idProducto: ids.idProducto,
+        'Nombre del Producto': card.querySelector('.var-nombre')?.value?.trim() || getInputValue('prod-nombre'),
+        Nombre: card.querySelector('.var-nombre')?.value?.trim() || getInputValue('prod-nombre'),
+        Precio: parseAmount(card.querySelector('.var-precio')?.value || getInputValue('prod-precio')),
+        'Precio Mayor': parseAmount(card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista')),
+        Categoria: getInputValue('prod-categoria'),
+        'CategorÃ­a': getInputValue('prod-categoria'),
+        Cantidad: stock,
+        'Stock Inicial': stock,
+        Descripcion: getInputValue('prod-descripcion'),
+        'Caracteristicas del producto': getInputValue('prod-descripcion'),
+        Tamano: tamano,
+        Talla: tamano,
+        'TamaÃ±o': tamano,
+        Color: color,
+        Estilo: estilo,
+        SKU: card.querySelector('.var-sku')?.value?.trim() || '',
+        Imagen: imagen,
+        'Imagen Principal': imagen,
+        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+        'Galeria JSON': getInputValue('prod-galeria'),
+        'GalerÃ­a JSON': getInputValue('prod-galeria'),
+        Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
+        Estado: getInputValue('prod-estado') || 'Activo',
+        'Fecha de CreaciÃ³n': getInputValue('prod-fecha-creacion')
+    };
+}
+
+function collectVariantPayloads() {
+    const cards = Array.from(document.querySelectorAll('#variants-container .admin-panel'));
+    return cards
+        .filter(card => card.dataset.saved !== '1')
+        .map(buildVariantPayloadFromCard)
+        .filter(Boolean);
+}
+
 function setProductFormMode(isEditing) {
     isEditingProduct = isEditing;
     const title = el('product-form-title');
@@ -452,19 +580,31 @@ function setProductFormMode(isEditing) {
     const btn = el('btn-save');
     if (title) title.textContent = isEditing ? 'Editar Producto' : 'Nuevo Producto';
     if (mode) mode.textContent = isEditing ? 'Editando' : 'Creando';
-    if (btn) btn.textContent = isEditing ? 'Guardar cambios' : 'Guardar producto';
+    if (btn) btn.textContent = isEditing ? 'Guardar cambios' : 'Guardar producto y variantes';
 }
 
 function resetProductForm() {
     const form = el('product-form');
     if (form) form.reset();
-    setInputValue('prod-id', '');
-    setInputValue('prod-id-producto', '');
+    
+    setMotherProductId(generateMotherProductId());
+    const currentMotherId = getInputValue('prod-id-producto');
+    setInputValue('prod-id', `${currentMotherId}-V01`);
     setInputValue('prod-fecha-creacion', '');
     setInputValue('prod-stock-inicial', '0');
     setInputValue('prod-stock', '0');
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
+    setInputValue('prod-estilo', '');
+    setInputValue('variation-styles', '');
+    setInputValue('variation-sizes', '');
+    setInputValue('variation-colors', '');
+    const generatorSummary = document.getElementById('variation-generator-summary');
+    if (generatorSummary) generatorSummary.textContent = 'Genera tarjetas editables para cada combinacion antes de guardar.';
+    const variationPanel = document.getElementById('variation-options-panel');
+    if (variationPanel) variationPanel.style.display = 'none';
+    const variationFields = document.getElementById('variation-generator-fields');
+    if (variationFields) variationFields.style.display = 'none';
     const promoCheck = document.getElementById('prod-promocion');
     if (promoCheck) promoCheck.checked = false;
     setProductFormMode(false);
@@ -679,6 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initInventorySearch();
     initInventoryActions();
     initCarouselImageAdmin();
+    resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
     const adminLoginButton = document.querySelector('#admin-login-form .admin-btn');
@@ -767,6 +908,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     updateLivePreview(); // Actualización inicial
 
+    document.getElementById('prod-id-producto')?.addEventListener('change', () => {
+        const motherId = getInputValue('prod-id-producto');
+        setMotherProductId(motherId);
+        const currentChildId = getInputValue('prod-id');
+        if (motherId && (!currentChildId || /^VAR-/i.test(currentChildId) || /-V01$/i.test(currentChildId))) {
+            setInputValue('prod-id', `${motherId}-V01`);
+        }
+        updateLivePreview();
+    });
+
     // --- LOGIN LOGIC ---
     const loginForm = document.getElementById('admin-login-form');
     const loginError = document.getElementById('login-error');
@@ -825,13 +976,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btn-save');
         btn.disabled = true;
         btn.textContent = 'Enviando...';
+        ensureProductHierarchyIds();
 
         const rawPrecio = document.getElementById('prod-precio').value;
         const cleanPrecio = parseAmount(rawPrecio);
         const rawPrecioMayorista = document.getElementById('prod-precio-mayorista').value;
         const cleanPrecioMayorista = parseAmount(rawPrecioMayorista);
 
-        const stock = Number(document.getElementById('prod-stock').value || 0);
+        const stock = Number(document.getElementById('prod-stock-inicial').value || 0);
         const estado = document.getElementById('prod-estado').value;
 
         const data = {
@@ -844,16 +996,28 @@ document.addEventListener('DOMContentLoaded', () => {
             Cantidad: stock,
             'Imagen Principal': document.getElementById('prod-imagen').value,
             Color: document.getElementById('prod-color').value,
-            Estilo: document.getElementById('prod-catalogo').value,
+            Estilo: document.getElementById('prod-id').value,
             Estado: estado
         };
         Object.assign(data, buildProductPayload());
+        const motherProductId = getInputValue('prod-id-producto') || ensureProductHierarchyIds().idProducto;
+        data['ID Producto'] = motherProductId;
+        data.ID_Producto = motherProductId;
+        data.idProducto = motherProductId;
 
         async function proceedSubmit(finalData) {
             try {
                 await postProductToGoogleSheets(finalData, isEditingProduct);
-                showToast('Producto guardado en Google Sheets', 'success');
+                const variants = collectVariantPayloads();
+                let savedVariants = 0;
+                for (const variantData of variants) {
+                    await postProductToGoogleSheets(variantData, isEditingProduct);
+                    savedVariants++;
+                }
+                showToast(savedVariants ? `Producto y ${savedVariants} variante(s) guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
                 resetProductForm();
+                btn.disabled = false;
+                btn.textContent = 'Guardar producto y variantes';
                 if (document.getElementById('edit-product-modal')?.style.display === 'flex') {
                     cerrarModalEdicion();
                 }
@@ -888,15 +1052,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
 
     document.getElementById('btn-add-variant')?.addEventListener('click', () => {
+        document.getElementById('btn-add-manual-variant')?.click();
+    });
+
+    document.getElementById('btn-show-variation-generator')?.addEventListener('click', () => {
+        const fields = document.getElementById('variation-generator-fields');
+        if (fields) {
+            fields.style.display = 'block';
+            fields.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    });
+
+    document.getElementById('btn-add-manual-variant')?.addEventListener('click', () => {
         const container = document.getElementById('variants-container');
         if (!container) return;
 
-        // Asegurar ID Madre
-        if (!getInputValue('prod-id-producto') && getInputValue('prod-id')) {
-            setInputValue('prod-id-producto', getInputValue('prod-id'));
-        }
+        const ids = ensureProductHierarchyIds();
 
         const cardId = Date.now();
+        const variantNumber = document.querySelectorAll('#variants-container .admin-panel').length + 2;
+        const autoVariantId = `${ids.idProducto}-V${String(variantNumber).padStart(2, '0')}`;
+        
         const card = document.createElement('div');
         card.className = 'admin-panel';
         card.id = `variant-card-${cardId}`;
@@ -916,17 +1092,34 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="admin-form-grid">
                 <div class="form-group">
-                    <label>ID Variable</label>
-                    <input type="text" class="form-control var-id" placeholder="Auto">
+                    <label>ID Variante / Hijo</label>
+                    <input type="text" class="form-control var-id" value="${autoVariantId}" placeholder="Ej: ESTAMPADO-01">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" class="form-control var-nombre" placeholder="${getInputValue('prod-nombre')}" value="${getInputValue('prod-nombre')}">
+                </div>
+                <div class="form-group">
+                    <label>Precio</label>
+                    <input type="text" class="form-control var-precio" placeholder="${getInputValue('prod-precio')}" value="${getInputValue('prod-precio')}">
+                </div>
+                <div class="form-group">
+                    <label>Precio Mayorista</label>
+                    <input type="text" class="form-control var-precio-mayor" placeholder="${getInputValue('prod-precio-mayorista')}" value="${getInputValue('prod-precio-mayorista')}">
                 </div>
                 <div class="form-group">
                     <label>SKU Variante</label>
                     <input type="text" class="form-control var-sku">
                 </div>
                 <div class="form-group">
+                    <label>Estilo</label>
+                    <input type="text" class="form-control var-estilo" value="${getInputValue('prod-estilo')}" placeholder="Ej: flor, corazon">
+                </div>
+                <div class="form-group">
                     <label>Tamaño / Medida</label>
                     <input type="text" class="form-control var-tamano">
                 </div>
+
                 <div class="form-group">
                     <label>Color</label>
                     <input type="text" class="form-control var-color">
@@ -952,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Evento de guardado para esta tarjeta específica
         card.querySelector('.btn-save-individual-variant').addEventListener('click', async (e) => {
             const btn = e.target;
-            var motherId = getInputValue('prod-id-producto') || getInputValue('prod-id');
+            var motherId = ensureProductHierarchyIds().idProducto;
             if (!motherId) {
                 showToast('Error: Debes especificar un ID Producto (Madre) antes de guardar una variante');
                 btn.disabled = false;
@@ -962,31 +1155,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = btn.textContent;
             btn.textContent = 'Guardando...';
 
-            const data = {
-                'ID Variacion': card.querySelector('.var-id').value,
-                'ID Producto': getInputValue('prod-id-producto') || getInputValue('prod-id'),
-                'Nombre del Producto': getInputValue('prod-nombre'),
-                Nombre: getInputValue('prod-nombre'),
-                Categoria: getInputValue('prod-categoria'),
-                'Categoría': getInputValue('prod-categoria'),
-                Precio: parseAmount(getInputValue('prod-precio')),
-                'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
-                Cantidad: Number(card.querySelector('.var-stock').value || 0),
-                'Stock Inicial': Number(card.querySelector('.var-stock').value || 0),
-                Descripcion: getInputValue('prod-descripcion'),
-                'Caracteristicas del producto': getInputValue('prod-descripcion'),
-                Tamano: card.querySelector('.var-tamano').value,
-                Color: card.querySelector('.var-color').value,
-                SKU: card.querySelector('.var-sku').value,
-                Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
-                'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
-                Catalogo: getInputValue('prod-catalogo') || 'Ambos',
-                'Galeria JSON': getInputValue('prod-galeria'),
-                Estado: getInputValue('prod-estado') || 'Activo'
-            };
+                const data = {
+                    'ID Variacion': card.querySelector('.var-id').value,
+                    'ID Variación': card.querySelector('.var-id').value,
+                    'ID Producto': getInputValue('prod-id-producto') || getInputValue('prod-id'),
+                    ID_Producto: getInputValue('prod-id-producto') || getInputValue('prod-id'),
+                    'Nombre del Producto': card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre'),
+                    Nombre: card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre'),
+                    Precio: parseAmount(card.querySelector('.var-precio')?.value || getInputValue('prod-precio')),
+                    'Precio Mayor': parseAmount(card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista')),
+                    Categoria: getInputValue('prod-categoria'),
+                    'Categoría': getInputValue('prod-categoria'),
+                    Cantidad: Number(card.querySelector('.var-stock').value || 0),
+                    'Stock Inicial': Number(card.querySelector('.var-stock').value || 0),
+                    Descripcion: getInputValue('prod-descripcion'),
+                    'Caracteristicas del producto': getInputValue('prod-descripcion'),
+                    Tamano: card.querySelector('.var-tamano').value,
+                    Talla: card.querySelector('.var-tamano').value,
+                    'TamaÃ±o': card.querySelector('.var-tamano').value,
+                    Color: card.querySelector('.var-color').value,
+                    Estilo: card.querySelector('.var-estilo')?.value || card.querySelector('.var-id').value || getInputValue('prod-estilo'),
+                    SKU: card.querySelector('.var-sku').value,
+                    Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
+                    'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
+                    Catalogo: getInputValue('prod-catalogo') || 'Ambos',
+                    'Galeria JSON': getInputValue('prod-galeria'),
+                    'GalerÃ­a JSON': getInputValue('prod-galeria'),
+                    Estado: getInputValue('prod-estado') || 'Activo'
+                };
 
             try {
                 await postProductToGoogleSheets(data, false);
+                card.dataset.saved = '1';
                 showToast('¡Variante guardada!');
                 btn.style.background = '#00c853';
                 btn.textContent = '✅ Guardado';
@@ -1003,6 +1203,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.textContent = 'Reintentar';
             }
         });
+    });
+
+    document.getElementById('btn-generate-variations')?.addEventListener('click', () => {
+        const addButton = document.getElementById('btn-add-manual-variant');
+        const container = document.getElementById('variants-container');
+        if (!addButton || !container) return;
+
+        const styles = splitVariationOptions(getInputValue('variation-styles') || getInputValue('prod-estilo'));
+        const sizes = splitVariationOptions(getInputValue('variation-sizes') || getInputValue('prod-tamano'));
+        const colors = splitVariationOptions(getInputValue('variation-colors') || getInputValue('prod-color'));
+        const combinations = [];
+
+        styles.forEach(styleValue => {
+            sizes.forEach(sizeValue => {
+                colors.forEach(colorValue => {
+                    if (styleValue || sizeValue || colorValue) {
+                        combinations.push({ styleValue, sizeValue, colorValue });
+                    }
+                });
+            });
+        });
+
+        if (!combinations.length) {
+            showToast('Escribe al menos un estilo, tamaño o color para generar variantes');
+            return;
+        }
+
+        container.innerHTML = '';
+        const motherId = ensureProductHierarchyIds().idProducto;
+        const firstCombo = combinations[0];
+        setInputValue('prod-id', `${motherId}-V01`);
+        setInputValue('prod-estilo', firstCombo.styleValue || '');
+        setInputValue('prod-tamano', firstCombo.sizeValue || '');
+        setInputValue('prod-color', firstCombo.colorValue || '');
+
+        combinations.slice(1).forEach((combo, index) => {
+            addButton.click();
+            const card = container.lastElementChild;
+            if (!card) return;
+            const variantId = `${motherId}-V${String(index + 2).padStart(2, '0')}`;
+
+            card.querySelector('.var-id').value = variantId;
+            card.querySelector('.var-nombre').value = getInputValue('prod-nombre');
+            card.querySelector('.var-estilo').value = combo.styleValue || getInputValue('prod-estilo');
+            card.querySelector('.var-tamano').value = combo.sizeValue || getInputValue('prod-tamano');
+            card.querySelector('.var-color').value = combo.colorValue || getInputValue('prod-color');
+        });
+
+        const summary = document.getElementById('variation-generator-summary');
+        if (summary) summary.textContent = `${combinations.length} variante(s) hijas listas: V01 en la variante inicial y ${Math.max(combinations.length - 1, 0)} tarjeta(s) adicional(es).`;
+        showToast(`${combinations.length} variacion(es) generadas`, 'success');
     });
 });
 
@@ -2084,7 +2335,7 @@ function editarProducto(index) {
     var isVariant = idProd && idVar && idProd !== idVar;
 
     setInputValue('prod-id', idVar);
-    setInputValue('prod-id-producto', idProd);
+    setMotherProductId(idProd);
     document.getElementById('prod-nombre').value = p.Nombre || p.Producto || '';
     document.getElementById('prod-categoria').value = p.Categoria || '';
     document.getElementById('prod-precio').value = p.Precio || '';

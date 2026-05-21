@@ -408,111 +408,138 @@
                                 <span class="admin-mode-pill" id="product-form-mode">Creando</span>
                             </div>
                             <form id="product-form">
-                                <div class="form-group">
-                                    <label>Nombre del Producto</label>
-                                    <input type="text" class="form-control" id="prod-nombre" name="Nombre" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Categoría</label>
-                                    <select class="form-control" id="prod-categoria" name="Categoria" required>
-                                        <option value="Collares">Collares</option>
-                                        <option value="Pulseras">Pulseras</option>
-                                        <option value="Aretes">Aretes</option>
-                                        <option value="Anillos">Anillos</option>
-                                        <option value="Sets">Sets</option>
-                                        <option value="Dijes">Dijes</option>
-                                        <option value="BANNER" style="background:#9B2CFA;color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
-                                    </select>
-                                </div>
-                                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                                    <div>
-                                        <label>Precio Minorista</label>
-                                        <input type="text" class="form-control" id="prod-precio" name="Precio" required>
-                                    </div>
-                                    <div>
-                                        <label>Precio Mayorista</label>
-                                        <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
-                                    </div>
-                                </div>
-                                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                                    <div>
-                                        <label>Catálogo</label>
-                                        <select class="form-control" id="prod-catalogo" name="Catalogo">
-                                            <option value="Ambos">Minorista y Mayorista</option>
-                                            <option value="Minorista">Solo Minorista</option>
-                                            <option value="Mayorista">Solo Mayorista</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label>Stock General</label>
-                                        <input type="number" class="form-control" id="prod-stock" name="Stock" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>URL de Imagen o Arrastra aquí</label>
-                                    <div class="drop-zone" id="prod-image-drop-zone" style="background:rgba(0,0,0,0.2); border:1px dashed rgba(155,44,250,0.3); border-radius:16px; padding:10px; display:flex; gap:10px; align-items:center;">
-                                        <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="https://..." style="margin:0; border:none; background:transparent;">
-                                        <span style="font-size:18px;">📁</span>
-                                    </div>
-                                </div>
-                                <div style="grid-column:1/-1;border:1px solid rgba(155,44,250,0.2);border-radius:16px;padding:16px;background:rgba(155,44,250,0.05);margin-bottom:16px;">
-                                    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9B2CFA;font-weight:800;margin-bottom:12px;">🧬 JERARQUÍA DE PRODUCTO</div>
+                                <!-- BLOQUE 1: PRODUCTO MADRE -->
+                                <div style="border:1px solid rgba(155,44,250,0.2); border-radius:16px; padding:20px; background:rgba(155,44,250,0.05); margin-bottom:24px;">
+                                    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#9B2CFA; font-weight:800; margin-top:0; margin-bottom:16px;">📦 1. Datos del Producto General (Madre)</h3>
                                     <div class="admin-form-grid">
                                         <div class="form-group">
-                                            <label title="ID del producto principal que agrupa todas sus variantes" style="color:#9B2CFA;font-weight:800;">⭐ ID Producto Madre</label>
-                                            <input type="text" class="form-control" id="prod-id-producto" placeholder="Ej: PROD-001" style="border-color:rgba(155,44,250,0.3);">
+                                            <label title="Identificador Base (Madre)" style="color:#9B2CFA; font-weight:800;">⭐ ID Producto Madre</label>
+                                            <input type="text" class="form-control" id="prod-id-producto" name="ID Producto" placeholder="Automatico" readonly style="border-color:rgba(155,44,250,0.3);">
+                                            <input type="hidden" id="prod-id-producto-hidden" name="idProducto">
                                         </div>
                                         <div class="form-group">
-                                            <label title="ID único para esta variante específica" style="color:#FFA500;font-weight:800;">🔸 ID Variante (Hija)</label>
-                                            <input type="text" class="form-control" id="prod-id" name="id" placeholder="Auto si está vacío" style="border-color:rgba(255,165,0,0.3);">
+                                            <label>Nombre del Producto</label>
+                                            <input type="text" class="form-control" id="prod-nombre" name="Nombre" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Categoría</label>
+                                            <select class="form-control" id="prod-categoria" name="Categoria" required>
+                                                <option value="Collares">Collares</option>
+                                                <option value="Pulseras">Pulseras</option>
+                                                <option value="Aretes">Aretes</option>
+                                                <option value="Anillos">Anillos</option>
+                                                <option value="Sets">Sets</option>
+                                                <option value="Dijes">Dijes</option>
+                                                <option value="BANNER" style="background:#9B2CFA;color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Catálogo</label>
+                                            <select class="form-control" id="prod-catalogo" name="Catalogo">
+                                                <option value="Ambos">Minorista y Mayorista</option>
+                                                <option value="Minorista">Solo Minorista</option>
+                                                <option value="Mayorista">Solo Mayorista</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Precio Minorista</label>
+                                            <input type="text" class="form-control" id="prod-precio" name="Precio" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Precio Mayorista</label>
+                                            <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
+                                        </div>
+                                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                                            <input type="checkbox" id="prod-promocion" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
+                                            <label for="prod-promocion" style="margin:0; cursor:pointer;">Aplica Promoción</label>
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>Características / Descripción</label>
+                                            <textarea class="form-control" id="prod-descripcion" placeholder="Materiales, notas..."></textarea>
                                         </div>
                                     </div>
-                                    <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px;text-align:center;">Mismo ID Madre = Mismo grupo de variantes</div>
                                 </div>
-                                <div class="admin-form-grid">
-                                    <div class="form-group">
-                                        <label>Colores (comas)</label>
-                                        <input type="text" class="form-control" id="prod-color" name="Color" placeholder="morado, dorado">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>SKU</label>
-                                        <input type="text" class="form-control" id="prod-sku">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Stock Inicial</label>
-                                        <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Tamano</label>
-                                        <input type="text" class="form-control" id="prod-tamano">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Estilo</label>
-                                        <input type="text" class="form-control" id="prod-estilo">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Estado</label>
-                                        <select class="form-control" id="prod-estado">
-                                            <option value="Activo">Activo</option>
-                                            <option value="Disponible">Disponible</option>
-                                            <option value="Agotado">Agotado</option>
-                                            <option value="Inactivo">Inactivo</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-                                        <input type="checkbox" id="prod-promocion" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
-                                        <label for="prod-promocion" style="margin:0; cursor:pointer;">Aplica Promoción</label>
-                                    </div>
-                                    <div class="form-group admin-form-wide">
-                                        <label>Caracteristicas</label>
-                                        <textarea class="form-control" id="prod-descripcion" placeholder="Materiales, notas..."></textarea>
-                                    </div>
-                                    <div class="form-group admin-form-wide">
-                                        <label>Galeria JSON</label>
-                                        <textarea class="form-control" id="prod-galeria" placeholder='["url1", "url2"]'></textarea>
+
+                                <!-- BLOQUE 2: VARIANTE INICIAL -->
+                                <div style="border:1px solid rgba(255,165,0,0.2); border-radius:16px; padding:20px; background:rgba(255,165,0,0.05); margin-bottom:24px;">
+                                    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#FFA500; font-weight:800; margin-top:0; margin-bottom:16px;">2. Variante inicial / Hijo principal</h3>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label title="Identificador hijo de la jerarquia" style="color:#FFA500; font-weight:800;">ID Variante / Hijo</label>
+                                            <input type="text" class="form-control" id="prod-id" name="id" placeholder="Ej: PROD-001-V01" style="border-color:rgba(255,165,0,0.3);">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>SKU (Opcional)</label>
+                                            <input type="text" class="form-control" id="prod-sku">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Stock</label>
+                                            <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Color</label>
+                                            <input type="text" class="form-control" id="prod-color" name="Color" placeholder="Dorado">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Estilo</label>
+                                            <input type="text" class="form-control" id="prod-estilo" placeholder="Ej: flor, corazon, minimalista">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Tama&ntilde;o / Medida</label>
+                                            <input type="text" class="form-control" id="prod-tamano">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Estado</label>
+                                            <select class="form-control" id="prod-estado">
+                                                <option value="Activo">Activo</option>
+                                                <option value="Disponible">Disponible</option>
+                                                <option value="Agotado">Agotado</option>
+                                                <option value="Inactivo">Inactivo</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>URL de Imagen Principal (o Arrastra aquí)</label>
+                                            <div class="drop-zone" id="prod-image-drop-zone" style="background:rgba(0,0,0,0.2); border:1px dashed rgba(255,165,0,0.3); border-radius:12px; padding:10px; display:flex; gap:10px; align-items:center;">
+                                                <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="https://..." style="margin:0; border:none; background:transparent;">
+                                                <span style="font-size:18px;">📁</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>Galería JSON (Fotos Adicionales)</label>
+                                            <textarea class="form-control" id="prod-galeria" placeholder='["url1", "url2"]'></textarea>
+                                        </div>
                                     </div>
                                 </div>
                                 <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
+
+                                <!-- BLOQUE 3: OPCIONES Y VARIANTES -->
+                                <div id="variation-options-panel" style="display:none; border:1px solid rgba(16,185,129,0.22); border-radius:16px; padding:20px; background:rgba(16,185,129,0.05); margin-bottom:24px;">
+                                    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#10B981; font-weight:800; margin-top:0; margin-bottom:16px;">3. Opciones y variantes hijas</h3>
+                                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                                        <button type="button" class="admin-btn" id="btn-add-manual-variant" style="width:auto; background:#6C5CE7; box-shadow:0 10px 20px rgba(108,92,231,0.18);">Agregar variante manual</button>
+                                        <button type="button" class="admin-btn" id="btn-show-variation-generator" style="width:auto; background:#10B981; box-shadow:0 10px 20px rgba(16,185,129,0.18);">Generar variantes</button>
+                                    </div>
+                                    <div id="variation-generator-fields" style="display:none;">
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label>Opcion 1: Estilo</label>
+                                            <input type="text" class="form-control" id="variation-styles" placeholder="corazon, estrella, inicial">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Opcion 2: Tama&ntilde;o</label>
+                                            <input type="text" class="form-control" id="variation-sizes" placeholder="S, M, L o 45 cm, 50 cm">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Opcion 3: Color</label>
+                                            <input type="text" class="form-control" id="variation-colors" placeholder="dorado, plateado, rosado">
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px;">
+                                        <p id="variation-generator-summary" style="margin:0; font-size:12px; color:rgba(255,255,255,0.5);">Genera tarjetas editables para cada combinacion antes de guardar.</p>
+                                        <button type="button" class="admin-btn" id="btn-generate-variations" style="width:auto; background:#10B981; box-shadow:0 10px 20px rgba(16,185,129,0.18);">Generar variaciones</button>
+                                    </div>
+                                    </div>
+                                </div>
                                 
                                 <!-- CONTENEDOR DE VARIANTES DINÁMICAS -->
                                 <div id="variants-container" style="margin-top:30px; display: flex; flex-direction: column; gap: 20px;"></div>
@@ -521,9 +548,9 @@
                                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:30px; gap:16px;">
                                     <div style="display:flex; gap:12px; align-items:center; flex:1;">
                                         <button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button>
-                                        <button type="button" class="admin-btn" id="btn-add-variant" style="background:#6C5CE7; box-shadow:0 10px 20px rgba(108,92,231,0.2);">➕ Nueva Variante</button>
+                                        <button type="button" class="admin-btn" id="btn-add-variant" style="background:#6C5CE7; box-shadow:0 10px 20px rgba(108,92,231,0.2);">Añadir variantes</button>
                                     </div>
-                                    <button type="submit" class="admin-btn" id="btn-save" style="flex:1;">Guardar Producto General</button>
+                                    <button type="submit" class="admin-btn" id="btn-save" style="flex:1;">Guardar producto y variantes</button>
                                 </div>
                             </form>
                         </div>
@@ -1037,6 +1064,6 @@
     
 
 
-    <script src="admin-app.js"></script>
+    <script src="admin-app.js?v=id-producto-fix-20260520"></script>
 </body>
 </html>
