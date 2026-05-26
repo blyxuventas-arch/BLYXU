@@ -144,6 +144,28 @@
             const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
             activeCatalogMode = detailCatalogMode;
 
+            function isCatalogOnlyValue(value) {
+                const clean = normalizeSearchText(value);
+                return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
+            }
+
+            function getVisibleVariantParts(product) {
+                const rawParts = [
+                    product.Color || product.color,
+                    product.Tamano || product.tamano,
+                    product.Estilo || product.estilo
+                ];
+
+                return rawParts
+                    .map(value => String(value || '').trim())
+                    .filter(value => value && !isCatalogOnlyValue(value))
+                    .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
+            }
+
+            function getAvailabilityText(stock) {
+                return stock > 0 ? 'Disponible' : 'Agotado por ahora';
+            }
+
             if (detailCatalogMode === 'wholesale') {
                 const catalogLink = document.querySelector('.nav-links a[href="index.html#coleccion"]');
                 if (catalogLink) {
@@ -180,7 +202,7 @@
             const colors = product.Color || product.color || 'Único';
             const sku = product.SKU || product.idVariacion || '';
             const size = product.Tamano || product.tamano || '';
-            const style = product.Estilo || product.estilo || '';
+            const style = isCatalogOnlyValue(product.Estilo || product.estilo) ? '' : (product.Estilo || product.estilo || '');
 
             document.getElementById('detail-name').textContent = name;
             const stockAlert = document.getElementById('detail-stock-alert');
@@ -191,7 +213,7 @@
                     stockAlert.classList.add('is-out');
                     stockAlert.style.display = 'inline-flex';
                 } else if (stock <= LOW_STOCK_THRESHOLD) {
-                    stockAlert.textContent = `Bajo stock: quedan ${stock} unidades`;
+                    stockAlert.textContent = 'Bajo stock';
                     stockAlert.classList.add('is-low');
                     stockAlert.style.display = 'inline-flex';
                 } else {
@@ -201,7 +223,7 @@
             document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
             document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
             document.getElementById('detail-desc').textContent = desc;
-            document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado por ahora';
+            document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
             document.getElementById('detail-colors').textContent = colors;
 
             if (sku) {
@@ -229,11 +251,7 @@
                     const sibIndex = allProducts.indexOf(sib);
                     const isActive = sibIndex === productId;
                     
-                    let labelParts = [];
-                    if (sib.Color) labelParts.push(sib.Color);
-                    if (sib.Tamano || sib.tamano) labelParts.push(sib.Tamano || sib.tamano);
-                    if (sib.Estilo || sib.estilo) labelParts.push(sib.Estilo || sib.estilo);
-                    
+                    let labelParts = getVisibleVariantParts(sib);
                     let label = labelParts.join(' - ');
                     if (!label) {
                         label = sib.idVariacion || `Opción ${index + 1}`;
@@ -368,12 +386,35 @@
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
 
+            function isCatalogOnlyValue(value) {
+                const clean = normalizeSearchText(value);
+                return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
+            }
+
+            function getVisibleVariantParts(product) {
+                const rawParts = [
+                    product.Color || product.color,
+                    product.Tamano || product.tamano,
+                    product.Estilo || product.estilo
+                ];
+
+                return rawParts
+                    .map(value => String(value || '').trim())
+                    .filter(value => value && !isCatalogOnlyValue(value))
+                    .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
+            }
+
+            function getAvailabilityText(stock) {
+                return stock > 0 ? 'Disponible' : 'Agotado por ahora';
+            }
+
             function setSpec(rowId, valueId, value) {
                 const row = document.getElementById(rowId);
                 const target = document.getElementById(valueId);
                 if (!row || !target) return;
-                row.style.display = value ? 'flex' : 'none';
-                target.textContent = value || '';
+                const visibleValue = isCatalogOnlyValue(value) ? '' : value;
+                row.style.display = visibleValue ? 'flex' : 'none';
+                target.textContent = visibleValue || '';
             }
 
             function switchMainImage(src, alt) {
@@ -450,10 +491,7 @@
                     chip.className = `detail-variant-chip ${sibIndex === productId ? 'active' : ''}`;
                     chip.dataset.productIndex = String(sibIndex);
 
-                    const labelParts = [];
-                    if (sib.Color) labelParts.push(sib.Color);
-                    if (sib.Tamano || sib.tamano) labelParts.push(sib.Tamano || sib.tamano);
-                    if (sib.Estilo || sib.estilo) labelParts.push(sib.Estilo || sib.estilo);
+                    const labelParts = getVisibleVariantParts(sib);
                     chip.textContent = labelParts.join(' - ') || sib.idVariacion || `Opcion ${index + 1}`;
                     list.appendChild(chip);
                 });
@@ -478,7 +516,7 @@
                 document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
                 document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
                 document.getElementById('detail-desc').textContent = desc;
-                document.getElementById('detail-stock').textContent = stock > 0 ? `${stock} unidades disponibles` : 'Agotado por ahora';
+                document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
                 document.getElementById('detail-colors').textContent = product.Color || product.color || 'Único';
 
                 const stockAlert = document.getElementById('detail-stock-alert');
@@ -489,7 +527,7 @@
                         stockAlert.classList.add('is-out');
                         stockAlert.style.display = 'inline-flex';
                     } else if (stock <= LOW_STOCK_THRESHOLD) {
-                        stockAlert.textContent = `Bajo stock: quedan ${stock} unidades`;
+                        stockAlert.textContent = 'Bajo stock';
                         stockAlert.classList.add('is-low');
                         stockAlert.style.display = 'inline-flex';
                     } else {

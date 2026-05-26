@@ -28,6 +28,12 @@
         }
         * { margin:0; padding:0; box-sizing:border-box; }
         body, html { height:100%; margin:0; overflow:hidden; background:var(--bg-dark); color:var(--text-main); font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+        @media (hover:hover) and (pointer:fine) {
+            body { cursor:default!important; }
+            a, button, [role="button"], .sidebar-btn, .admin-btn, .toggle-vars-btn, .drop-zone, select.form-control { cursor:pointer!important; }
+            input, textarea, input.form-control, textarea.form-control { cursor:text!important; }
+            button:disabled, .admin-btn:disabled { cursor:not-allowed!important; }
+        }
 
         .bg-animation { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
         .bg-animation::before { content:''; position:absolute; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(168,85,247,0.06),transparent 70%); top:-15%; left:-5%; animation:bgFloat 40s infinite alternate ease-in-out; }
@@ -331,7 +337,6 @@
          PANTALLA DE LOGIN
          --------------------------------------------------- -->
     <div class="wholesale-overlay open" id="admin-login-screen" style="opacity: 1; pointer-events: auto; display: flex; z-index: 10000;">
-        <canvas id="admin-particles" class="wholesale-particles-canvas"></canvas>
         <div class="wholesale-panel" id="login-box">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">Panel Seguro</div>

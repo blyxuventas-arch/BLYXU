@@ -11,6 +11,7 @@ const SHEETS = {
       'ID Producto',
       'Nombre del Producto',
       'Categoría',
+      'Catalogo',
       'Precio',
       'Precio Mayor',
       'Stock Inicial',
@@ -180,6 +181,16 @@ function handleRequest_(e, method) {
       const data = body.data || body;
 
       if (
+        action === 'batchsave' ||
+        action === 'guardarlote' ||
+        action === 'batch'
+      ) {
+        const itemsList = Array.isArray(data) ? data : [data];
+        const saved = batchSaveRows_(sheetName, itemsList);
+        return json_({ ok: true, status: 'success', data: saved });
+      }
+
+      if (
         action === 'crear' ||
         action === 'create' ||
         action === 'agregar' ||
@@ -285,6 +296,80 @@ function createOrder_(data) {
     updateStockFromOrder_(pedido['Productos JSON']);
 
     return pedido;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function batchSaveRows_(sheetName, itemsList) {
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const primary = SHEETS[sheetName].primary;
+  const now = new Date();
+  
+  const lastRow = sheet.getLastRow();
+  const allValues = lastRow >= 2 ? sheet.getRange(2, 1, lastRow - 1, headers.length).getValues() : [];
+  
+  const existingRowsMap = new Map();
+  allValues.forEach((rowValues, idx) => {
+    const rowObj = rowToObject_(headers, rowValues);
+    const primaryId = String(getObjectValueByHeader_(rowObj, primary, '')).trim();
+    if (primaryId) {
+      existingRowsMap.set(primaryId, {
+        rowIndex: idx + 2,
+        data: rowObj
+      });
+    }
+  });
+  
+  const savedResults = [];
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  
+  try {
+    itemsList.forEach(inputData => {
+      const rowObject = normalizeDataForSheet_(sheetName, inputData);
+      
+      if (sheetName === 'Productos') {
+        rowObject['ID Variación'] = rowObject['ID Variación'] || rowObject['ID Variacion'] || makeId_('VAR');
+        rowObject['ID Producto'] = rowObject['ID Producto'] || rowObject['ID Variación'];
+        rowObject['Estado'] = rowObject['Estado'] || 'Activo';
+        rowObject['Fecha de Creación'] = rowObject['Fecha de Creación'] || now;
+      }
+      
+      const primaryId = String(rowObject[primary] || getObjectValueByHeader_(rowObject, primary, '')).trim();
+      const existing = existingRowsMap.get(primaryId);
+      
+      if (existing) {
+        headers.forEach(header => {
+          const value = getObjectValueByHeader_(rowObject, header);
+          if (value !== undefined && value !== '') {
+            existing.data[header] = value;
+          }
+        });
+        
+        if (headers.includes('Fecha Actualización')) {
+          existing.data['Fecha Actualización'] = now;
+        }
+        
+        const mergedRow = headers.map(header => getObjectValueByHeader_(existing.data, header, ''));
+        sheet.getRange(existing.rowIndex, 1, 1, headers.length).setValues([mergedRow]);
+        savedResults.push(existing.data);
+      } else {
+        const row = headers.map(header => getObjectValueByHeader_(rowObject, header, ''));
+        sheet.appendRow(row);
+        
+        const newRowIndex = sheet.getLastRow();
+        existingRowsMap.set(primaryId, {
+          rowIndex: newRowIndex,
+          data: rowObject
+        });
+        
+        savedResults.push(rowObject);
+      }
+    });
+    
+    return savedResults;
   } finally {
     lock.releaseLock();
   }
@@ -644,7 +729,8 @@ function findHeader_(headers, key, sheetName) {
       nombre: 'Nombre del Producto',
       producto: 'Nombre del Producto',
       categoria: 'Categoría',
-      catalogo: 'Estilo',
+      catalogo: 'Catalogo',
+      publicacion: 'Catalogo',
       descripcion: 'Características del producto',
       caracteristicas: 'Características del producto',
       tamano: 'Tamaño',

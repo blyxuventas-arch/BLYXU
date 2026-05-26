@@ -1657,6 +1657,13 @@ body {
     margin-bottom: 10px;
 }
 
+.product-card-variant {
+    font-size: 11px;
+    color: var(--accent);
+    margin: -4px 0 10px;
+    line-height: 1.35;
+}
+
 .product-card-colors {
     display: flex;
     gap: 6px;

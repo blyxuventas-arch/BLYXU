@@ -25,10 +25,12 @@ const INVOICE_CONFIG_FIELDS = [
     ['Factura_Email', 'inv-config-email']
 ];
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
+const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_MAX_EDGE = 1800;
 const IMAGE_UPLOAD_QUALITY = 0.82;
+let siteConfigPromise = null;
 let inventoryRenderedRows = 0;
 let inventoryRenderToken = 0;
 let inventoryLoadMoreObserver = null;
@@ -196,7 +198,7 @@ function normalizeImageUrl(value) {
     const driveMatch = firstUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/) || firstUrl.match(/[?&]id=([^&]+)/);
 
     if (firstUrl.includes('drive.google.com') && driveMatch && driveMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w300`;
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w1200`;
     }
 
     if (firstUrl.startsWith('//')) return `https:${firstUrl}`;
@@ -300,6 +302,58 @@ async function postProductToGoogleSheets(data, isEditingOverride = null) {
     throw new Error(result?.error || result?.message || 'No se pudo guardar el producto');
 }
 
+async function postProductBatchToGoogleSheets(itemsList) {
+    if (!itemsList || itemsList.length === 0) return [];
+    
+    const normalizedItems = itemsList.map(item => normalizeProductPayloadForSubmit(item));
+    const payload = {
+        resource: 'productos',
+        action: 'batchsave',
+        data: normalizedItems
+    };
+
+    const res = await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result && (result.ok || result.status === 'success')) {
+        return Array.isArray(result.data) ? result.data : [result.data || result];
+    }
+
+    throw new Error(result?.error || result?.message || 'No se pudo guardar el lote de productos');
+}
+
+async function saveProductListToGoogleSheets(itemsList, options = {}) {
+    if (!itemsList || itemsList.length === 0) return [];
+
+    try {
+        return await postProductBatchToGoogleSheets(itemsList);
+    } catch (batchError) {
+        console.warn('Guardado por lote falló. Reintentando uno por uno:', batchError);
+    }
+
+    const saved = [];
+    const failures = [];
+    const fallbackEditOverride = options.fallbackEditOverride === undefined ? false : options.fallbackEditOverride;
+
+    for (const item of itemsList) {
+        try {
+            saved.push(await postProductToGoogleSheets(item, fallbackEditOverride));
+        } catch (error) {
+            const id = item?.['ID Variacion'] || item?.['ID VariaciÃ³n'] || item?.idVariacion || item?.SKU || item?.Nombre || 'sin ID';
+            failures.push(`${id}: ${error.message || error}`);
+        }
+    }
+
+    if (failures.length) {
+        throw new Error('No se pudieron guardar algunos productos. ' + failures.join(' | '));
+    }
+
+    return saved;
+}
+
 function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
     const indexed = inventario.map((product, index) => ({ product, index }));
@@ -319,53 +373,49 @@ function getFilteredInventory() {
         return !idp || !idv || idv === idp;
     }
 
-    let resultList = indexed;
-    if (query) {
-        var scored = indexed
-            .map(function (item) { return { product: item.product, index: item.index, score: scoreInventorySearch(item.product, query) }; })
-            .filter(function (item) { return item.score > 0; })
-            .sort(function (a, b) { return b.score - a.score; });
-
-        var matchedMids = new Set();
-        scored.forEach(function (item) { matchedMids.add(getMid(item.product)); });
-
-        var seen = new Set();
-        resultList = [];
-        scored.forEach(function (item) {
-            var mid = getMid(item.product);
-            indexed.forEach(function (sib) {
-                var sibMid = getMid(sib.product);
-                var key = sibMid + '|' + sib.index;
-                if (mid === sibMid && !seen.has(key)) {
-                    seen.add(key);
-                    resultList.push(sib);
-                }
-            });
-        });
-        indexed.forEach(function (item) {
-            var mid = getMid(item.product);
-            var key = mid + '|' + item.index;
-            if (matchedMids.has(mid) && !seen.has(key)) {
-                seen.add(key);
-                resultList.push(item);
-            }
-        });
-    }
-
     var grouped = new Map();
-    resultList.forEach(function (item) {
+    indexed.forEach(function (item) {
         var mid = getMid(item.product);
         if (!grouped.has(mid)) grouped.set(mid, []);
         grouped.get(mid).push(item);
     });
 
-    var finalFlatList = [];
-    grouped.forEach(function (items, motherId) {
+    grouped.forEach(function (items) {
         items.sort(function (a, b) {
             var aIsMother = isMother(a.product) ? 1 : 0;
             var bIsMother = isMother(b.product) ? 1 : 0;
             return bIsMother - aIsMother;
         });
+    });
+
+    let groupEntries = Array.from(grouped.entries()).map(function (entry, groupOrder) {
+        return { motherId: entry[0], items: entry[1], score: 1, groupOrder: groupOrder };
+    });
+
+    if (query) {
+        var scoresByMother = new Map();
+        indexed.forEach(function (item) {
+            var score = scoreInventorySearch(item.product, query);
+            if (score <= 0) return;
+            var mid = getMid(item.product);
+            scoresByMother.set(mid, Math.max(scoresByMother.get(mid) || 0, score));
+        });
+
+        groupEntries = groupEntries
+            .filter(function (entry) { return scoresByMother.has(entry.motherId); })
+            .map(function (entry) {
+                entry.score = scoresByMother.get(entry.motherId);
+                return entry;
+            })
+            .sort(function (a, b) {
+                return (b.score - a.score) || (a.groupOrder - b.groupOrder);
+            });
+    }
+
+    var finalFlatList = [];
+    groupEntries.forEach(function (entry) {
+        var items = entry.items;
+        var motherId = entry.motherId;
 
         var totalStock = items.reduce(function (s, item) { return s + (Number(item.product.Stock || item.product.Cantidad) || 0); }, 0);
         var prices = items.map(function (i) { return Number(i.product.Precio || 0); }).filter(function (p) { return p > 0; });
@@ -435,6 +485,8 @@ function normalizeProductPayloadForSubmit(data) {
     const payload = { ...(data || {}) };
     const ids = ensureProductHierarchyIds();
     const idProducto = payload['ID Producto'] || payload['ID Producto Madre'] || payload.ID_Producto || payload.ID_PRODUCTO || payload.IdProducto || payload.id_producto || payload.idProducto || ids.idProducto;
+    const catalogo = payload.Catalogo || payload['Catálogo'] || payload['CatÃ¡logo'] || getInputValue('prod-catalogo') || 'Ambos';
+    const cantidad = payload.Cantidad ?? payload.Stock ?? payload.stock ?? payload['Stock Inicial'] ?? '';
     const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
 
     payload['ID Producto'] = idProducto;
@@ -447,6 +499,11 @@ function normalizeProductPayloadForSubmit(data) {
     payload['ID Variacion'] = idVariacion;
     payload['ID Variación'] = idVariacion;
     payload.idVariacion = idVariacion;
+    payload.Catalogo = catalogo;
+    payload['Catálogo'] = catalogo;
+    payload['CatÃ¡logo'] = catalogo;
+    payload.catalogo = catalogo;
+    if (cantidad !== '') payload.Stock = cantidad;
 
     return payload;
 }
@@ -470,12 +527,14 @@ function buildProductPayload() {
         'Nombre del Producto': nombre,
         Nombre: nombre,
         Categoria: categoria,
+        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
         'Categoría': categoria,
         'Catálogo': getInputValue('prod-catalogo') || 'Ambos',
         Precio: parseAmount(getInputValue('prod-precio')),
         'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
         'Stock Inicial': stockInicial,
         Cantidad: stock,
+        Stock: stock,
         Descripcion: descripcion,
         'Caracteristicas del producto': descripcion,
         Tamano: getInputValue('prod-tamano'),
@@ -532,8 +591,10 @@ function buildVariantPayloadFromCard(card) {
         Precio: parseAmount(card.querySelector('.var-precio')?.value || getInputValue('prod-precio')),
         'Precio Mayor': parseAmount(card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista')),
         Categoria: getInputValue('prod-categoria'),
+        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
         'CategorÃ­a': getInputValue('prod-categoria'),
         Cantidad: stock,
+        Stock: stock,
         'Stock Inicial': stock,
         Descripcion: getInputValue('prod-descripcion'),
         'Caracteristicas del producto': getInputValue('prod-descripcion'),
@@ -545,7 +606,6 @@ function buildVariantPayloadFromCard(card) {
         SKU: card.querySelector('.var-sku')?.value?.trim() || '',
         Imagen: imagen,
         'Imagen Principal': imagen,
-        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
         'Galeria JSON': getInputValue('prod-galeria'),
         'GalerÃ­a JSON': getInputValue('prod-galeria'),
         Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
@@ -683,6 +743,9 @@ function initAdminParticles() {
     const ctx = canvas.getContext('2d');
     let width, height;
     let particles = [];
+    let animationId = null;
+    let running = true;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     
     const mouse = { x: -9999, y: -9999, active: false };
     
@@ -715,7 +778,7 @@ function initAdminParticles() {
     function initNodes() {
         particles = [];
         const isMobile = window.innerWidth < 768;
-        const count = isMobile ? 50 : 120;
+        const count = reduceMotion ? 0 : (isMobile ? 24 : 48);
         for (let i = 0; i < count; i++) {
             particles.push({
                 x: Math.random() * width,
@@ -732,6 +795,13 @@ function initAdminParticles() {
     resize();
 
     function draw() {
+        if (!running || !loginScreen || loginScreen.style.display === 'none') {
+            running = false;
+            return;
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent';
         ctx.fillStyle = 'rgba(10, 2, 20, 0.35)';
         ctx.fillRect(0, 0, width, height);
 
@@ -786,20 +856,28 @@ function initAdminParticles() {
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
-            ctx.fill();
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 8;
             ctx.shadowColor = p.color;
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
 
-        requestAnimationFrame(draw);
+        animationId = requestAnimationFrame(draw);
     }
 
+    window.stopAdminParticles = function () {
+        running = false;
+        if (animationId) cancelAnimationFrame(animationId);
+        window.removeEventListener('resize', resize);
+    };
+
+    if (reduceMotion) return;
     draw();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initAdminParticles();
-    initAdminCustomCursor();
+    // initAdminParticles(); // Desactivado para optimizar carga
+    // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initRetailPriceToggle();
     initContactConfigAdmin();
     initInvoiceConfigAdmin();
@@ -940,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             loginScreen.style.opacity = '0';
                             setTimeout(() => {
                                 loginScreen.style.display = 'none';
+                                if (typeof window.stopAdminParticles === 'function') window.stopAdminParticles();
                                 mainContent.style.display = ''; // Permite que actúe el CSS grid (dashboard-layout)
                                 cargarInventario(); // Load only after login
                             }, 500);
@@ -996,22 +1075,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function proceedSubmit(finalData) {
             try {
-                const savedProducts = [];
-                const savedMain = await postProductToGoogleSheets(finalData, isEditingProduct);
-                if (savedMain) savedProducts.push(savedMain);
                 const variants = collectVariantPayloads();
-                let savedVariants = 0;
-                for (const variantData of variants) {
-                    const savedVariant = await postProductToGoogleSheets(variantData, isEditingProduct);
-                    if (savedVariant) savedProducts.push(savedVariant);
-                    savedVariants++;
-                }
+                const itemsToSave = [finalData, ...variants];
+                
+                const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
+                    fallbackEditOverride: isEditingProduct ? true : false
+                });
+                clearPublicProductsCache();
+                
                 try {
                     mergeSavedProductsIntoInventory(savedProducts);
                 } catch (renderError) {
                     console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
                 }
-                showToast(savedVariants ? `Producto y ${savedVariants} variante(s) guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
+                const savedVariantsCount = savedProducts.length - 1;
+                showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} variante(s) guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
                 resetProductForm();
                 btn.disabled = false;
                 btn.textContent = 'Guardar producto y variantes';
@@ -1049,6 +1127,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
 
     document.getElementById('btn-add-variant')?.addEventListener('click', () => {
+        const panel = document.getElementById('variation-options-panel');
+        if (panel) panel.style.display = 'block';
         document.getElementById('btn-add-manual-variant')?.click();
     });
 
@@ -1162,8 +1242,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     Precio: parseAmount(card.querySelector('.var-precio')?.value || getInputValue('prod-precio')),
                     'Precio Mayor': parseAmount(card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista')),
                     Categoria: getInputValue('prod-categoria'),
+                    Catalogo: getInputValue('prod-catalogo') || 'Ambos',
                     'Categoría': getInputValue('prod-categoria'),
                     Cantidad: Number(card.querySelector('.var-stock').value || 0),
+                    Stock: Number(card.querySelector('.var-stock').value || 0),
                     'Stock Inicial': Number(card.querySelector('.var-stock').value || 0),
                     Descripcion: getInputValue('prod-descripcion'),
                     'Caracteristicas del producto': getInputValue('prod-descripcion'),
@@ -1175,7 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     SKU: card.querySelector('.var-sku').value,
                     Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
                     'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
-                    Catalogo: getInputValue('prod-catalogo') || 'Ambos',
                     'Galeria JSON': getInputValue('prod-galeria'),
                     'GalerÃ­a JSON': getInputValue('prod-galeria'),
                     Estado: getInputValue('prod-estado') || 'Activo'
@@ -1183,6 +1264,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await postProductToGoogleSheets(data, false);
+                clearPublicProductsCache();
                 card.dataset.saved = '1';
                 showToast('¡Variante guardada!');
                 btn.style.background = '#00c853';
@@ -1285,16 +1367,17 @@ function initRetailPriceToggle() {
 }
 
 async function loadSiteConfigForAdmin() {
-    try {
-        const res = await fetch(`${GOOGLE_SHEET_API}?action=get_config`);
-        const data = await res.json();
-        return data && data.status === 'success' ? (data.config || {}) : {};
-    } catch (err) {
-        clearTimeout(timeout);
-        clearTimeout(timeout);
-        console.warn('No se pudo cargar configuración:', err);
-        return {};
+    if (!siteConfigPromise) {
+        siteConfigPromise = fetch(`${GOOGLE_SHEET_API}?action=get_config`, { cache: 'no-store' })
+            .then(res => res.json())
+            .then(data => data && data.status === 'success' ? (data.config || {}) : {})
+            .catch(err => {
+                console.warn('No se pudo cargar configuración:', err);
+                siteConfigPromise = null;
+                return {};
+            });
     }
+    return siteConfigPromise;
 }
 
 async function saveSiteConfig(key, value) {
@@ -1740,6 +1823,7 @@ function initCarouselImageAdmin() {
                 'Nombre del Producto': title,
                 Nombre: title,
                 Categoria: 'BANNER',
+                'Categoría': 'BANNER',
                 Precio: 0,
                 'Precio Mayor': 0,
                 'Stock Inicial': 1,
@@ -1756,6 +1840,8 @@ function initCarouselImageAdmin() {
             showToast('Banner guardado para el carrusel de inicio');
             form.reset();
             preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
+            // Borrar cache público para que el cambio se vea de inmediato
+            clearPublicProductsCache();
             setTimeout(() => cargarInventario({ silent: true }), 2000);
         } catch (error) {
             console.error(error);
@@ -1886,6 +1972,14 @@ function writeInventoryCache(list) {
         }));
     } catch (e) {
         console.warn('No se pudo guardar cache de inventario:', e.message);
+    }
+}
+
+function clearPublicProductsCache() {
+    try {
+        localStorage.removeItem(PUBLIC_PRODUCTS_CACHE_KEY);
+    } catch (e) {
+        console.warn('No se pudo limpiar cache publico:', e.message);
     }
 }
 
@@ -2301,19 +2395,14 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
 window.guardarGrupoCompleto = async function (idProducto) {
     showToast('Guardando grupo completo...');
 
-    // 1. Save mother product
+    const itemsToSave = [];
+    
+    // 1. Mother product
     var motherData = buildProductPayload();
-    try {
-        await postProductToGoogleSheets(motherData, Boolean(motherData['ID Variacion']));
-    } catch (err) {
-        showToast('Error guardando producto madre: ' + err.message, 'error');
-        return;
-    }
+    itemsToSave.push(motherData);
 
     // 2. Save all visible expanded variants
     var expandedRows = document.querySelectorAll('.var-edit-expanded[style*="table-row"]');
-    var saved = 0;
-    var errors = 0;
     for (var i = 0; i < expandedRows.length; i++) {
         var row = expandedRows[i];
         var vid = row.querySelector('.ve-id')?.value || '';
@@ -2336,16 +2425,24 @@ window.guardarGrupoCompleto = async function (idProducto) {
             Catalogo: getInputValue('prod-catalogo') || 'Ambos',
             Estado: getInputValue('prod-estado') || 'Activo'
         };
-        try {
-            await postProductToGoogleSheets(vdata, true);
-            saved++;
-        } catch (e) {
-            errors++;
-        }
+        itemsToSave.push(vdata);
     }
 
-    showToast('Grupo guardado: madre + ' + saved + ' variante(s)' + (errors ? ' (' + errors + ' error(es))' : ''), errors ? 'error' : 'success');
-    setTimeout(function () { cargarInventario({ silent: true }); }, 1500);
+    try {
+        const savedList = await saveProductListToGoogleSheets(itemsToSave, {
+            fallbackEditOverride: true
+        });
+        clearPublicProductsCache();
+        try {
+            mergeSavedProductsIntoInventory(savedList);
+        } catch (renderError) {
+            console.warn('Grupo guardado, pero no se pudo refrescar el inventario local:', renderError);
+        }
+        showToast(`Grupo guardado exitosamente: ${savedList.length} producto(s)`, 'success');
+        setTimeout(function () { cargarInventario({ silent: true }); }, 1500);
+    } catch (err) {
+        showToast('Error guardando el grupo: ' + err.message, 'error');
+    }
 };
 
 function editarProducto(index) {
@@ -2361,7 +2458,8 @@ function editarProducto(index) {
     document.getElementById('prod-precio').value = p.Precio || '';
     document.getElementById('prod-precio-mayorista').value = p.Precio_Mayorista || p.precio_mayorista || p.Mayorista || '';
     document.getElementById('prod-catalogo').value = p.Catalogo || p.catalogo || 'Ambos';
-    document.getElementById('prod-stock').value = p.Stock || p.Cantidad || '';
+    var elStock = document.getElementById('prod-stock');
+    if (elStock) elStock.value = p.Stock || p.Cantidad || '';
     document.getElementById('prod-imagen').value = p.Imagen || '';
     document.getElementById('prod-color').value = p.Color || '';
     setInputValue('prod-stock-inicial', p.Stock_Inicial || p['Stock Inicial'] || p.Stock || p.Cantidad || '');

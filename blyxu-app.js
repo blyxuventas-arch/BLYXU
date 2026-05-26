@@ -426,6 +426,7 @@ function normalizeGoogleProduct(product) {
         idVariacion: getProductField(product, ['ID Variaci\u00f3n', 'ID Variacion', 'ID Variación', 'idVariacion', 'id', 'SKU']),
         idProducto: getProductField(product, ['ID Producto', ' ID Producto', 'idProducto']),
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'nombre', 'Producto'], 'Producto'),
+        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], ''),
         Categoria: getProductField(product, ['Categor\u00eda', 'Categoria', 'Categoría', 'categoria'], ''),
         Precio: getProductField(product, ['Precio', 'precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista', 'precio_mayorista', 'Mayorista'], 0),
@@ -798,7 +799,9 @@ async function fetchProducts(options = {}) {
     } else {
         try {
             setProductsLoading(showLoading);
-            const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL);
+            const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), {
+                cache: 'no-store'
+            });
             const data = await res.json();
             if (data && (data.status === 'error' || data.ok === false)) {
                 throw new Error(data.message || data.error || 'Error del Apps Script');
@@ -841,8 +844,10 @@ async function fetchSiteConfig() {
     if (!GOOGLE_SHEET_API) return siteConfig;
 
     try {
-        const url = `${GOOGLE_SHEET_API}?action=get_config`;
-        const res = await fetch(url);
+        const url = `${GOOGLE_SHEET_API}?action=get_config&_=${Date.now()}`;
+        const res = await fetch(url, {
+            cache: 'no-store'
+        });
         const data = await res.json();
         if (data && data.status === 'success' && data.config) {
             siteConfig = data.config;
@@ -1089,7 +1094,7 @@ function getProductStock(product) {
 
 function getProductStockStatus(stock) {
     if (stock <= 0) return { type: 'out', label: 'Agotado por ahora' };
-    if (stock <= LOW_STOCK_THRESHOLD) return { type: 'low', label: `Quedan ${stock}` };
+    if (stock <= LOW_STOCK_THRESHOLD) return { type: 'low', label: 'Pocas unidades' };
     return null;
 }
 
@@ -1194,6 +1199,23 @@ function renderWholesaleCatalogProducts() {
     });
 }
 
+function getVariantSummary(product) {
+    function isCatalogOnlyValue(value) {
+        const clean = normalizeSearchText(value);
+        return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
+    }
+
+    const parts = [
+        product.Estilo || product.estilo,
+        product.Tamano || product.tamano || product.Talla,
+        product.Color || product.color
+    ]
+        .map(value => String(value || '').trim())
+        .filter(value => value && !isCatalogOnlyValue(value));
+
+    return Array.from(new Set(parts)).join(' / ');
+}
+
 // -- RENDER PRODUCTS --
 function renderProducts(products, options = {}) {
     const {
@@ -1213,21 +1235,7 @@ function renderProducts(products, options = {}) {
     
     const searched = applySmartProductSearch(filteredByCategory, searchQuery);
 
-    // Agrupar por idProducto (referencia madre)
-    const groupedMap = new Map();
-    searched.forEach(p => {
-        const parentId = p.idProducto;
-        if (parentId) {
-            // Solo agregar si no existe o si queremos darle prioridad al que coincida mejor con la búsqueda
-            if (!groupedMap.has(parentId)) {
-                groupedMap.set(parentId, p);
-            }
-        } else {
-            groupedMap.set(p.idVariacion || p.Nombre || Math.random().toString(), p);
-        }
-    });
-
-    const filtered = getShuffledProducts(Array.from(groupedMap.values()));
+    const filtered = getShuffledProducts(searched);
 
     if (!filtered.length) {
         grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
@@ -1245,6 +1253,7 @@ function renderProducts(products, options = {}) {
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
         const colors = (p.Color || p.color || '').split(',').map(c => c.trim()).filter(Boolean);
+        const variantText = getVariantSummary(p);
         const originalIndex = allProducts.indexOf(p);
         const productIndex = originalIndex >= 0 ? originalIndex : i;
         const isFeatured = featuredFirst && i === 0;
@@ -1264,6 +1273,7 @@ function renderProducts(products, options = {}) {
             <div class="product-card-info" onclick="window.location.href='${detailUrl}'">
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
+                ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
                 ${colors.length ? `<div class="product-card-colors">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" title="${c}"></span>`).join('')}</div>` : ''}
                 ${showPrices ? `<div class="product-card-price ${oldPrice > price ? 'discount-active' : ''}">
                     ${formatMoney(price)}
@@ -1913,13 +1923,11 @@ function consultProductByWhatsApp(product, pageUrl = window.location.href) {
     const name = product?.Nombre || product?.nombre || product?.Producto || 'Producto BLYXU';
     const category = product?.Categoria || product?.categoria || '';
     const sku = product?.SKU || product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '';
-    const stock = product?.Stock || product?.stock || product?.Cantidad || '';
 
     let msg = '*Consulta de precio BLYXU*\n\n';
     msg += `Hola, quiero consultar el precio de:\n*${name}*\n`;
     if (category) msg += `Categoría: ${category}\n`;
     if (sku) msg += `SKU / Ref: ${sku}\n`;
-    if (stock) msg += `Disponibilidad vista: ${stock} unidades\n`;
     if (pageUrl) msg += `\nLink: ${pageUrl}`;
 
     openWhatsAppMessage(msg);
