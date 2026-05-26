@@ -1774,8 +1774,55 @@ function initCarouselImageAdmin() {
     const preview = document.getElementById('carousel-preview');
     const titleInput = document.getElementById('carousel-title');
     const descriptionInput = document.getElementById('carousel-description');
+    const modeInput = document.getElementById('carousel-mode');
     const btn = document.getElementById('btn-save-carousel');
     if (!form || !fileInput || !imageUrlInput || !preview || !btn) return;
+
+    const fixedHomeBannerId = 'BANNER-HOME-01';
+
+    function makeCarouselBannerId() {
+        return 'BANNER-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    function renderCarouselPreview(src) {
+        preview.innerHTML = `<img src="${src}" alt="Preview carrusel">`;
+    }
+
+    async function deactivateOtherHomeBanners(activeId) {
+        let source = Array.isArray(inventario) ? inventario : [];
+        if (!source.length) {
+            try {
+                const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), { cache: 'no-store' });
+                const data = await res.json();
+                source = normalizeInventoryList(Array.isArray(data) ? data : (data.data || data.productos || []));
+            } catch (error) {
+                console.warn('No se pudieron leer banners actuales antes de reemplazar:', error);
+                source = [];
+            }
+        }
+
+        const banners = source.filter(item => {
+            const category = String(item.Categoria || item.categoria || '').toUpperCase();
+            const id = item.idVariacion || item.ID || item['ID Variacion'] || item['ID VariaciÃ³n'] || '';
+            return category === 'BANNER' && id && id !== activeId;
+        });
+
+        for (const banner of banners) {
+            const id = banner.idVariacion || banner.ID || banner['ID Variacion'] || banner['ID VariaciÃ³n'];
+            try {
+                await postProductToGoogleSheets({
+                    ...banner,
+                    'ID Variacion': id,
+                    'ID VariaciÃ³n': id,
+                    'ID Producto': banner.idProducto || banner['ID Producto'] || id,
+                    ID_Producto: banner.idProducto || banner['ID Producto'] || id,
+                    Estado: 'Inactivo'
+                }, true);
+            } catch (error) {
+                console.warn('No se pudo desactivar banner anterior:', id, error);
+            }
+        }
+    }
 
     fileInput.addEventListener('change', () => {
         const file = fileInput.files?.[0];
@@ -1786,7 +1833,7 @@ function initCarouselImageAdmin() {
 
         const reader = new FileReader();
         reader.onload = () => {
-            preview.innerHTML = `<img src="${reader.result}" alt="Preview carrusel">`;
+            renderCarouselPreview(reader.result);
         };
         reader.readAsDataURL(file);
     });
@@ -1819,26 +1866,43 @@ function initCarouselImageAdmin() {
 
             const title = titleInput.value.trim() || 'BLYXU';
             const description = descriptionInput.value.trim() || 'Nueva imagen del carrusel de inicio';
-            await postProductToGoogleSheets({
+            const mode = modeInput?.value || 'replace';
+            const bannerId = mode === 'replace' ? fixedHomeBannerId : makeCarouselBannerId();
+            const bannerPayload = {
+                'ID Variacion': bannerId,
+                'ID VariaciÃ³n': bannerId,
+                idVariacion: bannerId,
+                'ID Producto': bannerId,
+                ID_Producto: bannerId,
+                idProducto: bannerId,
                 'Nombre del Producto': title,
                 Nombre: title,
                 Categoria: 'BANNER',
+                Catalogo: 'Ambos',
                 'Categoría': 'BANNER',
                 Precio: 0,
                 'Precio Mayor': 0,
                 'Stock Inicial': 1,
+                Stock: 1,
                 Cantidad: 1,
                 'Imagen Principal': imageUrl,
                 Imagen: imageUrl,
                 Color: description,
                 'Caracteristicas del producto': description,
-                Estilo: 'Ambos',
-                Catalogo: 'Ambos',
+                Descripcion: description,
+                Estilo: 'Inicio',
                 Estado: 'Activo'
-            });
+            };
 
-            showToast('Banner guardado para el carrusel de inicio');
+            if (mode === 'replace') {
+                await deactivateOtherHomeBanners(bannerId);
+            }
+
+            await postProductToGoogleSheets(bannerPayload, false);
+
+            showToast(mode === 'replace' ? 'Imagen de inicio actualizada' : 'Banner añadido al carrusel de inicio', 'success');
             form.reset();
+            if (modeInput) modeInput.value = 'replace';
             preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
             // Borrar cache público para que el cambio se vea de inmediato
             clearPublicProductsCache();
@@ -1857,7 +1921,7 @@ function initCarouselImageAdmin() {
         imageUrlInput.value = url;
         const reader = new FileReader();
         reader.onload = () => {
-            preview.innerHTML = `<img src="${reader.result}" alt="Preview carrusel">`;
+            renderCarouselPreview(reader.result);
         };
         reader.readAsDataURL(file);
     });

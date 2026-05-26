@@ -270,6 +270,13 @@
             border-color:rgba(244,196,65,0.36)!important;
             background:linear-gradient(135deg,rgba(168,85,247,0.12),rgba(244,196,65,0.04))!important;
         }
+        #carousel-preview img {
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            object-position:center;
+            display:block;
+        }
         #product-form > div[style*="grid-column"] {
             border-color:rgba(244,196,65,0.18)!important;
             background:linear-gradient(135deg,rgba(244,196,65,0.06),rgba(168,85,247,0.055))!important;
@@ -1020,6 +1027,13 @@
                             <div class="form-group">
                                 <label>URL de la imagen (Auto generada)</label>
                                 <input type="text" class="form-control" id="carousel-image-url" placeholder="https://...">
+                            </div>
+                            <div class="form-group">
+                                <label>Modo de portada</label>
+                                <select class="form-control" id="carousel-mode">
+                                    <option value="replace">Imagen única / reemplazar inicio</option>
+                                    <option value="add">Añadir al carrusel</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label>Título del Banner</label>

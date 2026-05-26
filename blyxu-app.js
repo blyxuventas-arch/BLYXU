@@ -39,6 +39,7 @@ let activeSearchQuery = '';
 let activeWholesaleFilter = 'todos';
 let activeWholesaleSearchQuery = '';
 let heroProductCarouselTimer = null;
+let mainBannerCarouselTimer = null;
 let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
@@ -996,6 +997,12 @@ function renderBanners(banners) {
     const track = document.getElementById('main-banner-track');
     const nav = document.getElementById('main-banner-nav');
     if (!track) return;
+
+    banners = (Array.isArray(banners) ? banners : [])
+        .map(normalizeGoogleProduct)
+        .filter(isActiveProduct)
+        .filter(b => String(b.Categoria || b.categoria || '').toUpperCase() === 'BANNER')
+        .filter(b => normalizeImageUrl(b.Imagen || b.imagen || b.Foto || ''));
     
     if (!banners.length) {
         // Fallback demo banner
@@ -1008,11 +1015,11 @@ function renderBanners(banners) {
     
     track.innerHTML = banners.map((b, i) => `
         <div class="main-banner-slide ${i===0?'active':''}">
-            <img src="${b.Imagen || b.imagen || 'hero_necklace.png'}" alt="Banner" style="filter: brightness(0.6);" onerror="this.src='hero_necklace.png'">
+            <img src="${normalizeImageUrl(b.Imagen || b.imagen || b.Foto || 'hero_necklace.png')}" alt="${escapeHtml(b.Nombre || b.nombre || 'Banner BLYXU')}" style="filter: brightness(0.6);" onerror="this.src='hero_necklace.png'">
             <div class="main-banner-overlay"></div>
             <div class="main-banner-content">
-                <h1 class="main-banner-title">${b.Nombre || b.nombre || ''}</h1>
-                <p class="main-banner-desc">${b.Descripcion || b.Color || 'Descubre nuestras \u00faltimas colecciones'}</p>
+                <h1 class="main-banner-title">${escapeHtml(b.Nombre || b.nombre || '')}</h1>
+                <p class="main-banner-desc">${escapeHtml(b.Descripcion || b.Color || 'Descubre nuestras \u00faltimas colecciones')}</p>
                 <div style="display:flex; gap:16px; margin-top:24px; flex-wrap:wrap;">
                     <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
                     <a href="javascript:void(0)" onclick="openWholesaleOverlay()" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
@@ -1032,15 +1039,27 @@ function renderBanners(banners) {
 }
 
 function initMainBannerCarousel(totalSlides) {
+    if (mainBannerCarouselTimer) {
+        clearInterval(mainBannerCarouselTimer);
+        mainBannerCarouselTimer = null;
+    }
+
+    const prevBtn = document.getElementById('banner-prev');
+    const nextBtn = document.getElementById('banner-next');
+    const nav = document.getElementById('main-banner-nav');
+    const track = document.getElementById('main-banner-track');
+
     if (totalSlides <= 1) {
-        document.getElementById('banner-prev').style.display = 'none';
-        document.getElementById('banner-next').style.display = 'none';
+        if (track) track.style.transform = 'translateX(0)';
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (nav) nav.style.display = 'none';
         return;
     }
 
-    const track = document.getElementById('main-banner-track');
-    const prevBtn = document.getElementById('banner-prev');
-    const nextBtn = document.getElementById('banner-next');
+    if (prevBtn) prevBtn.style.display = 'flex';
+    if (nextBtn) nextBtn.style.display = 'flex';
+    if (nav) nav.style.display = 'flex';
     const dots = document.querySelectorAll('.main-banner-dot');
     let currentIndex = 0;
 
@@ -1054,7 +1073,7 @@ function initMainBannerCarousel(totalSlides) {
     if (prevBtn) prevBtn.onclick = () => { currentIndex = (currentIndex - 1 + totalSlides) % totalSlides; update(); };
     dots.forEach((d, i) => d.onclick = () => { currentIndex = i; update(); });
 
-    setInterval(() => {
+    mainBannerCarouselTimer = setInterval(() => {
         currentIndex = (currentIndex + 1) % totalSlides;
         update();
     }, 6000);
