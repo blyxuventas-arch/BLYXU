@@ -2035,7 +2035,8 @@ function askCustomerInfo() {
 }
 
 function askRetailQuestion() {
-    return prompt('Pregunta o nota para enviar por WhatsApp (opcional)') || '';
+    const noteEl = document.getElementById('cart-note');
+    return noteEl ? noteEl.value.trim() : '';
 }
 
 function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder = null, total = 0, note = '' }) {
@@ -2057,7 +2058,8 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
     cart.forEach(c => {
         const lineTotal = c.priceVisible === false ? 'Precio por consultar' : formatMoney(c.price * c.qty);
         msg += `- ${c.name} x ${c.qty} - ${lineTotal}\n`;
-        if (c.sku) msg += `  Ref: ${c.sku}\n`;
+        const reference = c.sku || c.idVariacion;
+        if (reference && reference !== c.name) msg += `  Ref: ${reference}\n`;
     });
 
     msg += hasHiddenPrices ? '\n*Total:* Por consultar' : `\n*Total: ${formatMoney(total)}*`;
@@ -2120,6 +2122,8 @@ async function checkout(skipPrompt = false) {
     cart = [];
     saveCart();
     updateCartUI();
+    const noteEl = document.getElementById('cart-note');
+    if (noteEl) noteEl.value = '';
 
     if (isWholesaleOrder) {
         // Mostrar mensaje de éxito en lugar de cerrar el carrito y hacer alert

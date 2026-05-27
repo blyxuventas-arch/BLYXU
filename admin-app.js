@@ -250,7 +250,8 @@ function inventorySearchBlob(product) {
         product.SKU,
         product.Estado,
         product.Stock,
-        product.Precio
+        product.Precio,
+        product.Precio_Mayorista
     ].join(' '));
 }
 
@@ -340,7 +341,8 @@ async function saveProductListToGoogleSheets(itemsList, options = {}) {
 
     for (const item of itemsList) {
         try {
-            saved.push(await postProductToGoogleSheets(item, fallbackEditOverride));
+            const itemEditOverride = item && item.__adminForceCreate ? false : fallbackEditOverride;
+            saved.push(await postProductToGoogleSheets(item, itemEditOverride));
         } catch (error) {
             const id = item?.['ID Variacion'] || item?.['ID VariaciÃ³n'] || item?.idVariacion || item?.SKU || item?.Nombre || 'sin ID';
             failures.push(`${id}: ${error.message || error}`);
@@ -419,8 +421,11 @@ function getFilteredInventory() {
 
         var totalStock = items.reduce(function (s, item) { return s + (Number(item.product.Stock || item.product.Cantidad) || 0); }, 0);
         var prices = items.map(function (i) { return Number(i.product.Precio || 0); }).filter(function (p) { return p > 0; });
+        var wholesalePrices = items.map(function (i) { return Number(i.product.Precio_Mayorista || i.product['Precio Mayor'] || 0); }).filter(function (p) { return p > 0; });
         var minPrice = prices.length ? Math.min.apply(null, prices) : 0;
         var maxPrice = prices.length ? Math.max.apply(null, prices) : 0;
+        var minWholesalePrice = wholesalePrices.length ? Math.min.apply(null, wholesalePrices) : 0;
+        var maxWholesalePrice = wholesalePrices.length ? Math.max.apply(null, wholesalePrices) : 0;
 
         items.forEach(function (item, idx) {
             finalFlatList.push({
@@ -431,7 +436,9 @@ function getFilteredInventory() {
                 motherId: motherId,
                 totalStock: totalStock,
                 minPrice: minPrice,
-                maxPrice: maxPrice
+                maxPrice: maxPrice,
+                minWholesalePrice: minWholesalePrice,
+                maxWholesalePrice: maxWholesalePrice
             });
         });
     });
@@ -483,6 +490,7 @@ function ensureProductHierarchyIds() {
 
 function normalizeProductPayloadForSubmit(data) {
     const payload = { ...(data || {}) };
+    delete payload.__adminForceCreate;
     const ids = ensureProductHierarchyIds();
     const idProducto = payload['ID Producto'] || payload['ID Producto Madre'] || payload.ID_Producto || payload.ID_PRODUCTO || payload.IdProducto || payload.id_producto || payload.idProducto || ids.idProducto;
     const catalogo = payload.Catalogo || payload['Catálogo'] || payload['CatÃ¡logo'] || getInputValue('prod-catalogo') || 'Ambos';
@@ -570,6 +578,33 @@ function makeVariantSlug(value) {
         .slice(0, 18) || 'VAR';
 }
 
+function getNextVariantId(idProducto) {
+    const motherId = String(idProducto || '').trim();
+    const usedNumbers = new Set();
+    const escapedMother = motherId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const variantPattern = new RegExp('^' + escapedMother + '-V(\\d+)$', 'i');
+
+    function collect(value) {
+        const id = String(value || '').trim();
+        const match = id.match(variantPattern);
+        if (match) usedNumbers.add(Number(match[1]));
+    }
+
+    inventario.forEach(function (product) {
+        const mid = String(product.idProducto || product['ID Producto'] || '').trim();
+        if (mid !== motherId) return;
+        collect(product.idVariacion || product.ID || product['ID Variacion'] || product['ID VariaciÃ³n']);
+    });
+
+    document.querySelectorAll('#variants-container .var-id').forEach(function (input) {
+        collect(input.value);
+    });
+
+    let next = 1;
+    while (usedNumbers.has(next)) next += 1;
+    return `${motherId}-V${String(next).padStart(2, '0')}`;
+}
+
 function buildVariantPayloadFromCard(card) {
     const ids = ensureProductHierarchyIds();
     const variantId = card.querySelector('.var-id')?.value?.trim() || '';
@@ -581,6 +616,7 @@ function buildVariantPayloadFromCard(card) {
     const estilo = card.querySelector('.var-estilo')?.value?.trim() || variantId;
 
     return {
+        __adminForceCreate: true,
         'ID Variacion': variantId,
         'ID Variación': variantId,
         'ID Producto': ids.idProducto,
@@ -1145,10 +1181,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
 
         const ids = ensureProductHierarchyIds();
+        if (!container.querySelector('table') && !container.querySelector('.admin-panel')) {
+            container.innerHTML = '';
+        }
 
         const cardId = Date.now();
-        const variantNumber = document.querySelectorAll('#variants-container .admin-panel').length + 2;
-        const autoVariantId = `${ids.idProducto}-V${String(variantNumber).padStart(2, '0')}`;
+        const autoVariantId = getNextVariantId(ids.idProducto);
         
         const card = document.createElement('div');
         card.className = 'admin-panel';
@@ -1235,8 +1273,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = {
                     'ID Variacion': card.querySelector('.var-id').value,
                     'ID Variación': card.querySelector('.var-id').value,
-                    'ID Producto': getInputValue('prod-id-producto') || getInputValue('prod-id'),
-                    ID_Producto: getInputValue('prod-id-producto') || getInputValue('prod-id'),
+                    'ID Producto': motherId,
+                    ID_Producto: motherId,
                     'Nombre del Producto': card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre'),
                     Nombre: card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre'),
                     Precio: parseAmount(card.querySelector('.var-precio')?.value || getInputValue('prod-precio')),
@@ -1277,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => cargarInventario({ silent: true }), 1500);
             } catch (err) {
                 console.error(err);
-                showToast('Error al guardar');
+                showToast('Error al guardar variante: ' + (err.message || err), 'error');
                 btn.disabled = false;
                 btn.textContent = 'Reintentar';
             }
@@ -2055,7 +2093,7 @@ function paintInventory(list) {
     if (!tbody) return;
 
     if (inventario.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay productos en el inventario.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay productos en el inventario.</td></tr>';
         return;
     }
 
@@ -2077,7 +2115,7 @@ async function cargarInventario(options) {
         }
 
         if (tbody && !canKeepCurrentRows && inventario.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
         }
 
         const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), {
@@ -2098,7 +2136,7 @@ async function cargarInventario(options) {
     } catch (err) {
         console.error("Error al cargar datos:", err);
         if (tbody && inventario.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
         } else {
             showToast('No se pudo actualizar inventario: ' + err.message, 'error');
         }
@@ -2120,7 +2158,7 @@ function renderInventoryInBatches() {
     }
 
     if (!filteredInventario.length) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No se encontraron productos${adminInventorySearchQuery ? ' para tu busqueda' : ''}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No se encontraron productos${adminInventorySearchQuery ? ' para tu busqueda' : ''}.</td></tr>`;
         return;
     }
 
@@ -2146,7 +2184,7 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
     if (inventoryRenderedRows < filteredInventario.length) {
         tbody.insertAdjacentHTML('beforeend', `
             <tr class="inventory-load-more-row">
-                <td colspan="7" style="text-align:center;padding:18px;">
+                <td colspan="8" style="text-align:center;padding:18px;">
                     <button class="admin-btn" type="button" data-inventory-action="load-more" style="max-width:240px;">Cargar mas productos</button>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
                         Mostrando ${inventoryRenderedRows} de ${filteredInventario.length}
@@ -2280,11 +2318,19 @@ function inventoryRowTemplate(p, index, itemMeta) {
     var category = escapeHtml(p.Categoria || p.Color || '-');
     var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
     var price = Number(p.Precio || 0) || 0;
+    var wholesalePrice = Number(p.Precio_Mayorista || p['Precio Mayor'] || 0) || 0;
     var minP = Number(itemMeta.minPrice || price) || 0;
     var maxP = Number(itemMeta.maxPrice || price) || 0;
+    var minWholesaleP = Number(itemMeta.minWholesalePrice || wholesalePrice) || 0;
+    var maxWholesaleP = Number(itemMeta.maxWholesalePrice || wholesalePrice) || 0;
     var priceStr = minP && maxP && minP !== maxP
         ? '$' + minP.toLocaleString('es-CO') + ' - $' + maxP.toLocaleString('es-CO')
         : '$' + (maxP || minP || price).toLocaleString('es-CO');
+    var wholesalePriceStr = minWholesaleP && maxWholesaleP && minWholesaleP !== maxWholesaleP
+        ? '$' + minWholesaleP.toLocaleString('es-CO') + ' - $' + maxWholesaleP.toLocaleString('es-CO')
+        : (maxWholesaleP || minWholesaleP || wholesalePrice)
+            ? '$' + (maxWholesaleP || minWholesaleP || wholesalePrice).toLocaleString('es-CO')
+            : '-';
     var catStyle = 'background:rgba(155,44,250,0.15);color:#d946ef;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;';
 
     if (!isChild) {
@@ -2304,6 +2350,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
             + '</div></td>'
             + '<td><span style="' + catStyle + '">' + category + '</span></td>'
             + '<td style="font-weight:800;color:#fff;font-size:14px;">' + priceStr + '</td>'
+            + '<td style="font-weight:800;color:#fbbf24;font-size:13px;">' + wholesalePriceStr + '</td>'
             + '<td><div class="' + stockClass + '">' + stockTotal + '</div><div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase;letter-spacing:1px;">en stock</div></td>'
             + '<td>' + toggleBtnHtml + '</td>'
             + '<td style="white-space:nowrap;"><button class="action-btn-edit" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
@@ -2319,6 +2366,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         + ' <span class="variant-badge-id">' + escapeHtml(idVar || '-') + '</span></div></td>'
         + '<td><span style="font-size:11px;color:#9B2CFA;font-weight:600;">' + category + '</span></td>'
         + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + price.toLocaleString('es-CO') + '</td>'
+        + '<td style="font-size:13px;color:#fbbf24;font-weight:700;">' + (wholesalePrice ? '$' + wholesalePrice.toLocaleString('es-CO') : '-') + '</td>'
         + '<td><span style="font-size:12px;font-weight:700;color:' + (stockVal > 0 ? '#10B981' : '#EF4444') + ';">' + stockVal + ' und.</span></td>'
         + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(p.Catalogo || 'Ambos') + '</span></td>'
         + '<td><button class="action-btn-edit-sm" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
