@@ -1413,8 +1413,19 @@ function loadCart(mode = activeCartMode) {
 
 function setCartMode(mode) {
     activeCartMode = normalizeCartMode(mode);
+    document.body?.setAttribute('data-cart-mode', activeCartMode);
     cart = loadCart(activeCartMode);
     return cart;
+}
+
+function setCatalogCartMode(mode) {
+    activeCatalogMode = normalizeCartMode(mode);
+    setCartMode(activeCatalogMode);
+    updateCartUI();
+}
+
+function getCartModeLabel(mode = activeCartMode) {
+    return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Cat&aacute;logo';
 }
 
 function addToCart(idx, sourceButton, mode = activeCatalogMode) {
@@ -1485,11 +1496,13 @@ function updateCartUI() {
     const itemsEl = document.getElementById('cart-items');
     const totalEl = document.getElementById('cart-total');
     const consultNoteEl = document.getElementById('cart-consult-note');
+    const titleEl = document.querySelector('.cart-header h3');
     const count = cart.reduce((s, c) => s + c.qty, 0);
     if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+    if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
     if (!itemsEl) return;
     if (!cart.length) {
-        itemsEl.innerHTML = '<div class="cart-empty">Tu carrito est&aacute; vac&iacute;o</div>';
+        itemsEl.innerHTML = `<div class="cart-empty">Tu carrito ${getCartModeLabel()} est&aacute; vac&iacute;o</div>`;
         if (totalEl) totalEl.textContent = '$0';
         if (consultNoteEl) consultNoteEl.textContent = '';
         const checkoutBtn = document.getElementById('btn-checkout');
@@ -1619,6 +1632,8 @@ function updateCartUI() {
 }
 
 function openCart() {
+    setCartMode(activeCartMode);
+    updateCartUI();
     document.getElementById('cart-overlay')?.classList.add('open');
     document.getElementById('cart-sidebar')?.classList.add('open');
 }
@@ -1826,13 +1841,11 @@ function initWholesaleAccess() {
 
     triggers.forEach(trigger => trigger.addEventListener('click', openWholesale));
     retailTriggers.forEach(trigger => trigger.addEventListener('click', () => {
-        activeCatalogMode = 'retail';
-        setCartMode('retail');
+        setCatalogCartMode('retail');
         activeFilter = 'todos';
         wholesaleSection?.classList.remove('open');
         wholesaleSection?.setAttribute('aria-hidden', 'true');
         renderCatalogProducts();
-        updateCartUI();
     }));
     closeBtn?.addEventListener('click', closeWholesale);
     input.addEventListener('input', () => error?.classList.remove('show'));

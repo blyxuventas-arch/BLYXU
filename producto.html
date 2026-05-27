@@ -137,7 +137,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=payments-fast-20260527"></script>
+    <script src="blyxu-app.js?v=cart-split-20260527"></script>
     <script>
         // Lógica específica para la página de producto
         document.addEventListener('DOMContentLoaded', async () => {
@@ -147,6 +147,8 @@
             const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
             const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
             activeCatalogMode = detailCatalogMode;
+            setCartMode(detailCatalogMode);
+            updateCartUI();
 
             function isCatalogOnlyValue(value) {
                 const clean = normalizeSearchText(value);
@@ -377,6 +379,9 @@
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
             const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
             let currentDetailProductId = Number.parseInt(urlParams.get('id'), 10);
+            activeCatalogMode = detailCatalogMode;
+            setCartMode(detailCatalogMode);
+            updateCartUI();
 
             if (allProducts.length === 0) {
                 await loadProducts({ renderCatalog: false });
