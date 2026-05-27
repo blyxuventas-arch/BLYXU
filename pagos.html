@@ -351,7 +351,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-app.js"></script>
+    <script src="blyxu-app.js?v=payments-fast-20260527"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('qr-login-form');
@@ -378,6 +378,59 @@
                     console.error('Error al copiar:', err);
                 });
             };
+
+            function readLocalSiteConfigCache() {
+                try {
+                    const cached = JSON.parse(localStorage.getItem('blyxu_site_config_cache_v1') || 'null');
+                    return cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object'
+                        ? cached
+                        : null;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            const PAYMENT_CONFIG_CACHE_MAX_AGE = 60 * 60 * 1000;
+
+            function applyRecentLocalPaymentConfig(cached) {
+                if (!cached || Date.now() - Number(cached.savedAt || 0) > PAYMENT_CONFIG_CACHE_MAX_AGE) return;
+                if (typeof siteConfig === 'undefined') return;
+
+                ['QR_Password', 'QR_Payments_JSON', 'QR_Image'].forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(cached.data, key)) {
+                        siteConfig[key] = cached.data[key];
+                    }
+                });
+                localStorage.setItem('blyxu_site_config_cache_v1', JSON.stringify(cached));
+            }
+
+            async function refreshPaymentConfig() {
+                if (typeof fetchSiteConfig !== 'function') {
+                    return typeof siteConfig !== 'undefined' ? siteConfig : {};
+                }
+
+                const recentLocalConfig = readLocalSiteConfigCache();
+                applyRecentLocalPaymentConfig(recentLocalConfig);
+
+                if (String(getSiteConfigValue('QR_Password', '')).trim()) {
+                    fetchSiteConfig()
+                        .then(() => applyRecentLocalPaymentConfig(recentLocalConfig))
+                        .catch(error => console.warn('No se pudo refrescar configuracion de pagos:', error));
+                    return siteConfig;
+                }
+
+                if (typeof configLoadPromise !== 'undefined' && configLoadPromise) {
+                    try {
+                        await configLoadPromise;
+                    } catch (error) {
+                        console.warn('No se pudo completar la carga inicial de configuracion:', error);
+                    }
+                }
+
+                await fetchSiteConfig();
+                applyRecentLocalPaymentConfig(recentLocalConfig);
+                return siteConfig;
+            }
 
             function renderPaymentMethods() {
                 card.style.display = 'block';
@@ -449,11 +502,12 @@
                         `;
                     }
 
-                    if ((m.type === 'qr' || m.type === 'both') && m.image) {
+                    const qrImageUrl = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(m.image) : m.image;
+                    if ((m.type === 'qr' || m.type === 'both') && qrImageUrl) {
                         html += `
                             <p style="margin-bottom: 12px; font-weight: 600; color: rgba(255,255,255,0.7); font-size: 13px;">Código QR de Pago:</p>
                             <div class="qr-image-container">
-                                <img src="${escapeHtml(m.image)}" alt="Código QR de Pago">
+                                <img src="${escapeHtml(qrImageUrl)}" alt="Código QR de Pago">
                             </div>
                         `;
                     }
@@ -488,14 +542,19 @@
                 e.preventDefault();
                 errorMsg.style.display = 'none';
                 
-                if (Object.keys(siteConfig).length === 0) {
-                    const btn = form.querySelector('button');
-                    const originalText = btn.textContent;
+                const btn = form.querySelector('button');
+                const originalText = btn ? btn.textContent : '';
+                if (btn) {
                     btn.textContent = 'Verificando...';
                     btn.disabled = true;
-                    await fetchSiteConfig();
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                }
+                try {
+                    await refreshPaymentConfig();
+                } finally {
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                 }
 
                 const expectedPass = String(getSiteConfigValue('QR_Password', '')).trim();

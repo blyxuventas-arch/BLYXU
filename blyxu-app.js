@@ -19,7 +19,6 @@ const LOW_STOCK_THRESHOLD = 3;
 
 // -- STATE --
 let allProducts = [];
-let cart = JSON.parse(localStorage.getItem('blyxu_cart') || '[]');
 let activeFilter = 'todos';
 let productsLoadPromise = null;
 let bannerProducts = [];
@@ -28,8 +27,15 @@ const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
 const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
+const LEGACY_CART_KEY = 'blyxu_cart';
+const CART_STORAGE_KEYS = {
+    retail: 'blyxu_cart_retail',
+    wholesale: 'blyxu_cart_wholesale'
+};
 const CATALOG_BATCH_SIZE = 12;
-let activeCatalogMode = 'retail';
+let activeCatalogMode = getInitialCartMode();
+let activeCartMode = activeCatalogMode;
+let cart = loadCart(activeCartMode);
 let showRetailPrices = localStorage.getItem(RETAIL_PRICE_VISIBILITY_KEY) !== '0';
 let siteConfig = {};
 let configLoadPromise = null;
@@ -1355,7 +1361,65 @@ function getColorHex(name) {
 }
 
 // -- CART --
+function normalizeCartMode(mode) {
+    return mode === 'wholesale' ? 'wholesale' : 'retail';
+}
+
+function getInitialCartMode() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (document.body?.dataset.catalogMode === 'wholesale' || params.get('catalogo') === 'mayorista') {
+            return 'wholesale';
+        }
+    } catch (error) {
+        // Mantener modo normal si no se puede leer la URL.
+    }
+    return 'retail';
+}
+
+function readCartFromStorage(key) {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function migrateLegacyCartIfNeeded() {
+    const legacyCart = readCartFromStorage(LEGACY_CART_KEY);
+    if (!legacyCart.length) return;
+
+    const hasSeparatedCart = readCartFromStorage(CART_STORAGE_KEYS.retail).length || readCartFromStorage(CART_STORAGE_KEYS.wholesale).length;
+    if (hasSeparatedCart) {
+        localStorage.removeItem(LEGACY_CART_KEY);
+        return;
+    }
+
+    const grouped = { retail: [], wholesale: [] };
+    legacyCart.forEach(item => {
+        const mode = normalizeCartMode(item?.mode);
+        grouped[mode].push({ ...item, mode });
+    });
+    localStorage.setItem(CART_STORAGE_KEYS.retail, JSON.stringify(grouped.retail));
+    localStorage.setItem(CART_STORAGE_KEYS.wholesale, JSON.stringify(grouped.wholesale));
+    localStorage.removeItem(LEGACY_CART_KEY);
+}
+
+function loadCart(mode = activeCartMode) {
+    migrateLegacyCartIfNeeded();
+    return readCartFromStorage(CART_STORAGE_KEYS[normalizeCartMode(mode)]);
+}
+
+function setCartMode(mode) {
+    activeCartMode = normalizeCartMode(mode);
+    cart = loadCart(activeCartMode);
+    return cart;
+}
+
 function addToCart(idx, sourceButton, mode = activeCatalogMode) {
+    mode = normalizeCartMode(mode);
+    setCartMode(mode);
     const p = allProducts[idx];
     if (!p) return;
     const name = p.Nombre || p.nombre || p.Producto || 'Producto';
@@ -1412,7 +1476,9 @@ function incrementCartQty(idx, delta) {
     updateCartQty(idx, (item.qty || 1) + delta);
 }
 
-function saveCart() { localStorage.setItem('blyxu_cart', JSON.stringify(cart)); }
+function saveCart(mode = activeCartMode) {
+    localStorage.setItem(CART_STORAGE_KEYS[normalizeCartMode(mode)], JSON.stringify(cart));
+}
 
 function updateCartUI() {
     const badge = document.getElementById('cart-count');
@@ -1427,7 +1493,12 @@ function updateCartUI() {
         if (totalEl) totalEl.textContent = '$0';
         if (consultNoteEl) consultNoteEl.textContent = '';
         const checkoutBtn = document.getElementById('btn-checkout');
-        if (checkoutBtn) checkoutBtn.textContent = 'Enviar consulta por WhatsApp';
+        const formContainer = document.getElementById('cart-wholesale-form');
+        if (formContainer) formContainer.style.display = 'none';
+        if (checkoutBtn) {
+            checkoutBtn.textContent = activeCartMode === 'wholesale' ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
+            checkoutBtn.style.display = 'block';
+        }
         return;
     }
     itemsEl.innerHTML = cart.map((c, i) => `
@@ -1456,11 +1527,12 @@ function updateCartUI() {
     }
     const checkoutBtn = document.getElementById('btn-checkout');
     if (checkoutBtn) {
-        const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
+        const isWholesaleOrder = activeCartMode === 'wholesale';
         checkoutBtn.textContent = isWholesaleOrder ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
 
         // Manejo del form inline para mayoristas
         let formContainer = document.getElementById('cart-wholesale-form');
+        if (!isWholesaleOrder && formContainer) formContainer.style.display = 'none';
         if (!formContainer) {
             formContainer = document.createElement('div');
             formContainer.id = 'cart-wholesale-form';
@@ -1471,8 +1543,8 @@ function updateCartUI() {
                     <h4 style="margin:0 0 12px; font-size:14px; font-weight:800; color:#fff;">Datos de Envío</h4>
                     <input type="text" id="ws-nombre" class="form-control" placeholder="Nombre completo" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
                     <input type="tel" id="ws-telefono" class="form-control" placeholder="Número de celular" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <input type="text" id="ws-direccion" class="form-control" placeholder="Dirección de entrega" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <input type="text" id="ws-ciudad" class="form-control" placeholder="Ciudad" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <input type="text" id="ws-direccion" class="form-control" placeholder="Dirección de entrega (opcional)" style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
+                    <input type="text" id="ws-ciudad" class="form-control" placeholder="Ciudad (opcional)" style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
                     <textarea id="ws-nota" class="form-control" placeholder="Nota adicional (opcional)" style="margin-bottom:12px; min-height:50px; font-size:13px; padding:8px 12px; border-radius:8px; resize:vertical;"></textarea>
                     
                     <button class="btn-checkout" id="btn-confirm-ws" type="button" style="background:linear-gradient(135deg, #10B981, #059669); margin-bottom:8px;">Confirmar y Enviar Pedido</button>
@@ -1484,7 +1556,8 @@ function updateCartUI() {
 
             document.getElementById('btn-cancel-ws').addEventListener('click', () => {
                 formContainer.style.display = 'none';
-                checkoutBtn.style.display = 'block';
+                const currentCheckoutBtn = document.getElementById('btn-checkout');
+                if (currentCheckoutBtn) currentCheckoutBtn.style.display = 'block';
             });
 
             document.getElementById('btn-confirm-ws').addEventListener('click', () => {
@@ -1506,8 +1579,8 @@ function updateCartUI() {
                     }
                 }
                 
-                if(!n || !t || !d || !c) {
-                    errorBox.textContent = '✦ Por favor completa todos los campos obligatorios.';
+                if(!n || !t) {
+                    errorBox.textContent = '✦ Por favor completa nombre y celular.';
                     errorBox.style.display = 'block';
                     return;
                 }
@@ -1754,10 +1827,12 @@ function initWholesaleAccess() {
     triggers.forEach(trigger => trigger.addEventListener('click', openWholesale));
     retailTriggers.forEach(trigger => trigger.addEventListener('click', () => {
         activeCatalogMode = 'retail';
+        setCartMode('retail');
         activeFilter = 'todos';
         wholesaleSection?.classList.remove('open');
         wholesaleSection?.setAttribute('aria-hidden', 'true');
         renderCatalogProducts();
+        updateCartUI();
     }));
     closeBtn?.addEventListener('click', closeWholesale);
     input.addEventListener('input', () => error?.classList.remove('show'));
@@ -2061,7 +2136,11 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
     if (cliente) {
         msg += `*Cliente:* ${cliente.nombre}\n`;
         msg += `*Telefono:* ${cliente.telefono}\n`;
-        msg += `*Direccion:* ${cliente.direccion}, ${cliente.ciudad}\n\n`;
+        const addressParts = [cliente.direccion, cliente.ciudad].filter(Boolean);
+        if (addressParts.length) {
+            msg += `*Direccion:* ${addressParts.join(', ')}\n`;
+        }
+        msg += '\n';
     } else {
         msg += 'Hola, quiero consultar estos productos:\n\n';
     }
@@ -2083,7 +2162,7 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
 async function checkout(skipPrompt = false) {
     if (!cart.length) return;
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    const isWholesaleOrder = cart.some(item => item.mode === 'wholesale');
+    const isWholesaleOrder = activeCartMode === 'wholesale';
     
     const cliente = isWholesaleOrder ? window.wsClienteTemp : null;
     if (isWholesaleOrder && !cliente) return;
@@ -2167,6 +2246,7 @@ async function checkout(skipPrompt = false) {
 document.addEventListener('DOMContentLoaded', () => {
     if (document.body?.dataset.catalogMode === 'wholesale') {
         activeCatalogMode = 'wholesale';
+        setCartMode('wholesale');
     }
 
     initParticles();
@@ -2178,6 +2258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomCursor();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
     const isContactPage = document.body?.dataset.page === 'contact';
+    const isPaymentsPage = document.body?.dataset.page === 'pagos';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     
     renderFloatingWhatsApp();
@@ -2209,9 +2290,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (isContactPage) {
+    if (isContactPage || isPaymentsPage) {
         fetchSiteConfig().then(() => {
-            renderContactPage();
+            if (isContactPage) renderContactPage();
             renderPromoWidget();
         });
     } else {

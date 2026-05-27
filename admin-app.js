@@ -26,6 +26,7 @@ const INVOICE_CONFIG_FIELDS = [
 ];
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
 const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
+const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_MAX_EDGE = 1800;
@@ -1418,6 +1419,25 @@ async function loadSiteConfigForAdmin() {
     return siteConfigPromise;
 }
 
+function updateSiteConfigCacheForAdmin(key, value) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SITE_CONFIG_CACHE_KEY) || 'null');
+        const cachedData = cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object'
+            ? cached.data
+            : {};
+
+        localStorage.setItem(SITE_CONFIG_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            data: {
+                ...cachedData,
+                [key]: String(value ?? '')
+            }
+        }));
+    } catch (error) {
+        console.warn('No se pudo actualizar cache local de configuracion:', error);
+    }
+}
+
 async function saveSiteConfig(key, value) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);
@@ -1434,6 +1454,8 @@ async function saveSiteConfig(key, value) {
             signal: controller.signal
         });
         clearTimeout(timeout);
+        updateSiteConfigCacheForAdmin(key, value);
+        siteConfigPromise = null;
     } catch (err) {
         clearTimeout(timeout);
         console.error('No se pudo guardar configuración:', err);
@@ -1625,6 +1647,7 @@ function createPaymentMethodCard(data = { name: '', type: 'key', value: '', imag
                     ${data.image ? `<img src="${data.image}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">` : `<span style="font-size:11px; color:rgba(255,255,255,0.2); z-index:1;">Arrastra el QR aquí</span>`}
                 </div>
                 <input type="url" class="form-control pm-image-url" value="${escapeHtml(data.image || '')}" placeholder="URL del QR (Auto generada al subir)">
+                <input type="file" class="form-control pm-image-file" accept="image/*" style="margin-top:8px;">
             </div>
             <div class="form-group">
                 <label>Instrucciones de Pago (Opcional)</label>
@@ -1653,11 +1676,54 @@ function createPaymentMethodCard(data = { name: '', type: 'key', value: '', imag
     
     const previewZone = card.querySelector('.pm-image-preview');
     const urlInput = card.querySelector('.pm-image-url');
+    const fileInput = card.querySelector('.pm-image-file');
+    const setQrUploadState = (isUploading) => {
+        card.dataset.qrUploading = isUploading ? '1' : '0';
+        if (fileInput) fileInput.disabled = isUploading;
+        previewZone.style.opacity = isUploading ? '0.75' : '1';
+    };
+    const renderQrPreview = (url, isLocal = false) => {
+        previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;${isLocal ? ' opacity:0.7;' : ''}">`;
+    };
+    const uploadQrFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('Selecciona una imagen valida para el QR', true);
+            return;
+        }
+
+        let localUrl = '';
+        try {
+            setQrUploadState(true);
+            localUrl = URL.createObjectURL(file);
+            renderQrPreview(localUrl, true);
+            const uploadedUrl = await uploadCarouselImage(file);
+            urlInput.value = uploadedUrl;
+            renderQrPreview(uploadedUrl);
+            showToast('QR subido correctamente');
+        } catch (error) {
+            console.error('Error subiendo QR:', error);
+            showToast('Error al subir QR: ' + error.message, true);
+        } finally {
+            if (localUrl) URL.revokeObjectURL(localUrl);
+            setQrUploadState(false);
+        }
+    };
+
     setupDragAndDrop(previewZone, (url) => {
         urlInput.value = url;
-        previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`;
+        renderQrPreview(url);
     }, (localUrl) => {
-        previewZone.innerHTML = `<img src="${localUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:8px; opacity:0.7;">`;
+        setQrUploadState(true);
+        renderQrPreview(localUrl, true);
+    }, () => {
+        setQrUploadState(false);
+    });
+
+    fileInput?.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        uploadQrFile(file).finally(() => {
+            fileInput.value = '';
+        });
     });
     
     urlInput.addEventListener('input', () => {
@@ -1752,6 +1818,16 @@ function initQRConfigAdmin() {
         const methods = [];
         if (container) {
             const cards = container.querySelectorAll('.payment-method-card');
+            const uploadingCards = Array.from(cards).filter(card => card.dataset.qrUploading === '1');
+            if (uploadingCards.length) {
+                showToast('Espera a que termine de subir el QR antes de guardar', true);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+                return;
+            }
+
             cards.forEach(card => {
                 const name = card.querySelector('.pm-name').value.trim();
                 const type = card.querySelector('.pm-type').value;
@@ -1764,11 +1840,23 @@ function initQRConfigAdmin() {
             });
         }
 
+        const missingQrImage = methods.find(method => (method.type === 'qr' || method.type === 'both') && !method.image);
+        if (missingQrImage) {
+            showToast(`Falta subir o pegar la URL del QR para ${missingQrImage.name}`, true);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            return;
+        }
+
+        const firstQrImage = methods.find(method => method.image)?.image || '';
+
         try {
             await Promise.all([
                 saveSiteConfig('QR_Password', document.getElementById('qr-config-password')?.value.trim() || ''),
                 saveSiteConfig('QR_Payments_JSON', JSON.stringify(methods)),
-                saveSiteConfig('QR_Image', methods[0]?.image || '') // Retrocompatibilidad
+                saveSiteConfig('QR_Image', firstQrImage) // Retrocompatibilidad
             ]);
             showToast('Configuración de pagos guardada correctamente');
         } catch (error) {
