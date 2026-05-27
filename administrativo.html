@@ -331,8 +331,43 @@
             background:rgba(0,0,0,0.12);
         }
 
-        @media(max-width:1100px) { .grid-split{grid-template-columns:1fr} .dashboard-layout{grid-template-columns:1fr} .sub-sidebar{display:none} }
-        @media(max-width:768px) { .dashboard-header{padding:14px 18px 8px;flex-direction:column;align-items:flex-start;gap:4px} .dashboard-content-area{padding:0 14px 20px} .admin-panel{padding:16px;border-radius:12px} .dashboard-header h1{font-size:17px} }
+        @media(max-width:1100px) {
+            body, html { overflow:hidden; }
+            .dashboard-layout { grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr); }
+            .sub-sidebar { display:flex; flex-direction:row; align-items:center; gap:6px; padding:10px 12px; overflow-x:auto; overflow-y:hidden; border-right:0; border-bottom:1px solid rgba(168,85,247,0.08); }
+            .sidebar-logo { flex:0 0 auto; padding:0 12px 0 0; margin:0 6px 0 0; border-bottom:0; border-right:1px solid rgba(168,85,247,0.08); }
+            .sidebar-logo h1 { font-size:16px; letter-spacing:1.8px; white-space:nowrap; }
+            .sidebar-section { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+            .sidebar-section h4 { display:none; }
+            .sidebar-btn { width:auto; white-space:nowrap; padding:9px 12px; margin:0; }
+            .sidebar-btn.logout { margin-top:0; }
+            .grid-split,
+            #view-products .grid-split { grid-template-columns:1fr; }
+            .dashboard-main { min-height:0; }
+            .table-wrapper { overflow-x:auto; }
+            .inventory-tree { min-width:760px; }
+        }
+        @media(max-width:768px) {
+            .dashboard-header { padding:14px 18px 8px; flex-direction:column; align-items:flex-start; gap:4px; }
+            .dashboard-content-area { padding:0 14px 20px; }
+            .admin-panel { padding:16px; border-radius:12px; }
+            .dashboard-header h1 { font-size:17px; }
+            .admin-form-grid { grid-template-columns:1fr; }
+            .admin-title-row { flex-direction:column; align-items:flex-start; }
+            #view-settings > .admin-panel { padding:18px!important; }
+            #contact-config-form,
+            #carousel-image-form { padding:16px!important; }
+            .modal-box { width:calc(100vw - 28px); padding:22px; }
+        }
+        @media(max-width:480px) {
+            .sub-sidebar { padding:8px 10px; }
+            .sidebar-logo h1 { font-size:14px; }
+            .sidebar-btn { font-size:11px; padding:8px 10px; }
+            .dashboard-badge { white-space:normal; line-height:1.35; }
+            .admin-panel { padding:14px; }
+            .login-box,
+            .wholesale-panel { width:calc(100vw - 28px); padding:28px 22px!important; }
+        }
     </style>
 </head>
 <body>

@@ -242,15 +242,25 @@ function initNavbar() {
     });
 
     if (toggle && navLinks) {
-        toggle.addEventListener('click', () => {
+        const toggleMenu = () => {
             toggle.classList.toggle('open');
             navLinks.classList.toggle('open');
+            toggle.setAttribute('aria-expanded', navLinks.classList.contains('open') ? 'true' : 'false');
+        };
+
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.addEventListener('click', toggleMenu);
+        toggle.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            toggleMenu();
         });
         links.forEach(a => {
             a.addEventListener('click', () => {
                 setActiveLink(a);
                 toggle.classList.remove('open');
                 navLinks.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
             });
         });
     }
