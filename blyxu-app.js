@@ -1373,7 +1373,18 @@ function addToCart(idx, sourceButton, mode = activeCatalogMode) {
     else { cart.push({ idVariacion, sku, name, price, priceVisible, img, qty: 1, mode, stock }); }
     saveCart();
     updateCartUI();
-    openCart();
+    
+    // Iluminar el carrito sin abrir el panel lateral
+    const cartBtn = document.getElementById('cart-btn');
+    if (cartBtn) {
+        cartBtn.classList.remove('cart-highlight-active');
+        void cartBtn.offsetWidth; // Forzar reflow para reiniciar la animación
+        cartBtn.classList.add('cart-highlight-active');
+        setTimeout(() => {
+            cartBtn.classList.remove('cart-highlight-active');
+        }, 900);
+    }
+    
     // Button animation
     const btn = sourceButton || document.querySelector(`.product-card[data-index="${idx}"] .product-card-quick`);
     if (btn) { btn.style.background = '#22c55e'; setTimeout(() => btn.style.background = '', 600); }

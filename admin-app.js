@@ -1589,10 +1589,104 @@ function initPromoConfigAdmin() {
     });
 }
 
-const QR_CONFIG_FIELDS = [
-    ['QR_Password', 'qr-config-password'],
-    ['QR_Image', 'qr-config-image']
-];
+function createPaymentMethodCard(data = { name: '', type: 'key', value: '', image: '', instructions: '' }, index) {
+    const card = document.createElement('div');
+    card.className = 'payment-method-card';
+    card.style.cssText = 'border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 16px; padding: 20px; background: rgba(255,255,255,0.02); position: relative; display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;';
+    card.dataset.index = index;
+    
+    card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:8px;">
+            <strong style="color:#ffd969; font-size:14px;">Método #${index + 1}</strong>
+            <button type="button" class="btn-delete-payment-method" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:14px; font-weight:700;">Eliminar</button>
+        </div>
+        <div class="admin-form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0;">
+            <div class="form-group">
+                <label>Nombre del Banco / Método</label>
+                <input type="text" class="form-control pm-name" value="${escapeHtml(data.name || '')}" placeholder="Ej: Nequi, Daviplata, Bancolombia" required>
+            </div>
+            <div class="form-group">
+                <label>Tipo de Método</label>
+                <select class="form-control pm-type" required>
+                    <option value="key" ${data.type === 'key' ? 'selected' : ''}>Llave / Cuenta / Número (Texto)</option>
+                    <option value="qr" ${data.type === 'qr' ? 'selected' : ''}>Código QR (Imagen)</option>
+                    <option value="both" ${data.type === 'both' ? 'selected' : ''}>Ambos (Texto + QR)</option>
+                </select>
+            </div>
+        </div>
+        <div class="admin-form-grid" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 0;">
+            <div class="form-group pm-value-group" style="${data.type === 'qr' ? 'display:none;' : ''}">
+                <label>Número de Cuenta, Celular o Llave</label>
+                <input type="text" class="form-control pm-value" value="${escapeHtml(data.value || '')}" placeholder="Ej: 3123456789 o Cta Ahorros 123-...">
+            </div>
+            <div class="form-group pm-image-group" style="${data.type === 'key' ? 'display:none;' : ''}">
+                <label>Código QR (Arrastra la imagen o pon la URL)</label>
+                <div style="height:120px; background:rgba(0,0,0,0.2); border:2px dashed rgba(155,44,250,0.2); border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:8px; overflow:hidden; position:relative;" class="pm-image-preview drop-zone">
+                    ${data.image ? `<img src="${data.image}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">` : `<span style="font-size:11px; color:rgba(255,255,255,0.2); z-index:1;">Arrastra el QR aquí</span>`}
+                </div>
+                <input type="url" class="form-control pm-image-url" value="${escapeHtml(data.image || '')}" placeholder="URL del QR (Auto generada al subir)">
+            </div>
+            <div class="form-group">
+                <label>Instrucciones de Pago (Opcional)</label>
+                <input type="text" class="form-control pm-instructions" value="${escapeHtml(data.instructions || '')}" placeholder="Ej: Enviar captura por WhatsApp">
+            </div>
+        </div>
+    `;
+    
+    const typeSelect = card.querySelector('.pm-type');
+    const valueGroup = card.querySelector('.pm-value-group');
+    const imageGroup = card.querySelector('.pm-image-group');
+    
+    typeSelect.addEventListener('change', () => {
+        const val = typeSelect.value;
+        if (val === 'key') {
+            valueGroup.style.display = 'block';
+            imageGroup.style.display = 'none';
+        } else if (val === 'qr') {
+            valueGroup.style.display = 'none';
+            imageGroup.style.display = 'block';
+        } else {
+            valueGroup.style.display = 'block';
+            imageGroup.style.display = 'block';
+        }
+    });
+    
+    const previewZone = card.querySelector('.pm-image-preview');
+    const urlInput = card.querySelector('.pm-image-url');
+    setupDragAndDrop(previewZone, (url) => {
+        urlInput.value = url;
+        previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`;
+    }, (localUrl) => {
+        previewZone.innerHTML = `<img src="${localUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:8px; opacity:0.7;">`;
+    });
+    
+    urlInput.addEventListener('input', () => {
+        const url = urlInput.value.trim();
+        if (url) {
+            previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;" onerror="this.parentElement.innerHTML='<span style=\x22font-size:11px;color:#ef4444;\x22>No se pudo cargar la imagen</span>'">`;
+        } else {
+            previewZone.innerHTML = `<span style="font-size:11px; color:rgba(255,255,255,0.2); z-index:1;">Arrastra el QR aquí</span>`;
+        }
+    });
+
+    card.querySelector('.btn-delete-payment-method').addEventListener('click', () => {
+        card.remove();
+        reindexPaymentMethods();
+    });
+
+    return card;
+}
+
+function reindexPaymentMethods() {
+    const container = document.getElementById('payment-methods-container');
+    if (!container) return;
+    const cards = container.querySelectorAll('.payment-method-card');
+    cards.forEach((card, index) => {
+        card.dataset.index = index;
+        const indexLabel = card.querySelector('strong');
+        if (indexLabel) indexLabel.textContent = `Método #${index + 1}`;
+    });
+}
 
 function initQRConfigAdmin() {
     const form = document.getElementById('qr-config-form');
@@ -1601,33 +1695,49 @@ function initQRConfigAdmin() {
     // Llenar campos con la config actual
     loadSiteConfigForAdmin().then(config => {
         if (!config) return;
-        QR_CONFIG_FIELDS.forEach(([key, id]) => {
-            const input = document.getElementById(id);
-            if (input) input.value = config[key] || '';
-        });
         
-        // Vista previa si hay imagen
-        if (config['QR_Image']) {
-            const preview = document.getElementById('qr-preview');
-            if (preview) {
-                preview.innerHTML = `<img src="${config['QR_Image']}" style="width:100%; height:100%; object-fit:contain; border-radius:12px;">`;
+        // Contraseña
+        const passInput = document.getElementById('qr-config-password');
+        if (passInput) passInput.value = config['QR_Password'] || '';
+        
+        // Métodos de pago (Cargar de QR_Payments_JSON o fallback a QR_Image)
+        let methods = [];
+        if (config['QR_Payments_JSON']) {
+            try {
+                methods = JSON.parse(config['QR_Payments_JSON']);
+            } catch(e) {
+                console.error("Error parsing QR_Payments_JSON:", e);
             }
+        } else if (config['QR_Image']) {
+            methods = [{
+                name: 'Código QR de Pago',
+                type: 'qr',
+                value: '',
+                image: config['QR_Image'],
+                instructions: 'Escanea el código QR desde tu aplicación bancaria'
+            }];
+        }
+        
+        const container = document.getElementById('payment-methods-container');
+        if (container) {
+            container.innerHTML = '';
+            methods.forEach((method, idx) => {
+                container.appendChild(createPaymentMethodCard(method, idx));
+            });
         }
     });
 
-    // Configurar Drag & Drop para subir la imagen del QR
-    setupDragAndDrop('qr-preview', (url) => {
-        const input = document.getElementById('qr-config-image');
-        if (input) {
-            input.value = url;
-            input.dispatchEvent(new Event('input'));
-        }
-    }, (localUrl) => {
-        const preview = document.getElementById('qr-preview');
-        if (preview) {
-            preview.innerHTML = `<img src="${localUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:12px; opacity:0.7;">`;
-        }
-    });
+    // Evento para añadir método de pago
+    const addBtn = document.getElementById('btn-add-payment-method');
+    if (addBtn) {
+        addBtn.onclick = () => {
+            const container = document.getElementById('payment-methods-container');
+            if (container) {
+                const index = container.querySelectorAll('.payment-method-card').length;
+                container.appendChild(createPaymentMethodCard({ name: '', type: 'key', value: '', image: '', instructions: '' }, index));
+            }
+        };
+    }
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -1638,12 +1748,29 @@ function initQRConfigAdmin() {
             btn.textContent = 'Guardando...';
         }
 
+        const container = document.getElementById('payment-methods-container');
+        const methods = [];
+        if (container) {
+            const cards = container.querySelectorAll('.payment-method-card');
+            cards.forEach(card => {
+                const name = card.querySelector('.pm-name').value.trim();
+                const type = card.querySelector('.pm-type').value;
+                const value = card.querySelector('.pm-value').value.trim();
+                const image = card.querySelector('.pm-image-url').value.trim();
+                const instructions = card.querySelector('.pm-instructions').value.trim();
+                if (name) {
+                    methods.push({ name, type, value, image, instructions });
+                }
+            });
+        }
+
         try {
-            await Promise.all(QR_CONFIG_FIELDS.map(([key, id]) => {
-                const input = document.getElementById(id);
-                return saveSiteConfig(key, input ? input.value.trim() : '');
-            }));
-            showToast('Configuración de QR guardada correctamente');
+            await Promise.all([
+                saveSiteConfig('QR_Password', document.getElementById('qr-config-password')?.value.trim() || ''),
+                saveSiteConfig('QR_Payments_JSON', JSON.stringify(methods)),
+                saveSiteConfig('QR_Image', methods[0]?.image || '') // Retrocompatibilidad
+            ]);
+            showToast('Configuración de pagos guardada correctamente');
         } catch (error) {
             console.error('Error guardando QR:', error);
             showToast('Error al guardar: ' + error.message, true);
@@ -1758,7 +1885,7 @@ async function uploadCarouselImage(file) {
  * Configura el comportamiento de Arrastrar y Soltar en un elemento
  */
 function setupDragAndDrop(containerId, onFileProcessed, onLocalPreview, onUploadEnd) {
-    const container = document.getElementById(containerId);
+    const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
     if (!container) return;
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

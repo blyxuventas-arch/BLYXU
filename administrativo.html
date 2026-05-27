@@ -1033,21 +1033,25 @@
                             <button type="submit" class="admin-btn" id="btn-save-promo-config">Guardar Banner Promocional</button>
                         </form>
 
-                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Gestión de Códigos QR (Pagos)</h3>
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Gestión de Métodos de Pago y QRs</h3>
                         <form id="qr-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                            <div class="admin-form-grid">
+                            <div class="admin-form-grid" style="margin-bottom:20px;">
                                 <div class="form-group admin-form-wide">
                                     <label>Contraseña de Acceso a Pagos</label>
                                     <input type="text" class="form-control" id="qr-config-password" placeholder="Ej: blyxu2026">
                                 </div>
                             </div>
-                            <div class="form-group" style="margin-top: 16px;">
-                                <label>Imagen del Código QR</label>
-                                <div style="height:180px; background:rgba(0,0,0,0.2); border:2px dashed rgba(155,44,250,0.2); border-radius:24px; display:flex; align-items:center; justify-content:center; margin-bottom:24px; overflow:hidden; position:relative;" id="qr-preview" class="drop-zone">
-                                    <span style="font-size:13px; color:rgba(255,255,255,0.2); font-weight:600; z-index: 1;">Arrastra la imagen de tu QR aquí</span>
+                            
+                            <div style="margin-bottom:24px;">
+                                <h4 style="font-size:14px; font-weight:700; color:#ffd969; margin-bottom:12px;">Métodos de Pago Habilitados</h4>
+                                <div id="payment-methods-container" style="display:flex; flex-direction:column; gap:16px;">
+                                    <!-- Se inyectarán los métodos de pago dinámicamente -->
                                 </div>
-                                <input type="url" class="form-control" id="qr-config-image" placeholder="URL de la imagen del QR (Se llenará automáticamente si subes el archivo)" style="margin-bottom: 16px;">
+                                <button type="button" class="admin-btn" id="btn-add-payment-method" style="margin-top:16px; background:rgba(255,255,255,0.05); border:1px dashed var(--primary); width:auto; padding:8px 16px;">
+                                    ➕ Agregar Método de Pago
+                                </button>
                             </div>
+                            
                             <button type="submit" class="admin-btn" id="btn-save-qr-config" style="background:linear-gradient(135deg, #a855f7, #f4c441); color:#09030f;">Guardar Configuración de Pagos</button>
                         </form>
                         
