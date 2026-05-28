@@ -27,6 +27,8 @@ const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
 const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
+const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
+const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
 const LEGACY_CART_KEY = 'blyxu_cart';
 const CART_STORAGE_KEYS = {
     retail: 'blyxu_cart_retail',
@@ -357,6 +359,11 @@ function writeCache(key, data) {
     }
 }
 
+function isCacheFresh(key, ttlMs) {
+    const cached = readCache(key);
+    return Boolean(cached?.savedAt && Date.now() - cached.savedAt < ttlMs);
+}
+
 function setProductsLoading(isLoading) {
     const loading = document.getElementById('loading-products');
     if (loading) loading.style.display = isLoading ? 'flex' : 'none';
@@ -616,10 +623,10 @@ function applyPromotionsToProducts() {
 async function loadProducts(options = {}) {
     const { renderCatalog = true, useCache = true } = options;
     const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache();
+    const productCacheIsFresh = usedProductCache && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
 
-    if (useCache && Object.keys(siteConfig).length === 0) {
-        hydrateSiteConfigFromCache();
-    }
+    const usedConfigCache = useCache && Object.keys(siteConfig).length === 0 && hydrateSiteConfigFromCache();
+    const configCacheIsFresh = usedConfigCache && isCacheFresh(SITE_CONFIG_CACHE_KEY, SITE_CONFIG_CACHE_TTL);
 
     if (renderCatalog && usedProductCache) {
         applyPromotionsToProducts();
@@ -628,34 +635,37 @@ async function loadProducts(options = {}) {
         renderCatalogProducts();
     }
 
-    if (!productsLoadPromise) {
+    if (!productsLoadPromise && !productCacheIsFresh) {
         productsLoadPromise = fetchProducts({ showLoading: !usedProductCache && renderCatalog });
     }
-    if (!configLoadPromise) {
+    if (!configLoadPromise && !configCacheIsFresh) {
         configLoadPromise = fetchSiteConfig();
     }
 
     if (usedProductCache) {
-        Promise.all([productsLoadPromise, configLoadPromise]).then(() => {
-            applyPromotionsToProducts();
-            if (renderCatalog) {
-                renderBanners(bannerProducts);
-                renderInventorySpotlight();
-                renderCatalogProducts();
-            }
-        });
+        const backgroundLoads = [productsLoadPromise, configLoadPromise].filter(Boolean);
+        if (backgroundLoads.length) {
+            Promise.all(backgroundLoads).then(() => {
+                applyPromotionsToProducts();
+                if (renderCatalog) {
+                    renderBanners(bannerProducts);
+                    renderInventorySpotlight();
+                    renderCatalogProducts();
+                }
+            });
+        }
         return allProducts;
     }
 
+    const requiredLoads = [productsLoadPromise, configLoadPromise].filter(Boolean);
     if (renderCatalog) {
-        await Promise.all([productsLoadPromise, configLoadPromise]);
+        await Promise.all(requiredLoads);
         applyPromotionsToProducts();
         renderBanners(bannerProducts);
         renderInventorySpotlight();
         renderCatalogProducts();
     } else {
-        await productsLoadPromise;
-        await configLoadPromise;
+        await Promise.all(requiredLoads);
         applyPromotionsToProducts();
     }
 

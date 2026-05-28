@@ -215,11 +215,15 @@ function cleanProductStyleValue(value) {
 
 function normalizeGoogleProduct(product) {
     const styleValue = cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], ''));
+    const idVariacion = getProductField(product, ['ID Variacion', 'ID Variación', 'ID VariaciÃ³n', 'idVariacion', 'ID', 'id', 'SKU'], '');
+    const idProducto = getProductField(product, ['ID Producto', 'ID Producto Madre', 'ID_Producto', 'ID_PRODUCTO', 'IdProducto', 'id_producto', 'idProducto'], '');
     return {
         ...product,
         ID: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
         idVariacion: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
-        idProducto: getProductField(product, ['ID Producto', 'ID_Producto', 'idProducto'], ''),
+        ID: idVariacion,
+        idVariacion: idVariacion,
+        idProducto: idProducto,
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'Producto'], ''),
         Categoria: getProductField(product, ['Categoría', 'Categoria'], ''),
         Precio: getProductField(product, ['Precio'], 0),
@@ -239,6 +243,36 @@ function normalizeGoogleProduct(product) {
     };
 }
 
+function isVisibleInventoryProduct(product) {
+    var estado = (product.Estado || '').toUpperCase();
+    var nombre = (product.Nombre || product.Producto || '').toUpperCase();
+    return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
+}
+
+function getInventoryMotherId(product) {
+    return String(getProductField(product, [
+        'ID Producto',
+        'ID Producto Madre',
+        'ID_Producto',
+        'ID_PRODUCTO',
+        'IdProducto',
+        'id_producto',
+        'idProducto'
+    ], '') || '').trim();
+}
+
+function getInventoryVariationId(product) {
+    return String(getProductField(product, [
+        'ID Variacion',
+        'ID Variación',
+        'ID VariaciÃ³n',
+        'idVariacion',
+        'ID',
+        'id',
+        'SKU'
+    ], '') || '').trim();
+}
+
 function normalizeSearchText(value) {
     return String(value || '')
         .normalize('NFD')
@@ -256,6 +290,8 @@ function inventorySearchBlob(product) {
         product.Tamano,
         product.Estilo,
         product.SKU,
+        getInventoryMotherId(product),
+        getInventoryVariationId(product),
         product.Estado,
         product.Stock,
         product.Precio,
@@ -270,7 +306,7 @@ function scoreInventorySearch(product, query) {
     const terms = q.split(/\s+/).filter(Boolean);
     const name = normalizeSearchText(product.Nombre);
     const category = normalizeSearchText(product.Categoria);
-    const sku = normalizeSearchText(product.SKU || product['ID Variación'] || product['ID Variacion']);
+    const sku = normalizeSearchText(product.SKU || getInventoryVariationId(product) || getInventoryMotherId(product));
     const blob = inventorySearchBlob(product);
 
     if (!terms.every(term => blob.includes(term))) return 0;
@@ -376,7 +412,7 @@ function getFilteredInventory() {
     const indexed = inventario.map((product, index) => ({ product, index }));
 
     function getMid(p) {
-        var id = String(p.idProducto || p['ID Producto'] || p.idVariacion || p.ID || p['ID Variacion'] || '').trim();
+        var id = getInventoryMotherId(p) || getInventoryVariationId(p);
         if (!id) {
             if (!p._fallbackId) p._fallbackId = 'no-id-' + Math.random().toString(36).substr(2, 9);
             id = p._fallbackId;
@@ -385,8 +421,8 @@ function getFilteredInventory() {
     }
 
     function isMother(p) {
-        var idv = String(p.idVariacion || p.ID || p['ID Variacion'] || '').trim();
-        var idp = String(p.idProducto || p['ID Producto'] || '').trim();
+        var idv = getInventoryVariationId(p);
+        var idp = getInventoryMotherId(p);
         return !idp || !idv || idv === idp;
     }
 
@@ -442,11 +478,11 @@ function getFilteredInventory() {
         var minWholesalePrice = wholesalePrices.length ? Math.min.apply(null, wholesalePrices) : 0;
         var maxWholesalePrice = wholesalePrices.length ? Math.max.apply(null, wholesalePrices) : 0;
 
-        items.forEach(function (item, idx) {
+        function pushInventoryRow(item, isChild) {
             finalFlatList.push({
                 product: item.product,
                 index: item.index,
-                isChild: idx > 0,
+                isChild: isChild,
                 groupSize: items.length,
                 motherId: motherId,
                 totalStock: totalStock,
@@ -455,7 +491,16 @@ function getFilteredInventory() {
                 minWholesalePrice: minWholesalePrice,
                 maxWholesalePrice: maxWholesalePrice
             });
-        });
+        }
+
+        if (items.length > 1) {
+            pushInventoryRow(items[0], false);
+            items.forEach(function (item) {
+                pushInventoryRow(item, true);
+            });
+        } else {
+            pushInventoryRow(items[0], false);
+        }
     });
 
     return finalFlatList;
@@ -650,6 +695,13 @@ function getNextVariantId(idProducto) {
     document.querySelectorAll('#variants-container .var-id').forEach(function (input) {
         collect(input.value);
     });
+
+    const motherVarId = getInputValue('prod-id');
+    if (motherVarId) {
+        collect(motherVarId);
+    } else {
+        usedNumbers.add(1);
+    }
 
     let next = 1;
     while (usedNumbers.has(next)) next += 1;
@@ -1219,8 +1271,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
 
     document.getElementById('btn-add-variant')?.addEventListener('click', () => {
-        const panel = document.getElementById('variation-options-panel');
-        if (panel) panel.style.display = 'block';
         document.getElementById('btn-add-manual-variant')?.click();
     });
 
@@ -2294,11 +2344,7 @@ function initInventoryActions() {
 function normalizeInventoryList(rawProducts) {
     return (Array.isArray(rawProducts) ? rawProducts : [])
         .map(normalizeGoogleProduct)
-        .filter(function (p) {
-            var estado = (p.Estado || '').toUpperCase();
-            var nombre = (p.Nombre || p.Producto || '').toUpperCase();
-            return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
-        })
+        .filter(isVisibleInventoryProduct)
         .reverse();
 }
 
@@ -2328,7 +2374,9 @@ function mergeSavedProductsIntoInventory(savedProducts) {
 function readInventoryCache() {
     try {
         var cached = JSON.parse(localStorage.getItem(INVENTORY_CACHE_KEY) || 'null');
-        return cached && Array.isArray(cached.data) ? cached.data : [];
+        return cached && Array.isArray(cached.data)
+            ? cached.data.map(normalizeGoogleProduct).filter(isVisibleInventoryProduct)
+            : [];
     } catch (e) {
         return [];
     }
@@ -2440,7 +2488,10 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
     tbody.querySelector('.inventory-load-more-row')?.remove();
 
     const start = inventoryRenderedRows;
-    const end = Math.min(start + INVENTORY_BATCH_SIZE, filteredInventario.length);
+    let end = Math.min(start + INVENTORY_BATCH_SIZE, filteredInventario.length);
+    while (end < filteredInventario.length && filteredInventario[end]?.isChild) {
+        end++;
+    }
     const rows = filteredInventario
         .slice(start, end)
         .map(item => inventoryRowTemplate(item.product, item.index, item))
@@ -2512,7 +2563,7 @@ function cleanInventoryId(value) {
 
 function getInventoryProductKey(product) {
     if (!product) return '';
-    var key = product.idVariacion || product.ID || product['ID Variacion'] || product['ID Variación'] || product._rowIndex || '';
+    var key = getInventoryVariationId(product) || product._rowIndex || '';
     if (!key) {
         if (!product._inventoryKey) product._inventoryKey = 'tmp-' + Math.random().toString(36).slice(2);
         key = product._inventoryKey;
@@ -2606,7 +2657,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     if (!itemMeta) itemMeta = {};
     var isChild = !!itemMeta.isChild;
     var groupSize = itemMeta.groupSize || 1;
-    var motherId = itemMeta.motherId || p.idProducto || p['ID Producto'] || p.idVariacion || p.ID || 'sin-id';
+    var motherId = itemMeta.motherId || getInventoryMotherId(p) || getInventoryVariationId(p) || 'sin-id';
     var cleanMotherId = cleanInventoryId(motherId);
     var rowClass = isChild ? 'variant-row mother-' + cleanMotherId : 'mother-row';
     var productKey = escapeHtml(getInventoryProductKey(p));
@@ -2617,7 +2668,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     var image = escapeHtml(p.Imagen || 'Logo2.png');
     var name = escapeHtml(p.Nombre || p.Producto || 'Producto General');
     var category = escapeHtml(p.Categoria || p.Color || '-');
-    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
+    var idVar = getInventoryVariationId(p);
     var price = Number(p.Precio || 0) || 0;
     var wholesalePrice = Number(p.Precio_Mayorista || p['Precio Mayor'] || 0) || 0;
     var minP = Number(itemMeta.minPrice || price) || 0;
@@ -2636,7 +2687,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
 
     if (!isChild) {
         var toggleBtnHtml = groupSize > 1
-            ? '<button class="toggle-vars-btn" type="button" data-inventory-action="toggle" data-mother-id="' + escapeHtml(cleanMotherId) + '">Ver ' + (groupSize - 1) + ' Variantes</button>'
+            ? '<button class="toggle-vars-btn" type="button" data-inventory-action="toggle" data-mother-id="' + escapeHtml(cleanMotherId) + '">Ver ' + groupSize + ' Variantes</button>'
             : '<span class="variant-count-badge">Producto Unico</span>';
         var badgeHtml = '<span class="mother-badge-id" title="ID Producto">ID Prod: ' + escapeHtml(motherId) + '</span>';
         if (idVar && idVar !== motherId) {
@@ -2715,8 +2766,8 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     if (!idProducto) return;
 
     var variantes = inventario.filter(function (prod) {
-        var mid = prod.idProducto || prod['ID Producto'] || '';
-        var vid = prod.idVariacion || prod.ID || prod['ID Variacion'] || '';
+        var mid = getInventoryMotherId(prod);
+        var vid = getInventoryVariationId(prod);
         return mid === idProducto && vid !== idVariacionActual;
     });
 
@@ -2733,7 +2784,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     tableHtml += '</tr></thead><tbody>';
 
     variantes.forEach(function (v) {
-        var vid = v.idVariacion || v.ID || '-';
+        var vid = getInventoryVariationId(v) || '-';
         var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
         var vTamano = getProductField(v, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], '');
         var vColor = v.Color || '-';
@@ -2878,7 +2929,8 @@ window.guardarGrupoCompleto = async function (idProducto) {
 function editarProducto(index) {
     var p = inventario[index];
     var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '';
-    var idProd = p.idProducto || p['ID Producto'] || '';
+    var idProd = getInventoryMotherId(p);
+    idVar = getInventoryVariationId(p);
     var isVariant = idProd && idVar && idProd !== idVar;
     var form = document.getElementById('product-form');
     if (form) form.dataset.originalVariationId = idVar;
@@ -2936,9 +2988,10 @@ function editarProducto(index) {
 
     if (idProd) {
         cargarVariantesAlFormulario(idProd, idVar);
-        // Add "Guardar Grupo" button if not already present
+        document.getElementById('btn-save-group')?.remove();
+        // El guardado principal ya cubre el grupo completo.
         var saveGroupBtn = document.getElementById('btn-save-group');
-        if (!saveGroupBtn) {
+        if (false && !saveGroupBtn) {
             var formFooter = document.querySelector('#product-form > div:last-child');
             if (formFooter) {
                 var newBtn = document.createElement('button');
@@ -3182,8 +3235,8 @@ async function eliminarGrupo(motherIdClean) {
         async function () {
             showToast('Eliminando grupo...');
             var variants = inventario.filter(function (p) {
-                var mid = p.idProducto || p['ID Producto'] || '';
-                var vid = p.idVariacion || p.ID || p['ID Variacion'] || '';
+                var mid = getInventoryMotherId(p);
+                var vid = getInventoryVariationId(p);
                 return cleanInventoryId(mid) === motherIdClean || cleanInventoryId(vid) === motherIdClean;
             });
             if (variants.length === 0) { showToast('No se encontraron productos del grupo', 'error'); return; }
@@ -3192,7 +3245,7 @@ async function eliminarGrupo(motherIdClean) {
             for (var i = 0; i < variants.length; i++) {
                 try {
                     var v = variants[i];
-                    var vId = v.idVariacion || v.ID || v['ID Variacion'] || v['ID Variación'] || '';
+                    var vId = getInventoryVariationId(v);
                     if (!vId) continue;
                     await delFromSheet(vId, motherIdClean, { nombre: v.Nombre || v.Producto || '', rowIndex: v._rowIndex || 0 });
                 } catch (e) { errors++; lastErr = e.message; }

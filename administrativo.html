@@ -290,6 +290,7 @@
             background:linear-gradient(135deg,#6c5ce7,#a855f7)!important;
             box-shadow:0 12px 26px rgba(108,92,231,0.2)!important;
         }
+        #variation-options-panel { display:none!important; }
         #btn-save,
         #btn-save-contact-config,
         #btn-save-carousel {
@@ -517,11 +518,11 @@
                                         </div>
                                         <div class="form-group">
                                             <label>SKU (Opcional)</label>
-                                            <input type="text" class="form-control" id="prod-sku">
+                                            <input type="text" class="form-control" id="prod-sku" name="SKU">
                                         </div>
                                         <div class="form-group">
                                             <label>Stock</label>
-                                            <input type="number" class="form-control" id="prod-stock-inicial" min="0" value="0" required>
+                                            <input type="number" class="form-control" id="prod-stock-inicial" name="Cantidad" min="0" value="0" required>
                                         </div>
                                         <div class="form-group">
                                             <label>Color</label>
@@ -529,15 +530,15 @@
                                         </div>
                                         <div class="form-group">
                                             <label>Estilo</label>
-                                            <input type="text" class="form-control" id="prod-estilo" placeholder="Ej: flor, corazon, minimalista">
+                                            <input type="text" class="form-control" id="prod-estilo" name="Estilo" placeholder="Ej: flor, corazon, minimalista">
                                         </div>
                                         <div class="form-group">
                                             <label>Tama&ntilde;o / Medida</label>
-                                            <input type="text" class="form-control" id="prod-tamano">
+                                            <input type="text" class="form-control" id="prod-tamano" name="Tamaño">
                                         </div>
                                         <div class="form-group">
                                             <label>Estado</label>
-                                            <select class="form-control" id="prod-estado">
+                                            <select class="form-control" id="prod-estado" name="Estado">
                                                 <option value="Activo">Activo</option>
                                                 <option value="Disponible">Disponible</option>
                                                 <option value="Agotado">Agotado</option>
@@ -1132,6 +1133,6 @@
     
 
 
-    <script src="admin-app.js?v=editor-save-fix-20260527"></script>
+    <script src="admin-app.js?v=remove-duplicate-buttons-20260528"></script>
 </body>
 </html>
