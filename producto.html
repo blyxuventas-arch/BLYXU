@@ -77,8 +77,8 @@
                     <span class="spec-label">Disponibilidad</span>
                     <span class="spec-value" id="detail-stock">En Stock</span>
                 </div>
-                <div class="spec-item">
-                    <span class="spec-label">Colores</span>
+                <div class="spec-item" id="spec-color-row">
+                    <span class="spec-label" id="detail-color-label">Colores</span>
                     <span class="spec-value" id="detail-colors">Varios</span>
                 </div>
                 <div class="spec-item" id="spec-sku-row" style="display: none;">
@@ -137,7 +137,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=cart-split-20260527"></script>
+    <script src="blyxu-app.js?v=search-group-fix-20260527"></script>
     <script>
         // Lógica específica para la página de producto
         document.addEventListener('DOMContentLoaded', async () => {
@@ -155,17 +155,46 @@
                 return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
             }
 
+            function isReferenceValue(value, product) {
+                const raw = String(value || '').trim();
+                const clean = normalizeSearchText(raw);
+                if (!raw) return false;
+                if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
+                return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+                    .some(ref => ref && clean === normalizeSearchText(ref));
+            }
+
             function getVisibleVariantParts(product) {
                 const rawParts = [
-                    product.Color || product.color,
+                    product.Estilo || product.estilo,
                     product.Tamano || product.tamano,
-                    product.Estilo || product.estilo
+                    product.Color || product.color
                 ];
 
                 return rawParts
                     .map(value => String(value || '').trim())
-                    .filter(value => value && !isCatalogOnlyValue(value))
+                    .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
                     .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
+            }
+
+            function getVariantFieldValue(product, field) {
+                const value = field === 'style'
+                    ? (product.Estilo || product.estilo)
+                    : field === 'size'
+                        ? (product.Tamano || product.tamano || product.Talla)
+                        : (product.Color || product.color);
+                const raw = String(value || '').trim();
+                return raw && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
+            }
+
+            function getGroupVariantDimension(siblings) {
+                const fields = ['style', 'size', 'color'];
+                let winner = { field: 'style', count: 0 };
+                fields.forEach(field => {
+                    const values = new Set(siblings.map(item => normalizeSearchText(getVariantFieldValue(item, field))).filter(Boolean));
+                    if (values.size > winner.count) winner = { field, count: values.size };
+                });
+                return winner.count > 1 ? winner.field : 'style';
             }
 
             function getAvailabilityText(stock) {
@@ -206,9 +235,11 @@
             const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
             const stock = getProductStock(product);
             const colors = product.Color || product.color || 'Único';
-            const sku = product.SKU || product.idVariacion || '';
+            const displayColors = getVariantFieldValue(product, 'color');
+            const sku = product.SKU || '';
             const size = product.Tamano || product.tamano || '';
-            const style = isCatalogOnlyValue(product.Estilo || product.estilo) ? '' : (product.Estilo || product.estilo || '');
+            const rawStyle = product.Estilo || product.estilo || '';
+            const style = (isCatalogOnlyValue(rawStyle) || isReferenceValue(rawStyle, product)) ? '' : rawStyle;
 
             document.getElementById('detail-name').textContent = name;
             const stockAlert = document.getElementById('detail-stock-alert');
@@ -230,7 +261,9 @@
             document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
             document.getElementById('detail-desc').textContent = desc;
             document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
-            document.getElementById('detail-colors').textContent = colors;
+            document.getElementById('detail-colors').textContent = displayColors || colors;
+            const colorRow = document.getElementById('spec-color-row');
+            if (colorRow) colorRow.style.display = displayColors ? 'flex' : 'none';
 
             if (sku) {
                 document.getElementById('detail-sku').textContent = sku;
@@ -251,16 +284,17 @@
             
             if (siblings.length > 1) {
                 const varContainer = document.getElementById('product-variations');
+                const variantDimension = getGroupVariantDimension(siblings);
                 let html = '<h3>Variantes disponibles</h3><div class="detail-variant-list">';
                 
                 siblings.forEach((sib, index) => {
                     const sibIndex = allProducts.indexOf(sib);
                     const isActive = sibIndex === productId;
                     
-                    let labelParts = getVisibleVariantParts(sib);
-                    let label = labelParts.join(' - ');
+                    let label = getVariantFieldValue(sib, variantDimension);
+                    if (!label) label = getVisibleVariantParts(sib).join(' - ');
                     if (!label) {
-                        label = sib.idVariacion || `Opción ${index + 1}`;
+                        label = `Opcion ${index + 1}`;
                     }
 
                     html += `<button class="detail-variant-chip ${isActive ? 'active' : ''}" onclick="window.location.href='producto.html?id=${sibIndex}${detailCatalogMode==='wholesale'?'&catalogo=mayorista':''}'">
@@ -400,17 +434,46 @@
                 return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
             }
 
+            function isReferenceValue(value, product) {
+                const raw = String(value || '').trim();
+                const clean = normalizeSearchText(raw);
+                if (!raw) return false;
+                if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
+                return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+                    .some(ref => ref && clean === normalizeSearchText(ref));
+            }
+
             function getVisibleVariantParts(product) {
                 const rawParts = [
-                    product.Color || product.color,
+                    product.Estilo || product.estilo,
                     product.Tamano || product.tamano,
-                    product.Estilo || product.estilo
+                    product.Color || product.color
                 ];
 
                 return rawParts
                     .map(value => String(value || '').trim())
-                    .filter(value => value && !isCatalogOnlyValue(value))
+                    .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
                     .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
+            }
+
+            function getVariantFieldValue(product, field) {
+                const value = field === 'style'
+                    ? (product.Estilo || product.estilo)
+                    : field === 'size'
+                        ? (product.Tamano || product.tamano || product.Talla)
+                        : (product.Color || product.color);
+                const raw = String(value || '').trim();
+                return raw && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
+            }
+
+            function getGroupVariantDimension(siblings) {
+                const fields = ['style', 'size', 'color'];
+                let winner = { field: 'style', count: 0 };
+                fields.forEach(field => {
+                    const values = new Set(siblings.map(item => normalizeSearchText(getVariantFieldValue(item, field))).filter(Boolean));
+                    if (values.size > winner.count) winner = { field, count: values.size };
+                });
+                return winner.count > 1 ? winner.field : 'style';
             }
 
             function getAvailabilityText(stock) {
@@ -421,7 +484,8 @@
                 const row = document.getElementById(rowId);
                 const target = document.getElementById(valueId);
                 if (!row || !target) return;
-                const visibleValue = isCatalogOnlyValue(value) ? '' : value;
+                const activeProduct = allProducts[currentDetailProductId];
+                const visibleValue = (isCatalogOnlyValue(value) || isReferenceValue(value, activeProduct)) ? '' : value;
                 row.style.display = visibleValue ? 'flex' : 'none';
                 target.textContent = visibleValue || '';
             }
@@ -492,6 +556,7 @@
 
                 variationContainer.innerHTML = '<h3>Variantes disponibles</h3><div class="detail-variant-list"></div>';
                 const list = variationContainer.querySelector('.detail-variant-list');
+                const variantDimension = getGroupVariantDimension(siblings);
 
                 siblings.forEach((sib, index) => {
                     const sibIndex = allProducts.indexOf(sib);
@@ -500,8 +565,9 @@
                     chip.className = `detail-variant-chip ${sibIndex === productId ? 'active' : ''}`;
                     chip.dataset.productIndex = String(sibIndex);
 
+                    const dimensionLabel = getVariantFieldValue(sib, variantDimension);
                     const labelParts = getVisibleVariantParts(sib);
-                    chip.textContent = labelParts.join(' - ') || sib.idVariacion || `Opcion ${index + 1}`;
+                    chip.textContent = dimensionLabel || labelParts.join(' - ') || `Opcion ${index + 1}`;
                     list.appendChild(chip);
                 });
 
@@ -526,7 +592,7 @@
                 document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
                 document.getElementById('detail-desc').textContent = desc;
                 document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
-                document.getElementById('detail-colors').textContent = product.Color || product.color || 'Único';
+                setSpec('spec-color-row', 'detail-colors', product.Color || product.color || '');
 
                 const stockAlert = document.getElementById('detail-stock-alert');
                 if (stockAlert) {
@@ -544,7 +610,7 @@
                     }
                 }
 
-                setSpec('spec-sku-row', 'detail-sku', product.SKU || product.idVariacion || '');
+                setSpec('spec-sku-row', 'detail-sku', product.SKU || '');
                 setSpec('spec-size-row', 'detail-size', product.Tamano || product.tamano || '');
                 setSpec('spec-style-row', 'detail-style', product.Estilo || product.estilo || '');
 

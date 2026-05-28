@@ -24,8 +24,8 @@ const INVOICE_CONFIG_FIELDS = [
     ['Factura_Telefono', 'inv-config-telefono'],
     ['Factura_Email', 'inv-config-email']
 ];
-const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v2';
-const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
+const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v3';
+const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -207,7 +207,14 @@ function normalizeImageUrl(value) {
     return firstUrl;
 }
 
+function cleanProductStyleValue(value) {
+    const raw = String(value || '').trim();
+    const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
+}
+
 function normalizeGoogleProduct(product) {
+    const styleValue = cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], ''));
     return {
         ...product,
         ID: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
@@ -217,7 +224,7 @@ function normalizeGoogleProduct(product) {
         Categoria: getProductField(product, ['Categoría', 'Categoria'], ''),
         Precio: getProductField(product, ['Precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista'], 0),
-        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'Estilo'], 'Ambos'),
+        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], 'Ambos'),
         Stock: getProductField(product, ['Cantidad', 'Stock'], 0),
         Imagen: normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen'], '')),
         Color: getProductField(product, ['Color'], ''),
@@ -225,7 +232,7 @@ function normalizeGoogleProduct(product) {
         Galeria: getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], ''),
         Descripcion: getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion'], ''),
         Tamano: getProductField(product, ['Tamano', 'Tamaño', 'Talla'], ''),
-        Estilo: getProductField(product, ['Estilo'], ''),
+        Estilo: styleValue,
         SKU: getProductField(product, ['SKU'], ''),
         Estado: getProductField(product, ['Estado'], 'Activo'),
         Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de Creación'], '')
@@ -280,6 +287,7 @@ function scoreInventorySearch(product, query) {
 }
 
 async function postProductToGoogleSheets(data, isEditingOverride = null) {
+    const editId = data?.__adminOriginalId || data?.originalId || data?.editId || null;
     data = normalizeProductPayloadForSubmit(data);
     if (!data['ID Producto']) {
         throw new Error('Falta ID Producto Madre. No se puede enviar al inventario.');
@@ -290,6 +298,7 @@ async function postProductToGoogleSheets(data, isEditingOverride = null) {
         action: isEditing ? 'editar' : 'crear',
         data
     };
+    if (editId) payload.id = editId;
 
     const res = await fetch(GOOGLE_SHEET_API, {
         method: 'POST',
@@ -307,7 +316,12 @@ async function postProductToGoogleSheets(data, isEditingOverride = null) {
 async function postProductBatchToGoogleSheets(itemsList) {
     if (!itemsList || itemsList.length === 0) return [];
     
-    const normalizedItems = itemsList.map(item => normalizeProductPayloadForSubmit(item));
+    const normalizedItems = itemsList.map(item => {
+        const editId = item?.__adminOriginalId || item?.originalId || item?.editId || null;
+        const normalized = normalizeProductPayloadForSubmit(item);
+        if (editId) normalized.__adminOriginalId = editId;
+        return normalized;
+    });
     const payload = {
         resource: 'productos',
         action: 'batchsave',
@@ -492,6 +506,9 @@ function ensureProductHierarchyIds() {
 function normalizeProductPayloadForSubmit(data) {
     const payload = { ...(data || {}) };
     delete payload.__adminForceCreate;
+    delete payload.__adminOriginalId;
+    delete payload.originalId;
+    delete payload.editId;
     const ids = ensureProductHierarchyIds();
     const idProducto = payload['ID Producto'] || payload['ID Producto Madre'] || payload.ID_Producto || payload.ID_PRODUCTO || payload.IdProducto || payload.id_producto || payload.idProducto || ids.idProducto;
     const catalogo = payload.Catalogo || payload['Catálogo'] || payload['CatÃ¡logo'] || getInputValue('prod-catalogo') || 'Ambos';
@@ -550,7 +567,7 @@ function buildProductPayload() {
         Talla: getInputValue('prod-tamano'),
         'Tamaño': getInputValue('prod-tamano'),
         Color: getInputValue('prod-color'),
-        Estilo: getInputValue('prod-estilo') || idVariacion,
+        Estilo: getProductStyleValue(),
         Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
         'Imagen Principal': imagen,
         Imagen: imagen,
@@ -566,7 +583,40 @@ function splitVariationOptions(value) {
         .split(',')
         .map(item => item.trim())
         .filter(Boolean);
+    if (items.length > 1) {
+        const prefixMatch = items[0].match(/^(.*\D)(\d+)$/);
+        if (prefixMatch) {
+            const prefix = prefixMatch[1];
+            return items.map((item, index) => {
+                if (index > 0 && /^\d+$/.test(item)) return prefix + item;
+                return item;
+            });
+        }
+    }
     return items.length ? items : [''];
+}
+
+function getSelectedVariationPrimaryField() {
+    return getInputValue('variation-primary-field') || 'style';
+}
+
+function getVariationInputForField(field) {
+    if (field === 'color') return getInputValue('variation-colors') || getInputValue('prod-color');
+    if (field === 'size') return getInputValue('variation-sizes') || getInputValue('prod-tamano');
+    return getInputValue('variation-styles') || getInputValue('prod-estilo');
+}
+
+function getVariationFieldFromInput() {
+    const selected = getSelectedVariationPrimaryField();
+    if (selected !== 'auto') return selected;
+    if (getInputValue('variation-styles') || getInputValue('prod-estilo')) return 'style';
+    if (getInputValue('variation-colors') || getInputValue('prod-color')) return 'color';
+    if (getInputValue('variation-sizes') || getInputValue('prod-tamano')) return 'size';
+    return 'style';
+}
+
+function getProductStyleValue(fallback = '') {
+    return cleanProductStyleValue(getInputValue('prod-estilo')) || fallback;
 }
 
 function makeVariantSlug(value) {
@@ -614,7 +664,8 @@ function buildVariantPayloadFromCard(card) {
     const imagen = card.querySelector('.var-imagen')?.value?.trim() || getInputValue('prod-imagen');
     const tamano = card.querySelector('.var-tamano')?.value?.trim() || '';
     const color = card.querySelector('.var-color')?.value?.trim() || '';
-    const estilo = card.querySelector('.var-estilo')?.value?.trim() || variantId;
+    const estiloInput = card.querySelector('.var-estilo');
+    const estilo = estiloInput ? cleanProductStyleValue(estiloInput.value) : getProductStyleValue();
 
     return {
         __adminForceCreate: true,
@@ -672,6 +723,7 @@ function setProductFormMode(isEditing) {
 function resetProductForm() {
     const form = el('product-form');
     if (form) form.reset();
+    if (form) delete form.dataset.originalVariationId;
     
     setMotherProductId(generateMotherProductId());
     const currentMotherId = getInputValue('prod-id-producto');
@@ -685,6 +737,7 @@ function resetProductForm() {
     setInputValue('variation-styles', '');
     setInputValue('variation-sizes', '');
     setInputValue('variation-colors', '');
+    setInputValue('variation-primary-field', 'style');
     const generatorSummary = document.getElementById('variation-generator-summary');
     if (generatorSummary) generatorSummary.textContent = 'Genera tarjetas editables para cada combinacion antes de guardar.';
     const variationPanel = document.getElementById('variation-options-panel');
@@ -1101,10 +1154,12 @@ document.addEventListener('DOMContentLoaded', () => {
             Cantidad: stock,
             'Imagen Principal': document.getElementById('prod-imagen').value,
             Color: document.getElementById('prod-color').value,
-            Estilo: document.getElementById('prod-id').value,
+            Estilo: getProductStyleValue(),
             Estado: estado
         };
         Object.assign(data, buildProductPayload());
+        const originalVariationId = document.getElementById('product-form')?.dataset.originalVariationId || '';
+        if (isEditingProduct && originalVariationId) data.__adminOriginalId = originalVariationId;
         const motherProductId = getInputValue('prod-id-producto') || ensureProductHierarchyIds().idProducto;
         data['ID Producto'] = motherProductId;
         data.ID_Producto = motherProductId;
@@ -1292,7 +1347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     Talla: card.querySelector('.var-tamano').value,
                     'TamaÃ±o': card.querySelector('.var-tamano').value,
                     Color: card.querySelector('.var-color').value,
-                    Estilo: card.querySelector('.var-estilo')?.value || card.querySelector('.var-id').value || getInputValue('prod-estilo'),
+                    Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
                     SKU: card.querySelector('.var-sku').value,
                     Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
                     'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
@@ -1328,20 +1383,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('variants-container');
         if (!addButton || !container) return;
 
-        const styles = splitVariationOptions(getInputValue('variation-styles') || getInputValue('prod-estilo'));
-        const sizes = splitVariationOptions(getInputValue('variation-sizes') || getInputValue('prod-tamano'));
-        const colors = splitVariationOptions(getInputValue('variation-colors') || getInputValue('prod-color'));
-        const combinations = [];
-
-        styles.forEach(styleValue => {
-            sizes.forEach(sizeValue => {
-                colors.forEach(colorValue => {
-                    if (styleValue || sizeValue || colorValue) {
-                        combinations.push({ styleValue, sizeValue, colorValue });
-                    }
-                });
-            });
-        });
+        const primaryField = getVariationFieldFromInput();
+        const primaryOptions = splitVariationOptions(getVariationInputForField(primaryField));
+        const baseStyle = primaryField === 'style' ? '' : getInputValue('prod-estilo');
+        const baseSize = primaryField === 'size' ? '' : getInputValue('prod-tamano');
+        const baseColor = primaryField === 'color' ? '' : getInputValue('prod-color');
+        const combinations = primaryOptions
+            .map(value => ({
+                styleValue: primaryField === 'style' ? value : baseStyle,
+                sizeValue: primaryField === 'size' ? value : baseSize,
+                colorValue: primaryField === 'color' ? value : baseColor
+            }))
+            .filter(combo => combo.styleValue || combo.sizeValue || combo.colorValue);
 
         if (!combinations.length) {
             showToast('Escribe al menos un estilo, tamaño o color para generar variantes');
@@ -2420,6 +2473,39 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+function getVariantAttributesLabel(product) {
+    const attributes = [
+        cleanProductStyleValue(product?.Estilo || product?.estilo),
+        product?.Tamano || product?.Talla || product?.['TamaÃ±o'] || product?.['TamaÃƒÂ±o'],
+        product?.Color || product?.color
+    ]
+        .map(value => String(value || '').trim())
+        .filter(Boolean);
+
+    return attributes.length ? attributes.join(' / ') : '-';
+}
+
+function getVariantAttributesLabel(product) {
+    function isReferenceValue(value) {
+        const raw = String(value || '').trim();
+        const clean = normalizeSearchText(raw);
+        if (!raw) return false;
+        if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
+        return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+            .some(ref => ref && clean === normalizeSearchText(ref));
+    }
+
+    const attributes = [
+        cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
+        getProductField(product, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], ''),
+        getProductField(product, ['Color', 'color'], '')
+    ]
+        .map(value => String(value || '').trim())
+        .filter(value => value && !isReferenceValue(value));
+
+    return attributes.length ? attributes.join(' / ') : '-';
+}
+
 function cleanInventoryId(value) {
     return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '');
 }
@@ -2509,7 +2595,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
             + '<td>' + catInfo + '</td>'
             + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + Number(p.Precio || 0).toLocaleString('es-CO') + '</td>'
             + '<td><span style="font-size:12px;font-weight:700;color:' + stockColor + ';">' + stockVal + ' und.</span></td>'
-            + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + (p.Catalogo || 'Ambos') + '</span></td>'
+            + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(getVariantAttributesLabel(p)) + '</span></td>'
             + '<td><button class="action-btn-edit-sm" onclick="editarProducto(' + index + ')">Editar</button>'
             + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">Borrar</button></td>'
             + '</tr>';
@@ -2583,7 +2669,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + price.toLocaleString('es-CO') + '</td>'
         + '<td style="font-size:13px;color:#fbbf24;font-weight:700;">' + (wholesalePrice ? '$' + wholesalePrice.toLocaleString('es-CO') : '-') + '</td>'
         + '<td><span style="font-size:12px;font-weight:700;color:' + (stockVal > 0 ? '#10B981' : '#EF4444') + ';">' + stockVal + ' und.</span></td>'
-        + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(p.Catalogo || 'Ambos') + '</span></td>'
+        + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(getVariantAttributesLabel(p)) + '</span></td>'
         + '<td><button class="action-btn-edit-sm" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
         + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button></td>'
         + '</tr>';
@@ -2643,17 +2729,20 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     tableHtml += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:11px;">';
     tableHtml += '<thead><tr style="color:rgba(255,255,255,0.25);font-size:9px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">';
     tableHtml += '<th style="padding:4px 8px;text-align:left;">ID Var</th><th style="padding:4px 8px;text-align:left;">Color</th><th style="padding:4px 8px;text-align:left;">Stock</th><th style="padding:4px 8px;text-align:left;">Precio</th><th style="padding:4px 8px;text-align:left;">SKU</th><th style="padding:4px 8px;text-align:center;">Acción</th>';
+    tableHtml = tableHtml.replace('>Color</th>', '>Atributos</th>');
     tableHtml += '</tr></thead><tbody>';
 
     variantes.forEach(function (v) {
         var vid = v.idVariacion || v.ID || '-';
+        var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
+        var vTamano = getProductField(v, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], '');
         var vColor = v.Color || '-';
         var vStock = v.Stock || v.Cantidad || 0;
         var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
         var vSku = v.SKU || '-';
         tableHtml += '<tr class="var-edit-row" data-varid="' + vid + '">';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:6px 0 0 6px;font-weight:700;color:#FFA500;white-space:nowrap;">' + vid + '</td>';
-        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#fff;">' + vColor + '</td>';
+        tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#fff;">' + escapeHtml(getVariantAttributesLabel(v)) + '</td>';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);font-weight:700;color:' + (vStock > 0 ? '#10B981' : '#EF4444') + ';">' + vStock + '</td>';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#9B2CFA;font-weight:700;">$' + vPrecio + '</td>';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:rgba(255,255,255,0.5);">' + vSku + '</td>';
@@ -2664,14 +2753,16 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         tableHtml += '<tr class="var-edit-expanded" id="var-expand-' + vid + '" style="display:none;"><td colspan="6" style="padding:12px 16px;background:rgba(255,165,0,0.03);border-radius:8px;border-left:2px solid #FFA500;">';
         tableHtml += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">ID</label><input class="form-control ve-id" value="' + vid + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Estilo</label><input class="form-control ve-estilo" value="' + escapeHtml(vEstilo) + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tamano</label><input class="form-control ve-tamano" value="' + escapeHtml(vTamano) + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Color</label><input class="form-control ve-color" value="' + (vColor !== '-' ? vColor : '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Stock</label><input type="number" class="form-control ve-stock" value="' + vStock + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio</label><input class="form-control ve-precio" value="' + (v.Precio || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '</div>';
-        tableHtml += '<div style="display:flex;gap:8px;"><button class="admin-btn" onclick="guardarVarianteEditada(\'' + vid + '\',\'' + idProducto + '\')" style="width:auto;padding:6px 16px;font-size:10px;background:linear-gradient(135deg,#FFA500,#FF6347);">Guardar cambios</button>';
-        tableHtml += '<button class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:6px 16px;font-size:10px;">Cancelar</button></div>';
+        tableHtml += '<div style="display:flex;gap:8px;"><button type="button" class="admin-btn" onclick="guardarVarianteEditada(\'' + vid + '\',\'' + idProducto + '\')" style="width:auto;padding:6px 16px;font-size:10px;background:linear-gradient(135deg,#FFA500,#FF6347);">Guardar cambios</button>';
+        tableHtml += '<button type="button" class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:6px 16px;font-size:10px;">Cancelar</button></div>';
         tableHtml += '</td></tr>';
     });
 
@@ -2691,6 +2782,7 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
     var row = document.getElementById('var-expand-' + vid);
     if (!row) return;
     var data = {
+        __adminOriginalId: vid,
         'ID Variacion': row.querySelector('.ve-id').value,
         'ID Producto': idProducto,
         'Nombre del Producto': getInputValue('prod-nombre'),
@@ -2702,7 +2794,11 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
         Cantidad: Number(row.querySelector('.ve-stock').value || 0),
         'Stock Inicial': Number(row.querySelector('.ve-stock').value || 0),
         Descripcion: getInputValue('prod-descripcion'),
+        Tamano: row.querySelector('.ve-tamano')?.value || '',
+        Talla: row.querySelector('.ve-tamano')?.value || '',
+        'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
         Color: row.querySelector('.ve-color').value,
+        Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
         SKU: row.querySelector('.ve-sku').value,
         Imagen: row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
         'Imagen Principal': row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
@@ -2726,14 +2822,17 @@ window.guardarGrupoCompleto = async function (idProducto) {
     
     // 1. Mother product
     var motherData = buildProductPayload();
+    const originalVariationId = document.getElementById('product-form')?.dataset.originalVariationId || '';
+    if (isEditingProduct && originalVariationId) motherData.__adminOriginalId = originalVariationId;
     itemsToSave.push(motherData);
 
-    // 2. Save all visible expanded variants
-    var expandedRows = document.querySelectorAll('.var-edit-expanded[style*="table-row"]');
+    // 2. Save all variants in the group, including collapsed edit rows.
+    var expandedRows = document.querySelectorAll('.var-edit-expanded');
     for (var i = 0; i < expandedRows.length; i++) {
         var row = expandedRows[i];
         var vid = row.querySelector('.ve-id')?.value || '';
         var vdata = {
+            __adminOriginalId: row.getAttribute('id')?.replace('var-expand-', '') || vid,
             'ID Variacion': vid,
             'ID Producto': idProducto,
             'Nombre del Producto': getInputValue('prod-nombre'),
@@ -2745,7 +2844,11 @@ window.guardarGrupoCompleto = async function (idProducto) {
             Cantidad: Number(row.querySelector('.ve-stock')?.value || 0),
             'Stock Inicial': Number(row.querySelector('.ve-stock')?.value || 0),
             Descripcion: getInputValue('prod-descripcion'),
+            Tamano: row.querySelector('.ve-tamano')?.value || '',
+            Talla: row.querySelector('.ve-tamano')?.value || '',
+            'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
             Color: row.querySelector('.ve-color')?.value || '',
+            Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
             SKU: row.querySelector('.ve-sku')?.value || '',
             Imagen: row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
             'Imagen Principal': row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
@@ -2777,6 +2880,8 @@ function editarProducto(index) {
     var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '';
     var idProd = p.idProducto || p['ID Producto'] || '';
     var isVariant = idProd && idVar && idProd !== idVar;
+    var form = document.getElementById('product-form');
+    if (form) form.dataset.originalVariationId = idVar;
 
     setInputValue('prod-id', idVar);
     setMotherProductId(idProd);
@@ -2792,7 +2897,7 @@ function editarProducto(index) {
     setInputValue('prod-stock-inicial', p.Stock_Inicial || p['Stock Inicial'] || p.Stock || p.Cantidad || '');
     setInputValue('prod-descripcion', p.Descripcion || p['Caracteristicas del producto'] || '');
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
-    setInputValue('prod-estilo', p.Estilo || '');
+    setInputValue('prod-estilo', cleanProductStyleValue(p.Estilo || ''));
     
     var isPromo = String(p.Promocion || '').toUpperCase() === 'VERDADERO' || String(p.Promocion || '').toLowerCase() === 'true';
     var promoCheck = document.getElementById('prod-promocion');

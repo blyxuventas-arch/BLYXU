@@ -305,6 +305,7 @@ function batchSaveRows_(sheetName, itemsList) {
   const sheet = getSheet_(sheetName);
   const headers = getHeaders_(sheet);
   const primary = SHEETS[sheetName].primary;
+  const primaryHeader = resolveHeader_(headers, primary, sheetName);
   const now = new Date();
   
   const lastRow = sheet.getLastRow();
@@ -313,7 +314,7 @@ function batchSaveRows_(sheetName, itemsList) {
   const existingRowsMap = new Map();
   allValues.forEach((rowValues, idx) => {
     const rowObj = rowToObject_(headers, rowValues);
-    const primaryId = String(getObjectValueByHeader_(rowObj, primary, '')).trim();
+    const primaryId = String(getObjectValueByHeader_(rowObj, primaryHeader, '')).trim();
     if (primaryId) {
       existingRowsMap.set(primaryId, {
         rowIndex: idx + 2,
@@ -329,6 +330,9 @@ function batchSaveRows_(sheetName, itemsList) {
   try {
     itemsList.forEach(inputData => {
       const rowObject = normalizeDataForSheet_(sheetName, inputData);
+      const originalId = String(
+        (inputData && (inputData.__adminOriginalId || inputData.originalId || inputData.editId)) || ''
+      ).trim();
       
       if (sheetName === 'Productos') {
         rowObject['ID Variación'] = rowObject['ID Variación'] || rowObject['ID Variacion'] || makeId_('VAR');
@@ -337,13 +341,13 @@ function batchSaveRows_(sheetName, itemsList) {
         rowObject['Fecha de Creación'] = rowObject['Fecha de Creación'] || now;
       }
       
-      const primaryId = String(rowObject[primary] || getObjectValueByHeader_(rowObject, primary, '')).trim();
-      const existing = existingRowsMap.get(primaryId);
+      const primaryId = String(getObjectValueByHeader_(rowObject, primaryHeader, '') || getObjectValueByHeader_(rowObject, primary, '')).trim();
+      const existing = existingRowsMap.get(originalId || primaryId);
       
       if (existing) {
         headers.forEach(header => {
           const value = getObjectValueByHeader_(rowObject, header);
-          if (value !== undefined && value !== '') {
+          if (value !== undefined) {
             existing.data[header] = value;
           }
         });
@@ -425,7 +429,7 @@ function appendRow_(sheetName, inputData) {
 
       headers.forEach(header => {
         const value = getObjectValueByHeader_(rowObject, header);
-        if (value !== undefined && value !== '') {
+        if (value !== undefined) {
           current[header] = value;
         }
       });
@@ -446,7 +450,8 @@ function updateRow_(sheetName, id, inputData) {
   const sheet = getSheet_(sheetName);
   const headers = getHeaders_(sheet);
   const primary = SHEETS[sheetName].primary;
-  const rowIndex = findRowIndex_(sheet, primary, id);
+  const primaryHeader = resolveHeader_(headers, primary, sheetName);
+  const rowIndex = findRowIndex_(sheet, primaryHeader, id);
 
   if (!rowIndex) throw new Error('No se encontro registro con id: ' + id);
 
@@ -702,10 +707,20 @@ function normalizeDataForSheet_(sheetName, data) {
       value = JSON.stringify(value || []);
     }
 
+    if (sheetName === 'Productos' && header === 'Estilo') {
+      value = cleanProductStyleForSheet_(value);
+    }
+
     output[header] = value;
   });
 
   return output;
+}
+
+function cleanProductStyleForSheet_(value) {
+  const raw = String(value || '').trim();
+  const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
 }
 
 function findHeader_(headers, key, sheetName) {
@@ -775,10 +790,30 @@ function findHeader_(headers, key, sheetName) {
   return aliasKey ? sheetAliases[aliasKey] : null;
 }
 
+function resolveHeader_(headers, key, sheetName) {
+  const direct = findHeader_(headers, key, sheetName);
+  if (direct && headers.includes(direct)) return direct;
+
+  const candidates = [key];
+  const rawKey = String(key || '').toLowerCase();
+  if ((sheetName === 'Productos' || !sheetName) && (normalizeKey_(key).includes('idvariaci') || rawKey.includes('variaci'))) {
+    candidates.push('ID Variación', 'ID Variacion', 'ID');
+  }
+
+  for (let i = 0; i < candidates.length; i++) {
+    const normalized = normalizeKey_(candidates[i]);
+    const match = headers.find(header => normalizeKey_(header) === normalized);
+    if (match) return match;
+  }
+
+  return direct || key;
+}
+
 function findRowIndex_(sheet, keyHeader, value) {
   const headers = getHeaders_(sheet);
-  const normalizedTarget = normalizeKey_(keyHeader);
-  let col = headers.indexOf(keyHeader) + 1;
+  const resolvedHeader = resolveHeader_(headers, keyHeader, null);
+  const normalizedTarget = normalizeKey_(resolvedHeader || keyHeader);
+  let col = headers.indexOf(resolvedHeader) + 1;
 
   if (!col) {
     const idx = headers.findIndex(header => normalizeKey_(header) === normalizedTarget);

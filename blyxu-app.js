@@ -25,7 +25,7 @@ let bannerProducts = [];
 let productsLoadError = '';
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
-const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v1';
+const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const LEGACY_CART_KEY = 'blyxu_cart';
 const CART_STORAGE_KEYS = {
@@ -452,7 +452,7 @@ function normalizeGoogleProduct(product) {
         Galeria: galeria,
         Color: getProductField(product, ['Color', 'Color ', 'color'], ''),
         Tamano: getProductField(product, ['Tama\u00f1o', 'Tamano', 'Tamaño', 'tamano'], ''),
-        Estilo: getProductField(product, ['Estilo', 'estilo'], ''),
+        Estilo: cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
         Descripcion: getProductField(product, ['Caracter\u00edsticas del producto', 'Caracteristicas del producto', 'Características del producto', 'Caractreristicas del producto', 'Descripcion', 'descripcion'], ''),
         SKU: getProductField(product, ['SKU', 'sku'], ''),
         Estado: getProductField(product, ['Estado', 'estado'], 'Activo')
@@ -461,6 +461,12 @@ function normalizeGoogleProduct(product) {
 function isActiveProduct(product) {
     const estado = String(getProductField(product, ['Estado', 'estado'], 'Activo')).toLowerCase();
     return !estado || estado === 'activo' || estado === 'disponible';
+}
+
+function cleanProductStyleValue(value) {
+    const raw = String(value || '').trim();
+    const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
 }
 
 function normalizeSearchText(value) {
@@ -485,6 +491,15 @@ function productSearchBlob(product) {
     ].join(' '));
 }
 
+function getStemmedVariants(term) {
+    const variants = [term];
+    if (term.length > 3) {
+        if (term.endsWith('es')) variants.push(term.slice(0, -2));
+        if (term.endsWith('s')) variants.push(term.slice(0, -1));
+    }
+    return variants;
+}
+
 function scoreProductSearch(product, query) {
     const q = normalizeSearchText(query);
     if (!q) return 1;
@@ -495,14 +510,23 @@ function scoreProductSearch(product, query) {
     const sku = normalizeSearchText(product.SKU || product.idVariacion);
     const blob = productSearchBlob(product);
 
-    if (!terms.every(term => blob.includes(term))) return 0;
+    // Búsqueda inteligente: permite que "espejos" encuentre "espejo"
+    const allTermsMatch = terms.every(term => {
+        const variants = getStemmedVariants(term);
+        return variants.some(v => blob.includes(v));
+    });
+
+    if (!allTermsMatch) return 0;
 
     let score = 10;
     terms.forEach(term => {
-        if (name.startsWith(term)) score += 60;
-        else if (name.includes(term)) score += 35;
-        if (category.includes(term)) score += 20;
-        if (sku.includes(term)) score += 25;
+        const variants = getStemmedVariants(term);
+        variants.forEach(v => {
+            if (name.startsWith(v)) score += 60;
+            else if (name.includes(v)) score += 35;
+            if (category.includes(v)) score += 20;
+            if (sku.includes(v)) score += 25;
+        });
     });
 
     return score;
@@ -517,6 +541,42 @@ function applySmartProductSearch(products, query = activeSearchQuery) {
         .filter(item => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map(item => item.product);
+}
+
+function getProductGroupKey(product) {
+    return String(product?.idProducto || product?.['ID Producto'] || product?.idVariacion || product?.SKU || product?.Nombre || '').trim();
+}
+
+function isGeneralProductReference(product) {
+    const idProducto = String(product?.idProducto || product?.['ID Producto'] || '').trim();
+    const idVariacion = String(product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '').trim();
+    return !idProducto || !idVariacion || idProducto === idVariacion || /-v01$/i.test(idVariacion);
+}
+
+function collapseSearchResultsToGeneralReferences(results, sourceProducts) {
+    const sourceByGroup = new Map();
+    (sourceProducts || []).forEach(product => {
+        const key = getProductGroupKey(product);
+        if (!key) return;
+        if (!sourceByGroup.has(key)) sourceByGroup.set(key, []);
+        sourceByGroup.get(key).push(product);
+    });
+
+    const grouped = new Map();
+    results.forEach(product => {
+        const key = getProductGroupKey(product);
+        if (!key) return;
+        if (grouped.has(key)) return;
+
+        const groupProducts = sourceByGroup.get(key) || [product];
+        const representative =
+            groupProducts.find(isGeneralProductReference) ||
+            groupProducts[0] ||
+            product;
+        grouped.set(key, representative);
+    });
+
+    return Array.from(grouped.values());
 }
 
 function applyPromotionsToProducts() {
@@ -1240,13 +1300,22 @@ function getVariantSummary(product) {
         return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
     }
 
+    function isReferenceValue(value) {
+        const raw = String(value || '').trim();
+        const clean = normalizeSearchText(raw);
+        if (!raw) return false;
+        if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
+        return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+            .some(ref => ref && clean === normalizeSearchText(ref));
+    }
+
     const parts = [
         product.Estilo || product.estilo,
         product.Tamano || product.tamano || product.Talla,
         product.Color || product.color
     ]
         .map(value => String(value || '').trim())
-        .filter(value => value && !isCatalogOnlyValue(value));
+        .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value));
 
     return Array.from(new Set(parts)).join(' / ');
 }
@@ -1269,8 +1338,11 @@ function renderProducts(products, options = {}) {
         products.filter(p => isSameCategory(getProductCategory(p), filter));
     
     const searched = applySmartProductSearch(filteredByCategory, searchQuery);
+    const visibleResults = normalizeSearchText(searchQuery)
+        ? collapseSearchResultsToGeneralReferences(searched, filteredByCategory)
+        : searched;
 
-    const filtered = getShuffledProducts(searched);
+    const filtered = getShuffledProducts(visibleResults);
 
     if (!filtered.length) {
         grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
