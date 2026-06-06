@@ -548,6 +548,49 @@ function ensureProductHierarchyIds() {
     return { idProducto, idVariacion };
 }
 
+function getSubmittedStockValue(payload) {
+    const candidates = [
+        payload?.Stock,
+        payload?.stock,
+        payload?.Cantidad,
+        payload?.['Stock Inicial'],
+        payload?.Stock_Inicial
+    ];
+    const rawValue = candidates.find(value => value !== undefined && value !== null && String(value).trim() !== '');
+    if (rawValue === undefined) return null;
+    const stock = Number(rawValue);
+    return Number.isFinite(stock) ? stock : null;
+}
+
+function shouldAutoMarkAsOutOfStock(estado) {
+    const cleanEstado = String(estado || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    return !cleanEstado || cleanEstado === 'activo' || cleanEstado === 'disponible';
+}
+
+function applyAutomaticStockStatus(payload) {
+    const stock = getSubmittedStockValue(payload);
+    if (stock === 0 && shouldAutoMarkAsOutOfStock(payload.Estado)) {
+        payload.Estado = 'Agotado';
+    }
+    return payload;
+}
+
+function syncProductStatusWithStockInput() {
+    const stockInput = document.getElementById('prod-stock-inicial');
+    const estadoInput = document.getElementById('prod-estado');
+    if (!stockInput || !estadoInput) return;
+    if (String(stockInput.value || '').trim() === '') return;
+    const stock = Number(stockInput.value);
+    if (Number.isFinite(stock) && stock === 0 && shouldAutoMarkAsOutOfStock(estadoInput.value)) {
+        estadoInput.value = 'Agotado';
+        updateLivePreview();
+    }
+}
+
 function normalizeProductPayloadForSubmit(data) {
     const payload = { ...(data || {}) };
     delete payload.__adminForceCreate;
@@ -575,6 +618,7 @@ function normalizeProductPayloadForSubmit(data) {
     payload['CatÃ¡logo'] = catalogo;
     payload.catalogo = catalogo;
     if (cantidad !== '') payload.Stock = cantidad;
+    applyAutomaticStockStatus(payload);
 
     return payload;
 }
@@ -1115,6 +1159,15 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('change', updateLivePreview);
         }
     });
+    const stockInput = document.getElementById('prod-stock-inicial');
+    if (stockInput) {
+        stockInput.addEventListener('input', syncProductStatusWithStockInput);
+        stockInput.addEventListener('change', syncProductStatusWithStockInput);
+    }
+    const estadoInput = document.getElementById('prod-estado');
+    if (estadoInput) {
+        estadoInput.addEventListener('change', syncProductStatusWithStockInput);
+    }
     updateLivePreview(); // Actualización inicial
 
     document.getElementById('prod-id-producto')?.addEventListener('change', () => {
@@ -1246,23 +1299,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.disabled = false;
                 btn.textContent = 'Guardar / Enviar';
             }
-        }
-
-        if (stock === 0 && estado === 'Activo') {
-            showModal('Stock en Cero', 'El stock es 0. ¿Marcar como "Agotado"?', 'Sí, marcar Agotado',
-                function () {
-                    closeModal();
-                    data['Estado'] = 'Agotado';
-                    document.getElementById('prod-estado').value = 'Agotado';
-                    proceedSubmit(data);
-                },
-                function () {
-                    proceedSubmit(data);
-                }
-            );
-            btn.disabled = false;
-            btn.textContent = 'Guardar / Enviar';
-            return;
         }
 
         proceedSubmit(data);
@@ -2809,6 +2845,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Color</label><input class="form-control ve-color" value="' + (vColor !== '-' ? vColor : '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Stock</label><input type="number" class="form-control ve-stock" value="' + vStock + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio</label><input class="form-control ve-precio" value="' + (v.Precio || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio Mayor</label><input class="form-control ve-precio-mayorista" value="' + (v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '</div>';
@@ -2841,7 +2878,7 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
         Categoria: getInputValue('prod-categoria'),
         'Categoría': getInputValue('prod-categoria'),
         Precio: parseAmount(row.querySelector('.ve-precio').value || getInputValue('prod-precio')),
-        'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+        'Precio Mayor': parseAmount(row.querySelector('.ve-precio-mayorista')?.value || getInputValue('prod-precio-mayorista')),
         Cantidad: Number(row.querySelector('.ve-stock').value || 0),
         'Stock Inicial': Number(row.querySelector('.ve-stock').value || 0),
         Descripcion: getInputValue('prod-descripcion'),
@@ -2858,6 +2895,7 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
     };
     try {
         await postProductToGoogleSheets(data, true);
+        clearPublicProductsCache();
         showToast('Variante actualizada', 'success');
         cerrarVarianteEdicion(vid);
         setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
@@ -2891,7 +2929,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
             Categoria: getInputValue('prod-categoria'),
             'Categoría': getInputValue('prod-categoria'),
             Precio: parseAmount(row.querySelector('.ve-precio')?.value || getInputValue('prod-precio')),
-            'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
+            'Precio Mayor': parseAmount(row.querySelector('.ve-precio-mayorista')?.value || getInputValue('prod-precio-mayorista')),
             Cantidad: Number(row.querySelector('.ve-stock')?.value || 0),
             'Stock Inicial': Number(row.querySelector('.ve-stock')?.value || 0),
             Descripcion: getInputValue('prod-descripcion'),
@@ -2942,11 +2980,15 @@ function editarProducto(index) {
     document.getElementById('prod-precio').value = p.Precio || '';
     document.getElementById('prod-precio-mayorista').value = p.Precio_Mayorista || p.precio_mayorista || p.Mayorista || '';
     document.getElementById('prod-catalogo').value = p.Catalogo || p.catalogo || 'Ambos';
+    var stockVal = [p.Stock, p.Cantidad, ''].find(v => v !== undefined && String(v).trim() !== '');
+    if (stockVal === undefined) stockVal = '';
     var elStock = document.getElementById('prod-stock');
-    if (elStock) elStock.value = p.Stock || p.Cantidad || '';
+    if (elStock) elStock.value = stockVal;
     document.getElementById('prod-imagen').value = p.Imagen || '';
     document.getElementById('prod-color').value = p.Color || '';
-    setInputValue('prod-stock-inicial', p.Stock_Inicial || p['Stock Inicial'] || p.Stock || p.Cantidad || '');
+    var stockInicialVal = [p.Stock_Inicial, p['Stock Inicial'], p.Stock, p.Cantidad, ''].find(v => v !== undefined && String(v).trim() !== '');
+    if (stockInicialVal === undefined) stockInicialVal = '';
+    setInputValue('prod-stock-inicial', stockInicialVal);
     setInputValue('prod-descripcion', p.Descripcion || p['Caracteristicas del producto'] || '');
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
     setInputValue('prod-estilo', cleanProductStyleValue(p.Estilo || ''));

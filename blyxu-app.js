@@ -467,7 +467,7 @@ function normalizeGoogleProduct(product) {
 }
 function isActiveProduct(product) {
     const estado = String(getProductField(product, ['Estado', 'estado'], 'Activo')).toLowerCase();
-    return !estado || estado === 'activo' || estado === 'disponible';
+    return !estado || estado === 'activo' || estado === 'disponible' || estado === 'agotado';
 }
 
 function cleanProductStyleValue(value) {
