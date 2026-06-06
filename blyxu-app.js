@@ -43,6 +43,7 @@ let siteConfig = {};
 let configLoadPromise = null;
 let catalogRenderToken = 0;
 let catalogBatchState = null;
+const catalogBatchMemory = new Map();
 let activeSearchQuery = '';
 let activeWholesaleFilter = 'todos';
 let activeWholesaleSearchQuery = '';
@@ -275,8 +276,9 @@ function initNavbar() {
 }
 
 // -- SCROLL REVEAL --
-function initReveal() {
-    const revealItems = document.querySelectorAll('.reveal');
+function initReveal(scope = document) {
+    const root = scope && typeof scope.querySelectorAll === 'function' ? scope : document;
+    const revealItems = root.querySelectorAll('.reveal:not(.visible)');
     if (!('IntersectionObserver' in window)) {
         revealItems.forEach(el => el.classList.add('visible'));
         return;
@@ -584,6 +586,50 @@ function collapseSearchResultsToGeneralReferences(results, sourceProducts) {
     });
 
     return Array.from(grouped.values());
+}
+
+function getCatalogRepresentativeKey(product) {
+    const parentId = String(product?.idProducto || product?.['ID Producto'] || '').trim();
+    if (parentId) return `parent:${parentId}`;
+
+    const variationId = String(product?.idVariacion || product?.['ID Variacion'] || product?.['ID Variación'] || product?.SKU || '').trim();
+    if (variationId) return `variation:${variationId}`;
+
+    return [
+        'product',
+        normalizeSearchText(product?.Nombre || product?.Producto),
+        normalizeSearchText(product?.Categoria),
+        normalizeSearchText(product?.Imagen)
+    ].join(':');
+}
+
+function getCatalogRepresentativeScore(product, index, mode = activeCatalogMode) {
+    let score = 100000 - index;
+    if (getProductStock(product) > 0) score += 50000;
+    if (isGeneralProductReference(product)) score += 20000;
+    if (normalizeImageUrl(product?.Imagen || product?.imagen || '')) score += 5000;
+    if (getProductPrice(product, mode) > 0) score += 1000;
+    return score;
+}
+
+function collapseCatalogProductsToRepresentatives(products, mode = activeCatalogMode) {
+    const groups = new Map();
+
+    products.forEach((product, index) => {
+        const key = getCatalogRepresentativeKey(product);
+        if (!key) return;
+
+        const candidate = {
+            product,
+            score: getCatalogRepresentativeScore(product, index, mode)
+        };
+        const current = groups.get(key);
+        if (!current || candidate.score > current.score) {
+            groups.set(key, candidate);
+        }
+    });
+
+    return Array.from(groups.values()).map(item => item.product);
 }
 
 function applyPromotionsToProducts() {
@@ -1352,12 +1398,26 @@ function renderProducts(products, options = {}) {
         ? collapseSearchResultsToGeneralReferences(searched, filteredByCategory)
         : searched;
 
-    const filtered = getShuffledProducts(visibleResults);
+    const filtered = getShuffledProducts(collapseCatalogProductsToRepresentatives(visibleResults, mode));
 
     if (!filtered.length) {
         grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
         return;
     }
+
+    const renderKey = [
+        gridId,
+        mode,
+        normalizeSearchText(filter),
+        normalizeSearchText(searchQuery)
+    ].join('|');
+    const previousBatch = catalogBatchMemory.get(renderKey);
+    const initialBatchSize = Math.max(
+        CATALOG_BATCH_SIZE,
+        Math.min(previousBatch?.rendered || 0, filtered.length)
+    );
+    const shouldRestoreScroll = Boolean(previousBatch?.rendered && previousBatch.rendered > CATALOG_BATCH_SIZE);
+    const previousScrollY = window.scrollY;
 
     grid.innerHTML = '';
     let rendered = 0;
@@ -1401,12 +1461,12 @@ function renderProducts(products, options = {}) {
         </div>`;
     }
 
-    function renderNextBatch() {
+    function renderNextBatch(batchSize = CATALOG_BATCH_SIZE) {
         if (renderToken !== catalogRenderToken) return;
 
         grid.querySelector('.catalog-load-more-wrap')?.remove();
         const start = rendered;
-        const end = Math.min(start + CATALOG_BATCH_SIZE, filtered.length);
+        const end = Math.min(start + batchSize, filtered.length);
         const batch = filtered
             .slice(start, end)
             .map((product, index) => productCardTemplate(product, start + index))
@@ -1414,25 +1474,35 @@ function renderProducts(products, options = {}) {
 
         grid.insertAdjacentHTML('beforeend', batch);
         rendered = end;
-        initReveal();
+        catalogBatchMemory.set(renderKey, { rendered, total: filtered.length });
+        initReveal(grid);
 
         if (rendered < filtered.length) {
             grid.insertAdjacentHTML('beforeend', `
                 <div class="catalog-load-more-wrap">
                     <span class="catalog-load-status">Mostrando ${rendered} de ${filtered.length} productos</span>
-                    <button class="catalog-load-more btn-filter" type="button" onclick="loadMoreCatalogBatch()">Ver m&aacute;s</button>
+                    <button class="catalog-load-more btn-filter" type="button" onclick="loadMoreCatalogBatch(this)">Ver m&aacute;s</button>
                 </div>
             `);
         }
     }
 
-    catalogBatchState = { renderToken, renderNextBatch };
-    renderNextBatch();
+    catalogBatchState = { renderToken, renderKey, renderNextBatch };
+    renderNextBatch(initialBatchSize);
+    if (shouldRestoreScroll) {
+        requestAnimationFrame(() => window.scrollTo(0, previousScrollY));
+    }
 }
 
-function loadMoreCatalogBatch() {
+function loadMoreCatalogBatch(trigger) {
     if (catalogBatchState) {
+        const previousScrollY = window.scrollY;
+        if (trigger) {
+            trigger.disabled = true;
+            trigger.setAttribute('aria-busy', 'true');
+        }
         catalogBatchState.renderNextBatch();
+        requestAnimationFrame(() => window.scrollTo(0, previousScrollY));
     }
 }
 

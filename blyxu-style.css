@@ -1016,6 +1016,7 @@ body {
     align-items: center;
     gap: 12px;
     padding: 24px 0 8px;
+    min-height: 104px;
 }
 
 .catalog-load-status {
@@ -1025,7 +1026,13 @@ body {
 
 .catalog-load-more {
     min-width: 160px;
+    min-height: 46px;
     background: rgba(255, 255, 255, .04);
+}
+
+.catalog-load-more:disabled {
+    opacity: .55;
+    cursor: wait;
 }
 
 /* ===== PRODUCT GRID ===== */
@@ -4260,6 +4267,14 @@ textarea {
     .product-card-desc,
     .product-card-variant {
         overflow-wrap: anywhere;
+    }
+
+    .catalog-load-more-wrap {
+        padding-inline: 4%;
+    }
+
+    .catalog-load-more {
+        width: min(100%, 280px);
     }
 
     .image-marquee-section {
