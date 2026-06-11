@@ -16,6 +16,9 @@ const CONTACT_CONFIG_FIELDS = [
     ['Contacto_Titulo_Atencion', 'contact-config-service-title'],
     ['Contacto_Detalle_Atencion', 'contact-config-service-detail']
 ];
+const WHATSAPP_CONFIG_FIELDS = [
+    ['WhatsApp_Comercial', 'whatsapp-config-commerce']
+];
 const INVOICE_CONFIG_FIELDS = [
     ['Factura_Logo', 'inv-config-logo'],
     ['Factura_Empresa', 'inv-config-empresa'],
@@ -37,6 +40,7 @@ let inventoryRenderToken = 0;
 let inventoryLoadMoreObserver = null;
 let filteredInventario = [];
 let adminInventorySearchQuery = '';
+let adminInventoryCategoryFilter = 'todos';
 let isEditingProduct = false;
 let inventoryFetchToken = 0;
 
@@ -409,6 +413,7 @@ async function saveProductListToGoogleSheets(itemsList, options = {}) {
 
 function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
+    const categoryFilter = normalizeSearchText(adminInventoryCategoryFilter);
     const indexed = inventario.map((product, index) => ({ product, index }));
 
     function getMid(p) {
@@ -444,6 +449,14 @@ function getFilteredInventory() {
     let groupEntries = Array.from(grouped.entries()).map(function (entry, groupOrder) {
         return { motherId: entry[0], items: entry[1], score: 1, groupOrder: groupOrder };
     });
+
+    if (categoryFilter && categoryFilter !== 'todos') {
+        groupEntries = groupEntries.filter(function (entry) {
+            return entry.items.some(function (item) {
+                return normalizeSearchText(item.product.Categoria) === categoryFilter;
+            });
+        });
+    }
 
     if (query) {
         var scoresByMother = new Map();
@@ -855,6 +868,7 @@ function resetProductForm() {
 function updateCategoryOptions() {
     const list = el('admin-category-options');
     const select = el('prod-categoria');
+    const inventorySelect = el('admin-inventory-category-filter');
 
     const defaults = ['Collares', 'Pulseras', 'Aretes', 'Anillos', 'Sets', 'Dijes', 'BANNER'];
     const categories = [...new Set([
@@ -869,6 +883,14 @@ function updateCategoryOptions() {
         const current = select.value;
         select.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
         if (current && categories.includes(current)) select.value = current;
+    }
+    if (inventorySelect) {
+        const current = inventorySelect.value || 'todos';
+        const inventoryCategories = categories.filter(category => normalizeSearchText(category) !== 'banner');
+        inventorySelect.innerHTML = '<option value="todos">Todas las categor&iacute;as</option>'
+            + inventoryCategories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
+        inventorySelect.value = inventoryCategories.includes(current) ? current : 'todos';
+        adminInventoryCategoryFilter = inventorySelect.value;
     }
 }
 
@@ -1061,11 +1083,105 @@ function initAdminParticles() {
     draw();
 }
 
+function initSettingsTabs() {
+    const panel = document.querySelector('#view-settings > .admin-panel');
+    if (!panel || panel.querySelector('.settings-tabs')) return;
+
+    const definitions = [
+        { id: 'retail', label: 'Precios', title: 'Precios Minoristas', source: document.getElementById('toggle-retail-prices')?.closest('div') },
+        { id: 'contact', label: 'Contacto', title: 'Informacion de Contacto', formId: 'contact-config-form' },
+        { id: 'whatsapp', label: 'WhatsApp', title: 'WhatsApp Comercial', formId: 'whatsapp-config-form' },
+        { id: 'invoice', label: 'Factura', title: 'Configuracion de Factura y Remision', formId: 'invoice-config-form' },
+        { id: 'promo', label: 'Promo', title: 'Banner Promocional Flotante', formId: 'promo-config-form' },
+        { id: 'payments', label: 'Pagos', title: 'Gestion de Metodos de Pago y QRs', formId: 'qr-config-form' },
+        { id: 'carousel', label: 'Carrusel', title: 'Carrusel de Inicio', formId: 'carousel-image-form' }
+    ];
+
+    const tabs = document.createElement('div');
+    tabs.className = 'settings-tabs';
+    tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', 'Secciones de configuracion del sitio');
+
+    const content = document.createElement('div');
+    content.className = 'settings-tab-content';
+
+    panel.insertBefore(tabs, panel.firstElementChild);
+    panel.insertBefore(content, tabs.nextSibling);
+
+    const sections = [];
+
+    definitions.forEach(def => {
+        const source = def.source || document.getElementById(def.formId);
+        if (!source) return;
+
+        const section = document.createElement('section');
+        section.className = 'settings-tab-panel';
+        section.id = `settings-tab-${def.id}`;
+        section.dataset.settingsTab = def.id;
+        section.setAttribute('role', 'tabpanel');
+
+        if (def.id === 'retail') {
+            source.classList.add('settings-retail-card');
+        } else {
+            const heading = source.previousElementSibling?.tagName === 'H3'
+                ? source.previousElementSibling
+                : null;
+            section.appendChild(heading || Object.assign(document.createElement('h3'), { textContent: def.title }));
+        }
+
+        section.appendChild(source);
+        content.appendChild(section);
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'settings-tab-btn';
+        button.dataset.settingsTabTarget = def.id;
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-controls', section.id);
+        button.textContent = def.label;
+        tabs.appendChild(button);
+
+        sections.push({ id: def.id, button, section });
+    });
+
+    if (!sections.length) return;
+
+    function activateSettingsTab(tabId) {
+        const nextTab = sections.some(item => item.id === tabId) ? tabId : sections[0].id;
+        sections.forEach(item => {
+            const active = item.id === nextTab;
+            item.button.classList.toggle('active', active);
+            item.button.setAttribute('aria-selected', active ? 'true' : 'false');
+            item.section.classList.toggle('active', active);
+            item.section.hidden = !active;
+        });
+        try {
+            localStorage.setItem('blyxu_admin_settings_tab', nextTab);
+        } catch (error) {
+            console.warn('No se pudo guardar la pestana activa:', error);
+        }
+    }
+
+    sections.forEach(item => {
+        item.button.addEventListener('click', () => activateSettingsTab(item.id));
+    });
+
+    let savedTab = '';
+    try {
+        savedTab = localStorage.getItem('blyxu_admin_settings_tab') || '';
+    } catch (error) {
+        savedTab = '';
+    }
+    activateSettingsTab(savedTab || sections[0].id);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // initAdminParticles(); // Desactivado para optimizar carga
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
+    initSettingsTabs();
     initRetailPriceToggle();
     initContactConfigAdmin();
+    initWhatsAppConfigAdmin();
     initInvoiceConfigAdmin();
     initPromoConfigAdmin();
     initQRConfigAdmin();
@@ -1605,7 +1721,9 @@ async function saveSiteConfig(key, value) {
 function fillContactConfigForm(config) {
     CONTACT_CONFIG_FIELDS.forEach(([key, id]) => {
         const input = document.getElementById(id);
-        if (input) input.value = config?.[key] || '';
+        if (input) input.value = key === 'Contacto_WhatsApp'
+            ? (config?.[key] || config?.WhatsApp_Comercial || '')
+            : (config?.[key] || '');
     });
 }
 
@@ -1629,6 +1747,14 @@ function initContactConfigAdmin() {
                 const value = document.getElementById(id)?.value?.trim() || '';
                 return saveSiteConfig(key, value);
             }));
+            const contactWhatsAppInput = document.getElementById('contact-config-whatsapp');
+            const contactWhatsApp = normalizeWhatsAppPhone(contactWhatsAppInput?.value || '');
+            if (contactWhatsApp) {
+                if (contactWhatsAppInput) contactWhatsAppInput.value = contactWhatsApp;
+                await saveSiteConfig('WhatsApp_Comercial', contactWhatsApp);
+                const commerceInput = document.getElementById('whatsapp-config-commerce');
+                if (commerceInput) commerceInput.value = contactWhatsApp;
+            }
             showToast('Contacto actualizado');
         } catch (err) {
             console.error('No se pudo guardar contacto:', err);
@@ -1637,6 +1763,63 @@ function initContactConfigAdmin() {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText || 'Guardar Contacto';
+            }
+        }
+    });
+}
+
+function normalizeWhatsAppPhone(value) {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function fillWhatsAppConfigForm(config) {
+    WHATSAPP_CONFIG_FIELDS.forEach(([key, id]) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.value = config?.[key] || config?.Contacto_WhatsApp || '';
+    });
+}
+
+function initWhatsAppConfigAdmin() {
+    const form = document.getElementById('whatsapp-config-form');
+    if (!form) return;
+
+    loadSiteConfigForAdmin().then(fillWhatsAppConfigForm);
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-whatsapp-config');
+        const originalText = btn ? btn.textContent : '';
+        const phoneInput = document.getElementById('whatsapp-config-commerce');
+        const phone = normalizeWhatsAppPhone(phoneInput?.value || '');
+
+        if (!phone) {
+            showToast('Ingresa un numero de WhatsApp valido');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            if (phoneInput) phoneInput.value = phone;
+            await Promise.all([
+                saveSiteConfig('WhatsApp_Comercial', phone),
+                saveSiteConfig('Contacto_WhatsApp', phone)
+            ]);
+
+            const contactInput = document.getElementById('contact-config-whatsapp');
+            if (contactInput) contactInput.value = phone;
+            showToast('WhatsApp comercial actualizado');
+        } catch (err) {
+            console.error('No se pudo guardar WhatsApp:', err);
+            showToast('No se pudo guardar WhatsApp');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText || 'Guardar WhatsApp';
             }
         }
     });
@@ -2321,16 +2504,26 @@ function initCarouselImageAdmin() {
 
 function initInventorySearch() {
     const input = document.getElementById('admin-inventory-search');
-    if (!input) return;
+    const categorySelect = document.getElementById('admin-inventory-category-filter');
 
     let searchTimer = null;
-    input.addEventListener('input', () => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-            adminInventorySearchQuery = input.value;
+    if (input) {
+        input.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                adminInventorySearchQuery = input.value;
+                renderInventoryInBatches();
+            }, 180);
+        });
+    }
+
+    if (categorySelect) {
+        adminInventoryCategoryFilter = categorySelect.value || 'todos';
+        categorySelect.addEventListener('change', () => {
+            adminInventoryCategoryFilter = categorySelect.value || 'todos';
             renderInventoryInBatches();
-        }, 180);
-    });
+        });
+    }
 }
 
 function initInventoryActions() {
@@ -2510,7 +2703,8 @@ function renderInventoryInBatches() {
     }
 
     if (!filteredInventario.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No se encontraron productos${adminInventorySearchQuery ? ' para tu busqueda' : ''}.</td></tr>`;
+        const hasFilters = adminInventorySearchQuery || (adminInventoryCategoryFilter && adminInventoryCategoryFilter !== 'todos');
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;">No se encontraron productos${hasFilters ? ' para los filtros aplicados' : ''}.</td></tr>`;
         return;
     }
 

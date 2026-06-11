@@ -707,6 +707,8 @@ async function loadProducts(options = {}) {
                     renderInventorySpotlight();
                     renderCatalogProducts();
                 }
+                renderFloatingWhatsApp();
+                renderPromoWidget();
             });
         }
         return allProducts;
@@ -1009,6 +1011,12 @@ function getSiteConfigValue(key, fallback = '') {
     return value === undefined || value === null || value === '' ? fallback : String(value);
 }
 
+function getCommerceWhatsAppPhone() {
+    return String(
+        getSiteConfigValue('WhatsApp_Comercial', getSiteConfigValue('Contacto_WhatsApp', BLYXU_WHATSAPP_PHONE))
+    ).replace(/\D/g, '');
+}
+
 function setTextById(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
@@ -1073,7 +1081,7 @@ function initContactRequestForm(whatsapp) {
         const email = document.getElementById('contact-request-email')?.value.trim() || '';
         const topic = document.getElementById('contact-request-topic')?.value || 'Solicitud concierge';
         const message = document.getElementById('contact-request-message')?.value.trim() || '';
-        const phone = String(whatsapp || BLYXU_WHATSAPP_PHONE).replace(/\D/g, '');
+        const phone = String(whatsapp || getCommerceWhatsAppPhone()).replace(/\D/g, '');
 
         const text = [
             '*Solicitud Concierge BLYXU*',
@@ -1098,7 +1106,7 @@ function renderContactPage() {
     const note = getSiteConfigValue('Contacto_Nota', 'Coordina tu visita, consulta disponibilidad de piezas y recibe atencion directa para tus pedidos BLYXU.');
     const serviceTitle = getSiteConfigValue('Contacto_Titulo_Atencion', 'Pedidos privados');
     const serviceDetail = getSiteConfigValue('Contacto_Detalle_Atencion', 'Escribenos para coordinar compras, confirmar disponibilidad y programar atencion en boutique.');
-    const whatsapp = getSiteConfigValue('Contacto_WhatsApp', BLYXU_WHATSAPP_PHONE);
+    const whatsapp = getCommerceWhatsAppPhone();
     const instagram = getSiteConfigValue('Contacto_Instagram', '');
     const email = getSiteConfigValue('Contacto_Email', '');
     const mapUrl = getSiteConfigValue('Contacto_Mapa_URL', BLYXU_DEFAULT_MAP_URL);
@@ -2074,11 +2082,12 @@ function showBrandLoader() {
 }
 
 function openWhatsAppMessage(message) {
-    window.open(`https://wa.me/${BLYXU_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`, '_blank');
+    const phone = getCommerceWhatsAppPhone();
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
 }
 
 function renderFloatingWhatsApp() {
-    const phone = String(getSiteConfigValue('Contacto_WhatsApp', BLYXU_WHATSAPP_PHONE)).replace(/\D/g, '');
+    const phone = getCommerceWhatsAppPhone();
     if (!phone) return;
 
     let button = document.getElementById('floating-whatsapp');

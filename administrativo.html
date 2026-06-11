@@ -234,6 +234,7 @@
         }
         #product-form,
         #contact-config-form,
+        #whatsapp-config-form,
         #carousel-image-form {
             position:relative;
             z-index:1;
@@ -299,6 +300,7 @@
         #variation-options-panel { display:none!important; }
         #btn-save,
         #btn-save-contact-config,
+        #btn-save-whatsapp-config,
         #btn-save-carousel {
             background:linear-gradient(135deg,#a855f7,#7c3aed)!important;
             box-shadow:0 14px 30px rgba(168,85,247,0.2)!important;
@@ -401,6 +403,12 @@
             border-radius:18px;
             background:rgba(0,0,0,0.12);
         }
+        #whatsapp-config-form {
+            padding:22px!important;
+            border:1px solid rgba(255,255,255,0.055)!important;
+            border-radius:18px;
+            background:rgba(0,0,0,0.12);
+        }
         #carousel-image-form {
             padding:22px;
             border:1px solid rgba(255,255,255,0.055);
@@ -435,6 +443,7 @@
             .settings-tabs { gap:8px; padding:6px; }
             .settings-tab-btn { flex:1 1 calc(50% - 8px); justify-content:center; min-width:140px; }
             #contact-config-form,
+            #whatsapp-config-form,
             #carousel-image-form { padding:16px!important; }
             .modal-box { width:calc(100vw - 28px); padding:22px; }
         }
@@ -1069,6 +1078,17 @@
                                 </div>
                             </div>
                             <button type="submit" class="admin-btn" id="btn-save-contact-config">Guardar Contacto</button>
+                        </form>
+
+                        <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">WhatsApp Comercial</h3>
+                        <form id="whatsapp-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <div class="admin-form-grid">
+                                <div class="form-group admin-form-wide">
+                                    <label>Numero para pedidos, precios y burbuja flotante</label>
+                                    <input type="tel" class="form-control" id="whatsapp-config-commerce" placeholder="Ej: 573112368622">
+                                </div>
+                            </div>
+                            <button type="submit" class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button>
                         </form>
 
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Configuración de Factura y Remisión</h3>
