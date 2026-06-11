@@ -119,6 +119,12 @@
         .preview-card:hover .preview-btn { background:rgba(255,255,255,0.06); color:var(--text-muted); }
 
         /* INVENTORY */
+        .inventory-filter-row { padding:32px 32px 0; display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; }
+        .inventory-filter-row #admin-inventory-search { order:1; flex:1 1 520px; min-width:260px; }
+        .inventory-category-filter { order:2; flex:0 0 280px; display:flex; flex-direction:column; gap:6px; margin:0; }
+        .inventory-category-filter span { color:rgba(216,180,254,0.72); font-size:9.5px; font-weight:800; letter-spacing:.7px; text-transform:uppercase; }
+        .inventory-category-filter select { cursor:pointer; appearance:none; background-image:linear-gradient(45deg,transparent 50%,rgba(244,196,65,.9) 50%),linear-gradient(135deg,rgba(244,196,65,.9) 50%,transparent 50%); background-position:calc(100% - 18px) 18px,calc(100% - 12px) 18px; background-size:6px 6px,6px 6px; background-repeat:no-repeat; padding-right:34px; }
+        .inventory-category-filter select option { background:#10091f; color:#fff; }
         .table-wrapper { border-radius:12px; overflow:hidden; border:1px solid rgba(168,85,247,0.04); }
         .inventory-tree { width:100%; border-collapse:separate; border-spacing:0; }
         .inventory-tree thead { position:sticky; top:0; z-index:5; }
@@ -306,13 +312,83 @@
             background:radial-gradient(circle at 50% 36%,rgba(244,196,65,0.12),transparent 34%),linear-gradient(135deg,#12081f,#07030f);
         }
         #view-settings > .admin-panel {
-            max-width:920px!important;
+            max-width:1120px!important;
             padding:28px!important;
         }
-        #view-settings > .admin-panel > div:first-child {
+        #view-settings > .admin-panel .settings-retail-card {
             border-radius:18px!important;
             border-color:rgba(244,196,65,0.14)!important;
             background:linear-gradient(135deg,rgba(244,196,65,0.08),rgba(168,85,247,0.06))!important;
+        }
+        .settings-tabs {
+            position:relative;
+            z-index:1;
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+            margin:0 0 24px;
+            padding:8px;
+            border:1px solid rgba(255,255,255,0.055);
+            border-radius:18px;
+            background:rgba(0,0,0,0.14);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.025);
+        }
+        .settings-tab-btn {
+            width:auto;
+            min-height:42px;
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            padding:10px 14px;
+            border:1px solid transparent;
+            border-radius:12px;
+            background:transparent;
+            color:rgba(255,255,255,0.62);
+            font:inherit;
+            font-size:12px;
+            font-weight:800;
+            cursor:pointer;
+            transition:transform .22s ease, background .22s ease, border-color .22s ease, color .22s ease, box-shadow .22s ease;
+        }
+        .settings-tab-btn:hover,
+        .settings-tab-btn.active {
+            transform:translateY(-1px);
+            color:#fff;
+            border-color:rgba(244,196,65,0.26);
+            background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(244,196,65,0.08));
+            box-shadow:0 12px 26px rgba(0,0,0,0.22);
+        }
+        .settings-tab-content {
+            position:relative;
+            z-index:1;
+        }
+        .settings-tab-panel {
+            display:none;
+            animation:settingsTabIn .22s ease both;
+        }
+        .settings-tab-panel.active {
+            display:block;
+        }
+        .settings-tab-panel > h3 {
+            margin:0 0 18px!important;
+            font-size:18px!important;
+            font-weight:800!important;
+            color:#fff!important;
+        }
+        .settings-tab-panel form,
+        .settings-tab-panel .settings-retail-card {
+            margin:0!important;
+            padding:22px!important;
+            border:1px solid rgba(255,255,255,0.055)!important;
+            border-radius:18px;
+            background:rgba(0,0,0,0.12);
+        }
+        .settings-tab-panel form {
+            border-bottom:1px solid rgba(255,255,255,0.055)!important;
+        }
+        @keyframes settingsTabIn {
+            from { opacity:0; transform:translateY(8px); }
+            to { opacity:1; transform:translateY(0); }
         }
         #toggle-retail-prices {
             color:#100718!important;
@@ -356,6 +432,8 @@
             .admin-form-grid { grid-template-columns:1fr; }
             .admin-title-row { flex-direction:column; align-items:flex-start; }
             #view-settings > .admin-panel { padding:18px!important; }
+            .settings-tabs { gap:8px; padding:6px; }
+            .settings-tab-btn { flex:1 1 calc(50% - 8px); justify-content:center; min-width:140px; }
             #contact-config-form,
             #carousel-image-form { padding:16px!important; }
             .modal-box { width:calc(100vw - 28px); padding:22px; }
@@ -638,8 +716,14 @@
 
                 <!-- VISTA 2: INVENTARIO -->
                 <div id="view-inventory" class="dashboard-section">
-                    <div class="admin-panel gradient-bg" style="padding:0; overflow:hidden;">
-                        <div style="padding:32px 32px 0;">
+                    <div class="admin-panel gradient-bg" style="padding:0; overflow:visible;">
+                        <div class="inventory-filter-row">
+                            <label class="inventory-category-filter" for="admin-inventory-category-filter">
+                                <span>Categor&iacute;a</span>
+                                <select class="form-control" id="admin-inventory-category-filter" aria-label="Filtrar inventario por categor&iacute;a">
+                                    <option value="todos">Todas las categor&iacute;as</option>
+                                </select>
+                            </label>
                             <input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoría, SKU o ID..." autocomplete="off">
                         </div>
                         <div class="table-wrapper" style="padding: 24px 32px;">
@@ -1133,6 +1217,6 @@
     
 
 
-    <script src="admin-app.js?v=stock-auto-catalog-fix-20260606"></script>
+    <script src="admin-app.js?v=settings-tabs-20260610"></script>
 </body>
 </html>
