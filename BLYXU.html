@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BLYXU™ — Joyería & Accesorios Premium</title>
     <meta name="description" content="BLYXU - Tu destino para joyería y accesorios premium. Colecciones exclusivas en tonos púrpura y oro.">
-    <link rel="stylesheet" href="blyxu-style.css?v=catalog-load-more-fix-20260606">
+    <link rel="stylesheet" href="blyxu-style.css?v=catalog-filters-20260610">
 </head>
 <body>
 
@@ -150,17 +150,18 @@
                     <input type="search" id="catalog-search" placeholder="Buscar producto, categoria, color o SKU" autocomplete="off">
                 </div>
             </div>
-            <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                <div class="section-tags">
-                    <span data-cat="todos" class="active" onclick="setFilter('todos')">Todos</span>
-                    <span data-cat="collares" onclick="setFilter('collares')">Collares</span>
-                    <span data-cat="pulseras" onclick="setFilter('pulseras')">Pulseras</span>
-                    <span data-cat="aretes" onclick="setFilter('aretes')">Aretes</span>
-                    <span data-cat="anillos" onclick="setFilter('anillos')">Anillos</span>
-                </div>
-                <button class="btn-filter" onclick="setFilter('todos')">
+            <div class="catalog-filter-bar" style="justify-content:flex-end;">
+                <label class="category-select-wrap" for="catalog-category-select">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                    </svg>
+                    <select id="catalog-category-select" aria-label="Filtrar por categor&iacute;a">
+                        <option value="todos">Todas las categor&iacute;as</option>
+                    </select>
+                </label>
+                <button class="btn-filter" type="button" onclick="setFilter('todos')">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:6px;"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                    FILTROS
+                    LIMPIAR
                 </button>
             </div>
         </div>
@@ -196,10 +197,10 @@
         <div>
             <h4>Categorías</h4>
             <ul>
-                <li><a href="#" onclick="setFilter('collares')">Collares</a></li>
-                <li><a href="#" onclick="setFilter('pulseras')">Pulseras</a></li>
-                <li><a href="#" onclick="setFilter('aretes')">Aretes</a></li>
-                <li><a href="#" onclick="setFilter('anillos')">Anillos</a></li>
+                <li><a href="#coleccion" onclick="setFilter('collares'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Collares</a></li>
+                <li><a href="#coleccion" onclick="setFilter('pulseras'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Pulseras</a></li>
+                <li><a href="#coleccion" onclick="setFilter('aretes'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Aretes</a></li>
+                <li><a href="#coleccion" onclick="setFilter('anillos'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Anillos</a></li>
             </ul>
         </div>
         <div>
@@ -261,6 +262,6 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=catalog-load-more-fix-20260606"></script>
+    <script src="blyxu-app.js?v=catalog-filters-20260610"></script>
 </body>
 </html>

@@ -298,9 +298,18 @@ function formatMoney(n) {
 
 function getProductField(product, fields, fallback = '') {
     const names = Array.isArray(fields) ? fields : [fields];
+    if (!product || typeof product !== 'object') return fallback;
+
+    const keyMap = new Map();
+    Object.keys(product).forEach(key => {
+        const normalizedKey = normalizeSearchText(key).replace(/\s+/g, '');
+        if (!keyMap.has(normalizedKey)) keyMap.set(normalizedKey, key);
+    });
+
     for (const name of names) {
-        if (product && product[name] !== undefined && product[name] !== null && product[name] !== '') {
-            return product[name];
+        const actualKey = keyMap.get(normalizeSearchText(name).replace(/\s+/g, ''));
+        if (actualKey && product[actualKey] !== undefined && product[actualKey] !== null && product[actualKey] !== '') {
+            return product[actualKey];
         }
     }
     return fallback;
@@ -1274,8 +1283,9 @@ function isSameCategory(a, b) {
 }
 
 function getCatalogCategories(products) {
+    const sourceProducts = Array.isArray(products) && products.length ? products : allProducts;
     const categoryMap = new Map();
-    products.forEach(product => {
+    sourceProducts.forEach(product => {
         const category = getProductCategory(product);
         if (!category || isSameCategory(category, 'BANNER')) return;
         const key = normalizeSearchText(category);
@@ -1294,7 +1304,8 @@ function renderCategoryFilters(products, options = {}) {
     const select = document.getElementById(selectId);
     if (!select) return;
 
-    const categories = getCatalogCategories(products);
+    const categorySource = Array.isArray(allProducts) && allProducts.length ? allProducts : products;
+    const categories = getCatalogCategories(categorySource);
     const activeCategory = currentFilter === 'todos' ? '' : categories.find(cat => isSameCategory(cat, currentFilter));
     const normalizedFilter = currentFilter !== 'todos' && !activeCategory ? 'todos' : currentFilter;
 
@@ -1306,6 +1317,14 @@ function renderCategoryFilters(products, options = {}) {
         select.value = normalizedFilter === 'todos' ? 'todos' : (activeCategory || 'todos');
         select.onchange = () => onChange(select.value);
     }
+}
+
+function syncActiveCategoryControls(filterValue) {
+    const normalizedFilter = normalizeSearchText(filterValue || 'todos');
+    document.querySelectorAll('[data-cat]').forEach(control => {
+        const controlValue = normalizeSearchText(control.getAttribute('data-cat') || 'todos');
+        control.classList.toggle('active', controlValue === normalizedFilter);
+    });
 }
 
 function renderCatalogProducts() {
@@ -1401,7 +1420,8 @@ function renderProducts(products, options = {}) {
     const filtered = getShuffledProducts(collapseCatalogProductsToRepresentatives(visibleResults, mode));
 
     if (!filtered.length) {
-        grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : ''}</div>`;
+        const categoryLabel = filter !== 'todos' ? ` en la categor\u00eda ${escapeHtml(filter)}` : '';
+        grid.innerHTML = `<div class="cart-empty" style="grid-column:1/-1;">No se encontraron productos${searchQuery ? ' para tu b\u00fasqueda' : categoryLabel}</div>`;
         return;
     }
 
@@ -1854,6 +1874,7 @@ function initHeroCarousel(initialIndex = 0, products = null) {
 // -- FILTERS --
 function setFilter(cat) {
     activeFilter = cat || 'todos';
+    syncActiveCategoryControls(activeFilter);
     const select = document.getElementById('catalog-category-select');
     if (select) {
         const option = Array.from(select.options).find(opt => activeFilter === 'todos' ? opt.value === 'todos' : isSameCategory(opt.value, activeFilter));
@@ -1864,6 +1885,7 @@ function setFilter(cat) {
 
 function setWholesaleFilter(cat) {
     activeWholesaleFilter = cat || 'todos';
+    syncActiveCategoryControls(activeWholesaleFilter);
     const select = document.getElementById('wholesale-category-select');
     if (select) {
         const option = Array.from(select.options).find(opt => activeWholesaleFilter === 'todos' ? opt.value === 'todos' : isSameCategory(opt.value, activeWholesaleFilter));

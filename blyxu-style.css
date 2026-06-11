@@ -991,22 +991,41 @@ body {
 }
 
 .btn-filter {
+    position: relative;
+    overflow: hidden;
     padding: 10px 20px;
     border: 1px solid rgba(255, 255, 255, .15);
     border-radius: 8px;
-    background: transparent;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(155, 44, 250, .06));
     color: #fff;
     font-size: 12px;
     letter-spacing: 1px;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all .3s;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease, color .25s ease;
     font-family: inherit;
 }
 
+.btn-filter::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, .14) 50%, transparent 80%);
+    transform: translateX(-120%);
+    transition: transform .45s ease;
+    pointer-events: none;
+}
+
 .btn-filter:hover {
-    background: var(--surface-2);
-    border-color: var(--glass-border);
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(246, 200, 76, .45);
+    box-shadow: 0 14px 28px rgba(155, 44, 250, .18);
+}
+
+.btn-filter:hover::before {
+    transform: translateX(120%);
 }
 
 .catalog-load-more-wrap {
@@ -3996,43 +4015,110 @@ body.dark-mode {
 
 /* ===== CATALOG FILTER FIXES ===== */
 .category-select-wrap {
-    display: flex;
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
+    min-height: 48px;
     padding: 10px 20px;
     border-radius: 14px;
-    transition: all 0.3s;
-    backdrop-filter: blur(10px);
+    border: 1px solid rgba(155, 44, 250, 0.38);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(155, 44, 250, 0.05));
+    color: #fff;
+    transition: transform .25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow .25s ease, border-color .25s ease, background .25s ease;
+    backdrop-filter: blur(14px) saturate(120%);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.category-select-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: inherit;
+    background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.14) 50%, transparent 80%);
+    transform: translateX(-125%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .45s ease, opacity .25s ease;
+}
+
+.category-select-wrap:hover,
+.category-select-wrap:focus-within {
+    transform: translateY(-2px) scale(1.01);
+    border-color: rgba(246, 200, 76, 0.62);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(155, 44, 250, 0.09));
+    box-shadow: 0 16px 34px rgba(155, 44, 250, 0.24);
+}
+
+.category-select-wrap:hover::before,
+.category-select-wrap:focus-within::before {
+    opacity: 1;
+    transform: translateX(125%);
 }
 
 .category-select-wrap:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--secondary);
-    box-shadow: 0 0 20px rgba(155, 44, 250, 0.2);
+    border-color: rgba(246, 200, 76, 0.62);
 }
 
 .category-select-wrap select {
+    width: 100%;
+    min-width: 0;
     background: transparent;
-    border: none;
-    color: #fff;
+    border: 0;
+    color: inherit;
     font-family: inherit;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: .8px;
     cursor: pointer;
     outline: none;
-    padding-right: 10px;
+    padding-right: 12px;
     appearance: none; /* Remove default arrow */
+    transition: letter-spacing .25s ease, color .25s ease;
+}
+
+.category-select-wrap:hover select,
+.category-select-wrap:focus-within select {
+    letter-spacing: 1px;
 }
 
 /* Fix for the dropdown options background in some browsers */
 .category-select-wrap select option {
-    background: var(--bg-card);
+    background: #140a25;
     color: #fff;
-    padding: 10px;
+    padding: 10px 12px;
+}
+
+.category-select-wrap svg {
+    color: var(--secondary);
+    transition: transform .25s ease, color .25s ease;
+}
+
+.category-select-wrap:hover svg,
+.category-select-wrap:focus-within svg {
+    transform: rotate(-8deg) scale(1.08);
+    color: #f6c84c;
+}
+
+.category-select-wrap::after {
+    transition: transform .25s ease, border-top-color .25s ease, opacity .25s ease;
+}
+
+.category-select-wrap:hover::after,
+.category-select-wrap:focus-within::after {
+    border-top-color: #f6c84c;
+}
+
+[data-cat] {
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease, color .25s ease, opacity .25s ease;
+}
+
+[data-cat]:hover,
+[data-cat].active {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(155, 44, 250, 0.18);
 }
 
 .section-header {

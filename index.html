@@ -14,7 +14,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=catalog-load-more-fix-20260606">
+    <link rel="stylesheet" href="blyxu-style.css?v=catalog-filters-20260610">
 </head>
 
 <body>
@@ -192,10 +192,10 @@
         <div>
             <h4>Categorías</h4>
             <ul>
-                <li><a href="#" onclick="setFilter('collares')">Collares</a></li>
-                <li><a href="#" onclick="setFilter('pulseras')">Pulseras</a></li>
-                <li><a href="#" onclick="setFilter('aretes')">Aretes</a></li>
-                <li><a href="#" onclick="setFilter('anillos')">Anillos</a></li>
+                <li><a href="#coleccion" onclick="setFilter('collares'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Collares</a></li>
+                <li><a href="#coleccion" onclick="setFilter('pulseras'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Pulseras</a></li>
+                <li><a href="#coleccion" onclick="setFilter('aretes'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Aretes</a></li>
+                <li><a href="#coleccion" onclick="setFilter('anillos'); document.getElementById('coleccion')?.scrollIntoView({behavior:'smooth'}); return false;">Anillos</a></li>
             </ul>
         </div>
         <div>
@@ -259,7 +259,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=catalog-load-more-fix-20260606"></script>
+    <script src="blyxu-app.js?v=catalog-filters-20260610"></script>
 </body>
 
 </html>
