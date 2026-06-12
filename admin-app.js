@@ -43,6 +43,7 @@ let adminInventorySearchQuery = '';
 let adminInventoryCategoryFilter = 'todos';
 let isEditingProduct = false;
 let inventoryFetchToken = 0;
+const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
 
 function updateLivePreview() {
     const nombre = document.getElementById('prod-nombre')?.value || 'Nombre del Producto';
@@ -229,7 +230,7 @@ function normalizeGoogleProduct(product) {
         idVariacion: idVariacion,
         idProducto: idProducto,
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'Producto'], ''),
-        Categoria: getProductField(product, ['Categoría', 'Categoria'], ''),
+        Categoria: getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, ''),
         Precio: getProductField(product, ['Precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista'], 0),
         Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], 'Ambos'),
@@ -615,6 +616,7 @@ function normalizeProductPayloadForSubmit(data) {
     const catalogo = payload.Catalogo || payload['Catálogo'] || payload['CatÃ¡logo'] || getInputValue('prod-catalogo') || 'Ambos';
     const cantidad = payload.Cantidad ?? payload.Stock ?? payload.stock ?? payload['Stock Inicial'] ?? '';
     const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
+    const categoria = getProductField(payload, PRODUCT_CATEGORY_FIELD_KEYS, getInputValue('prod-categoria'));
 
     payload['ID Producto'] = idProducto;
     payload['ID Producto Madre'] = idProducto;
@@ -630,10 +632,50 @@ function normalizeProductPayloadForSubmit(data) {
     payload['Catálogo'] = catalogo;
     payload['CatÃ¡logo'] = catalogo;
     payload.catalogo = catalogo;
+    setProductCategoryAliases(payload, categoria);
     if (cantidad !== '') payload.Stock = cantidad;
     applyAutomaticStockStatus(payload);
 
     return payload;
+}
+
+function setProductCategoryAliases(payload, categoria) {
+    const cleanCategory = String(categoria || '').trim();
+    payload.Categoria = cleanCategory;
+    payload['Categor\u00eda'] = cleanCategory;
+    payload['Categor\u00c3\u00ada'] = cleanCategory;
+    payload['Categor\u00c3\u0192\u00c2\u00ada'] = cleanCategory;
+    payload.categoria = cleanCategory;
+    return payload;
+}
+
+function buildGroupCategorySyncPayloads(idProducto, currentVariationId, categoria) {
+    const motherId = String(idProducto || '').trim();
+    const activeVariationId = String(currentVariationId || '').trim();
+    const categoryValue = String(categoria || '').trim();
+    if (!motherId || !categoryValue) return [];
+
+    const seen = new Set();
+    return inventario
+        .filter(product => getInventoryMotherId(product) === motherId)
+        .map(product => ({ product, variationId: getInventoryVariationId(product) }))
+        .filter(item => {
+            const variationId = item.variationId;
+            const cleanVariationId = String(variationId || '').trim();
+            if (!cleanVariationId || cleanVariationId === activeVariationId || seen.has(cleanVariationId)) return false;
+            seen.add(cleanVariationId);
+            return true;
+        })
+        .map(item => setProductCategoryAliases({
+            ...item.product,
+            'Fecha de Creaci\u00f3n': getProductField(item.product, ['Fecha de Creaci\u00f3n', 'Fecha de Creacion', 'Fecha_Creacion', 'Fecha de Creaci\u00c3\u00b3n', 'Fecha de Creaci\u00c3\u0192\u00c2\u00b3n'], ''),
+            __adminOriginalId: item.variationId,
+            'ID Variacion': item.variationId,
+            'ID Variaci\u00f3n': item.variationId,
+            'ID Producto': motherId,
+            ID_Producto: motherId,
+            idProducto: motherId
+        }, categoryValue));
 }
 
 function buildProductPayload() {
@@ -1389,7 +1431,10 @@ document.addEventListener('DOMContentLoaded', () => {
         async function proceedSubmit(finalData) {
             try {
                 const variants = collectVariantPayloads();
-                const itemsToSave = [finalData, ...variants];
+                const groupCategoryUpdates = isEditingProduct
+                    ? buildGroupCategorySyncPayloads(motherProductId, finalData['ID Variacion'] || finalData['ID Variación'] || originalVariationId, finalData.Categoria)
+                    : [];
+                const itemsToSave = [finalData, ...groupCategoryUpdates, ...variants];
                 
                 const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
                     fallbackEditOverride: isEditingProduct ? true : false
@@ -1402,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
                 }
                 const savedVariantsCount = savedProducts.length - 1;
-                showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} variante(s) guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
+                showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} actualizacion(es) de variante guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
                 resetProductForm();
                 btn.disabled = false;
                 btn.textContent = 'Guardar producto y variantes';
