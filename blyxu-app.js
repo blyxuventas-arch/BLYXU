@@ -29,6 +29,7 @@ const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
 const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
+const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
 const LEGACY_CART_KEY = 'blyxu_cart';
 const CART_STORAGE_KEYS = {
     retail: 'blyxu_cart_retail',
@@ -292,8 +293,30 @@ function initReveal(scope = document) {
 
 // -- FORMAT MONEY (COP) --
 function formatMoney(n) {
-    const num = parseFloat(n) || 0;
+    const num = parseCatalogAmount(n);
     return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 0 });
+}
+
+function parseCatalogAmount(value) {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const clean = String(value ?? '').trim();
+    if (!clean) return 0;
+    const numeric = clean.replace(/[^\d,.-]/g, '');
+    const separators = numeric.match(/[,.]/g) || [];
+    if (!separators.length) return parseFloat(numeric) || 0;
+
+    const lastComma = numeric.lastIndexOf(',');
+    const lastDot = numeric.lastIndexOf('.');
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const decimalDigits = numeric.length - decimalIndex - 1;
+    const decimalSeparator = numeric[decimalIndex];
+    const hasDecimal = decimalDigits > 0 && decimalDigits !== 3;
+    const normalized = hasDecimal
+        ? numeric
+            .slice(0, decimalIndex)
+            .replace(/[,.]/g, '') + '.' + numeric.slice(decimalIndex + 1)
+        : numeric.replace(/[,.]/g, '');
+    return parseFloat(normalized) || 0;
 }
 
 function getProductField(product, fields, fallback = '') {
@@ -473,7 +496,8 @@ function normalizeGoogleProduct(product) {
         Estilo: cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
         Descripcion: getProductField(product, ['Caracter\u00edsticas del producto', 'Caracteristicas del producto', 'Características del producto', 'Caractreristicas del producto', 'Descripcion', 'descripcion'], ''),
         SKU: getProductField(product, ['SKU', 'sku'], ''),
-        Estado: getProductField(product, ['Estado', 'estado'], 'Activo')
+        Estado: getProductField(product, ['Estado', 'estado'], 'Activo'),
+        Promocion: normalizePromotionValue(getProductField(product, PRODUCT_PROMOTION_FIELD_KEYS, false))
     };
 }
 function isActiveProduct(product) {
@@ -485,6 +509,42 @@ function cleanProductStyleValue(value) {
     const raw = String(value || '').trim();
     const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
+}
+
+function normalizePromotionValue(value) {
+    if (typeof value === 'boolean') return value ? 'VERDADERO' : 'FALSO';
+    const clean = String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    return ['verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa'].includes(clean) ? 'VERDADERO' : 'FALSO';
+}
+
+function isProductPromotionEnabled(product) {
+    return normalizePromotionValue(getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, false)) === 'VERDADERO';
+}
+
+function getPromotionDiscountPercent() {
+    const promoTitle = getSiteConfigValue('Promo_Title', '');
+    const match = String(promoTitle || '').match(/(\d+)%/);
+    if (!match) return 0;
+
+    const discountPercentage = parseInt(match[1], 10);
+    return discountPercentage > 0 && discountPercentage < 100 ? discountPercentage : 0;
+}
+
+function getProductDisplayOldPrice(product, mode = activeCatalogMode, currentPrice = 0) {
+    const oldPrice = parseCatalogAmount(mode === 'wholesale'
+        ? (product?.PrecioMayoristaOriginal || 0)
+        : (product?.Precio_Anterior || product?.PrecioOriginal || 0));
+    return oldPrice > currentPrice ? oldPrice : 0;
+}
+
+function getProductPromotionBadgeMarkup(product) {
+    const discountPercentage = getPromotionDiscountPercent();
+    if (!discountPercentage || !isProductPromotionEnabled(product)) return '';
+    return `<span class="product-card-badge badge-sale">-${discountPercentage}%</span>`;
 }
 
 function normalizeSearchText(value) {
@@ -642,33 +702,32 @@ function collapseCatalogProductsToRepresentatives(products, mode = activeCatalog
 }
 
 function applyPromotionsToProducts() {
-    const isPromoEnabled = String(getSiteConfigValue('Promo_Enabled', 'false')).trim() === 'true';
-    if (!isPromoEnabled) return;
-    
     const promoTitle = getSiteConfigValue('Promo_Title', '');
     const match = promoTitle.match(/(\d+)%/);
     if (!match) return; // Si no hay porcentaje en el título, no podemos aplicar descuento
     
-    const discountPercentage = parseInt(match[1], 10);
-    if (discountPercentage <= 0 || discountPercentage >= 100) return;
+    const discountPercentage = getPromotionDiscountPercent();
+    if (!discountPercentage) return;
     
     const factor = 1 - (discountPercentage / 100);
     
     allProducts.forEach(product => {
-        const isPromo = String(product.Promocion || '').toUpperCase() === 'VERDADERO' || String(product.Promocion || '').toLowerCase() === 'true';
+        const isPromo = isProductPromotionEnabled(product);
         if (isPromo) {
             // Descuento en precio al detal
-            if (product.Precio > 0 && !product.PrecioOriginal) {
-                product.PrecioOriginal = product.Precio;
-                product.Precio = product.Precio * factor;
+            const retailPrice = parseCatalogAmount(product.PrecioOriginal || product.Precio);
+            if (retailPrice > 0) {
+                product.PrecioOriginal = retailPrice;
+                product.Precio = Math.round(retailPrice * factor);
                 if (!product.Precio_Anterior) product.Precio_Anterior = product.PrecioOriginal;
             }
             
             // Descuento en precio mayorista
             const wholesaleKey = Object.keys(product).find(k => ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'].includes(k));
-            if (wholesaleKey && product[wholesaleKey] > 0 && !product.PrecioMayoristaOriginal) {
-                product.PrecioMayoristaOriginal = product[wholesaleKey];
-                product[wholesaleKey] = product[wholesaleKey] * factor;
+            const wholesalePrice = wholesaleKey ? parseCatalogAmount(product.PrecioMayoristaOriginal || product[wholesaleKey]) : 0;
+            if (wholesaleKey && wholesalePrice > 0) {
+                product.PrecioMayoristaOriginal = wholesalePrice;
+                product[wholesaleKey] = Math.round(wholesalePrice * factor);
             }
         }
     });
@@ -998,6 +1057,7 @@ async function fetchSiteConfig() {
             showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] || '0') === '1';
             localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
             writeCache(SITE_CONFIG_CACHE_KEY, siteConfig);
+            if (typeof updateCartUI === 'function') updateCartUI();
         }
     } catch (err) {
         console.warn('No se pudo cargar configuracion del sitio:', err);
@@ -1253,7 +1313,7 @@ function getCurrentCatalogProducts() {
 function getProductPrice(product, mode = activeCatalogMode) {
     const retailPrice = getProductField(product, ['Precio', 'precio', 'Precio_Publico'], 0);
     const wholesalePrice = getProductField(product, ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'], retailPrice);
-    return parseFloat(mode === 'wholesale' ? wholesalePrice : retailPrice) || 0;
+    return parseCatalogAmount(mode === 'wholesale' ? wholesalePrice : retailPrice);
 }
 
 function getProductStock(product) {
@@ -1280,6 +1340,19 @@ function shouldShowProductPrices(mode = activeCatalogMode) {
         ? String(siteConfig[RETAIL_PRICE_CONFIG_KEY]) === '1'
         : savedVisibility !== '0';
     return mode === 'wholesale' || showRetailPrices;
+}
+
+async function syncRetailPriceVisibility() {
+    if (activeCartMode !== 'retail') return;
+
+    try {
+        if (configLoadPromise) {
+            await configLoadPromise;
+        }
+        await fetchSiteConfig();
+    } catch (error) {
+        console.warn('No se pudo sincronizar estado de precios minoristas:', error);
+    }
 }
 
 function getProductCategory(product) {
@@ -1453,7 +1526,7 @@ function renderProducts(products, options = {}) {
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
         const price = getProductPrice(p, mode);
-        const oldPrice = parseFloat(mode === 'wholesale' ? (p.PrecioMayoristaOriginal || 0) : (p.Precio_Anterior || 0));
+        const oldPrice = getProductDisplayOldPrice(p, mode, price);
         const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '');
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
@@ -1471,6 +1544,7 @@ function renderProducts(products, options = {}) {
                 ${img ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
+                ${getProductPromotionBadgeMarkup(p)}
                 ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${showPrices ? 'Agregar al carrito' : 'Agregar a consulta general'}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
@@ -1608,6 +1682,23 @@ function getCartModeLabel(mode = activeCartMode) {
     return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Cat&aacute;logo';
 }
 
+function getCartCustomerType(mode = activeCartMode) {
+    return normalizeCartMode(mode) === 'wholesale' ? 'Mayor' : 'Detal';
+}
+
+function getCartOrderLabel(mode = activeCartMode) {
+    return getCartCustomerType(mode) === 'Mayor' ? 'Mayorista' : 'Detal';
+}
+
+function shouldRegisterCartOrder(mode = activeCartMode) {
+    const normalizedMode = normalizeCartMode(mode);
+    return normalizedMode === 'wholesale' || shouldShowProductPrices('retail');
+}
+
+function cartItemShowsPrice(item) {
+    return shouldShowProductPrices(normalizeCartMode(item?.mode || activeCartMode));
+}
+
 function addToCart(idx, sourceButton, mode = activeCatalogMode) {
     mode = normalizeCartMode(mode);
     setCartMode(mode);
@@ -1689,7 +1780,7 @@ function updateCartUI() {
         const formContainer = document.getElementById('cart-wholesale-form');
         if (formContainer) formContainer.style.display = 'none';
         if (checkoutBtn) {
-            checkoutBtn.textContent = activeCartMode === 'wholesale' ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
+            checkoutBtn.textContent = shouldRegisterCartOrder() ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp';
             checkoutBtn.style.display = 'block';
         }
         return;
@@ -1699,33 +1790,41 @@ function updateCartUI() {
             ${c.img ? `<img src="${c.img}" class="cart-item-img" alt="">` : '<div class="cart-item-img" style="display:flex;align-items:center;justify-content:center;font-size:20px">?</div>'}
             <div class="cart-item-info">
                 <div class="cart-item-name">${c.name}</div>
-                <div class="cart-item-price">${c.priceVisible === false ? 'Precio por consultar' : `${formatMoney(c.price)} unidad`}</div>
+                <div class="cart-item-price">${cartItemShowsPrice(c) ? `${formatMoney(c.price)} unidad` : 'Precio por consultar'}</div>
                 <div class="cart-item-qty">
                     <button type="button" onclick="incrementCartQty(${i}, -1)" aria-label="Restar cantidad">-</button>
                     <input type="number" min="1" ${c.stock ? `max="${c.stock}"` : ''} value="${c.qty}" onchange="updateCartQty(${i}, this.value)" aria-label="Cantidad">
                     <button type="button" onclick="incrementCartQty(${i}, 1)" aria-label="Sumar cantidad">+</button>
                 </div>
-                <div class="cart-item-subtotal">${c.priceVisible === false ? 'Por consultar' : formatMoney(c.price * c.qty)}</div>
+                <div class="cart-item-subtotal">${cartItemShowsPrice(c) ? formatMoney(c.price * c.qty) : 'Por consultar'}</div>
             </div>
-            <button class="cart-item-remove" onclick="removeFromCart(${i})">&times;</button>
+            <button class="cart-item-remove" type="button" onclick="removeFromCart(${i})" aria-label="Eliminar producto" title="Eliminar producto">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="M19 6l-1 15H6L5 6"></path>
+                    <path d="M10 11v6"></path>
+                    <path d="M14 11v6"></path>
+                </svg>
+            </button>
         </div>
     `).join('');
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    const hasHiddenPrices = cart.some(c => c.priceVisible === false);
+    const hasHiddenPrices = cart.some(c => !cartItemShowsPrice(c));
     if (totalEl) totalEl.textContent = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
     if (consultNoteEl) {
         consultNoteEl.textContent = hasHiddenPrices
             ? 'Este carrito se enviara como consulta general por WhatsApp. Para consultar un solo producto, usa el boton "Precio por consultar" del producto.'
-            : 'Al finalizar, se enviara el listado del carrito por WhatsApp.';
+            : `Al finalizar, se registrara el pedido ${getCartOrderLabel().toLowerCase()} en el sistema.`;
     }
     const checkoutBtn = document.getElementById('btn-checkout');
     if (checkoutBtn) {
-        const isWholesaleOrder = activeCartMode === 'wholesale';
-        checkoutBtn.textContent = isWholesaleOrder ? 'Registrar Pedido Mayorista' : 'Enviar consulta por WhatsApp';
+        const isRegisteredOrder = shouldRegisterCartOrder();
+        checkoutBtn.textContent = isRegisteredOrder ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp';
 
-        // Manejo del form inline para mayoristas
+        // Manejo del form inline para pedidos registrados
         let formContainer = document.getElementById('cart-wholesale-form');
-        if (!isWholesaleOrder && formContainer) formContainer.style.display = 'none';
+        if (!isRegisteredOrder && formContainer) formContainer.style.display = 'none';
         if (!formContainer) {
             formContainer = document.createElement('div');
             formContainer.id = 'cart-wholesale-form';
@@ -1747,17 +1846,83 @@ function updateCartUI() {
             const footer = document.querySelector('.cart-footer');
             if (footer) footer.insertBefore(formContainer, checkoutBtn);
 
+            const customerCard = formContainer.firstElementChild;
+            if (customerCard) {
+                customerCard.classList.add('cart-customer-card');
+                customerCard.removeAttribute('style');
+            }
+            const customerTitle = customerCard?.querySelector('h4');
+            if (customerTitle) {
+                customerTitle.className = 'cart-customer-title';
+                customerTitle.removeAttribute('style');
+                customerTitle.innerHTML = `<span>Datos de Envio</span><span class="cart-required-pill">${getCartOrderLabel()}</span>`;
+            }
+
+            const decorateCartField = (id, label, required = false) => {
+                const input = document.getElementById(id);
+                if (!input || input.closest('.cart-field')) return;
+                const field = document.createElement('div');
+                field.className = 'cart-field';
+                if (required) field.dataset.requiredField = id;
+                const labelEl = document.createElement('label');
+                labelEl.setAttribute('for', id);
+                labelEl.innerHTML = required
+                    ? `${label} <span class="cart-field-required">Requerido</span>`
+                    : label;
+                input.removeAttribute('style');
+                input.parentNode.insertBefore(field, input);
+                field.appendChild(labelEl);
+                field.appendChild(input);
+            };
+            decorateCartField('ws-nombre', 'Nombre', true);
+            decorateCartField('ws-telefono', 'Numero de celular', true);
+            decorateCartField('ws-direccion', 'Direccion de entrega');
+            decorateCartField('ws-ciudad', 'Ciudad');
+            decorateCartField('ws-nota', 'Nota adicional');
+            const placeholderText = {
+                'ws-nombre': 'Nombre',
+                'ws-telefono': 'Numero de celular',
+                'ws-direccion': 'Direccion de entrega (opcional)',
+                'ws-ciudad': 'Ciudad (opcional)',
+                'ws-nota': 'Nota adicional (opcional)'
+            };
+            Object.entries(placeholderText).forEach(([id, placeholder]) => {
+                const field = document.getElementById(id);
+                if (field) field.placeholder = placeholder;
+            });
+
+            let initialErrorBox = document.getElementById('ws-form-error');
+            if (!initialErrorBox && customerCard) {
+                initialErrorBox = document.createElement('div');
+                initialErrorBox.id = 'ws-form-error';
+                initialErrorBox.className = 'cart-form-error';
+                initialErrorBox.setAttribute('aria-live', 'polite');
+                const firstField = customerCard.querySelector('.cart-field');
+                customerCard.insertBefore(initialErrorBox, firstField || customerCard.firstChild);
+            }
+
             document.getElementById('btn-cancel-ws').addEventListener('click', () => {
                 formContainer.style.display = 'none';
                 const currentCheckoutBtn = document.getElementById('btn-checkout');
                 if (currentCheckoutBtn) currentCheckoutBtn.style.display = 'block';
             });
 
+            ['ws-nombre', 'ws-telefono'].forEach(inputId => {
+                document.getElementById(inputId)?.addEventListener('input', event => {
+                    event.currentTarget.closest('.cart-field')?.classList.remove('is-invalid');
+                    const errorBox = document.getElementById('ws-form-error');
+                    if (errorBox) errorBox.style.display = 'none';
+                });
+            });
+
             document.getElementById('btn-confirm-ws').addEventListener('click', () => {
-                const n = document.getElementById('ws-nombre').value.trim();
-                const t = document.getElementById('ws-telefono').value.trim();
+                const nameInput = document.getElementById('ws-nombre');
+                const phoneInput = document.getElementById('ws-telefono');
+                const n = nameInput.value.trim();
+                const t = phoneInput.value.trim();
                 const d = document.getElementById('ws-direccion').value.trim();
                 const c = document.getElementById('ws-ciudad').value.trim();
+                [nameInput, phoneInput].forEach(input => input.closest('.cart-field')?.classList.remove('is-invalid'));
                 
                 let errorBox = document.getElementById('ws-form-error');
                 if (!errorBox) {
@@ -1773,26 +1938,26 @@ function updateCartUI() {
                 }
                 
                 if(!n || !t) {
+                    if (!n) nameInput.closest('.cart-field')?.classList.add('is-invalid');
+                    if (!t) phoneInput.closest('.cart-field')?.classList.add('is-invalid');
                     errorBox.textContent = '✦ Por favor completa nombre y celular.';
+                    errorBox.textContent = 'Completa el nombre y el numero de celular para registrar el pedido.';
                     errorBox.style.display = 'block';
+                    (n ? phoneInput : nameInput).focus();
                     return;
                 }
                 
                 errorBox.style.display = 'none';
                 window.wsClienteTemp = { nombre: n, telefono: t, direccion: d, ciudad: c, nota: document.getElementById('ws-nota').value.trim() };
                 
-                // Mostrar loader premium inmediatamente
                 formContainer.innerHTML = `
-                    <div style="text-align:center; padding:32px 16px;">
-                        <div class="loader-bar" style="height:4px; width:100%; background:rgba(255,255,255,0.1); border-radius:4px; margin-bottom:16px; overflow:hidden;">
-                            <div style="height:100%; width:50%; background:linear-gradient(90deg,var(--primary),#d946ef); border-radius:4px; animation:loadSlide 1s infinite ease-in-out;"></div>
-                        </div>
-                        <style>@keyframes loadSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }</style>
-                        <h4 style="margin:0 0 8px; font-size:16px; font-weight:800; color:#fff;">Registrando Pedido...</h4>
-                        <p style="margin:0; font-size:12px; color:rgba(255,255,255,0.5);">Sincronizando con el inventario central</p>
+                    <div class="cart-customer-card cart-registering">
+                        <div class="cart-loading-track"><span></span></div>
+                        <h4>Registrando pedido...</h4>
+                        <p>Un momento, ya casi queda listo.</p>
                     </div>
                 `;
-                checkout(true); // true indica que ya tenemos los datos y pasamos al flujo
+                checkout(true);
             });
         }
 
@@ -1801,9 +1966,11 @@ function updateCartUI() {
         checkoutBtn.parentNode.replaceChild(newBtn, checkoutBtn);
         
         newBtn.addEventListener('click', () => {
-            if (isWholesaleOrder) {
+            if (isRegisteredOrder) {
                 formContainer.style.display = 'block';
                 newBtn.style.display = 'none';
+                const customerTitle = formContainer.querySelector('.cart-customer-title');
+                if (customerTitle) customerTitle.innerHTML = `<span>Datos de Envio</span><span class="cart-required-pill">${getCartOrderLabel()}</span>`;
             } else {
                 checkout(false);
             }
@@ -1814,13 +1981,59 @@ function updateCartUI() {
 function openCart() {
     setCartMode(activeCartMode);
     updateCartUI();
+    syncRetailPriceVisibility().then(updateCartUI);
     document.getElementById('cart-overlay')?.classList.add('open');
     document.getElementById('cart-sidebar')?.classList.add('open');
 }
 function closeCart() {
+    clearWholesaleOrderNotice();
     document.getElementById('cart-overlay')?.classList.remove('open');
     document.getElementById('cart-sidebar')?.classList.remove('open');
 }
+
+function clearWholesaleOrderNotice() {
+    const formContainer = document.getElementById('cart-wholesale-form');
+    if (!formContainer || !formContainer.querySelector('.cart-success-card')) return;
+    formContainer.innerHTML = '';
+    formContainer.style.display = 'none';
+    window.wsClienteTemp = null;
+}
+
+function dismissWholesaleOrderNotice() {
+    clearWholesaleOrderNotice();
+    document.getElementById('cart-overlay')?.classList.remove('open');
+    document.getElementById('cart-sidebar')?.classList.remove('open');
+}
+
+function copyOrderReference(reference, button) {
+    const text = String(reference || '').trim();
+    if (!text) return;
+    const done = () => {
+        if (!button) return;
+        const original = button.dataset.originalText || button.textContent;
+        button.dataset.originalText = original;
+        button.textContent = 'Referencia copiada';
+        setTimeout(() => { button.textContent = original; }, 1600);
+    };
+    const fallbackCopy = () => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        done();
+    };
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(fallbackCopy);
+    } else {
+        fallbackCopy();
+    }
+}
+window.dismissWholesaleOrderNotice = dismissWholesaleOrderNotice;
+window.copyOrderReference = copyOrderReference;
 
 // -- HERO CAROUSEL --
 function initHeroCarousel(initialIndex = 0, products = null) {
@@ -2259,7 +2472,9 @@ function getDemoProducts() {
 }
 
 // -- INIT --
-async function saveOrderToGoogleSheets(cliente, total) {
+async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
+    const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
+    const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
     const productos = cart.map(item => ({
         idVariacion: item.idVariacion || item.sku || item.name,
         id: item.idVariacion || item.sku || item.name,
@@ -2271,12 +2486,13 @@ async function saveOrderToGoogleSheets(cliente, total) {
         modo: item.mode || activeCatalogMode
     }));
 
-    const orderId = `MAY-${Date.now()}`;
+    const orderId = `${normalizedType === 'Mayor' ? 'MAY' : 'DET'}-${Date.now()}`;
     const payload = {
         resource: 'pedidos',
         action: 'crear',
         'ID Pedido': orderId,
         'Nombre Cliente': cliente.nombre,
+        'Tipo Cliente': normalizedType,
         'Telefono': cliente.telefono,
         'Email': cliente.email || '',
         'Direccion': cliente.direccion,
@@ -2285,7 +2501,7 @@ async function saveOrderToGoogleSheets(cliente, total) {
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
         'Subtotal': total,
         'Estado Pedido': 'Pendiente',
-        'Metodo Contacto': 'Sistema Mayorista',
+        'Metodo Contacto': `Sistema ${orderLabel}`,
         'Nota Cliente': cliente.nota || ''
     };
 
@@ -2321,9 +2537,10 @@ function askRetailQuestion() {
     return noteEl ? noteEl.value.trim() : '';
 }
 
-function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder = null, total = 0, note = '' }) {
-    const hasHiddenPrices = cart.some(item => item.priceVisible === false);
-    let msg = isWholesaleOrder ? '*Pedido Mayorista BLYXU*\n\n' : '*Consulta BLYXU*\n\n';
+function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', cliente = null, savedOrder = null, total = 0, note = '' }) {
+    const hasHiddenPrices = cart.some(item => !cartItemShowsPrice(item));
+    const orderLabel = customerType === 'Mayor' ? 'Mayorista' : 'Detal';
+    let msg = isRegisteredOrder ? `*Pedido ${orderLabel} BLYXU*\n\n` : '*Consulta BLYXU*\n\n';
 
     if (savedOrder && savedOrder['ID Pedido']) {
         msg += `*ID Pedido:* ${savedOrder['ID Pedido']}\n`;
@@ -2342,7 +2559,7 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
     }
 
     cart.forEach(c => {
-        const lineTotal = c.priceVisible === false ? 'Precio por consultar' : formatMoney(c.price * c.qty);
+        const lineTotal = cartItemShowsPrice(c) ? formatMoney(c.price * c.qty) : 'Precio por consultar';
         msg += `- ${c.name} x ${c.qty} - ${lineTotal}\n`;
         const reference = c.sku || c.idVariacion;
         if (reference && reference !== c.name) msg += `  Ref: ${reference}\n`;
@@ -2357,25 +2574,35 @@ function buildCartWhatsAppMessage({ isWholesaleOrder, cliente = null, savedOrder
 
 async function checkout(skipPrompt = false) {
     if (!cart.length) return;
+    await syncRetailPriceVisibility();
     const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
-    const isWholesaleOrder = activeCartMode === 'wholesale';
+    const isRegisteredOrder = shouldRegisterCartOrder();
+    const customerType = getCartCustomerType();
+    const orderLabel = getCartOrderLabel();
     
-    const cliente = isWholesaleOrder ? window.wsClienteTemp : null;
-    if (isWholesaleOrder && !cliente) return;
+    const cliente = isRegisteredOrder ? window.wsClienteTemp : null;
+    if (isRegisteredOrder && !cliente) {
+        updateCartUI();
+        const formContainer = document.getElementById('cart-wholesale-form');
+        const checkoutBtn = document.getElementById('btn-checkout');
+        if (formContainer) formContainer.style.display = 'block';
+        if (checkoutBtn) checkoutBtn.style.display = 'none';
+        return;
+    }
     
-    const retailNote = isWholesaleOrder ? '' : askRetailQuestion();
+    const retailNote = isRegisteredOrder ? '' : askRetailQuestion();
 
     const btn = document.getElementById('btn-confirm-ws') || document.getElementById('btn-checkout');
     const originalText = btn ? btn.textContent : '';
     if (btn) {
         btn.disabled = true;
-        btn.textContent = isWholesaleOrder ? 'Registrando pedido...' : 'Preparando WhatsApp...';
+        btn.textContent = isRegisteredOrder ? 'Registrando pedido...' : 'Preparando WhatsApp...';
     }
 
     let savedOrder = null;
-    if (isWholesaleOrder) {
+    if (isRegisteredOrder) {
         try {
-            savedOrder = await saveOrderToGoogleSheets(cliente, total);
+            savedOrder = await saveOrderToGoogleSheets(cliente, total, customerType);
         } catch (error) {
             console.error('Error guardando pedido:', error);
             const formContainer = document.getElementById('cart-wholesale-form');
@@ -2398,7 +2625,8 @@ async function checkout(skipPrompt = false) {
     }
 
     const msg = buildCartWhatsAppMessage({
-        isWholesaleOrder,
+        isRegisteredOrder,
+        customerType,
         cliente,
         savedOrder,
         total,
@@ -2411,7 +2639,7 @@ async function checkout(skipPrompt = false) {
     const noteEl = document.getElementById('cart-note');
     if (noteEl) noteEl.value = '';
 
-    if (isWholesaleOrder) {
+    if (isRegisteredOrder) {
         // Mostrar mensaje de éxito en lugar de cerrar el carrito y hacer alert
         const formContainer = document.getElementById('cart-wholesale-form');
         if (formContainer) {
@@ -2427,6 +2655,31 @@ async function checkout(skipPrompt = false) {
                     <button class="btn-checkout" onclick="closeCart()" style="margin-top:24px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar Panel</button>
                 </div>
             `;
+            const orderId = savedOrder?.['ID Pedido'] || 'Pedido registrado';
+            const whatsappHref = `https://wa.me/${getCommerceWhatsAppPhone()}?text=${encodeURIComponent(msg)}`;
+            formContainer.style.display = 'block';
+            document.getElementById('btn-checkout')?.style && (document.getElementById('btn-checkout').style.display = 'none');
+            formContainer.innerHTML = `
+                <div class="cart-customer-card cart-success-card">
+                    <div class="cart-success-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <h4>Gracias por tu pedido</h4>
+                    <p>Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.</p>
+                    <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
+                    <div class="cart-success-actions">
+                        <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
+                            Copiar referencia
+                        </button>
+                        <a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5Z"></path><path d="M9.2 8.8c.2 2.8 2.3 5 5.1 5.5"></path></svg>
+                            Dudas por WhatsApp
+                        </a>
+                        <button class="btn-checkout" onclick="dismissWholesaleOrderNotice()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar</button>
+                    </div>
+                </div>
+            `;
+            if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
     } else {
         closeCart();
@@ -2455,6 +2708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
     const isContactPage = document.body?.dataset.page === 'contact';
     const isPaymentsPage = document.body?.dataset.page === 'pagos';
+    const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     
     renderFloatingWhatsApp();
@@ -2486,7 +2740,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (isContactPage || isPaymentsPage) {
+    if (isContactPage || isPaymentsPage || isOrdersLookupPage) {
         fetchSiteConfig().then(() => {
             if (isContactPage) renderContactPage();
             renderPromoWidget();

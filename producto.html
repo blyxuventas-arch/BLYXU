@@ -32,6 +32,7 @@
                 <li><a href="index.html#coleccion">Catálogo</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="pagos.html">Pagos</a></li>
+                <li><a href="facturas-pedidos.html">Facturas y Pedidos</a></li>
                 <li><a href="administrativo.html">Administrativo</a></li>
             </ul>
 
@@ -64,6 +65,7 @@
             <div class="product-info-price">
                 <span id="detail-price">$0</span>
                 <span class="old" id="detail-old-price" style="display:none;">$0</span>
+                <span class="detail-promo-badge" id="detail-promo-badge" style="display:none;"></span>
             </div>
 
             <p class="product-info-desc" id="detail-desc">
@@ -144,7 +146,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const productId = Number.parseInt(urlParams.get('id'), 10);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
-            const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
+            let detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
             const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
             activeCatalogMode = detailCatalogMode;
             setCartMode(detailCatalogMode);
@@ -214,6 +216,8 @@
             if (allProducts.length === 0) {
                 await loadProducts({ renderCatalog: false });
             }
+            detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
+            updateCartUI();
 
             const product = allProducts[productId];
             if (!Number.isInteger(productId) || !product) {
@@ -411,7 +415,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
-            const detailShowsPrices = detailCatalogMode === 'wholesale' || localStorage.getItem('blyxu_show_retail_prices') !== '0';
+            let detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
             let currentDetailProductId = Number.parseInt(urlParams.get('id'), 10);
             activeCatalogMode = detailCatalogMode;
             setCartMode(detailCatalogMode);
@@ -420,6 +424,8 @@
             if (allProducts.length === 0) {
                 await loadProducts({ renderCatalog: false });
             }
+            detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
+            updateCartUI();
 
             const detailImg = document.getElementById('detail-img');
             const detailImgContainer = document.getElementById('detail-img-container');

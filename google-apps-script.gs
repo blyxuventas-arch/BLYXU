@@ -20,6 +20,7 @@ const SHEETS = {
       'Tamaño',
       'Color',
       'Estilo',
+      'Promocion',
       'Imagen Principal',
       'Galería JSON',
       'SKU',
@@ -35,6 +36,7 @@ const SHEETS = {
       'Fecha',
       'ID Cliente',
       'Nombre Cliente',
+      'Tipo Cliente',
       'Teléfono',
       'Dirección',
       'Ciudad',
@@ -71,6 +73,7 @@ const SHEETS = {
       'ID Factura',
       'ID Pedido',
       'ID Cliente',
+      'Tipo Cliente',
       'Fecha',
       'Productos JSON',
       'Cantidad Total',
@@ -397,6 +400,7 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha'] = rowObject['Fecha'] || now;
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Pedido'] = rowObject['Estado Pedido'] || 'Nuevo';
+    rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
 
     if (!rowObject['ID Cliente'] && rowObject['Teléfono']) {
       rowObject['ID Cliente'] = cleanPhone_(rowObject['Teléfono']);
@@ -417,6 +421,7 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha'] = rowObject['Fecha'] || now;
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
+    rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
   }
 
   const row = headers.map(header => getObjectValueByHeader_(rowObject, header, ''));
@@ -723,6 +728,31 @@ function cleanProductStyleForSheet_(value) {
   return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
 }
 
+function inferCustomerType_(rowObject) {
+  const explicit = String(rowObject['Tipo Cliente'] || rowObject.tipo || rowObject.tipoCliente || '').trim();
+  const normalizedExplicit = explicit.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (normalizedExplicit.indexOf('mayor') >= 0 || normalizedExplicit.indexOf('wholesale') >= 0) return 'Mayor';
+  if (normalizedExplicit.indexOf('detal') >= 0 || normalizedExplicit.indexOf('minor') >= 0 || normalizedExplicit.indexOf('retail') >= 0) return 'Detal';
+
+  const id = String(rowObject['ID Pedido'] || '').toLowerCase();
+  if (id.indexOf('may-') === 0) return 'Mayor';
+  if (id.indexOf('det-') === 0) return 'Detal';
+
+  const method = String(rowObject['MÃ©todo Contacto'] || rowObject['Metodo Contacto'] || rowObject['MÃƒÂ©todo Contacto'] || '').toLowerCase();
+  if (method.indexOf('mayor') >= 0 || method.indexOf('wholesale') >= 0) return 'Mayor';
+  if (method.indexOf('detal') >= 0 || method.indexOf('minor') >= 0 || method.indexOf('retail') >= 0) return 'Detal';
+
+  const items = parseMaybeJson_(rowObject['Productos JSON']);
+  if (Array.isArray(items) && items.some(item => {
+    const mode = String(item.modo || item.mode || item.tipo || '').toLowerCase();
+    return mode.indexOf('wholesale') >= 0 || mode.indexOf('mayor') >= 0;
+  })) {
+    return 'Mayor';
+  }
+
+  return 'Detal';
+}
+
 function findHeader_(headers, key, sheetName) {
   const normalizedKey = normalizeKey_(key);
 
@@ -751,6 +781,8 @@ function findHeader_(headers, key, sheetName) {
       tamano: 'Tamaño',
       tamaño: 'Tamaño',
       talla: 'Tamaño',
+      promo: 'Promocion',
+      promocion: 'Promocion',
       stock: 'Cantidad',
       cantidad: 'Cantidad',
       precioMayorista: 'Precio Mayor',
@@ -767,7 +799,18 @@ function findHeader_(headers, key, sheetName) {
       carrito: 'Productos JSON',
       items: 'Productos JSON',
       total: 'Subtotal',
-      nota: 'Nota Cliente'
+      tipo: 'Tipo Cliente',
+      tipoCliente: 'Tipo Cliente',
+      tipocliente: 'Tipo Cliente',
+      clienteTipo: 'Tipo Cliente',
+      clientetipo: 'Tipo Cliente',
+      estado: 'Estado Pedido',
+      estadopedido: 'Estado Pedido',
+      metodo: 'MÃ©todo Contacto',
+      metodocontacto: 'MÃ©todo Contacto',
+      metodopago: 'MÃ©todo Contacto',
+      nota: 'Nota Cliente',
+      notacliente: 'Nota Cliente'
     },
     Clientes: {
       telefono: 'Teléfono',
@@ -779,6 +822,11 @@ function findHeader_(headers, key, sheetName) {
       productos: 'Productos JSON',
       items: 'Productos JSON',
       total: 'Subtotal',
+      tipo: 'Tipo Cliente',
+      tipoCliente: 'Tipo Cliente',
+      tipocliente: 'Tipo Cliente',
+      clienteTipo: 'Tipo Cliente',
+      clientetipo: 'Tipo Cliente',
       pago: 'Método Pago',
       entrega: 'Método Entrega'
     }

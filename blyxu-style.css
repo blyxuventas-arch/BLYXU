@@ -1621,8 +1621,11 @@ body {
 }
 
 .badge-sale {
+    left: auto;
+    right: 12px;
     background: #ef4444;
     color: #fff;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, .32);
 }
 
 .badge-out {
@@ -2150,11 +2153,35 @@ body {
 }
 
 .cart-item-remove {
-    background: none;
-    border: none;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 34px;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 50%;
     color: var(--text-dim);
     cursor: pointer;
-    font-size: 18px;
+    transition: color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.cart-item-remove svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cart-item-remove:hover {
+    color: #ff6b8a;
+    background: rgba(255, 107, 138, .1);
+    border-color: rgba(255, 107, 138, .32);
+    transform: translateY(-1px);
 }
 
 .cart-footer {
@@ -2220,6 +2247,240 @@ body {
 
 .cart-note-input:focus {
     border-color: var(--primary);
+}
+
+.cart-customer-card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .025));
+    border: 1px solid rgba(246, 200, 76, .24);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 14px 30px rgba(0, 0, 0, .18);
+}
+
+.cart-customer-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 12px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.cart-required-pill {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(246, 200, 76, .12);
+    border: 1px solid rgba(246, 200, 76, .28);
+    color: var(--nav-gold);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+}
+
+.cart-field {
+    margin-bottom: 10px;
+}
+
+.cart-field label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+    color: rgba(255, 255, 255, .72);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.cart-field-required {
+    color: var(--nav-gold);
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.cart-field .form-control {
+    border-color: rgba(255, 255, 255, .18);
+    background: rgba(255, 255, 255, .96);
+    color: #17111f;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.cart-field[data-required-field] .form-control {
+    border: 2px solid rgba(246, 200, 76, .82);
+    box-shadow: 0 0 0 1px rgba(246, 200, 76, .16), 0 0 18px rgba(246, 200, 76, .08);
+}
+
+.cart-field .form-control::placeholder {
+    color: rgba(23, 17, 31, .44);
+}
+
+.cart-field .form-control:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, .18), 0 0 20px rgba(246, 200, 76, .12);
+}
+
+.cart-field.is-invalid .form-control {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, .14);
+}
+
+.cart-form-error {
+    display: none;
+    margin-bottom: 12px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    background: rgba(239, 68, 68, .12);
+    border: 1px solid rgba(239, 68, 68, .22);
+    color: #fecaca;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.cart-registering,
+.cart-success-card,
+.cart-error-card {
+    text-align: center;
+    padding: 28px 16px;
+}
+
+.cart-loading-track {
+    height: 4px;
+    width: 100%;
+    background: rgba(255, 255, 255, .1);
+    border-radius: 999px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.cart-loading-track span {
+    display: block;
+    height: 100%;
+    width: 50%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary), #10b981, var(--nav-gold));
+    animation: cartLoadSlide .55s infinite ease-in-out;
+}
+
+@keyframes cartLoadSlide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(210%); }
+}
+
+.cart-success-icon {
+    width: 68px;
+    height: 68px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 14px 28px rgba(16, 185, 129, .28);
+    animation: cartSuccessPop .46s cubic-bezier(.2, 1.35, .35, 1) both;
+}
+
+.cart-success-icon svg {
+    width: 34px;
+    height: 34px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+@keyframes cartSuccessPop {
+    from { opacity: 0; transform: scale(.72); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.cart-success-card h4,
+.cart-error-card h4,
+.cart-registering h4 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.cart-success-card p,
+.cart-error-card p,
+.cart-registering p {
+    margin: 0;
+    color: rgba(255, 255, 255, .62);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.cart-order-id {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, .1);
+    border: 1px solid rgba(16, 185, 129, .24);
+    color: #6ee7b7;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .8px;
+}
+
+.cart-success-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 22px;
+}
+
+.cart-copy-reference-btn,
+.cart-whatsapp-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 48px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 900;
+    font-family: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.cart-copy-reference-btn {
+    background: linear-gradient(135deg, var(--nav-gold), #d9a51f);
+    color: #160d20;
+    box-shadow: 0 12px 26px rgba(246, 200, 76, .16);
+}
+
+.cart-whatsapp-link {
+    background: rgba(16, 185, 129, .12);
+    border: 1px solid rgba(16, 185, 129, .28);
+    color: #a7f3d0;
+    box-shadow: 0 12px 26px rgba(16, 185, 129, .2);
+}
+
+.cart-whatsapp-link svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 
 /* ===== WHOLESALE ACCESS ===== */

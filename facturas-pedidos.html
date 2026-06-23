@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturas y Pedidos - BLYXU</title>
+    <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
+    <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
+    <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
+    <link rel="stylesheet" href="blyxu-style.css?v=catalog-load-more-fix-20260606">
+    <style>
+        .orders-page {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            padding: 124px 24px 72px;
+        }
+
+        .orders-shell {
+            width: min(1120px, 100%);
+            margin: 0 auto;
+        }
+
+        .orders-hero {
+            display: grid;
+            grid-template-columns: minmax(280px, 440px) 1fr;
+            gap: 28px;
+            align-items: stretch;
+            margin-bottom: 26px;
+        }
+
+        .orders-intro,
+        .orders-login,
+        .orders-panel {
+            background: rgba(16, 8, 30, 0.78);
+            border: 1px solid rgba(246, 200, 76, 0.16);
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(18px);
+        }
+
+        .orders-intro {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 320px;
+            background:
+                linear-gradient(145deg, rgba(16, 8, 30, 0.86), rgba(33, 13, 54, 0.82)),
+                radial-gradient(circle at 16% 20%, rgba(246, 200, 76, 0.12), transparent 30%);
+        }
+
+        .orders-kicker {
+            color: var(--nav-gold);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2.4px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .orders-intro h1 {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(34px, 6vw, 58px);
+            line-height: 0.94;
+            letter-spacing: 0;
+            color: #fff;
+            margin: 0 0 16px;
+        }
+
+        .orders-intro p {
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 0;
+            max-width: 34rem;
+        }
+
+        .orders-login {
+            padding: 28px;
+            align-self: center;
+        }
+
+        .orders-login h2 {
+            margin: 0 0 8px;
+            color: #fff;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .orders-login p {
+            margin: 0 0 20px;
+            color: rgba(255, 255, 255, 0.52);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .orders-form {
+            display: grid;
+            gap: 12px;
+        }
+
+        .orders-form input {
+            width: 100%;
+            min-height: 54px;
+            border: 1px solid rgba(168, 85, 247, 0.34);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.34);
+            color: #fff;
+            padding: 0 16px;
+            font: inherit;
+            font-size: 16px;
+            letter-spacing: 0;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .orders-form input:focus {
+            border-color: rgba(246, 200, 76, 0.82);
+            background: rgba(0, 0, 0, 0.44);
+            box-shadow: 0 0 0 3px rgba(246, 200, 76, 0.1), 0 0 28px rgba(168, 85, 247, 0.18);
+        }
+
+        .orders-form button,
+        .orders-action-btn {
+            min-height: 50px;
+            border: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ffe477, #d8ac16 55%, #f4c441);
+            color: #09030f;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+
+        .orders-form button:hover,
+        .orders-action-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.06);
+        }
+
+        .orders-form button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+            transform: none;
+        }
+
+        .orders-status {
+            min-height: 18px;
+            color: #fb7185;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .orders-panel {
+            display: none;
+            overflow: hidden;
+        }
+
+        .orders-panel.open {
+            display: block;
+            animation: ordersFadeIn 0.28s ease forwards;
+        }
+
+        @keyframes ordersFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .orders-panel-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 22px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .orders-panel-title h2 {
+            margin: 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .orders-panel-title p {
+            margin: 4px 0 0;
+            color: rgba(255, 255, 255, 0.48);
+            font-size: 12px;
+        }
+
+        .orders-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .orders-tab {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.66);
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .orders-tab.active {
+            border-color: rgba(246, 200, 76, 0.45);
+            background: rgba(246, 200, 76, 0.12);
+            color: #fff4c3;
+        }
+
+        .orders-results {
+            padding: 22px;
+            display: grid;
+            gap: 16px;
+        }
+
+        .order-card {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
+            overflow: hidden;
+        }
+
+        .order-card-head {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: start;
+            padding: 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .order-id {
+            color: #fff;
+            font-weight: 900;
+            font-size: 15px;
+        }
+
+        .order-meta {
+            color: rgba(255, 255, 255, 0.46);
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .order-status {
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: rgba(168, 85, 247, 0.12);
+            color: #d8b4fe;
+            font-size: 11px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .order-status.complete {
+            background: rgba(52, 211, 153, 0.12);
+            color: #86efac;
+        }
+
+        .order-status.cancel {
+            background: rgba(251, 113, 133, 0.12);
+            color: #fda4af;
+        }
+
+        .order-body {
+            padding: 18px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .order-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .order-metric {
+            min-height: 70px;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+        }
+
+        .order-metric span {
+            display: block;
+            color: rgba(255, 255, 255, 0.38);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .order-metric strong {
+            color: #fff;
+            font-size: 13px;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .items-table th,
+        .items-table td {
+            padding: 11px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .items-table th {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 900;
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        .items-table td {
+            color: rgba(255, 255, 255, 0.74);
+        }
+
+        .invoice-card .order-card-head {
+            background: linear-gradient(90deg, rgba(246, 200, 76, 0.1), rgba(168, 85, 247, 0.08));
+        }
+
+        .invoice-total {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            align-items: baseline;
+            color: #fff;
+            font-weight: 900;
+            font-size: 20px;
+            padding-top: 8px;
+        }
+
+        .invoice-total span {
+            color: rgba(255, 255, 255, 0.42);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .invoice-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding-top: 4px;
+        }
+
+        .invoice-download-btn {
+            width: auto;
+            min-height: 42px;
+            padding: 0 18px;
+        }
+
+        .orders-empty {
+            padding: 34px 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.54);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 900px) {
+            .orders-hero {
+                grid-template-columns: 1fr;
+            }
+
+            .orders-intro {
+                min-height: auto;
+            }
+
+            .order-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 620px) {
+            .orders-page {
+                padding: 104px 16px 56px;
+            }
+
+            .orders-intro,
+            .orders-login {
+                padding: 22px;
+            }
+
+            .orders-panel-header,
+            .order-card-head {
+                grid-template-columns: 1fr;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .orders-panel-header {
+                display: grid;
+            }
+
+            .order-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .items-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+
+        #invoice-print-area {
+            display: none;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 14mm;
+            }
+
+            body.invoice-print-mode {
+                background: #fff !important;
+                color: #111 !important;
+            }
+
+            body.invoice-print-mode > :not(#invoice-print-area) {
+                display: none !important;
+            }
+
+            body.invoice-print-mode #invoice-print-area {
+                display: block !important;
+            }
+
+            .print-invoice {
+                color: #111;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 12px;
+                line-height: 1.45;
+            }
+
+            .print-invoice-header {
+                display: flex;
+                justify-content: space-between;
+                gap: 24px;
+                align-items: flex-start;
+                border-bottom: 2px solid #111;
+                padding-bottom: 18px;
+                margin-bottom: 22px;
+            }
+
+            .print-invoice-brand {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .print-invoice-brand img {
+                width: 74px;
+                height: 74px;
+                object-fit: contain;
+            }
+
+            .print-invoice-brand h1,
+            .print-invoice-title h2 {
+                margin: 0;
+                color: #111;
+            }
+
+            .print-invoice-brand h1 {
+                font-size: 22px;
+                letter-spacing: 1px;
+            }
+
+            .print-invoice-brand p,
+            .print-invoice-title p,
+            .print-invoice-box p {
+                margin: 3px 0;
+                color: #555;
+            }
+
+            .print-invoice-title {
+                text-align: right;
+            }
+
+            .print-invoice-title h2 {
+                font-size: 24px;
+                text-transform: uppercase;
+            }
+
+            .print-invoice-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 18px;
+                margin-bottom: 22px;
+            }
+
+            .print-invoice-box {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                padding: 14px;
+            }
+
+            .print-invoice-box h3 {
+                margin: 0 0 8px;
+                font-size: 11px;
+                letter-spacing: 1px;
+                color: #666;
+                text-transform: uppercase;
+            }
+
+            .print-invoice-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 8px;
+            }
+
+            .print-invoice-table th,
+            .print-invoice-table td {
+                border-bottom: 1px solid #e5e7eb;
+                padding: 10px 8px;
+                text-align: left;
+                color: #111;
+            }
+
+            .print-invoice-table th {
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                color: #666;
+                background: #f3f4f6;
+            }
+
+            .print-invoice-total {
+                margin-top: 18px;
+                padding-top: 14px;
+                border-top: 3px solid #111;
+                text-align: right;
+                font-size: 22px;
+                font-weight: 900;
+            }
+
+            .print-invoice-footer {
+                margin-top: 44px;
+                padding-top: 16px;
+                border-top: 1px solid #ddd;
+                text-align: center;
+                color: #666;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+
+<body data-page="facturas-pedidos">
+    <div class="bg-animation"></div>
+    <canvas id="particles-canvas"></canvas>
+
+    <nav class="navbar scrolled" id="navbar">
+        <a href="index.html" class="nav-logo">
+            <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
+        </a>
+
+        <ul class="nav-links" id="nav-links">
+            <li><a href="index.html#inicio">Inicio</a></li>
+            <li><a href="index.html#coleccion">Catalogo</a></li>
+            <li><a href="mayorista.html">Mayorista</a></li>
+            <li><a href="contacto.html">Contacto</a></li>
+            <li><a href="pagos.html">Pagos</a></li>
+            <li><a href="facturas-pedidos.html" class="active">Facturas y Pedidos</a></li>
+            <li><a href="administrativo.html">Administrativo</a></li>
+        </ul>
+
+        <div class="nav-actions">
+            <div class="nav-icon" id="cart-btn" style="position:relative">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
+                </svg>
+                <span class="cart-badge" id="cart-count" style="display:none">0</span>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="orders-page">
+        <div class="orders-shell">
+            <section class="orders-hero">
+                <div class="orders-intro">
+                    <div class="orders-kicker">Panel de cliente</div>
+                    <h1>Facturas y Pedidos</h1>
+                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu numero de contacto.</p>
+                </div>
+
+                <div class="orders-login">
+                    <h2>Consulta por contacto</h2>
+                    <p>Escribe el mismo numero que usaste al realizar tu pedido.</p>
+                    <form class="orders-form" id="orders-lookup-form">
+                        <input type="tel" id="orders-phone-input" inputmode="tel" autocomplete="tel" placeholder="Numero de contacto" required>
+                        <button type="submit" id="orders-submit-btn">Ver mi panel</button>
+                        <div class="orders-status" id="orders-status" aria-live="polite"></div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="orders-panel" id="orders-panel" aria-live="polite">
+                <div class="orders-panel-header">
+                    <div class="orders-panel-title">
+                        <h2 id="orders-panel-heading">Tu panel</h2>
+                        <p id="orders-panel-summary"></p>
+                    </div>
+                    <div class="orders-tabs" role="tablist" aria-label="Vista de pedidos y facturas">
+                        <button type="button" class="orders-tab active" data-orders-view="orders">Pedidos</button>
+                        <button type="button" class="orders-tab" data-orders-view="invoices">Facturas</button>
+                    </div>
+                </div>
+                <div class="orders-results" id="orders-results"></div>
+            </section>
+        </div>
+    </main>
+
+    <div id="invoice-print-area" aria-hidden="true"></div>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <img src="Logo2.png" alt="BLYXU" class="footer-logo">
+                <p>Joyeria artesanal con piedras naturales. Elegancia, exclusividad y diseno en cada pieza.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Enlaces</h4>
+                <a href="index.html#inicio">Inicio</a>
+                <a href="index.html#coleccion">Coleccion</a>
+                <a href="contacto.html">Contacto</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 BLYXU. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="blyxu-app.js?v=catalog-load-more-fix-20260606"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('orders-lookup-form');
+            const input = document.getElementById('orders-phone-input');
+            const btn = document.getElementById('orders-submit-btn');
+            const status = document.getElementById('orders-status');
+            const panel = document.getElementById('orders-panel');
+            const heading = document.getElementById('orders-panel-heading');
+            const summary = document.getElementById('orders-panel-summary');
+            const results = document.getElementById('orders-results');
+            const tabs = Array.from(document.querySelectorAll('[data-orders-view]'));
+            const apiUrl = typeof GOOGLE_SHEET_API !== 'undefined'
+                ? GOOGLE_SHEET_API
+                : 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
+            let currentOrders = [];
+            let currentInvoices = [];
+            let currentView = 'orders';
+            let currentPhone = '';
+
+            function onlyDigits(value) {
+                return String(value || '').replace(/\D/g, '');
+            }
+
+            function comparablePhone(value) {
+                const digits = onlyDigits(value);
+                return digits.length > 10 ? digits.slice(-10) : digits;
+            }
+
+            function getField(source, keys, fallback = '') {
+                const item = source || {};
+                for (const key of keys) {
+                    if (item[key] !== undefined && item[key] !== null && String(item[key]).trim() !== '') {
+                        return item[key];
+                    }
+                }
+                const normalized = Object.keys(item).reduce((map, key) => {
+                    map[onlyLetters(key)] = key;
+                    return map;
+                }, {});
+                for (const key of keys) {
+                    const match = normalized[onlyLetters(key)];
+                    if (match && item[match] !== undefined && item[match] !== null && String(item[match]).trim() !== '') {
+                        return item[match];
+                    }
+                }
+                return fallback;
+            }
+
+            function onlyLetters(value) {
+                return String(value || '')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]/gi, '')
+                    .toLowerCase();
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function formatMoney(value) {
+                const number = Number(value || 0);
+                return '$' + number.toLocaleString('es-CO');
+            }
+
+            function formatDate(value) {
+                if (!value) return '-';
+                const date = new Date(value);
+                if (Number.isNaN(date.getTime())) return String(value);
+                return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
+            }
+
+            function parseItems(order) {
+                const raw = getField(order, ['Productos JSON', 'Productos', 'items', 'carrito'], []);
+                if (Array.isArray(raw)) return raw;
+                if (!raw) return [];
+                try {
+                    const parsed = JSON.parse(raw);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function getOrderTotal(order, items) {
+                const direct = Number(getField(order, ['Subtotal', 'Total', 'total'], 0));
+                if (direct > 0) return direct;
+                return items.reduce((sum, item) => {
+                    const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
+                    const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                    return sum + (qty * price);
+                }, 0);
+            }
+
+            function getConfigValue(key, fallback = '') {
+                return typeof getSiteConfigValue === 'function' ? getSiteConfigValue(key, fallback) : fallback;
+            }
+
+            function statusClass(value) {
+                const clean = onlyLetters(value);
+                if (clean.includes('complet') || clean.includes('enviado') || clean.includes('pagado')) return 'complete';
+                if (clean.includes('cancel')) return 'cancel';
+                return '';
+            }
+
+            async function readOrdersResponse(response) {
+                const text = await response.text();
+
+                try {
+                    return JSON.parse(text);
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            async function fetchResourceData(resource) {
+                const getResponse = await fetch(apiUrl + '?resource=' + encodeURIComponent(resource) + '&action=get', { cache: 'no-store' });
+                let data = await readOrdersResponse(getResponse);
+
+                if (!data) {
+                    const postResponse = await fetch(apiUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ resource, action: 'get' })
+                    });
+                    data = await readOrdersResponse(postResponse);
+                }
+
+                if (!data) {
+                    throw new Error('No se pudo leer la base de datos. Google devolvio una pagina HTML en vez de datos.');
+                }
+
+                return data;
+            }
+
+            async function fetchOrdersByPhone(phone) {
+                const data = await fetchResourceData('pedidos');
+
+                if (!data || data.status !== 'success' || !Array.isArray(data.data)) {
+                    throw new Error(data?.error || 'No se pudo cargar la informacion.');
+                }
+
+                const target = comparablePhone(phone);
+                return data.data
+                    .filter(order => {
+                        const orderPhone = comparablePhone(getField(order, ['Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Telefono Cliente', 'Celular']));
+                        return orderPhone === target || (target.length >= 7 && orderPhone.endsWith(target));
+                    })
+                    .reverse();
+            }
+
+            async function fetchInvoicesByPhone(phone) {
+                let data = null;
+                try {
+                    data = await fetchResourceData('facturas');
+                } catch (error) {
+                    console.warn('No se pudieron cargar facturas:', error);
+                    return [];
+                }
+
+                if (!data || data.status !== 'success' || !Array.isArray(data.data)) {
+                    return [];
+                }
+
+                const target = comparablePhone(phone);
+                return data.data
+                    .filter(invoice => {
+                        const invoicePhone = comparablePhone(getField(invoice, ['ID Cliente', 'Telefono', 'Teléfono', 'TelÃ©fono', 'Celular']));
+                        return invoicePhone === target || (target.length >= 7 && invoicePhone.endsWith(target));
+                    })
+                    .reverse();
+            }
+
+            function renderItemsTable(items) {
+                if (!items.length) {
+                    return '<div class="orders-empty">Este registro no tiene productos detallados.</div>';
+                }
+
+                return `
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Ref.</th>
+                                <th>Cant.</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(item => {
+                                const name = getField(item, ['nombre', 'Nombre', 'Producto'], 'Producto');
+                                const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion'], '-');
+                                const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
+                                const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                                return `
+                                    <tr>
+                                        <td>${escapeHtml(name)}</td>
+                                        <td>${escapeHtml(sku || '-')}</td>
+                                        <td>${qty}</td>
+                                        <td>${formatMoney(price * qty)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            function renderOrders() {
+                if (!currentOrders.length) {
+                    results.innerHTML = '<div class="orders-empty">No encontramos pedidos asociados a ese numero de contacto.</div>';
+                    return;
+                }
+
+                results.innerHTML = currentOrders.map(order => {
+                    const id = getField(order, ['ID Pedido', 'ID', 'id'], 'Pedido');
+                    const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
+                    const name = getField(order, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU');
+                    const city = getField(order, ['Ciudad'], '-');
+                    const address = getField(order, ['Direccion', 'Direcci\u00f3n', 'Direcci\u00c3\u00b3n'], '-');
+                    const state = getField(order, ['Estado Pedido', 'Estado'], 'Pendiente');
+                    const method = getField(order, ['Metodo Contacto', 'M\u00e9todo Contacto', 'M\u00c3\u00a9todo Contacto', 'M\u00c3\u0192\u00c2\u00a9todo Contacto', 'Metodo'], '-');
+                    const note = getField(order, ['Nota Cliente', 'Nota'], '');
+                    const items = parseItems(order);
+                    const total = getOrderTotal(order, items);
+
+                    return `
+                        <article class="order-card">
+                            <div class="order-card-head">
+                                <div>
+                                    <div class="order-id">${escapeHtml(id)}</div>
+                                    <div class="order-meta">${escapeHtml(name)} - ${formatDate(date)}</div>
+                                </div>
+                                <span class="order-status ${statusClass(state)}">${escapeHtml(state)}</span>
+                            </div>
+                            <div class="order-body">
+                                <div class="order-grid">
+                                    <div class="order-metric"><span>Total</span><strong>${formatMoney(total)}</strong></div>
+                                    <div class="order-metric"><span>Ciudad</span><strong>${escapeHtml(city)}</strong></div>
+                                    <div class="order-metric"><span>Entrega</span><strong>${escapeHtml(address)}</strong></div>
+                                    <div class="order-metric"><span>Origen</span><strong>${escapeHtml(method)}</strong></div>
+                                </div>
+                                ${renderItemsTable(items)}
+                                ${note ? `<div class="order-metric"><span>Nota</span><strong>${escapeHtml(note)}</strong></div>` : ''}
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            function renderInvoices() {
+                if (!currentInvoices.length) {
+                    results.innerHTML = '<div class="orders-empty">No encontramos facturas asociadas a ese numero de contacto.</div>';
+                    return;
+                }
+
+                results.innerHTML = currentInvoices.map((order, index) => {
+                    const id = getField(order, ['ID Factura', 'ID', 'id'], 'Factura');
+                    const orderId = getField(order, ['ID Pedido'], '-');
+                    const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
+                    const name = getField(order, ['Nombre', 'Nombre Cliente', 'Cliente'], 'Cliente BLYXU');
+                    const phone = getField(order, ['ID Cliente', 'Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono'], currentPhone);
+                    const city = getField(order, ['Ciudad'], '-');
+                    const address = getField(order, ['Direccion', 'Direcci\u00f3n', 'Direcci\u00c3\u00b3n', 'M\u00e9todo Entrega', 'Metodo Entrega'], '-');
+                    const state = getField(order, ['Estado Factura', 'Estado'], 'Finalizada');
+                    const items = parseItems(order);
+                    const total = getOrderTotal(order, items);
+
+                    return `
+                        <article class="order-card invoice-card">
+                            <div class="order-card-head">
+                                <div>
+                                    <div class="order-id">Factura / Remision ${escapeHtml(id)}</div>
+                                    <div class="order-meta">Pedido: ${escapeHtml(orderId)} - Emitida: ${formatDate(date)}</div>
+                                </div>
+                                <span class="order-status ${statusClass(state)}">${escapeHtml(state)}</span>
+                            </div>
+                            <div class="order-body">
+                                <div class="order-grid">
+                                    <div class="order-metric"><span>Cliente</span><strong>${escapeHtml(name)}</strong></div>
+                                    <div class="order-metric"><span>Contacto</span><strong>${escapeHtml(phone)}</strong></div>
+                                    <div class="order-metric"><span>Direccion</span><strong>${escapeHtml(address)}</strong></div>
+                                    <div class="order-metric"><span>Ciudad</span><strong>${escapeHtml(city)}</strong></div>
+                                </div>
+                                ${renderItemsTable(items)}
+                                <div class="invoice-total"><span>Total factura</span>${formatMoney(total)}</div>
+                                <div class="invoice-actions">
+                                    <button type="button" class="orders-action-btn invoice-download-btn" onclick="downloadInvoicePdf(${index})">Descargar PDF</button>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            function buildPrintableInvoice(order) {
+                const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'Pedido');
+                const orderId = getField(order, ['ID Pedido'], id);
+                const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
+                const name = getField(order, ['Nombre', 'Nombre Cliente', 'Cliente'], 'Cliente BLYXU');
+                const phone = getField(order, ['ID Cliente', 'Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono'], currentPhone);
+                const city = getField(order, ['Ciudad'], '-');
+                const address = getField(order, ['Direccion', 'Direcci\u00f3n', 'Direcci\u00c3\u00b3n', 'M\u00e9todo Entrega', 'Metodo Entrega'], '-');
+                const state = getField(order, ['Estado Factura', 'Estado Pedido', 'Estado'], 'Finalizada');
+                const method = getField(order, ['Metodo Pago', 'M\u00e9todo Pago', 'Metodo Contacto', 'M\u00e9todo Contacto', 'M\u00c3\u00a9todo Contacto', 'M\u00c3\u0192\u00c2\u00a9todo Contacto', 'Metodo'], '-');
+                const items = parseItems(order);
+                const total = getOrderTotal(order, items);
+                const companyLogo = getConfigValue('Factura_Logo', 'Logo2.png') || 'Logo2.png';
+                const companyName = getConfigValue('Factura_Empresa', 'BLYXU');
+                const companyNit = getConfigValue('Factura_NIT', '');
+                const companyPhone = getConfigValue('Factura_Telefono', '');
+                const companyEmail = getConfigValue('Factura_Email', '');
+
+                const rows = items.length ? items.map(item => {
+                    const itemName = getField(item, ['nombre', 'Nombre', 'Producto'], 'Producto');
+                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion'], '-');
+                    const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
+                    const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                    return `
+                        <tr>
+                            <td>${escapeHtml(itemName)}<br><small>Ref: ${escapeHtml(sku || '-')}</small></td>
+                            <td style="text-align:center;">${qty}</td>
+                            <td style="text-align:right;">${formatMoney(price)}</td>
+                            <td style="text-align:right;">${formatMoney(price * qty)}</td>
+                        </tr>
+                    `;
+                }).join('') : `
+                    <tr>
+                        <td colspan="4" style="text-align:center;color:#777;">Este registro no tiene productos detallados.</td>
+                    </tr>
+                `;
+
+                return `
+                    <section class="print-invoice">
+                        <header class="print-invoice-header">
+                            <div class="print-invoice-brand">
+                                <img src="${escapeHtml(companyLogo)}" alt="BLYXU">
+                                <div>
+                                    <h1>${escapeHtml(companyName)}</h1>
+                                    ${companyNit ? `<p>NIT / DOC: ${escapeHtml(companyNit)}</p>` : ''}
+                                    ${companyPhone ? `<p>${escapeHtml(companyPhone)}</p>` : ''}
+                                    ${companyEmail ? `<p>${escapeHtml(companyEmail)}</p>` : ''}
+                                </div>
+                            </div>
+                            <div class="print-invoice-title">
+                                <h2>Factura</h2>
+                                <p><strong>${escapeHtml(id)}</strong></p>
+                                <p>${formatDate(date)}</p>
+                            </div>
+                        </header>
+
+                        <div class="print-invoice-grid">
+                            <div class="print-invoice-box">
+                                <h3>Facturar a</h3>
+                                <p><strong>${escapeHtml(name)}</strong></p>
+                                <p>Contacto: ${escapeHtml(phone || '-')}</p>
+                                <p>Direccion: ${escapeHtml(address || '-')}</p>
+                                <p>Ciudad: ${escapeHtml(city || '-')}</p>
+                            </div>
+                            <div class="print-invoice-box">
+                                <h3>Pedido</h3>
+                                <p>Estado: <strong>${escapeHtml(state)}</strong></p>
+                                <p>Metodo: ${escapeHtml(method)}</p>
+                                <p>ID Pedido: ${escapeHtml(orderId)}</p>
+                            </div>
+                        </div>
+
+                        <table class="print-invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th style="text-align:center;">Cant.</th>
+                                    <th style="text-align:right;">P. unit.</th>
+                                    <th style="text-align:right;">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+
+                        <div class="print-invoice-total">Total: ${formatMoney(total)}</div>
+                        <div class="print-invoice-footer">
+                            <p><strong>Gracias por tu compra.</strong></p>
+                            <p>Esta factura fue generada desde el panel de cliente BLYXU.</p>
+                        </div>
+                    </section>
+                `;
+            }
+
+            window.downloadInvoicePdf = function(index) {
+                const order = currentInvoices[index];
+                const printArea = document.getElementById('invoice-print-area');
+                if (!order || !printArea) return;
+
+                const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'factura');
+                const previousTitle = document.title;
+                printArea.innerHTML = buildPrintableInvoice(order);
+                document.body.classList.add('invoice-print-mode');
+                document.title = 'Factura-BLYXU-' + String(id).replace(/[^a-z0-9_-]/gi, '');
+
+                const cleanup = () => {
+                    document.body.classList.remove('invoice-print-mode');
+                    printArea.innerHTML = '';
+                    document.title = previousTitle;
+                    window.removeEventListener('afterprint', cleanup);
+                };
+
+                window.addEventListener('afterprint', cleanup);
+                setTimeout(() => {
+                    window.print();
+                    setTimeout(cleanup, 1200);
+                }, 100);
+            };
+
+            function renderCurrentView() {
+                tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.ordersView === currentView));
+                if (currentView === 'invoices') {
+                    renderInvoices();
+                } else {
+                    renderOrders();
+                }
+            }
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    currentView = tab.dataset.ordersView;
+                    renderCurrentView();
+                });
+            });
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const phone = input.value.trim();
+                const comparable = comparablePhone(phone);
+
+                if (comparable.length < 7) {
+                    status.textContent = 'Escribe un numero de contacto valido.';
+                    panel.classList.remove('open');
+                    return;
+                }
+
+                status.textContent = '';
+                btn.disabled = true;
+                btn.textContent = 'Buscando...';
+
+                try {
+                    currentPhone = phone;
+                    [currentOrders, currentInvoices] = await Promise.all([
+                        fetchOrdersByPhone(phone),
+                        fetchInvoicesByPhone(phone)
+                    ]);
+                    const firstRecord = currentOrders[0] || currentInvoices[0];
+                    const totalRecords = currentOrders.length + currentInvoices.length;
+                    const customer = firstRecord ? getField(firstRecord, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU') : 'Cliente BLYXU';
+                    heading.textContent = totalRecords ? 'Panel de ' + customer : 'Sin registros';
+                    summary.textContent = totalRecords === 1
+                        ? '1 registro encontrado para el contacto terminado en ' + comparable.slice(-4)
+                        : totalRecords + ' registros encontrados para el contacto terminado en ' + comparable.slice(-4);
+                    panel.classList.add('open');
+                    currentView = 'orders';
+                    renderCurrentView();
+                } catch (error) {
+                    status.textContent = error.message || 'No se pudo consultar el panel.';
+                    panel.classList.remove('open');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Ver mi panel';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

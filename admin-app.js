@@ -44,6 +44,32 @@ let adminInventoryCategoryFilter = 'todos';
 let isEditingProduct = false;
 let inventoryFetchToken = 0;
 const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
+const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
+
+function formatAdminMoney(value) {
+    return '$' + (parseFloat(value) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 });
+}
+
+function readAdminCachedSiteConfigValue(key, fallback = '') {
+    if (window.storeConfig && window.storeConfig[key] !== undefined) return window.storeConfig[key];
+    try {
+        const cached = JSON.parse(localStorage.getItem(SITE_CONFIG_CACHE_KEY) || 'null');
+        if (cached?.data && cached.data[key] !== undefined) return cached.data[key];
+    } catch (error) {
+        return fallback;
+    }
+    return fallback;
+}
+
+function getAdminPromotionDiscountPercent() {
+    const titleInput = document.getElementById('promo-config-title');
+    const promoTitle = titleInput?.value?.trim() || readAdminCachedSiteConfigValue('Promo_Title', '');
+    const match = String(promoTitle || '').match(/(\d+)%/);
+    if (!match) return 0;
+
+    const percent = parseInt(match[1], 10);
+    return percent > 0 && percent < 100 ? percent : 0;
+}
 
 function updateLivePreview() {
     const nombre = document.getElementById('prod-nombre')?.value || 'Nombre del Producto';
@@ -80,11 +106,30 @@ function updateLivePreview() {
     const parsedPrecio = parseAmount(precio);
     const parsedMayorista = parseAmount(precioMayorista);
 
+    const promoCheck = document.getElementById('prod-promocion');
+    const discountPercent = promoCheck?.checked ? getAdminPromotionDiscountPercent() : 0;
+    const discountFactor = discountPercent ? 1 - (discountPercent / 100) : 1;
+
     let priceHtml = '';
     if (parsedPrecio > 0) {
-        priceHtml = `$${parsedPrecio.toLocaleString('es-CO')}`;
+        if (discountPercent) {
+            const promoPrice = Math.round(parsedPrecio * discountFactor);
+            priceHtml = `<span style="color:#ffd969; text-shadow:0 0 12px rgba(255,217,105,.35);">${formatAdminMoney(promoPrice)}</span> <span style="font-size:12px; color:rgba(255,255,255,.38); text-decoration:line-through; margin-left:6px;">${formatAdminMoney(parsedPrecio)}</span> <span style="font-size:10px; color:#ffd969; border:1px solid rgba(255,217,105,.28); border-radius:4px; padding:2px 5px; margin-left:6px;">-${discountPercent}%</span>`;
+        } else {
+            priceHtml = formatAdminMoney(parsedPrecio);
+        }
         if (parsedMayorista > 0) {
-            priceHtml += ` <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:8px; border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: $${parsedMayorista.toLocaleString('es-CO')}</span>`;
+            const wholesaleText = discountPercent
+                ? `${formatAdminMoney(Math.round(parsedMayorista * discountFactor))} <span style="text-decoration:line-through; color:rgba(255,255,255,.35); margin-left:4px;">${formatAdminMoney(parsedMayorista)}</span>`
+                : formatAdminMoney(parsedMayorista);
+            priceHtml += ` <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:8px; border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: ${wholesaleText}</span>`;
+        }
+    } else if (parsedMayorista > 0) {
+        if (discountPercent) {
+            const promoWholesale = Math.round(parsedMayorista * discountFactor);
+            priceHtml = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: <span style="color:#ffd969;">${formatAdminMoney(promoWholesale)}</span> <span style="text-decoration:line-through; color:rgba(255,255,255,.35); margin-left:4px;">${formatAdminMoney(parsedMayorista)}</span> <span style="color:#ffd969; margin-left:4px;">-${discountPercent}%</span></span>`;
+        } else {
+            priceHtml = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: ${formatAdminMoney(parsedMayorista)}</span>`;
         }
     } else {
         priceHtml = '$0';
@@ -244,6 +289,7 @@ function normalizeGoogleProduct(product) {
         Estilo: styleValue,
         SKU: getProductField(product, ['SKU'], ''),
         Estado: getProductField(product, ['Estado'], 'Activo'),
+        Promocion: getProductPromotionValue(product, false),
         Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de Creación'], '')
     };
 }
@@ -617,6 +663,10 @@ function normalizeProductPayloadForSubmit(data) {
     const cantidad = payload.Cantidad ?? payload.Stock ?? payload.stock ?? payload['Stock Inicial'] ?? '';
     const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
     const categoria = getProductField(payload, PRODUCT_CATEGORY_FIELD_KEYS, getInputValue('prod-categoria'));
+    const promoCheck = document.getElementById('prod-promocion');
+    const promocion = promoCheck
+        ? (promoCheck.checked ? 'VERDADERO' : 'FALSO')
+        : getProductPromotionValue(payload, false);
 
     payload['ID Producto'] = idProducto;
     payload['ID Producto Madre'] = idProducto;
@@ -633,6 +683,7 @@ function normalizeProductPayloadForSubmit(data) {
     payload['CatÃ¡logo'] = catalogo;
     payload.catalogo = catalogo;
     setProductCategoryAliases(payload, categoria);
+    setProductPromotionAliases(payload, promocion);
     if (cantidad !== '') payload.Stock = cantidad;
     applyAutomaticStockStatus(payload);
 
@@ -649,11 +700,37 @@ function setProductCategoryAliases(payload, categoria) {
     return payload;
 }
 
-function buildGroupCategorySyncPayloads(idProducto, currentVariationId, categoria) {
+function normalizePromotionValue(value) {
+    if (typeof value === 'boolean') return value ? 'VERDADERO' : 'FALSO';
+    const clean = String(value ?? '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    return ['verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa'].includes(clean) ? 'VERDADERO' : 'FALSO';
+}
+
+function getProductPromotionValue(product, fallback = false) {
+    const rawValue = getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, fallback);
+    return normalizePromotionValue(rawValue);
+}
+
+function setProductPromotionAliases(payload, promocion) {
+    const cleanPromotion = normalizePromotionValue(promocion);
+    payload.Promocion = cleanPromotion;
+    payload['Promoci\u00f3n'] = cleanPromotion;
+    payload['Promoci\u00c3\u00b3n'] = cleanPromotion;
+    payload['Promoci\u00c3\u0192\u00c2\u00b3n'] = cleanPromotion;
+    payload.promo = cleanPromotion;
+    return payload;
+}
+
+function buildGroupCategorySyncPayloads(idProducto, currentVariationId, categoria, promocion) {
     const motherId = String(idProducto || '').trim();
     const activeVariationId = String(currentVariationId || '').trim();
     const categoryValue = String(categoria || '').trim();
     if (!motherId || !categoryValue) return [];
+    const promotionValue = getProductPromotionValue({ Promocion: promocion }, false);
 
     const seen = new Set();
     return inventario
@@ -675,7 +752,8 @@ function buildGroupCategorySyncPayloads(idProducto, currentVariationId, categori
             'ID Producto': motherId,
             ID_Producto: motherId,
             idProducto: motherId
-        }, categoryValue));
+        }, categoryValue))
+        .map(payload => setProductPromotionAliases(payload, promotionValue));
 }
 
 function buildProductPayload() {
@@ -1221,6 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // initAdminParticles(); // Desactivado para optimizar carga
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initSettingsTabs();
+    initOrdersAdminTabs();
     initRetailPriceToggle();
     initContactConfigAdmin();
     initWhatsAppConfigAdmin();
@@ -1309,7 +1388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Configurar listeners para la Vista Previa
-    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-estado'];
+    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-estado', 'prod-promocion'];
     inputsToWatch.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -1432,7 +1511,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const variants = collectVariantPayloads();
                 const groupCategoryUpdates = isEditingProduct
-                    ? buildGroupCategorySyncPayloads(motherProductId, finalData['ID Variacion'] || finalData['ID Variación'] || originalVariationId, finalData.Categoria)
+                    ? buildGroupCategorySyncPayloads(motherProductId, finalData['ID Variacion'] || finalData['ID Variación'] || originalVariationId, finalData.Categoria, finalData.Promocion)
                     : [];
                 const itemsToSave = [finalData, ...groupCategoryUpdates, ...variants];
                 
@@ -1925,7 +2004,9 @@ const PROMO_CONFIG_FIELDS = [
 
 function fillPromoConfigForm(config) {
     if (!config) return;
+    window.storeConfig = window.storeConfig || {};
     PROMO_CONFIG_FIELDS.forEach(([key, id]) => {
+        window.storeConfig[key] = config[key] || '';
         const input = document.getElementById(id);
         if (input) {
             if (input.type === 'checkbox') {
@@ -1935,6 +2016,7 @@ function fillPromoConfigForm(config) {
             }
         }
     });
+    updateLivePreview();
 }
 
 function initPromoConfigAdmin() {
@@ -1942,6 +2024,13 @@ function initPromoConfigAdmin() {
     if (!form) return;
 
     loadSiteConfigForAdmin().then(fillPromoConfigForm);
+
+    PROMO_CONFIG_FIELDS.forEach(([, id]) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.addEventListener('input', updateLivePreview);
+        input.addEventListener('change', updateLivePreview);
+    });
 
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -1953,6 +2042,7 @@ function initPromoConfigAdmin() {
         }
 
         try {
+            const savedConfig = {};
             await Promise.all(PROMO_CONFIG_FIELDS.map(([key, id]) => {
                 const input = document.getElementById(id);
                 let value = '';
@@ -1963,8 +2053,11 @@ function initPromoConfigAdmin() {
                         value = input.value.trim();
                     }
                 }
+                savedConfig[key] = value;
                 return saveSiteConfig(key, value);
             }));
+            window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
+            updateLivePreview();
             showToast('Banner promocional guardado correctamente');
         } catch (error) {
             console.error('Error guardando banner promocional:', error);
@@ -3232,7 +3325,7 @@ function editarProducto(index) {
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
     setInputValue('prod-estilo', cleanProductStyleValue(p.Estilo || ''));
     
-    var isPromo = String(p.Promocion || '').toUpperCase() === 'VERDADERO' || String(p.Promocion || '').toLowerCase() === 'true';
+    var isPromo = getProductPromotionValue(p, false) === 'VERDADERO';
     var promoCheck = document.getElementById('prod-promocion');
     if (promoCheck) promoCheck.checked = isPromo;
 
@@ -3580,56 +3673,351 @@ function switchDashboardView(viewId, title) {
 
 // === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
 window.pedidosList = [];
+window.facturasList = [];
+window.activeOrdersAdminTab = 'orders-mayor';
+const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v1';
+const ADMIN_ORDERS_CACHE_TTL = 45 * 1000;
+let adminOrdersLoadPromise = null;
 
-async function cargarPedidos() {
-    const tbody = document.getElementById('orders-tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">Sincronizando pedidos...</td></tr>';
-    
+function readAdminOrdersCache() {
     try {
-        const response = await fetch(GOOGLE_SHEET_API + "?resource=pedidos&action=get");
-        const result = await response.json();
-        if (result && result.status === 'success' && result.data) {
-            window.pedidosList = result.data.reverse(); // Más recientes primero
-            renderPedidos();
+        const cached = JSON.parse(localStorage.getItem(ADMIN_ORDERS_CACHE_KEY) || 'null');
+        return cached && Array.isArray(cached.pedidos) && Array.isArray(cached.facturas) ? cached : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeAdminOrdersCache() {
+    try {
+        localStorage.setItem(ADMIN_ORDERS_CACHE_KEY, JSON.stringify({
+            savedAt: Date.now(),
+            pedidos: window.pedidosList || [],
+            facturas: window.facturasList || []
+        }));
+    } catch (error) {
+        console.warn('No se pudo guardar cache de pedidos:', error);
+    }
+}
+
+function isAdminOrdersCacheFresh(cached) {
+    return Boolean(cached?.savedAt && Date.now() - Number(cached.savedAt) < ADMIN_ORDERS_CACHE_TTL);
+}
+
+async function cargarPedidos(options = {}) {
+    const force = Boolean(options && options.force);
+    const orderBodies = ['orders-mayor-tbody', 'orders-detal-tbody', 'orders-tbody']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    const invoiceBodies = ['invoices-mayor-tbody', 'invoices-detal-tbody', 'invoices-tbody']
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+    const cached = readAdminOrdersCache();
+    if (cached) {
+        window.pedidosList = cached.pedidos;
+        window.facturasList = cached.facturas;
+        renderPedidos();
+        renderFacturas();
+        if (!force && isAdminOrdersCacheFresh(cached)) return;
+        if (!force && adminOrdersLoadPromise) return adminOrdersLoadPromise;
+    } else {
+        orderBodies.forEach(tbody => { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">Sincronizando pedidos...</td></tr>'; });
+        invoiceBodies.forEach(tbody => { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 40px;">Sincronizando facturas...</td></tr>'; });
+    }
+
+    if (adminOrdersLoadPromise && !force) return adminOrdersLoadPromise;
+    
+    adminOrdersLoadPromise = (async () => {
+    try {
+        const [pedidosResponse, facturasResponse] = await Promise.all([
+            fetch(GOOGLE_SHEET_API + "?resource=pedidos&action=get&_=" + Date.now(), { cache: 'no-store' }),
+            fetch(GOOGLE_SHEET_API + "?resource=facturas&action=get&_=" + Date.now(), { cache: 'no-store' })
+        ]);
+        const [pedidosResult, facturasResult] = await Promise.all([
+            pedidosResponse.json(),
+            facturasResponse.json()
+        ]);
+
+        if (pedidosResult && pedidosResult.status === 'success' && Array.isArray(pedidosResult.data)) {
+            window.pedidosList = pedidosResult.data.slice().reverse(); // Más recientes primero
         } else {
-            throw new Error(result.error || 'Error al cargar los pedidos');
+            throw new Error(pedidosResult.error || 'Error al cargar los pedidos');
         }
+
+        if (facturasResult && facturasResult.status === 'success' && Array.isArray(facturasResult.data)) {
+            window.facturasList = facturasResult.data.slice().reverse();
+        } else {
+            window.facturasList = [];
+            console.warn('No se pudieron cargar facturas:', facturasResult && facturasResult.error);
+        }
+
+        writeAdminOrdersCache();
+        renderPedidos();
+        renderFacturas();
     } catch (err) {
         console.error(err);
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`;
-        showToast('Error cargando pedidos', 'error');
+        if (!cached) {
+            orderBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`; });
+            invoiceBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`; });
+        }
+        showToast(cached ? 'Mostrando pedidos guardados localmente' : 'Error cargando pedidos', cached ? 'warning' : 'error');
+    } finally {
+        adminOrdersLoadPromise = null;
     }
+    })();
+
+    return adminOrdersLoadPromise;
+}
+
+function getOrderIdValue(order) {
+    return order && (order['ID Pedido'] || order.ID || order.id || '');
+}
+
+function getInvoiceIdValue(invoice) {
+    return invoice && (invoice['ID Factura'] || invoice.ID || invoice.id || '');
+}
+
+function getInvoiceOrderIdValue(invoice) {
+    return invoice && (invoice['ID Pedido'] || invoice['Pedido'] || '');
+}
+
+function getInvoiceCustomerName(invoice) {
+    return invoice && (invoice.Nombre || invoice['Nombre Cliente'] || invoice.Cliente || '-');
+}
+
+function normalizeAdminCustomerType(value) {
+    const clean = String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    if (clean.includes('mayor') || clean.includes('wholesale')) return 'mayor';
+    if (clean.includes('detal') || clean.includes('minor') || clean.includes('retail')) return 'detal';
+    return '';
+}
+
+function inferOrderCustomerType(order) {
+    if (!order) return 'detal';
+    const explicit = normalizeAdminCustomerType(order['Tipo Cliente'] || order.Tipo || order.tipo || order.ClienteTipo);
+    if (explicit) return explicit;
+
+    const id = String(getOrderIdValue(order) || '').toLowerCase();
+    if (id.startsWith('may-')) return 'mayor';
+    if (id.startsWith('det-')) return 'detal';
+
+    const method = String(order['MÃ©todo Contacto'] || order['Metodo Contacto'] || order.Metodo || '').toLowerCase();
+    const methodType = normalizeAdminCustomerType(method);
+    if (methodType) return methodType;
+
+    try {
+        const jsonStr = order['Productos JSON'] || order.Productos;
+        const items = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (Array.isArray(jsonStr) ? jsonStr : []);
+        if (items.some(item => normalizeAdminCustomerType(item.modo || item.mode || item.tipo) === 'mayor')) return 'mayor';
+    } catch (error) {
+        // Si no se puede leer el JSON, dejamos el pedido como detal por compatibilidad.
+    }
+
+    return 'detal';
+}
+
+function inferInvoiceCustomerType(invoice) {
+    if (!invoice) return 'detal';
+    const explicit = normalizeAdminCustomerType(invoice['Tipo Cliente'] || invoice.Tipo || invoice.tipo || invoice.ClienteTipo);
+    if (explicit) return explicit;
+
+    const idPedido = String(getInvoiceOrderIdValue(invoice) || '').trim();
+    if (idPedido) {
+        const linkedOrder = (window.pedidosList || []).find(order => String(getOrderIdValue(order)).trim() === idPedido);
+        if (linkedOrder) return inferOrderCustomerType(linkedOrder);
+        const lowerId = idPedido.toLowerCase();
+        if (lowerId.startsWith('may-')) return 'mayor';
+        if (lowerId.startsWith('det-')) return 'detal';
+    }
+
+    try {
+        const jsonStr = invoice['Productos JSON'] || invoice.Productos;
+        const items = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (Array.isArray(jsonStr) ? jsonStr : []);
+        if (items.some(item => normalizeAdminCustomerType(item.modo || item.mode || item.tipo) === 'mayor')) return 'mayor';
+    } catch (error) {
+        // Mantener compatibilidad con facturas manuales.
+    }
+
+    return 'detal';
+}
+
+function getInvoiceStatusColor(estado) {
+    const value = String(estado || '').toLowerCase();
+    if (value.includes('final') || value.includes('complet') || value.includes('enviado') || value.includes('pagado')) return '#10B981';
+    if (value.includes('cancel')) return '#EF4444';
+    return '#9ca3af';
+}
+
+function getOrdersSearchQuery() {
+    return String(document.getElementById('admin-orders-search')?.value || '').toLowerCase().trim();
+}
+
+function recordMatchesOrdersSearch(record, fields) {
+    const query = getOrdersSearchQuery();
+    if (!query) return true;
+    return fields.map(value => String(value || '')).join(' ').toLowerCase().includes(query);
+}
+
+function getFacturedOrderIds() {
+    return new Set((window.facturasList || [])
+        .map(f => String(getInvoiceOrderIdValue(f)).trim())
+        .filter(Boolean));
+}
+
+function formatInvoiceListDate(fecha) {
+    if (!fecha) return '-';
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) return String(fecha);
+    return date.toLocaleDateString();
+}
+
+function getOrderTableTargets() {
+    const targets = [
+        { type: 'mayor', tbodyId: 'orders-mayor-tbody', badgeId: 'orders-mayor-count-badge' },
+        { type: 'detal', tbodyId: 'orders-detal-tbody', badgeId: 'orders-detal-count-badge' }
+    ].filter(target => document.getElementById(target.tbodyId));
+
+    if (!targets.length && document.getElementById('orders-tbody')) {
+        targets.push({ type: 'all', tbodyId: 'orders-tbody', badgeId: 'orders-count-badge' });
+    }
+
+    return targets;
+}
+
+function getInvoiceTableTargets() {
+    const targets = [
+        { type: 'mayor', tbodyId: 'invoices-mayor-tbody', badgeId: 'invoices-mayor-count-badge' },
+        { type: 'detal', tbodyId: 'invoices-detal-tbody', badgeId: 'invoices-detal-count-badge' }
+    ].filter(target => document.getElementById(target.tbodyId));
+
+    if (!targets.length && document.getElementById('invoices-tbody')) {
+        targets.push({ type: 'all', tbodyId: 'invoices-tbody', badgeId: 'invoices-count-badge' });
+    }
+
+    return targets;
+}
+
+function buildOrderRowHtml(p, idx) {
+    const id = getOrderIdValue(p) || '-';
+    const fecha = p.Fecha || '-';
+    const cliente = p['Nombre Cliente'] || p.Nombre || '-';
+    const total = parseFloat(p.Subtotal || p.Total || 0);
+    const estado = p['Estado Pedido'] || p.Estado || 'Pendiente';
+    const colorEstado = getInvoiceStatusColor(estado);
+
+    return `
+        <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="font-weight:700;">${escapeHtml(id)}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+            <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['TelÃ©fono'] || p.Telefono || '')}</span></td>
+            <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+            <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+            <td class="orders-actions-cell">
+                <button class="orders-action-btn" onclick="abrirEditorFactura(${idx})" type="button" title="Ajustar factura">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                    Facturar
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+function buildInvoiceRowHtml(f, idx) {
+    const idFactura = getInvoiceIdValue(f) || '-';
+    const idPedido = getInvoiceOrderIdValue(f) || '-';
+    const fecha = f.Fecha || '-';
+    const cliente = getInvoiceCustomerName(f);
+    const total = parseFloat(f.Subtotal || f.Total || 0);
+    const estado = f['Estado Factura'] || f.Estado || 'Finalizada';
+    const colorEstado = getInvoiceStatusColor(estado);
+
+    return `
+        <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <td style="font-weight:700;">${escapeHtml(idFactura)}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(idPedido)}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+            <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
+            <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+            <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+            <td class="orders-actions-cell">
+                <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver factura">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
+                    Ver factura
+                </button>
+            </td>
+        </tr>
+    `;
 }
 
 function renderPedidos() {
     const tbody = document.getElementById('orders-tbody');
-    if (!tbody) return;
+    const facturedOrderIds = getFacturedOrderIds();
+    const pendingOrders = (window.pedidosList || [])
+        .map((p, idx) => ({ p, idx }))
+        .filter(({ p }) => {
+            const id = String(getOrderIdValue(p)).trim();
+            if (id && facturedOrderIds.has(id)) return false;
+            const estado = p['Estado Pedido'] || p.Estado || '';
+            if (String(estado).toLowerCase().includes('factur')) return false;
+            return recordMatchesOrdersSearch(p, [
+                id,
+                p.Fecha,
+                p['Nombre Cliente'],
+                p.Nombre,
+                p['Teléfono'],
+                p.Telefono,
+                estado
+            ]);
+        });
 
-    if (window.pedidosList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">No hay pedidos registrados.</td></tr>';
+    getOrderTableTargets().forEach(target => {
+        const tbody = document.getElementById(target.tbodyId);
+        const rows = target.type === 'all'
+            ? pendingOrders
+            : pendingOrders.filter(({ p }) => inferOrderCustomerType(p) === target.type);
+        const badge = document.getElementById(target.badgeId);
+        if (badge) badge.textContent = rows.length;
+
+        if (!tbody) return;
+        tbody.innerHTML = rows.length
+            ? rows.map(({ p, idx }) => buildOrderRowHtml(p, idx)).join('')
+            : '<tr><td colspan="6" style="text-align:center; padding: 40px;">No hay pedidos pendientes en esta vista.</td></tr>';
+    });
+    return;
+
+    const badge = document.getElementById('orders-count-badge');
+    if (badge) badge.textContent = pendingOrders.length;
+
+    if (pendingOrders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">No hay pedidos pendientes en esta vista.</td></tr>';
         return;
     }
 
-    const html = window.pedidosList.map((p, idx) => {
-        const id = p['ID Pedido'] || p.ID || '-';
+    const html = pendingOrders.map(({ p, idx }) => {
+        const id = getOrderIdValue(p) || '-';
         const fecha = p.Fecha || '-';
         const cliente = p['Nombre Cliente'] || p.Nombre || '-';
         const total = parseFloat(p.Subtotal || p.Total || 0);
         const estado = p['Estado Pedido'] || p.Estado || 'Pendiente';
         
-        let colorEstado = '#9ca3af';
-        if(estado.toLowerCase().includes('completado') || estado.toLowerCase().includes('enviado')) colorEstado = '#10B981';
-        if(estado.toLowerCase().includes('cancelado')) colorEstado = '#EF4444';
+        const colorEstado = getInvoiceStatusColor(estado);
 
         return `
             <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <td style="font-weight:700;">${id}</td>
-                <td style="font-size:12px; color:var(--text-muted);">${new Date(fecha).toLocaleDateString()}</td>
-                <td style="font-weight:600;">${cliente} <br><span style="font-size:10px; color:var(--primary);">${p['Teléfono'] || p.Telefono || ''}</span></td>
+                <td style="font-weight:700;">${escapeHtml(id)}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+                <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['Teléfono'] || p.Telefono || '')}</span></td>
                 <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
-                <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${estado}</span></td>
-                <td>
-                    <button class="action-btn" onclick="abrirEditorFactura(${idx})" style="background:rgba(155,44,250,0.8); color:#fff; width:100%; justify-content:center;">Ver / Editar Factura</button>
+                <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+                <td class="orders-actions-cell">
+                    <button class="orders-action-btn" onclick="abrirEditorFactura(${idx})" type="button" title="Ajustar factura">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                        Facturar
+                    </button>
                 </td>
             </tr>
         `;
@@ -3638,37 +4026,228 @@ function renderPedidos() {
     tbody.innerHTML = html;
 }
 
+function renderFacturas() {
+    const tbody = document.getElementById('invoices-tbody');
+    if (!getInvoiceTableTargets().length) return;
+
+    const invoices = (window.facturasList || [])
+        .map((f, idx) => ({ f, idx }))
+        .filter(({ f }) => recordMatchesOrdersSearch(f, [
+            getInvoiceIdValue(f),
+            getInvoiceOrderIdValue(f),
+            f.Fecha,
+            getInvoiceCustomerName(f),
+            f['ID Cliente'],
+            f['Estado Factura'],
+            f.Estado,
+            f.Subtotal
+        ]));
+
+    getInvoiceTableTargets().forEach(target => {
+        const tbody = document.getElementById(target.tbodyId);
+        const rows = target.type === 'all'
+            ? invoices
+            : invoices.filter(({ f }) => inferInvoiceCustomerType(f) === target.type);
+        const badge = document.getElementById(target.badgeId);
+        if (badge) badge.textContent = rows.length;
+
+        if (!tbody) return;
+        tbody.innerHTML = rows.length
+            ? rows.map(({ f, idx }) => buildInvoiceRowHtml(f, idx)).join('')
+            : '<tr><td colspan="7" style="text-align:center; padding: 40px;">No hay facturas finalizadas en esta vista.</td></tr>';
+    });
+    return;
+
+    const badge = document.getElementById('invoices-count-badge');
+    if (badge) badge.textContent = invoices.length;
+
+    if (invoices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 40px;">No hay facturas finalizadas en esta vista.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = invoices.map(({ f, idx }) => {
+        const idFactura = getInvoiceIdValue(f) || '-';
+        const idPedido = getInvoiceOrderIdValue(f) || '-';
+        const fecha = f.Fecha || '-';
+        const cliente = getInvoiceCustomerName(f);
+        const total = parseFloat(f.Subtotal || f.Total || 0);
+        const estado = f['Estado Factura'] || f.Estado || 'Finalizada';
+        const colorEstado = getInvoiceStatusColor(estado);
+
+        return `
+            <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <td style="font-weight:700;">${escapeHtml(idFactura)}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(idPedido)}</td>
+                <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+                <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
+                <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+                <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+                <td class="orders-actions-cell">
+                    <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver factura">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
+                        Ver factura
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function initOrdersAdminTabs() {
+    const container = document.getElementById('view-orders');
+    if (!container || container.dataset.ordersTabsReady === 'true') return;
+    container.dataset.ordersTabsReady = 'true';
+
+    const tabs = Array.from(container.querySelectorAll('[data-orders-tab-target]'));
+    const panels = Array.from(container.querySelectorAll('[data-orders-tab]'));
+    const searchInput = document.getElementById('admin-orders-search');
+
+    function activate(tabId) {
+        window.activeOrdersAdminTab = tabId;
+        tabs.forEach(btn => {
+            const active = btn.dataset.ordersTabTarget === tabId;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        panels.forEach(panel => {
+            const active = panel.dataset.ordersTab === tabId;
+            panel.classList.toggle('active', active);
+            panel.hidden = !active;
+        });
+    }
+
+    window.switchOrdersAdminTab = activate;
+    tabs.forEach(btn => btn.addEventListener('click', () => activate(btn.dataset.ordersTabTarget)));
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            renderPedidos();
+            renderFacturas();
+        });
+    }
+
+    activate(window.activeOrdersAdminTab || 'orders-mayor');
+}
+
 // === CREADOR Y EDITOR DE FACTURAS ===
 window.invoiceItems = [];
-window.invoiceEditIndex = null; // null si es nueva, o el index de pedidosList
+window.invoiceEditIndex = null; // null si es nueva, o el index de la lista activa
+window.invoiceEditSource = 'manual';
+window.invoiceOriginalInvoiceId = '';
+window.invoiceCustomerType = 'Detal';
+window.invoiceSearchResults = [];
+window.invoiceInventoryLoadingPromise = null;
+window.invoiceInventoryLoadTried = false;
 
-window.abrirEditorFactura = function(idx = null) {
+function readInvoiceField(source, fields, fallback = '') {
+    return getProductField(source || {}, fields, fallback);
+}
+
+function formatDateForInvoiceInput(value) {
+    if (!value) return new Date().toISOString().slice(0, 10);
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+    return date.toISOString().slice(0, 10);
+}
+
+function getInvoiceProductId(product) {
+    return readInvoiceField(product, ['idVariacion', 'ID', 'ID Variacion', 'ID VariaciÃ³n', 'ID VariaciÃƒÂ³n', 'SKU'], '') || ('ITEM-' + Date.now());
+}
+
+function getInvoiceProductName(product) {
+    return readInvoiceField(product, ['Nombre', 'Nombre del Producto', 'Producto'], 'Producto');
+}
+
+function getInvoiceProductSku(product) {
+    return readInvoiceField(product, ['SKU', 'Referencia', 'ID Variacion', 'ID VariaciÃ³n', 'ID VariaciÃƒÂ³n'], '');
+}
+
+function getInvoiceProductPrice(product) {
+    const wholesale = parseFloat(readInvoiceField(product, ['Precio Mayor', 'Precio Mayorista', 'precioMayorista'], 0));
+    if (wholesale > 0) return wholesale;
+    return parseFloat(readInvoiceField(product, ['Precio', 'Precio Unitario', 'price'], 0)) || 0;
+}
+
+async function ensureInvoiceInventoryLoaded() {
+    if (Array.isArray(inventario) && inventario.length > 0) return;
+    if (window.invoiceInventoryLoadingPromise) return window.invoiceInventoryLoadingPromise;
+    if (window.invoiceInventoryLoadTried) return;
+    window.invoiceInventoryLoadTried = true;
+
+    const resultsContainer = document.getElementById('inv-search-results');
+    const searchInput = document.getElementById('inv-product-search');
+    if (resultsContainer && searchInput && searchInput.value.trim().length >= 2) {
+        resultsContainer.innerHTML = '<div class="inv-search-empty">Cargando productos...</div>';
+        resultsContainer.classList.add('active');
+    }
+
+    window.invoiceInventoryLoadingPromise = cargarInventario({ silent: true }).finally(() => {
+        window.invoiceInventoryLoadingPromise = null;
+    });
+    return window.invoiceInventoryLoadingPromise;
+}
+
+window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     window.invoiceItems = [];
     window.invoiceEditIndex = idx;
+    window.invoiceEditSource = idx === null ? 'manual' : source;
+    window.invoiceOriginalInvoiceId = '';
+    window.invoiceCustomerType = 'Detal';
     
+    document.getElementById('inv-original-id').value = '';
     document.getElementById('inv-edit-nombre').value = '';
     document.getElementById('inv-edit-tel').value = '';
     document.getElementById('inv-edit-dir').value = '';
     document.getElementById('inv-edit-ciudad').value = '';
+    document.getElementById('inv-edit-fecha').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('inv-edit-estado').value = 'Finalizada';
+    document.getElementById('inv-edit-metodo').value = 'Mostrador / Manual';
+    document.getElementById('inv-edit-nota').value = '';
     document.getElementById('inv-product-search').value = '';
     document.getElementById('inv-search-results').classList.remove('active');
+    document.getElementById('inv-custom-name').value = '';
+    document.getElementById('inv-custom-sku').value = '';
+    document.getElementById('inv-custom-price').value = '';
     
     if (idx !== null) {
-        // Editando existente
-        const p = window.pedidosList[idx];
-        document.getElementById('inv-editor-title').textContent = 'Editar Factura: ' + (p['ID Pedido'] || p.ID);
-        document.getElementById('inv-edit-id').value = p['ID Pedido'] || p.ID;
+        const editingInvoice = source === 'factura';
+        const p = editingInvoice ? window.facturasList[idx] : window.pedidosList[idx];
+        if (!p) {
+            showToast('No se encontro el registro seleccionado', 'error');
+            return;
+        }
+
+        const orderId = editingInvoice ? getInvoiceOrderIdValue(p) : getOrderIdValue(p);
+        const invoiceId = editingInvoice ? getInvoiceIdValue(p) : '';
+        window.invoiceOriginalInvoiceId = invoiceId || '';
+        window.invoiceCustomerType = editingInvoice
+            ? (inferInvoiceCustomerType(p) === 'mayor' ? 'Mayor' : 'Detal')
+            : (inferOrderCustomerType(p) === 'mayor' ? 'Mayor' : 'Detal');
+
+        document.getElementById('inv-editor-title').textContent = editingInvoice
+            ? 'Editar Factura: ' + (invoiceId || orderId)
+            : 'Ajustar Factura del Pedido: ' + orderId;
+        document.getElementById('inv-original-id').value = orderId;
+        document.getElementById('inv-edit-id').value = editingInvoice ? (invoiceId || orderId) : `FAC-${orderId}`;
         
-        document.getElementById('inv-edit-nombre').value = p['Nombre Cliente'] || p.Nombre || '';
-        document.getElementById('inv-edit-tel').value = p['Teléfono'] || p.Telefono || '';
-        document.getElementById('inv-edit-dir').value = p['Dirección'] || p.Direccion || '';
+        document.getElementById('inv-edit-nombre').value = editingInvoice ? getInvoiceCustomerName(p) : (p['Nombre Cliente'] || p.Nombre || '');
+        document.getElementById('inv-edit-tel').value = editingInvoice ? (p['ID Cliente'] || '') : (p['Teléfono'] || p.Telefono || '');
+        document.getElementById('inv-edit-dir').value = editingInvoice
+            ? (p['Método Entrega'] || p['Metodo Entrega'] || p.entrega || p['Dirección'] || p.Direccion || '')
+            : (p['Dirección'] || p.Direccion || '');
         document.getElementById('inv-edit-ciudad').value = p.Ciudad || '';
+        document.getElementById('inv-edit-fecha').value = formatDateForInvoiceInput(p.Fecha);
+        document.getElementById('inv-edit-estado').value = editingInvoice ? (p['Estado Factura'] || p.Estado || 'Finalizada') : 'Finalizada';
+        document.getElementById('inv-edit-metodo').value = editingInvoice
+            ? (p['Método Pago'] || p['Metodo Pago'] || p.pago || '')
+            : (p['MÃ©todo Contacto'] || p['Metodo Contacto'] || p.Metodo || '');
+        document.getElementById('inv-edit-nota').value = editingInvoice ? (p.Observaciones || '') : (p['Nota Cliente'] || p.Nota || '');
         
         try {
             const jsonStr = p['Productos JSON'] || p.Productos;
             let items = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : (Array.isArray(jsonStr) ? jsonStr : []);
-            window.invoiceItems = items.map(i => ({
-                idVariacion: i.idVariacion || i.id || i.sku || Date.now(),
+            window.invoiceItems = items.map((i, itemIndex) => ({
+                idVariacion: i.idVariacion || i.id || i.sku || ('ITEM-' + Date.now() + '-' + itemIndex),
                 nombre: i.nombre || i.Nombre || i.Producto || 'Producto',
                 sku: i.sku || i.id || '',
                 cantidad: parseInt(i.cantidad || i.Cantidad || i.qty || 1),
@@ -3677,13 +4256,115 @@ window.abrirEditorFactura = function(idx = null) {
         } catch(e) { console.error("Error cargando ítems", e); }
     } else {
         // Nueva
+        window.invoiceEditSource = 'manual';
         document.getElementById('inv-editor-title').textContent = 'Nueva Factura';
-        document.getElementById('inv-edit-id').value = '';
+        document.getElementById('inv-edit-id').value = `FAC-${Date.now()}`;
     }
     
     renderItemsFactura();
     document.getElementById('invoice-editor-modal').classList.add('open');
+    if (!Array.isArray(inventario) || inventario.length === 0) {
+        window.invoiceInventoryLoadTried = false;
+    }
+    ensureInvoiceInventoryLoaded();
 };
+
+if (typeof window.getProductPrice !== 'function') {
+    window.getProductPrice = function(product) {
+        return getInvoiceProductPrice(product);
+    };
+}
+
+function renderInvoiceProductSearch(query) {
+    const q = String(query || '').toLowerCase().trim();
+    const resultsContainer = document.getElementById('inv-search-results');
+    if (!resultsContainer) return;
+
+    if (q.length < 2) {
+        resultsContainer.classList.remove('active');
+        return;
+    }
+
+    const source = Array.isArray(inventario) ? inventario : [];
+    if (!source.length) {
+        resultsContainer.innerHTML = (window.invoiceInventoryLoadingPromise || !window.invoiceInventoryLoadTried)
+            ? '<div class="inv-search-empty">Cargando productos...</div>'
+            : '<div class="inv-search-empty">No hay productos cargados. Puedes agregar una linea manual abajo.</div>';
+        resultsContainer.classList.add('active');
+        const loadPromise = ensureInvoiceInventoryLoaded();
+        if (loadPromise && typeof loadPromise.then === 'function') {
+            loadPromise.then(() => renderInvoiceProductSearch(q));
+        }
+        return;
+    }
+
+    const results = source.filter(p => {
+        if (String(p.Categoria || '').toLowerCase() === 'banner') return false;
+        const searchable = [
+            getInvoiceProductName(p),
+            getInvoiceProductSku(p),
+            p.Categoria,
+            p.Color,
+            p.Estilo,
+            getInvoiceProductId(p)
+        ].join(' ').toLowerCase();
+        return searchable.includes(q);
+    }).slice(0, 15);
+
+    window.invoiceSearchResults = results;
+
+    if (results.length > 0) {
+        resultsContainer.innerHTML = results.map((p, index) => {
+            const img = normalizeImageUrl(p.Imagen || p['Imagen Principal'] || (p.Galeria && p.Galeria[0]));
+            const price = getInvoiceProductPrice(p);
+            const stock = readInvoiceField(p, ['Cantidad', 'Stock', 'Stock Inicial'], '');
+            return `
+                <button type="button" class="inv-search-item" data-invoice-product-result="${index}" style="width:100%; border:0; text-align:left; background:transparent;">
+                    <img src="${escapeHtml(img || 'Logo2.png')}" alt="">
+                    <div class="inv-search-item-info">
+                        <div class="inv-search-item-title">${escapeHtml(getInvoiceProductName(p))}</div>
+                        <div class="inv-search-item-sub">
+                            <span style="background:rgba(168,85,247,0.15); color:var(--primary-light); padding:2px 6px; border-radius:4px; font-weight:600; margin-right:6px;">Ref: ${escapeHtml(getInvoiceProductSku(p) || 'S/N')}</span>
+                            <span style="color:#10B981; font-weight:700;">$${price.toLocaleString('es-CO')}</span>
+                            ${stock !== '' ? `<span style="color:rgba(255,255,255,0.45);">Stock: ${escapeHtml(stock)}</span>` : ''}
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
+    } else {
+        resultsContainer.innerHTML = `
+            <div class="inv-search-empty">
+                <div style="font-size:24px; margin-bottom:8px;">?</div>
+                <div>No encontramos productos que coincidan con "${escapeHtml(q)}"</div>
+            </div>`;
+    }
+
+    resultsContainer.classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('inv-product-search');
+    const resultsContainer = document.getElementById('inv-search-results');
+    if (!searchInput || !resultsContainer) return;
+
+    searchInput.addEventListener('input', (e) => {
+        setTimeout(() => renderInvoiceProductSearch(e.target.value), 0);
+    });
+
+    resultsContainer.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-invoice-product-result]');
+        if (!item) return;
+        const product = window.invoiceSearchResults[parseInt(item.dataset.invoiceProductResult, 10)];
+        if (!product) return;
+        agregarItemBusqueda(
+            getInvoiceProductId(product),
+            getInvoiceProductName(product),
+            getInvoiceProductSku(product),
+            getInvoiceProductPrice(product)
+        );
+    });
+});
 
 // Buscador Inteligente
 document.addEventListener('DOMContentLoaded', () => {
@@ -3764,6 +4445,49 @@ window.agregarItemBusqueda = function(idVar, nombre, sku, precio) {
     renderItemsFactura();
 };
 
+window.agregarItemManualFactura = function() {
+    const nameInput = document.getElementById('inv-custom-name');
+    const skuInput = document.getElementById('inv-custom-sku');
+    const priceInput = document.getElementById('inv-custom-price');
+    const nombre = nameInput.value.trim();
+    const precio = parseFloat(priceInput.value);
+
+    if (!nombre) {
+        showToast('Escribe el nombre del producto manual', 'warning');
+        nameInput.focus();
+        return;
+    }
+
+    if (Number.isNaN(precio) || precio < 0) {
+        showToast('Escribe un precio valido', 'warning');
+        priceInput.focus();
+        return;
+    }
+
+    window.invoiceItems.push({
+        idVariacion: 'MANUAL-' + Date.now(),
+        nombre,
+        sku: skuInput.value.trim(),
+        cantidad: 1,
+        precio
+    });
+
+    nameInput.value = '';
+    skuInput.value = '';
+    priceInput.value = '';
+    renderItemsFactura();
+};
+
+window.modificarNombreItemFactura = function(index, value) {
+    if (!window.invoiceItems[index]) return;
+    window.invoiceItems[index].nombre = String(value || '').trim() || 'Producto';
+};
+
+window.modificarSkuItemFactura = function(index, value) {
+    if (!window.invoiceItems[index]) return;
+    window.invoiceItems[index].sku = String(value || '').trim();
+};
+
 window.modificarCantidadFactura = function(index, qty) {
     const val = parseInt(qty);
     if (val > 0) {
@@ -3802,7 +4526,10 @@ function renderItemsFactura() {
         total += subtotal;
         return `
             <tr>
-                <td>${item.nombre} <br><small style="color:#666;">Ref: ${item.sku || 'S/N'}</small></td>
+                <td>
+                    <input type="text" class="inv-item-name-input" value="${escapeHtml(item.nombre)}" onchange="modificarNombreItemFactura(${i}, this.value)">
+                    <input type="text" class="inv-item-ref-input" value="${escapeHtml(item.sku || '')}" placeholder="Ref: S/N" onchange="modificarSkuItemFactura(${i}, this.value)">
+                </td>
                 <td style="text-align:center;">
                     <input type="number" class="inv-qty-input" value="${item.cantidad}" min="1" onchange="modificarCantidadFactura(${i}, this.value)">
                 </td>
@@ -3811,7 +4538,7 @@ function renderItemsFactura() {
                 </td>
                 <td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td>
                 <td style="text-align:right;">
-                    <button class="action-btn" style="background:rgba(239,68,68,0.2); color:#ef4444;" onclick="eliminarItemFactura(${i})">✕</button>
+                    <button class="action-btn inv-remove-item-btn" type="button" onclick="eliminarItemFactura(${i})">x</button>
                 </td>
             </tr>
         `;
@@ -3827,9 +4554,10 @@ window.imprimirFacturaEditor = function() {
     const tel = document.getElementById('inv-edit-tel').value || '-';
     const dir = document.getElementById('inv-edit-dir').value || '-';
     const ciudad = document.getElementById('inv-edit-ciudad').value || '-';
+    const fecha = document.getElementById('inv-edit-fecha').value || new Date().toISOString().slice(0, 10);
     
     document.getElementById('inv-id').textContent = pId;
-    document.getElementById('inv-date').textContent = new Date().toLocaleDateString();
+    document.getElementById('inv-date').textContent = new Date(fecha + 'T00:00:00').toLocaleDateString();
     document.getElementById('inv-cliente-nombre').textContent = nombre;
     document.getElementById('inv-cliente-tel').textContent = tel;
     document.getElementById('inv-cliente-dir').textContent = dir;
@@ -3872,24 +4600,48 @@ window.guardarFacturaDB = async function() {
     btn.disabled = true;
     btn.textContent = 'Guardando...';
     
-    const isUpdate = document.getElementById('inv-edit-id').value !== '';
-    const idPedido = document.getElementById('inv-edit-id').value || `PED-${Date.now()}`;
+    const originalOrderId = document.getElementById('inv-original-id').value.trim();
+    const visibleId = document.getElementById('inv-edit-id').value.trim();
+    const editingExistingInvoice = window.invoiceEditSource === 'factura' && window.invoiceOriginalInvoiceId;
+    const existingInvoiceForOrder = originalOrderId
+        ? (window.facturasList || []).find(f => String(getInvoiceOrderIdValue(f)).trim() === originalOrderId)
+        : null;
+    const existingInvoiceId = existingInvoiceForOrder ? getInvoiceIdValue(existingInvoiceForOrder) : '';
+    const idPedido = window.invoiceEditSource === 'pedido'
+        ? originalOrderId
+        : (originalOrderId || '');
+    const idFactura = editingExistingInvoice
+        ? (visibleId || window.invoiceOriginalInvoiceId)
+        : (existingInvoiceId || (idPedido ? (visibleId || `FAC-${idPedido}`) : (visibleId || `FAC-${Date.now()}`)));
+    const isUpdate = Boolean(editingExistingInvoice || existingInvoiceId);
     const total = window.invoiceItems.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     const cantTotal = window.invoiceItems.reduce((sum, item) => sum + item.cantidad, 0);
+    const metodo = document.getElementById('inv-edit-metodo').value.trim() || 'Mostrador / Manual';
+    const estadoFactura = window.invoiceEditSource === 'pedido'
+        ? 'Finalizada'
+        : (document.getElementById('inv-edit-estado').value.trim() || 'Finalizada');
+    const entrega = [document.getElementById('inv-edit-dir').value.trim(), document.getElementById('inv-edit-ciudad').value.trim()]
+        .filter(Boolean)
+        .join(' - ');
+    const tipoCliente = window.invoiceCustomerType === 'Mayor' ? 'Mayor' : 'Detal';
     
     const payload = {
-        resource: 'pedidos',
+        resource: 'facturas',
         action: isUpdate ? 'actualizar' : 'crear',
+        id: window.invoiceOriginalInvoiceId || existingInvoiceId || idFactura,
+        'ID Factura': idFactura,
         'ID Pedido': idPedido,
-        'Nombre Cliente': document.getElementById('inv-edit-nombre').value,
-        'Telefono': document.getElementById('inv-edit-tel').value,
-        'Direccion': document.getElementById('inv-edit-dir').value,
-        'Ciudad': document.getElementById('inv-edit-ciudad').value,
+        'ID Cliente': document.getElementById('inv-edit-tel').value,
+        'Tipo Cliente': tipoCliente,
+        'Fecha': document.getElementById('inv-edit-fecha').value || new Date().toISOString().slice(0, 10),
+        'Nombre': document.getElementById('inv-edit-nombre').value,
         'Productos JSON': JSON.stringify(window.invoiceItems),
         'Cantidad Total': cantTotal,
         'Subtotal': total,
-        'Estado Pedido': isUpdate ? undefined : 'Completado', // Si es nueva, la damos por completada
-        'Metodo Contacto': 'Mostrador / Manual'
+        'Estado Factura': estadoFactura,
+        pago: metodo,
+        entrega,
+        'Observaciones': document.getElementById('inv-edit-nota').value
     };
     
     try {
@@ -3900,9 +4652,23 @@ window.guardarFacturaDB = async function() {
         const result = await res.json();
         
         if (result && result.status === 'success') {
+            if (window.invoiceEditSource === 'pedido' && originalOrderId) {
+                fetch(GOOGLE_SHEET_API, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        resource: 'pedidos',
+                        action: 'estado',
+                        id: originalOrderId,
+                        estado: 'Facturado'
+                    })
+                }).catch(error => console.warn('No se pudo marcar el pedido como facturado:', error));
+            }
             showToast('Factura guardada exitosamente', 'success');
             document.getElementById('invoice-editor-modal').classList.remove('open');
-            cargarPedidos();
+            if (typeof window.switchOrdersAdminTab === 'function') {
+                window.switchOrdersAdminTab(tipoCliente === 'Mayor' ? 'invoices-mayor' : 'invoices-detal');
+            }
+            cargarPedidos({ force: true });
         } else {
             throw new Error(result.error || 'Error al guardar');
         }
