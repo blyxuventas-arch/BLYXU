@@ -3943,10 +3943,14 @@ function buildInvoiceRowHtml(f, idx) {
             <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
             <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
             <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
-            <td class="orders-actions-cell">
-                <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver factura">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
-                    Ver factura
+            <td class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver / Editar factura">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
+                    Ver
+                </button>
+                <button class="orders-action-btn" onclick="sendAdminInvoiceRowToWhatsApp(${idx})" type="button" title="Enviar PDF de factura a cliente por WhatsApp" style="background: linear-gradient(135deg, #25D366, #128C7E); color: #fff;">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="currentColor"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.758.459 3.474 1.33 4.982L2 22l5.176-1.348c1.45.791 3.097 1.207 4.832 1.208h.004c5.505 0 9.987-4.478 9.988-9.985 0-2.667-1.038-5.174-2.924-7.06A9.923 9.923 0 0 0 12.012 2zm5.666 14.155c-.234.66-1.164 1.213-1.61 1.264-.42.047-.962.217-3.237-.723-2.73-1.127-4.48-3.9-4.617-4.084-.136-.184-1.11-1.48-1.11-2.822 0-1.343.702-2.003.953-2.274.252-.27.548-.338.732-.338.183 0 .366.002.525.01.17.007.397-.064.62.47.234.56.797 1.946.866 2.086.069.14.115.303.023.486-.092.183-.138.297-.275.457-.137.16-.289.358-.413.481-.137.137-.28.287-.12.562.16.275.71 1.173 1.526 1.9 1.05.937 1.936 1.228 2.21 1.365.275.137.435.115.596-.068.16-.184.686-.8.869-1.075.183-.275.366-.229.617-.137.251.092 1.597.753 1.871.89.275.137.458.206.526.32.069.115.069.664-.165 1.324z"/></svg>
+                    WhatsApp
                 </button>
             </td>
         </tr>
@@ -4232,6 +4236,9 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
         
         document.getElementById('inv-edit-nombre').value = editingInvoice ? getInvoiceCustomerName(p) : (p['Nombre Cliente'] || p.Nombre || '');
         document.getElementById('inv-edit-tel').value = editingInvoice ? (p['ID Cliente'] || '') : (p['Teléfono'] || p.Telefono || '');
+        if (document.getElementById('inv-edit-tipo')) {
+            document.getElementById('inv-edit-tipo').value = editingInvoice ? (p['Tipo Cliente'] || p.Tipo || 'Detal') : (window.invoiceCustomerType || 'Detal');
+        }
         document.getElementById('inv-edit-dir').value = editingInvoice
             ? (p['Método Entrega'] || p['Metodo Entrega'] || p.entrega || p['Dirección'] || p.Direccion || '')
             : (p['Dirección'] || p.Direccion || '');
@@ -4548,49 +4555,190 @@ function renderItemsFactura() {
 }
 
 window.imprimirFacturaEditor = function() {
-    // Pasar los datos del modal a la plantilla oculta de la factura
+    const origTitle = document.title;
     const pId = document.getElementById('inv-edit-id').value || `PED-${Date.now().toString().slice(-6)}`;
-    const nombre = document.getElementById('inv-edit-nombre').value || 'Cliente Generico';
+    const nombre = document.getElementById('inv-edit-nombre').value || 'Cliente BLYXU';
     const tel = document.getElementById('inv-edit-tel').value || '-';
     const dir = document.getElementById('inv-edit-dir').value || '-';
     const ciudad = document.getElementById('inv-edit-ciudad').value || '-';
     const fecha = document.getElementById('inv-edit-fecha').value || new Date().toISOString().slice(0, 10);
-    
+    const estado = document.getElementById('inv-edit-estado')?.value || 'Finalizada';
+    const metodo = document.getElementById('inv-edit-metodo')?.value || 'Digital / Directo';
+    const nota = document.getElementById('inv-edit-nota')?.value || '';
+    const tipoCliente = (document.getElementById('inv-edit-tipo')?.value || window.invoiceCustomerType || 'Detal').trim();
+
+    // Rellenar campos en plantilla de impresión
     document.getElementById('inv-id').textContent = pId;
-    document.getElementById('inv-date').textContent = new Date(fecha + 'T00:00:00').toLocaleDateString();
+    
+    try {
+        const dateObj = new Date(fecha.includes('T') ? fecha : fecha + 'T00:00:00');
+        document.getElementById('inv-date').textContent = isNaN(dateObj.getTime()) ? fecha : dateObj.toLocaleDateString('es-CO');
+    } catch(e) {
+        document.getElementById('inv-date').textContent = fecha;
+    }
+
     document.getElementById('inv-cliente-nombre').textContent = nombre;
     document.getElementById('inv-cliente-tel').textContent = tel;
     document.getElementById('inv-cliente-dir').textContent = dir;
     document.getElementById('inv-cliente-ciudad').textContent = ciudad;
-    
-    // Asignar datos dinámicos de empresa a la factura
+    if (document.getElementById('inv-cliente-tipo')) {
+        document.getElementById('inv-cliente-tipo').textContent = tipoCliente || 'Detal';
+    }
+
+    if (document.getElementById('inv-print-status')) {
+        document.getElementById('inv-status-text').textContent = (estado || 'COMPROBANTE OFICIAL').toUpperCase();
+    }
+    if (document.getElementById('inv-print-metodo')) {
+        document.getElementById('inv-print-metodo').textContent = metodo || 'Digital / Directo';
+    }
+
+    // Configuración dinámicas de empresa BLYXU
     const cfg = window.storeConfig || {};
     const logoImg = document.getElementById('inv-company-logo');
-    if (cfg['Factura_Logo']) logoImg.src = cfg['Factura_Logo'];
-    
-    document.getElementById('inv-company-name').textContent = cfg['Factura_Empresa'] || 'Mi Empresa';
-    document.getElementById('inv-company-nit').textContent = cfg['Factura_NIT'] || '000.000.000-0';
-    document.getElementById('inv-company-contact').textContent = cfg['Factura_Telefono'] || '-';
-    document.getElementById('inv-company-email').textContent = cfg['Factura_Email'] || '-';
-    
+    if (logoImg && cfg['Factura_Logo']) logoImg.src = cfg['Factura_Logo'];
+
+    if (document.getElementById('inv-company-name')) {
+        document.getElementById('inv-company-name').textContent = cfg['Factura_Empresa'] || 'BLYXU Joyería & Accesorios';
+    }
+    if (document.getElementById('inv-emisor-nombre')) {
+        document.getElementById('inv-emisor-nombre').textContent = cfg['Factura_Empresa'] || 'BLYXU Joyería & Accesorios';
+    }
+    if (document.getElementById('inv-company-nit')) {
+        document.getElementById('inv-company-nit').textContent = cfg['Factura_NIT'] || '000.000.000-0';
+    }
+    if (document.getElementById('inv-company-contact')) {
+        document.getElementById('inv-company-contact').textContent = '📱 WhatsApp: ' + (cfg['Factura_Telefono'] || '+57 311 2368622');
+    }
+    if (document.getElementById('inv-company-email')) {
+        document.getElementById('inv-company-email').textContent = '✉️ ' + (cfg['Factura_Email'] || 'contacto@blyxu.online');
+    }
+
+    // Sección de observaciones y notas
+    const notesElem = document.getElementById('inv-print-notes');
+    if (notesElem) {
+        if (nota.trim()) {
+            notesElem.textContent = nota;
+        } else {
+            notesElem.textContent = 'Gracias por preferir BLYXU Joyería. Cada una de nuestras piezas cuenta con sello y garantía de autenticidad BLYXU.';
+        }
+    }
+
+    // Renderizado de ítems con fuente ampliada
     const itemsTbody = document.getElementById('inv-items');
     let total = 0;
-    itemsTbody.innerHTML = window.invoiceItems.map(item => {
-        const sub = item.precio * item.cantidad;
+    let totalQty = 0;
+    
+    itemsTbody.innerHTML = (window.invoiceItems || []).map(item => {
+        const cant = Number(item.cantidad) || 1;
+        const precio = Number(item.precio) || 0;
+        const sub = cant * precio;
         total += sub;
+        totalQty += cant;
         return `
             <tr>
-                <td style="text-align:center;">${item.cantidad}</td>
-                <td>${item.nombre} <br><small style="color:#666;">Ref: ${item.sku || '-'}</small></td>
-                <td style="text-align:right;">$${item.precio.toLocaleString('es-CO')}</td>
-                <td style="text-align:right;">$${sub.toLocaleString('es-CO')}</td>
+                <td style="text-align:center;">
+                    <span style="background: #f3e8ff; color: #6d28d9; font-weight: 900; padding: 5px 12px; border-radius: 99px; font-size: 13px; display:inline-block; border: 1px solid #ddd6fe;">${cant}</span>
+                </td>
+                <td>
+                    <strong style="font-size:15.5px; color:#1e0a38; display:block; margin-bottom:3px; font-weight:800;">${escapeHtml(item.nombre)}</strong>
+                    <span style="display:inline-block; background:#ede9fe; color:#6d28d9; font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:6px;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
+                </td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 700; color:#334155; font-size: 14.5px;">$${precio.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 900; color:#1e0a38; font-size: 15.5px;">$${sub.toLocaleString('es-CO')}</td>
             </tr>
         `;
     }).join('');
-    
+
     document.getElementById('inv-total').textContent = '$' + total.toLocaleString('es-CO');
-    
-    setTimeout(() => window.print(), 200);
+    if (document.getElementById('inv-total-items-count')) {
+        document.getElementById('inv-total-items-count').textContent = totalQty + (totalQty === 1 ? ' Ítem' : ' Ítems');
+    }
+
+    // Nombre dinámico de archivo al imprimir/guardar PDF
+    const safeName = nombre.replace(/[^a-zA-Z0-9]/g, '_');
+    document.title = `Factura_${pId}_${safeName}`;
+
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+            document.title = origTitle;
+        }, 1200);
+    }, 200);
+};
+
+window.sendInvoiceWhatsAppEditor = function () {
+    const telInput = document.getElementById('inv-edit-tel');
+    let phone = telInput ? telInput.value.trim() : '';
+    let cleanPhone = String(phone).replace(/\D/g, '');
+
+    if (!cleanPhone || cleanPhone.length < 7) {
+        const userPhone = prompt('Por favor ingresa o confirma el número de WhatsApp del cliente (ej: 3118527762):', phone || '');
+        if (!userPhone) return;
+        cleanPhone = String(userPhone).replace(/\D/g, '');
+        if (telInput && cleanPhone) telInput.value = cleanPhone;
+    }
+
+    if (cleanPhone.length === 10 && cleanPhone.startsWith('3')) {
+        cleanPhone = '57' + cleanPhone;
+    }
+
+    const id = document.getElementById('inv-edit-id').value || `FAC-${Date.now().toString().slice(-6)}`;
+    const nombre = document.getElementById('inv-edit-nombre').value || 'Cliente BLYXU';
+    const fecha = document.getElementById('inv-edit-fecha').value || new Date().toISOString().slice(0, 10);
+    const dir = document.getElementById('inv-edit-dir').value || '';
+    const ciudad = document.getElementById('inv-edit-ciudad').value || '';
+
+    let total = 0;
+    const itemsText = (window.invoiceItems || []).length ? window.invoiceItems.map(item => {
+        const sub = (Number(item.precio) || 0) * (Number(item.cantidad) || 1);
+        total += sub;
+        return `• *${item.cantidad}x* ${item.nombre} - $${sub.toLocaleString('es-CO')}`;
+    }).join('\n') : '• Detalle de compra adjunto en la factura';
+
+    const msg = `✨ ¡Hola, *${nombre}*! 👋💎
+¡Muchas gracias por tu preferencia y por elegir *BLYXU Joyería & Accesorios*! ✨
+
+Aquí tienes el comprobante digital oficial de tu compra *#${id}*:
+
+📋 *RESUMEN DE TU COMPRA*
+----------------------------------------
+📅 *Fecha:* ${fecha}
+👤 *Cliente:* ${nombre}
+📱 *Contacto:* ${phone || cleanPhone}
+${ciudad ? `🏙️ *Ciudad:* ${ciudad}\n` : ''}${dir ? `📍 *Dirección de Envío:* ${dir}\n` : ''}
+📦 *Productos Pedidos:*
+${itemsText}
+
+💰 *TOTAL FACTURA:* $${total.toLocaleString('es-CO')}
+----------------------------------------
+
+📄 *Adjunto encontrarás el documento PDF de tu factura listo para ver y guardar.*
+
+💖 ¡Esperamos que disfrutes muchísimo tus accesorios! Cualquier duda estamos para ayudarte.
+🌐 *Tienda Web:* www.blyxu.online
+📱 *Soporte BLYXU:* +57 311 2368622`;
+
+    // 1. Disparar el generador / diálogo de impresión PDF para que el usuario guarde o imprima el archivo PDF
+    if (typeof window.imprimirFacturaEditor === 'function') {
+        window.imprimirFacturaEditor();
+    }
+
+    // 2. Abrir la ventana de WhatsApp con el mensaje estructurado listo para enviar
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    setTimeout(() => {
+        window.open(waUrl, '_blank');
+    }, 400);
+};
+
+window.sendAdminInvoiceRowToWhatsApp = function (idx) {
+    if (typeof window.abrirEditorFactura === 'function') {
+        window.abrirEditorFactura(idx, 'factura');
+        setTimeout(() => {
+            if (typeof window.sendInvoiceWhatsAppEditor === 'function') {
+                window.sendInvoiceWhatsAppEditor();
+            }
+        }, 350);
+    }
 };
 
 window.guardarFacturaDB = async function() {
