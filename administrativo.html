@@ -168,7 +168,27 @@
         .close-modal-btn:hover { background:rgba(255,255,255,0.06); color:#fff; }
 
         /* LOGIN */
-        #admin-login-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+        #admin-login-screen { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column; overflow:hidden; background:radial-gradient(circle at 50% 18%,rgba(168,85,247,0.18),transparent 30%),linear-gradient(180deg,#07020f 0%,#100620 46%,#030108 100%); }
+        #admin-login-screen::before,
+        #admin-login-screen::after { content:''; position:absolute; inset:-12%; pointer-events:none; z-index:0; }
+        #admin-login-screen::before { background:linear-gradient(115deg,transparent 0 34%,rgba(244,196,65,0.08) 42%,transparent 52% 100%); transform:translateX(-18%); animation:loginLightSweep 9s ease-in-out infinite; }
+        #admin-login-screen::after { background-image:radial-gradient(circle,rgba(244,196,65,0.28) 0 1px,transparent 1.8px),radial-gradient(circle,rgba(168,85,247,0.24) 0 1px,transparent 1.7px),linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px); background-size:120px 120px,170px 170px,100% 44px; background-position:0 0,42px 18px,0 0; opacity:.55; animation:loginRainTexture 16s linear infinite; }
+        #admin-particles { position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.95; }
+        #admin-login-screen #login-box { position:relative; z-index:2; width:90%; max-width:410px; padding:38px 42px 34px; overflow:hidden; border-radius:18px; border:1px solid rgba(244,196,65,0.22); background:radial-gradient(circle at 50% -12%,rgba(244,196,65,0.16),transparent 34%),linear-gradient(180deg,rgba(26,18,38,0.9),rgba(14,8,24,0.96)); box-shadow:0 34px 92px rgba(0,0,0,0.74),0 0 44px rgba(155,44,250,0.2),inset 0 1px 0 rgba(255,255,255,0.09); backdrop-filter:blur(18px); animation:loginPanelFloat 5.6s ease-in-out infinite; }
+        #admin-login-screen #login-box::before { content:'BLYXU'; display:block; color:#fff; font-family:Georgia,'Times New Roman',serif; font-size:30px; font-weight:800; letter-spacing:1px; text-shadow:2px 0 #a855f7,-2px 0 #f4c441,0 12px 28px rgba(0,0,0,0.45); margin-bottom:6px; text-align:center; }
+        #admin-login-screen #login-box::after { content:''; position:absolute; inset:1px; border-radius:17px; pointer-events:none; background:linear-gradient(125deg,transparent 0 28%,rgba(255,255,255,0.11) 42%,transparent 58% 100%); transform:translateX(-120%); animation:loginPanelSheen 7s ease-in-out infinite; }
+        #admin-login-screen .wholesale-logo { display:none!important; }
+        #admin-login-screen .wholesale-kicker { color:rgba(244,196,65,0.78); font-size:10px; font-weight:900; letter-spacing:3px; text-transform:uppercase; text-align:center; margin-bottom:8px; }
+        #admin-login-screen h2 { color:#f4c441; font-size:0; font-weight:800; letter-spacing:5px; margin-bottom:24px; text-align:center; }
+        #admin-login-screen h2::before { content:'VAULT ACCESS'; font-size:10px; }
+        #admin-login-screen input { height:58px; border-radius:12px; background:rgba(7,3,16,0.72); border:1px solid rgba(168,85,247,0.45); color:#fff; letter-spacing:7px!important; text-align:center; font-size:14px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.02),0 0 22px rgba(168,85,247,0.14); transition:border-color .25s ease,box-shadow .25s ease,background .25s ease,transform .25s ease; }
+        #admin-login-screen input:focus { border-color:rgba(244,196,65,0.82); background:rgba(9,4,19,0.92); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 0 0 3px rgba(244,196,65,0.1),0 0 34px rgba(168,85,247,0.3); transform:translateY(-1px); outline:none; }
+        #admin-login-screen input::placeholder { color:rgba(255,255,255,0.34); letter-spacing:7px; }
+        #admin-login-screen .admin-btn { position:relative; height:50px; overflow:hidden; border-radius:12px; isolation:isolate; background:linear-gradient(135deg,#ffe477,#d8ac16 48%,#f4c441 72%,#fff2a8); background-size:180% 180%; color:#09030f; text-transform:uppercase; letter-spacing:.8px; font-size:11px; font-weight:900; box-shadow:0 16px 34px rgba(244,196,65,0.24),0 0 0 1px rgba(255,255,255,0.08) inset; transition:transform .22s ease,box-shadow .22s ease,filter .22s ease; animation:loginButtonGlow 3.2s ease-in-out infinite; }
+        #admin-login-screen .admin-btn::before { content:''; position:absolute; inset:-40% -70%; z-index:-1; background:conic-gradient(from 90deg,transparent,rgba(255,255,255,0.66),transparent 34%); transform:translateX(-45%) rotate(0deg); animation:loginButtonOrbit 3.8s linear infinite; }
+        #admin-login-screen .admin-btn::after { content:''; position:absolute; inset:6px; border-radius:9px; background:linear-gradient(110deg,transparent 0 28%,rgba(255,255,255,0.62) 44%,transparent 60% 100%); transform:translateX(-135%); animation:adminButtonSheen 2.8s ease-in-out infinite; mix-blend-mode:screen; }
+        #admin-login-screen .admin-btn:hover { transform:translateY(-3px) scale(1.015); filter:saturate(1.1); box-shadow:0 22px 48px rgba(244,196,65,0.34),0 0 34px rgba(168,85,247,0.24); }
+        #admin-login-screen .admin-btn:active { transform:translateY(0)scale(0.98); }
         .login-box { background:var(--glass-bg); backdrop-filter:blur(20px); padding:40px; border-radius:20px; text-align:center; width:90%; max-width:360px; border:1px solid rgba(168,85,247,0.08); box-shadow:0 40px 80px rgba(0,0,0,0.5); }
         .login-box h2 { color:var(--text-dim); letter-spacing:2px; font-size:11px; font-weight:600; margin-bottom:18px; text-transform:uppercase; }
 
@@ -186,6 +206,23 @@
         .login-box .admin-btn:hover { transform:translateY(-2px); filter:saturate(1.08); box-shadow:0 20px 42px rgba(244,196,65,0.3); }
         .login-box .admin-btn:active { transform:translateY(0)scale(0.98); }
         @keyframes adminButtonSheen { 0%,48%{transform:translateX(-120%)} 78%,100%{transform:translateX(120%)} }
+        @keyframes loginLightSweep { 0%,35%{transform:translateX(-34%) skewX(-10deg);opacity:.42} 62%{transform:translateX(34%) skewX(-10deg);opacity:.72} 100%{transform:translateX(46%) skewX(-10deg);opacity:.28} }
+        @keyframes loginRainTexture { from{background-position:0 -120px,42px -170px,0 -44px} to{background-position:0 120px,42px 170px,0 44px} }
+        @keyframes loginPanelFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+        @keyframes loginPanelSheen { 0%,58%{transform:translateX(-120%)} 82%,100%{transform:translateX(120%)} }
+        @keyframes loginButtonGlow { 0%,100%{background-position:0% 50%; box-shadow:0 16px 34px rgba(244,196,65,0.24),0 0 0 1px rgba(255,255,255,0.08) inset} 50%{background-position:100% 50%; box-shadow:0 20px 44px rgba(244,196,65,0.36),0 0 26px rgba(168,85,247,0.2)} }
+        @keyframes loginButtonOrbit { to{transform:translateX(45%) rotate(360deg)} }
+        @media (prefers-reduced-motion: reduce) {
+            #admin-login-screen::before,
+            #admin-login-screen::after,
+            #admin-login-screen #login-box,
+            #admin-login-screen #login-box::after,
+            #admin-login-screen .admin-btn,
+            #admin-login-screen .admin-btn::before,
+            #admin-login-screen .admin-btn::after {
+                animation: none!important;
+            }
+        }
         #login-error { color:var(--danger); font-size:11px; margin-bottom:12px; display:none; font-weight:500; }
         .loader-container { width:100%; height:2.5px; background:rgba(255,255,255,0.04); border-radius:99px; overflow:hidden; margin-top:24px; display:none; }
         .loader-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:99px; transition:width 0.1s linear; }
@@ -467,6 +504,7 @@
          PANTALLA DE LOGIN
          --------------------------------------------------- -->
     <div class="wholesale-overlay open" id="admin-login-screen" style="opacity: 1; pointer-events: auto; display: flex; z-index: 10000;">
+        <canvas id="admin-particles" aria-hidden="true"></canvas>
         <div class="wholesale-panel" id="login-box">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">Panel Seguro</div>
@@ -503,6 +541,9 @@
                     </button>
                     <button class="sidebar-btn" onclick="switchDashboardView('inventory', 'Inventario Actual')">
                         <span style="font-size:18px; width:24px;">📋</span> Ver Inventario
+                    </button>
+                    <button class="sidebar-btn" onclick="switchDashboardView('china-orders', 'Pedidos a China')">
+                        <span style="font-size:13px; width:24px; font-weight:900; letter-spacing:.5px;">CN</span> Pedidos China
                     </button>
                     <button class="sidebar-btn" onclick="switchDashboardView('orders', 'Pedidos y Facturación')">
                         <span style="font-size:18px; width:24px;">💳</span> Pedidos y Fact.
@@ -558,15 +599,16 @@
                                         </div>
                                         <div class="form-group">
                                             <label>Categoría</label>
-                                            <select class="form-control" id="prod-categoria" name="Categoria" required>
-                                                <option value="Collares">Collares</option>
-                                                <option value="Pulseras">Pulseras</option>
-                                                <option value="Aretes">Aretes</option>
-                                                <option value="Anillos">Anillos</option>
-                                                <option value="Sets">Sets</option>
-                                                <option value="Dijes">Dijes</option>
-                                                <option value="BANNER" style="background:#9B2CFA;color:#fff;font-weight:bold;">BANNER (Página Principal)</option>
-                                            </select>
+                                            <input type="text" class="form-control" id="prod-categoria" name="Categoria" list="admin-category-options" placeholder="Escribe o elige una categoria" required>
+                                            <datalist id="admin-category-options">
+                                                <option value="Collares"></option>
+                                                <option value="Pulseras"></option>
+                                                <option value="Aretes"></option>
+                                                <option value="Anillos"></option>
+                                                <option value="Sets"></option>
+                                                <option value="Dijes"></option>
+                                                <option value="BANNER"></option>
+                                            </datalist>
                                         </div>
                                         <div class="form-group">
                                             <label>Catálogo</label>
@@ -755,6 +797,478 @@
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- VISTA 3: PEDIDOS A CHINA -->
+                <div id="view-china-orders" class="dashboard-section">
+                    <div class="admin-panel gradient-bg china-order-panel">
+                        <div class="china-order-header">
+                            <div>
+                                <span class="china-order-kicker">Compras proveedor</span>
+                                <h2>Crear pedido a China</h2>
+                            </div>
+                            <div class="china-rate-control">
+                                <label for="china-order-rate">TRM USD a COP</label>
+                                <input type="number" class="form-control" id="china-order-rate" min="0" step="1" value="4000">
+                            </div>
+                        </div>
+
+                        <div class="china-order-toolbar">
+                            <button type="button" class="admin-btn" id="btn-add-china-order-item" style="width:auto;">+ Agregar producto</button>
+                            <button type="button" class="admin-btn" id="btn-save-china-order" style="width:auto; background:linear-gradient(135deg,#10B981,#059669);">Guardar pedido</button>
+                            <button type="button" class="admin-btn" id="btn-print-china-order" style="width:auto; background:linear-gradient(135deg,#fbbf24,#d97706); color:#160b02;">Descargar PDF</button>
+                            <button type="button" class="admin-btn secondary" id="btn-copy-china-order" style="width:auto;">Copiar resumen</button>
+                            <button type="button" class="admin-btn danger" id="btn-clear-china-order" style="width:auto;">Limpiar pedido</button>
+                        </div>
+
+                        <div class="china-order-table-wrap">
+                            <table class="china-order-table">
+                                <thead>
+                                    <tr>
+                                        <th>Foto</th>
+                                        <th>Producto / referencia</th>
+                                        <th>Cantidad</th>
+                                        <th>Unit. USD</th>
+                                        <th>Unit. COP</th>
+                                        <th>Subtotal USD</th>
+                                        <th>Subtotal COP</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="china-order-items"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="china-order-total-grid">
+                            <div class="china-order-note">
+                                <label for="china-order-notes">Notas del pedido</label>
+                                <textarea class="form-control" id="china-order-notes" rows="3" placeholder="Proveedor, enlace, medidas, color, observaciones..."></textarea>
+                            </div>
+                            <div class="china-order-totals">
+                                <div class="china-total-card">
+                                    <span>Total en dolares</span>
+                                    <strong id="china-order-total-usd">US$0.00</strong>
+                                </div>
+                                <div class="china-total-card cop">
+                                    <span>Total en pesos</span>
+                                    <strong id="china-order-total-cop">$0</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="china-saved-orders">
+                            <div class="china-saved-heading">
+                                <div>
+                                    <span class="china-order-kicker">Historial</span>
+                                    <h3>Pedidos guardados</h3>
+                                </div>
+                                <span id="china-saved-count" class="orders-count-badge">0</span>
+                            </div>
+                            <div class="china-saved-list" id="china-saved-orders-list">
+                                <div class="china-saved-empty">No hay pedidos guardados todavia.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="china-order-print-container" aria-hidden="true"></div>
+
+                    <style>
+                        #view-china-orders .china-order-panel {
+                            padding: 28px;
+                            overflow: visible;
+                        }
+                        .china-order-header {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: flex-start;
+                            gap: 24px;
+                            padding-bottom: 22px;
+                            margin-bottom: 22px;
+                            border-bottom: 1px solid rgba(255,255,255,0.06);
+                        }
+                        .china-order-kicker {
+                            display: block;
+                            color: rgba(244,196,65,0.86);
+                            font-size: 10px;
+                            font-weight: 900;
+                            letter-spacing: 1.6px;
+                            text-transform: uppercase;
+                            margin-bottom: 7px;
+                        }
+                        .china-order-header h2 {
+                            margin: 0;
+                            color: #fff;
+                            font-size: 24px;
+                            font-weight: 900;
+                            letter-spacing: 0;
+                        }
+                        .china-rate-control {
+                            width: min(220px, 100%);
+                        }
+                        .china-rate-control label,
+                        .china-order-note label {
+                            display: block;
+                            margin-bottom: 7px;
+                            color: rgba(216,180,254,0.72);
+                            font-size: 9.5px;
+                            font-weight: 900;
+                            letter-spacing: .8px;
+                            text-transform: uppercase;
+                        }
+                        .china-order-toolbar {
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                            flex-wrap: wrap;
+                            margin-bottom: 18px;
+                        }
+                        .china-order-table-wrap {
+                            overflow-x: auto;
+                            border: 1px solid rgba(168,85,247,0.08);
+                            border-radius: 16px;
+                            background: rgba(0,0,0,0.12);
+                        }
+                        .china-order-table {
+                            width: 100%;
+                            min-width: 980px;
+                            border-collapse: separate;
+                            border-spacing: 0;
+                        }
+                        .china-order-table th {
+                            padding: 14px 12px;
+                            background: rgba(13,10,26,0.62);
+                            color: rgba(216,180,254,0.72);
+                            font-size: 9px;
+                            font-weight: 900;
+                            letter-spacing: 1px;
+                            text-align: left;
+                            text-transform: uppercase;
+                            border-bottom: 1px solid rgba(255,255,255,0.045);
+                        }
+                        .china-order-table td {
+                            padding: 12px;
+                            border-bottom: 1px solid rgba(255,255,255,0.035);
+                            vertical-align: middle;
+                        }
+                        .china-order-table tr:last-child td {
+                            border-bottom: none;
+                        }
+                        .china-order-photo-drop {
+                            width: 92px;
+                            height: 92px;
+                            border: 1px dashed rgba(244,196,65,0.32);
+                            border-radius: 14px;
+                            background: rgba(0,0,0,0.22);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            overflow: hidden;
+                            position: relative;
+                            color: rgba(255,255,255,0.38);
+                            font-size: 10px;
+                            font-weight: 800;
+                            text-align: center;
+                            transition: border-color .2s ease, background .2s ease;
+                        }
+                        .china-order-photo-drop.drag-over {
+                            border-color: rgba(244,196,65,0.9);
+                            background: rgba(244,196,65,0.08);
+                        }
+                        .china-order-photo-drop img {
+                            width: 100%;
+                            height: 100%;
+                            object-fit: cover;
+                            display: none;
+                        }
+                        .china-order-photo-drop input[type="file"] {
+                            position: absolute;
+                            inset: 0;
+                            opacity: 0;
+                            cursor: pointer;
+                        }
+                        .china-order-photo-drop.has-image span {
+                            display: none;
+                        }
+                        .china-order-photo-drop.has-image img {
+                            display: block;
+                        }
+                        .china-order-product-fields {
+                            display: grid;
+                            grid-template-columns: minmax(180px, 1fr) minmax(150px, .8fr);
+                            gap: 10px;
+                        }
+                        .china-order-table .form-control {
+                            min-height: 42px;
+                        }
+                        .china-order-money {
+                            min-width: 120px;
+                            color: #fff;
+                            font-size: 13px;
+                            font-weight: 900;
+                            white-space: nowrap;
+                        }
+                        .china-order-money.muted {
+                            color: rgba(255,255,255,0.58);
+                        }
+                        .china-order-remove {
+                            width: 36px;
+                            height: 36px;
+                            border: 1px solid rgba(251,113,133,0.28);
+                            border-radius: 10px;
+                            background: rgba(251,113,133,0.08);
+                            color: #fecdd3;
+                            font-size: 18px;
+                            font-weight: 900;
+                            line-height: 1;
+                        }
+                        .china-order-total-grid {
+                            display: grid;
+                            grid-template-columns: minmax(280px, 1fr) minmax(320px, 440px);
+                            gap: 18px;
+                            align-items: stretch;
+                            margin-top: 22px;
+                        }
+                        .china-order-note,
+                        .china-order-totals {
+                            border: 1px solid rgba(255,255,255,0.06);
+                            border-radius: 16px;
+                            padding: 18px;
+                            background: rgba(255,255,255,0.035);
+                        }
+                        .china-order-totals {
+                            display: grid;
+                            gap: 12px;
+                        }
+                        .china-total-card {
+                            border: 1px solid rgba(244,196,65,0.22);
+                            border-radius: 14px;
+                            padding: 18px;
+                            background: rgba(244,196,65,0.06);
+                        }
+                        .china-total-card span {
+                            display: block;
+                            margin-bottom: 7px;
+                            color: rgba(255,255,255,0.58);
+                            font-size: 10px;
+                            font-weight: 900;
+                            letter-spacing: 1.2px;
+                            text-transform: uppercase;
+                        }
+                        .china-total-card strong {
+                            color: #fbbf24;
+                            font-size: 28px;
+                            font-weight: 900;
+                            letter-spacing: 0;
+                            white-space: nowrap;
+                        }
+                        .china-total-card.cop {
+                            border-color: rgba(52,211,153,0.26);
+                            background: rgba(16,185,129,0.07);
+                        }
+                        .china-total-card.cop strong {
+                            color: #34d399;
+                        }
+                        .china-saved-orders {
+                            margin-top: 22px;
+                            padding: 20px;
+                            border: 1px solid rgba(255,255,255,0.06);
+                            border-radius: 18px;
+                            background: rgba(0,0,0,0.14);
+                        }
+                        .china-saved-heading {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            gap: 16px;
+                            margin-bottom: 16px;
+                        }
+                        .china-saved-heading h3 {
+                            margin: 0;
+                            color: #fff;
+                            font-size: 18px;
+                            font-weight: 900;
+                        }
+                        .china-saved-list {
+                            display: grid;
+                            gap: 10px;
+                        }
+                        .china-saved-row {
+                            display: grid;
+                            grid-template-columns: minmax(190px, 1.2fr) minmax(120px, .7fr) minmax(120px, .7fr) auto;
+                            gap: 12px;
+                            align-items: center;
+                            padding: 14px;
+                            border: 1px solid rgba(216,180,254,0.12);
+                            border-radius: 14px;
+                            background: rgba(255,255,255,0.035);
+                        }
+                        .china-saved-row strong {
+                            color: #fff;
+                            font-size: 13px;
+                            display: block;
+                            margin-bottom: 3px;
+                        }
+                        .china-saved-row span {
+                            color: rgba(255,255,255,0.54);
+                            font-size: 11px;
+                        }
+                        .china-saved-actions {
+                            display: flex;
+                            gap: 8px;
+                            justify-content: flex-end;
+                            flex-wrap: wrap;
+                        }
+                        .china-mini-btn {
+                            min-height: 34px;
+                            padding: 7px 11px;
+                            border: 1px solid rgba(216,180,254,0.18);
+                            border-radius: 10px;
+                            background: rgba(168,85,247,0.12);
+                            color: #fff;
+                            font-size: 11px;
+                            font-weight: 900;
+                        }
+                        .china-mini-btn.pdf {
+                            background: rgba(244,196,65,0.14);
+                            border-color: rgba(244,196,65,0.28);
+                            color: #fde68a;
+                        }
+                        .china-mini-btn.danger {
+                            background: rgba(251,113,133,0.09);
+                            border-color: rgba(251,113,133,0.22);
+                            color: #fecdd3;
+                        }
+                        .china-saved-empty {
+                            padding: 24px;
+                            text-align: center;
+                            color: rgba(255,255,255,0.46);
+                            border: 1px dashed rgba(216,180,254,0.14);
+                            border-radius: 14px;
+                        }
+                        #china-order-print-container {
+                            display: none;
+                        }
+                        @media print {
+                            body.printing-china-order * {
+                                visibility: hidden !important;
+                            }
+                            body.printing-china-order #invoice-print-container {
+                                display: none !important;
+                                visibility: hidden !important;
+                            }
+                            body.printing-china-order #china-order-print-container,
+                            body.printing-china-order #china-order-print-container * {
+                                visibility: visible !important;
+                            }
+                            body.printing-china-order #china-order-print-container {
+                                display: block !important;
+                                position: absolute;
+                                inset: 0 auto auto 0;
+                                width: 100%;
+                                padding: 0;
+                                background: #fff !important;
+                                color: #111827 !important;
+                                font-family: Arial, Helvetica, sans-serif;
+                            }
+                            .china-print-page {
+                                padding: 24px;
+                            }
+                            .china-print-header {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: flex-start;
+                                border: 2px solid #7c3aed;
+                                border-radius: 14px;
+                                padding: 18px;
+                                margin-bottom: 18px;
+                            }
+                            .china-print-header h1 {
+                                margin: 0;
+                                color: #1e0a38;
+                                font-size: 26px;
+                            }
+                            .china-print-header p,
+                            .china-print-meta p {
+                                margin: 5px 0 0;
+                                color: #475569;
+                                font-size: 12px;
+                            }
+                            .china-print-meta {
+                                text-align: right;
+                                font-weight: 700;
+                            }
+                            .china-print-table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin-top: 12px;
+                            }
+                            .china-print-table th,
+                            .china-print-table td {
+                                border: 1px solid #ddd6fe;
+                                padding: 9px;
+                                color: #111827;
+                                font-size: 12px;
+                                vertical-align: middle;
+                            }
+                            .china-print-table th {
+                                color: #581c87;
+                                text-transform: uppercase;
+                                letter-spacing: .5px;
+                                font-size: 10px;
+                            }
+                            .china-print-table img {
+                                width: 54px;
+                                height: 54px;
+                                object-fit: cover;
+                                border-radius: 8px;
+                                border: 1px solid #ddd6fe;
+                            }
+                            .china-print-totals {
+                                width: 330px;
+                                margin-left: auto;
+                                margin-top: 18px;
+                                border: 2px solid #7c3aed;
+                                border-radius: 12px;
+                                padding: 14px;
+                            }
+                            .china-print-total-row {
+                                display: flex;
+                                justify-content: space-between;
+                                gap: 12px;
+                                font-size: 14px;
+                                font-weight: 900;
+                                margin: 6px 0;
+                            }
+                            .china-print-notes {
+                                margin-top: 18px;
+                                padding: 14px;
+                                border: 1px dashed #a78bfa;
+                                border-radius: 12px;
+                                color: #334155;
+                                font-size: 12px;
+                                white-space: pre-wrap;
+                            }
+                        }
+                        @media (max-width: 860px) {
+                            .china-order-header,
+                            .china-order-total-grid {
+                                grid-template-columns: 1fr;
+                                display: grid;
+                            }
+                            .china-rate-control {
+                                width: 100%;
+                            }
+                            .china-order-product-fields {
+                                grid-template-columns: 1fr;
+                            }
+                            .china-saved-row {
+                                grid-template-columns: 1fr;
+                            }
+                            .china-saved-actions {
+                                justify-content: flex-start;
+                            }
+                        }
+                    </style>
                 </div>
 
                 <!-- VISTA 3: PEDIDOS -->
@@ -1044,12 +1558,180 @@
                         .btn-inv-save { background: linear-gradient(135deg, #a855f7, #d946ef); color: #fff; border: none; padding: 12px 28px; border-radius: 12px; font-weight: 900; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 25px rgba(155,44,250,0.45); font-size: 14px; }
                         .btn-inv-save:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 35px rgba(155,44,250,0.6); }
                         @media (max-width: 760px) {
-                            .inv-modal-body { padding: 24px 18px; }
+                            #view-orders .admin-panel.gradient-bg { border-radius: 14px!important; }
+                            #view-orders .admin-panel.gradient-bg > div:first-child {
+                                padding: 18px 16px 0!important;
+                                display: grid!important;
+                                gap: 12px!important;
+                                align-items: stretch!important;
+                            }
+                            #view-orders .admin-panel.gradient-bg > div:first-child > div {
+                                display: grid!important;
+                                grid-template-columns: 1fr 1fr;
+                                gap: 8px!important;
+                            }
+                            #view-orders .admin-panel.gradient-bg > div:first-child .admin-btn,
+                            #view-orders .admin-panel.gradient-bg > div:nth-child(2),
+                            #view-orders .admin-panel.gradient-bg > div:nth-child(3) {
+                                width: 100%!important;
+                                padding-left: 16px!important;
+                                padding-right: 16px!important;
+                            }
+                            #view-orders .settings-tab-btn {
+                                flex: 1 1 calc(50% - 8px);
+                                min-width: 130px;
+                                min-height: 44px;
+                                text-align: center;
+                                justify-content: center;
+                                padding: 9px 10px;
+                            }
+                            #view-orders .settings-tab-panel {
+                                padding: 14px!important;
+                                border-radius: 14px!important;
+                            }
+                            .orders-panel-heading {
+                                align-items: flex-start;
+                                flex-direction: column;
+                                gap: 10px;
+                            }
+                            .orders-count-badge {
+                                min-width: 54px;
+                            }
+                            .orders-action-btn {
+                                min-width: 108px;
+                                min-height: 40px;
+                            }
+                            .orders-actions-cell {
+                                min-width: 210px;
+                            }
+                            .invoice-editor-modal {
+                                align-items: stretch;
+                                justify-content: stretch;
+                            }
+                            .invoice-editor-modal.open {
+                                display: flex;
+                            }
+                            .inv-modal-content {
+                                width: 100%;
+                                max-width: none;
+                                height: 100dvh;
+                                max-height: none;
+                                border-radius: 0;
+                                border-left: 0;
+                                border-right: 0;
+                            }
+                            .inv-modal-header {
+                                padding: 16px 18px;
+                                gap: 12px;
+                            }
+                            .inv-modal-header h3 {
+                                min-width: 0;
+                                font-size: 17px;
+                                line-height: 1.2;
+                            }
+                            .inv-modal-body { padding: 20px 14px; }
                             .inv-grid-2, .inv-grid-3, .inv-add-custom { grid-template-columns: 1fr; }
                             .inv-grid-3 .inv-input-wrapper { grid-column: auto !important; }
-                            .inv-add-custom { margin-top: -18px; }
-                            .inv-modal-footer { flex-wrap: wrap; padding: 18px; }
+                            .inv-add-custom { margin-top: -18px; padding: 12px; }
+                            .inv-search-results {
+                                position: fixed;
+                                left: 14px;
+                                right: 14px;
+                                top: 132px;
+                                width: auto;
+                                max-height: calc(100dvh - 190px);
+                                z-index: 10040;
+                            }
+                            .inv-search-item {
+                                align-items: flex-start;
+                                padding: 14px;
+                            }
+                            .inv-search-item:hover {
+                                padding-left: 14px;
+                            }
+                            .inv-search-item img {
+                                width: 48px;
+                                height: 48px;
+                            }
+                            .inv-items-table {
+                                display: block;
+                                border-spacing: 0;
+                                margin-bottom: 22px;
+                            }
+                            .inv-items-table thead {
+                                display: none;
+                            }
+                            .inv-items-table tbody,
+                            .inv-items-table tr,
+                            .inv-items-table td {
+                                display: block;
+                                width: 100%;
+                            }
+                            .inv-items-table tr {
+                                margin-bottom: 12px;
+                                padding: 12px;
+                                border: 1px solid rgba(196,142,255,0.18);
+                                border-radius: 14px;
+                                background: rgba(255,255,255,0.055);
+                            }
+                            .inv-items-table td {
+                                padding: 8px 0;
+                                border: 0!important;
+                                background: transparent!important;
+                                text-align: left!important;
+                            }
+                            .inv-items-table td[data-label]::before {
+                                content: attr(data-label);
+                                display: block;
+                                margin-bottom: 6px;
+                                color: rgba(235,220,255,0.62);
+                                font-size: 10px;
+                                font-weight: 900;
+                                letter-spacing: 1px;
+                                text-transform: uppercase;
+                            }
+                            .inv-item-name-input,
+                            .inv-item-ref-input,
+                            .inv-qty-input,
+                            .inv-items-table td input[style] {
+                                width: 100%!important;
+                                min-width: 0!important;
+                                height: 46px;
+                                text-align: left;
+                            }
+                            .inv-remove-item-btn {
+                                width: 100%!important;
+                                height: 42px!important;
+                                border-radius: 12px!important;
+                            }
+                            .inv-total-section {
+                                align-items: flex-start;
+                                flex-direction: column;
+                                gap: 8px;
+                                margin-top: 22px;
+                                padding: 18px;
+                            }
+                            .inv-total-value {
+                                font-size: 32px;
+                                line-height: 1.1;
+                                overflow-wrap: anywhere;
+                            }
+                            .inv-modal-footer { flex-wrap: wrap; padding: 14px; gap: 10px; }
                             .inv-modal-footer button { width: 100%; justify-content: center; }
+                        }
+                        @media (max-width: 420px) {
+                            #view-orders .admin-panel.gradient-bg > div:first-child > div,
+                            #view-orders .settings-tab-btn {
+                                grid-template-columns: 1fr;
+                                flex-basis: 100%;
+                            }
+                            .inv-section-title {
+                                font-size: 11px;
+                                gap: 8px;
+                            }
+                            .invoice-editor-modal .form-control {
+                                font-size: 16px;
+                            }
                         }
                     </style>
 
@@ -1106,13 +1788,12 @@
                                     </div>
                                     <div class="inv-input-wrapper">
                                         <div class="inv-input-icon">🏷️</div>
-                                        <input type="text" id="inv-edit-tipo" class="form-control" placeholder="Tipo Cliente (Detal, Mayorista, VIP)" list="inv-cliente-tipo-options">
-                                        <datalist id="inv-cliente-tipo-options">
-                                            <option value="Detal"></option>
-                                            <option value="Mayorista"></option>
-                                            <option value="VIP / Especial"></option>
-                                            <option value="Distribuidor"></option>
-                                        </datalist>
+                                        <select id="inv-edit-tipo" class="form-control">
+                                            <option value="Detal">Detal</option>
+                                            <option value="Mayorista">Mayorista</option>
+                                            <option value="VIP / Especial">VIP / Especial</option>
+                                            <option value="Distribuidor">Distribuidor</option>
+                                        </select>
                                     </div>
                                     <div class="inv-input-wrapper">
                                         <div class="inv-input-icon">📍</div>
@@ -1194,10 +1875,7 @@
                         }
                         html, body {
                             background: #ffffff !important;
-                            color: #0f172a !important;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                            color-adjust: exact !important;
+                            color: #1e1b4b !important;
                             margin: 0 !important;
                             padding: 0 !important;
                             font-size: 14px !important;
@@ -1216,234 +1894,225 @@
                             width: 100%;
                             padding: 0;
                             background: #ffffff !important;
-                            color: #0f172a !important;
+                            color: #1e1b4b !important;
                             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                             box-sizing: border-box;
                         }
                         
-                        /* ENCABEZADO LUXURY TOP BANNER */
+                        /* ENCABEZADO — SOLO BORDES, SIN FONDO */
                         .admin-inv-top-banner {
-                            background: linear-gradient(135deg, #090312 0%, #1e0a38 45%, #4c1d95 100%) !important;
-                            padding: 24px 28px;
-                            border-radius: 16px;
-                            color: #ffffff !important;
+                            background: #ffffff !important;
+                            padding: 20px 24px;
+                            border-radius: 14px;
+                            border: 2px solid #7c3aed !important;
+                            color: #1e0a38 !important;
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            margin-bottom: 22px;
-                            border-bottom: 4px solid #d946ef !important;
-                            box-shadow: 0 8px 24px rgba(76, 29, 149, 0.25) !important;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
+                            margin-bottom: 20px;
                         }
                         .admin-inv-brand-wrapper {
                             display: flex;
                             align-items: center;
-                            gap: 18px;
+                            gap: 16px;
                         }
                         .admin-inv-brand-wrapper img {
-                            height: 64px;
+                            height: 58px;
                             width: auto;
                             object-fit: contain;
-                            background: rgba(255,255,255,0.12) !important;
-                            padding: 6px 14px;
-                            border-radius: 12px;
-                            border: 1px solid rgba(255,255,255,0.28);
-                            filter: brightness(0) invert(1) !important;
+                            padding: 4px 10px;
+                            border-radius: 10px;
+                            border: 1.5px solid #c4b5fd;
                         }
                         .admin-inv-brand-wrapper h1 {
                             margin: 0;
-                            font-size: 25px;
+                            font-size: 24px;
                             font-weight: 900;
                             letter-spacing: 1px;
-                            color: #ffffff !important;
+                            color: #1e0a38 !important;
                         }
                         .admin-inv-brand-wrapper .inv-company-sub {
-                            font-size: 11.5px;
-                            font-weight: 800;
-                            color: #f472b6 !important;
-                            letter-spacing: 1.2px;
-                            text-transform: uppercase;
-                            margin-top: 2px;
+                            display: none;
                         }
                         .admin-inv-brand-wrapper p {
-                            margin: 6px 0 0;
+                            margin: 5px 0 0;
                             font-size: 12.5px;
-                            color: #e9d5ff !important;
+                            color: #475569 !important;
                             font-weight: 600;
                         }
                         .admin-inv-badge-box {
-                            background: rgba(255, 255, 255, 0.12) !important;
-                            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-                            border-radius: 14px;
-                            padding: 14px 22px;
+                            background: #ffffff !important;
+                            border: 1.5px solid #a78bfa !important;
+                            border-radius: 12px;
+                            padding: 12px 20px;
                             text-align: right;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
                         }
                         .admin-inv-badge-box h2 {
                             margin: 0;
-                            font-size: 12px;
+                            font-size: 11px;
                             font-weight: 900;
                             letter-spacing: 2px;
-                            color: #f0abfc !important;
+                            color: #6b21a8 !important;
                             text-transform: uppercase;
                         }
                         .admin-inv-badge-box .inv-num {
-                            font-size: 23px;
+                            font-size: 22px;
                             font-weight: 900;
-                            color: #ff4db0 !important;
+                            color: #7c3aed !important;
                             margin: 3px 0;
                             font-family: monospace, monospace;
                             letter-spacing: 0.5px;
                         }
                         .admin-inv-badge-box .inv-date {
                             font-size: 12.5px;
-                            color: #e2e8f0 !important;
+                            color: #334155 !important;
                             font-weight: 600;
+                        }
+                        .admin-inv-badge-box .inv-date strong {
+                            color: #1e0a38 !important;
                         }
                         .admin-inv-badge-box .inv-status-chip {
                             display: inline-flex;
                             align-items: center;
-                            gap: 6px;
-                            margin-top: 6px;
-                            background: rgba(52, 211, 153, 0.22) !important;
-                            border: 1px solid rgba(52, 211, 153, 0.45) !important;
-                            color: #34d399 !important;
-                            padding: 3px 11px;
+                            gap: 5px;
+                            margin-top: 5px;
+                            background: #ffffff !important;
+                            border: 1.5px solid #22c55e !important;
+                            color: #16a34a !important;
+                            padding: 3px 10px;
                             border-radius: 20px;
-                            font-size: 10.5px;
+                            font-size: 10px;
                             font-weight: 900;
                             text-transform: uppercase;
                             letter-spacing: 1px;
                         }
                         .admin-inv-badge-box .status-dot {
-                            width: 7px;
-                            height: 7px;
-                            background: #34d399 !important;
+                            width: 6px;
+                            height: 6px;
+                            background: #22c55e !important;
                             border-radius: 50%;
-                        }
-
-                        /* GRID DE DATOS CLIENTE Y EMISOR */
-                        .invoice-details {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr;
-                            gap: 18px;
-                            margin-bottom: 22px;
-                            page-break-inside: avoid;
-                        }
-                        .invoice-details-box {
-                            background: #f8f5ff !important;
-                            border: 1px solid #e9d5ff !important;
-                            border-radius: 14px;
-                            padding: 18px 20px;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
+
+                        /* GRID DE DATOS CLIENTE Y EMISOR — BORDES LIMPIOS */
+                        .invoice-details {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 16px;
+                            margin-bottom: 20px;
+                            page-break-inside: avoid;
+                        }
+                        .invoice-details-box {
+                            background: #ffffff !important;
+                            border: 1.5px solid #c4b5fd !important;
+                            border-radius: 12px;
+                            padding: 16px 18px;
+                        }
                         .invoice-details-box.inv-box-cliente {
-                            border-left: 6px solid #8b5cf6 !important;
+                            border-left: 4px solid #7c3aed !important;
                         }
                         .invoice-details-box.inv-box-emisor {
-                            border-left: 6px solid #ec4899 !important;
+                            border-left: 4px solid #a855f7 !important;
                         }
                         .invoice-details-box .box-header-title {
                             display: flex;
                             align-items: center;
                             gap: 8px;
                             margin: 0 0 10px;
-                            font-size: 11.5px;
+                            font-size: 11px;
                             font-weight: 900;
                             letter-spacing: 1.5px;
                             color: #6b21a8 !important;
                             text-transform: uppercase;
-                            border-bottom: 1px solid #e9d5ff;
+                            border-bottom: 1px solid #ddd6fe;
                             padding-bottom: 6px;
                         }
                         .invoice-details-box .cliente-nombre-title,
                         .invoice-details-box .emisor-nombre-title {
-                            font-size: 18px;
+                            font-size: 17px;
                             font-weight: 900;
                             color: #1e0a38 !important;
                             display: block;
-                            margin-bottom: 8px;
+                            margin-bottom: 6px;
                         }
                         .invoice-details-box p {
-                            margin: 5px 0;
+                            margin: 4px 0;
                             font-size: 13.5px;
                             color: #334155 !important;
-                            line-height: 1.55;
+                            line-height: 1.5;
                             font-weight: 500;
                         }
 
-                        /* TABLA DE PRODUCTOS */
+                        /* TABLA DE PRODUCTOS — SIN FONDO OSCURO EN HEADER */
                         .invoice-table {
                             width: 100%;
-                            border-collapse: separate;
-                            border-spacing: 0;
-                            margin-bottom: 22px;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
                             page-break-inside: auto;
-                            border-radius: 14px;
-                            overflow: hidden;
-                            border: 1px solid #e9d5ff;
+                            border: 1.5px solid #c4b5fd;
+                            border-radius: 0;
                         }
                         .invoice-table tr {
                             page-break-inside: avoid;
                         }
                         .invoice-table th {
-                            background: linear-gradient(90deg, #1e0a38 0%, #3b0764 100%) !important;
-                            color: #ffffff !important;
-                            font-size: 11.5px;
+                            background: #ffffff !important;
+                            color: #6b21a8 !important;
+                            font-size: 11px;
                             font-weight: 900;
                             text-transform: uppercase;
                             letter-spacing: 1.5px;
-                            padding: 14px 16px;
-                            border: none;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
+                            padding: 12px 14px;
+                            border-bottom: 2px solid #7c3aed !important;
+                            border-right: 1px solid #e9d5ff;
+                        }
+                        .invoice-table th:last-child {
+                            border-right: none;
                         }
                         .invoice-table td {
-                            padding: 13px 16px;
-                            border-bottom: 1px solid #f0e6ff;
+                            padding: 12px 14px;
+                            border-bottom: 1px solid #e9d5ff;
+                            border-right: 1px solid #f0e6ff;
                             font-size: 14px;
                             color: #1e1b4b !important;
                             background: #ffffff !important;
                             font-weight: 600;
                         }
+                        .invoice-table td:last-child {
+                            border-right: none;
+                        }
                         .invoice-table tbody tr:nth-child(even) td {
-                            background: #faf7ff !important;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
+                            background: #ffffff !important;
                         }
                         .invoice-table tbody tr:last-child td {
                             border-bottom: none;
                         }
 
-                        /* BOTTOM GRID: NOTES & TOTAL */
+                        /* BOTTOM GRID: NOTES & TOTAL — SIN FONDOS PESADOS */
                         .invoice-bottom-grid {
                             display: grid;
-                            grid-template-columns: 1fr 360px;
-                            gap: 18px;
+                            grid-template-columns: 1fr 340px;
+                            gap: 16px;
                             align-items: start;
-                            margin-top: 18px;
+                            margin-top: 16px;
                             page-break-inside: avoid;
                         }
                         .invoice-notes-box {
-                            background: #fdf8ff !important;
-                            border: 1px dashed #d8b4fe !important;
-                            border-radius: 14px;
-                            padding: 16px 18px;
+                            background: #ffffff !important;
+                            border: 1.5px dashed #c4b5fd !important;
+                            border-radius: 12px;
+                            padding: 14px 16px;
                             font-size: 12.5px;
                             color: #334155 !important;
                             line-height: 1.5;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
                         }
                         .invoice-notes-box .notes-title {
-                            font-size: 11px;
+                            font-size: 10.5px;
                             font-weight: 900;
                             letter-spacing: 1.2px;
-                            color: #7e22ce !important;
-                            margin-bottom: 6px;
+                            color: #6b21a8 !important;
+                            margin-bottom: 5px;
                             text-transform: uppercase;
                         }
                         .invoice-notes-box p {
@@ -1456,15 +2125,12 @@
                             justify-content: flex-end;
                         }
                         .invoice-total-box {
-                            background: linear-gradient(135deg, #090312 0%, #2e1065 60%, #581c87 100%) !important;
-                            color: #ffffff !important;
-                            padding: 20px 26px;
-                            border-radius: 16px;
+                            background: #ffffff !important;
+                            color: #1e0a38 !important;
+                            padding: 18px 22px;
+                            border-radius: 14px;
                             width: 100%;
-                            box-shadow: 0 8px 24px rgba(88, 28, 135, 0.3) !important;
-                            border-bottom: 4px solid #10b981 !important;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
+                            border: 2px solid #7c3aed !important;
                         }
                         .invoice-total-box .total-row-item {
                             display: flex;
@@ -1473,35 +2139,35 @@
                             gap: 16px;
                         }
                         .invoice-total-box .total-label {
-                            font-size: 13px;
+                            font-size: 12px;
                             font-weight: 900;
                             letter-spacing: 2px;
-                            color: #e9d5ff !important;
+                            color: #6b21a8 !important;
                             text-transform: uppercase;
                         }
                         .invoice-total-box .total-amount {
-                            font-size: 30px;
+                            font-size: 28px;
                             font-weight: 900;
-                            color: #34d399 !important;
+                            color: #1e0a38 !important;
                             font-family: monospace, monospace;
                         }
                         .invoice-total-box .total-sub-info {
-                            margin-top: 10px;
-                            padding-top: 8px;
-                            border-top: 1px solid rgba(255,255,255,0.15);
-                            font-size: 11.5px;
-                            color: #cbd5e1 !important;
+                            margin-top: 8px;
+                            padding-top: 6px;
+                            border-top: 1px solid #ddd6fe;
+                            font-size: 11px;
+                            color: #64748b !important;
                             text-align: right;
                             font-weight: 600;
                         }
 
-                        /* PIE DE PÁGINA */
+                        /* PIE DE PÁGINA — LÍNEA DELGADA */
                         .invoice-footer-line {
-                            height: 4px;
-                            background: linear-gradient(90deg, #ec4899, #8b5cf6, #10b981, #3b82f6) !important;
-                            border-radius: 2px;
-                            margin-top: 24px;
-                            margin-bottom: 12px;
+                            height: 2px;
+                            background: #7c3aed !important;
+                            border-radius: 1px;
+                            margin-top: 22px;
+                            margin-bottom: 10px;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
@@ -1512,14 +2178,14 @@
                             page-break-inside: avoid;
                         }
                         .invoice-footer .thank-you {
-                            font-size: 15px;
+                            font-size: 14px;
                             font-weight: 900;
                             color: #1e0a38 !important;
-                            margin-bottom: 4px;
+                            margin-bottom: 3px;
                         }
                         .invoice-footer .footer-subtext {
                             margin: 0;
-                            font-size: 12px;
+                            font-size: 11.5px;
                             color: #64748b !important;
                             font-weight: 600;
                         }
@@ -1529,7 +2195,7 @@
                 <div id="invoice-print-container">
                     <div class="admin-inv-top-banner">
                         <div class="admin-inv-brand-wrapper">
-                            <img src="Logo2.png" alt="BLYXU Logo" id="inv-company-logo">
+                            <img src="blyxu-invoice-logo.png" alt="BLYXU Logo" id="inv-company-logo">
                             <div>
                                 <h1 id="inv-company-name">BLYXU Joyería & Accesorios</h1>
                                 <p>
@@ -1542,7 +2208,7 @@
                         <div class="admin-inv-badge-box">
                             <h2>FACTURA DE VENTA</h2>
                             <div class="inv-num" id="inv-id">FAC-0000</div>
-                            <div class="inv-date">Fecha: <strong id="inv-date" style="color:#ffffff;">01/01/2026</strong></div>
+                            <div class="inv-date">Fecha: <strong id="inv-date">01/01/2026</strong></div>
                             <div class="inv-status-chip" id="inv-print-status">
                                 <span class="status-dot"></span> <span id="inv-status-text">COMPROBANTE OFICIAL</span>
                             </div>
@@ -1552,25 +2218,25 @@
                     <div class="invoice-details">
                         <div class="invoice-details-box inv-box-cliente">
                             <div class="box-header-title">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 FACTURAR A / CLIENTE
                             </div>
                             <strong class="cliente-nombre-title" id="inv-cliente-nombre">Nombre del Cliente</strong>
-                            <p style="margin:6px 0 2px;">📱 <strong>Teléfono / WhatsApp:</strong> <span id="inv-cliente-tel">000000000</span></p>
-                            <p style="margin:2px 0;">📍 <strong>Dirección de Envío:</strong> <span id="inv-cliente-dir">Dirección</span></p>
-                            <p style="margin:2px 0;">🏙️ <strong>Ciudad:</strong> <span id="inv-cliente-ciudad">Ciudad</span></p>
-                            <p style="margin:2px 0;">🏷️ <strong>Tipo de Cliente:</strong> <span id="inv-cliente-tipo" style="font-weight:900; color:#7e22ce;">Detal</span></p>
+                            <p>📱 <strong>Teléfono / WhatsApp:</strong> <span id="inv-cliente-tel">000000000</span></p>
+                            <p>📍 <strong>Dirección de Envío:</strong> <span id="inv-cliente-dir">Dirección</span></p>
+                            <p>🏙️ <strong>Ciudad:</strong> <span id="inv-cliente-ciudad">Ciudad</span></p>
+                            <p>🏷️ <strong>Tipo de Cliente:</strong> <span id="inv-cliente-tipo" style="font-weight:900; color:#6b21a8;">Detal</span></p>
                         </div>
                         <div class="invoice-details-box inv-box-emisor">
                             <div class="box-header-title">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
                                 EMISOR / DATOS CORPORATIVOS
                             </div>
                             <strong class="emisor-nombre-title" id="inv-emisor-nombre">BLYXU Joyería & Accesorios</strong>
-                            <p style="margin:6px 0 2px;">🏢 <strong>Empresa:</strong> BLYXU Joyería & Accesorios</p>
-                            <p style="margin:2px 0;">📄 <strong>NIT / DOC:</strong> <span id="inv-company-nit">000.000.000-0</span></p>
-                            <p style="margin:2px 0;">📱 <strong>Soporte Inmediato:</strong> +57 311 2368622</p>
-                            <p style="margin:2px 0;">💳 <strong>Método de Pago:</strong> <span id="inv-print-metodo">Digital / Directo</span></p>
+                            <p>🏢 <strong>Empresa:</strong> BLYXU Joyería & Accesorios</p>
+                            <p>📄 <strong>NIT / DOC:</strong> <span id="inv-company-nit">000.000.000-0</span></p>
+                            <p>📱 <strong>Soporte Inmediato:</strong> +57 311 2368622</p>
+                            <p>💳 <strong>Método de Pago:</strong> <span id="inv-print-metodo">Digital / Directo</span></p>
                         </div>
                     </div>
 
@@ -1608,18 +2274,18 @@
                     </div>
 
                     <!-- SECCIÓN QR Y ENLACE INTERACTIVO A LA TIENDA -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; background: #fdf8ff !important; border: 1px solid #e9d5ff !important; border-left: 6px solid #a855f7 !important; border-radius: 14px; padding: 14px 20px; margin-top: 18px; page-break-inside: avoid; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;">
-                        <div style="display: flex; align-items: center; gap: 16px;">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.blyxu.online" alt="QR BLYXU" style="width: 70px; height: 70px; border-radius: 10px; border: 1px solid #d8b4fe; padding: 4px; background: #ffffff !important;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff !important; border: 1.5px solid #c4b5fd !important; border-left: 4px solid #7c3aed !important; border-radius: 12px; padding: 12px 18px; margin-top: 16px; page-break-inside: avoid;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.blyxu.online" alt="QR BLYXU" style="width: 65px; height: 65px; border-radius: 8px; border: 1px solid #c4b5fd; padding: 3px; background: #ffffff !important;">
                             <div>
-                                <strong style="font-size: 14.5px; color: #1e0a38 !important; display: block; margin-bottom: 3px;">🌐 ¡Visita nuestra Tienda Online oficial BLYXU!</strong>
-                                <p style="margin: 0; font-size: 12.5px; color: #475569 !important;">Escanea este código QR desde tu teléfono o haz clic en nuestro enlace web:</p>
-                                <a href="https://www.blyxu.online" target="_blank" style="display: inline-block; margin-top: 4px; font-size: 14.5px; font-weight: 900; color: #7c3aed !important; text-decoration: underline;">www.blyxu.online</a>
+                                <strong style="font-size: 13.5px; color: #1e0a38 !important; display: block; margin-bottom: 2px;">🌐 ¡Visita nuestra Tienda Online oficial BLYXU!</strong>
+                                <p style="margin: 0; font-size: 12px; color: #475569 !important;">Escanea este código QR o haz clic en el enlace:</p>
+                                <a href="https://www.blyxu.online" target="_blank" style="display: inline-block; margin-top: 3px; font-size: 13.5px; font-weight: 900; color: #7c3aed !important; text-decoration: underline;">www.blyxu.online</a>
                             </div>
                         </div>
-                        <div style="text-align: right; font-size: 12.5px; color: #64748b !important;">
+                        <div style="text-align: right; font-size: 12px; color: #64748b !important;">
                             <span style="font-weight:700;">Atención & Pedidos</span><br>
-                            <strong style="font-size: 14px; color: #16a34a !important;">📱 +57 311 2368622</strong>
+                            <strong style="font-size: 13px; color: #1e0a38 !important;">📱 +57 311 2368622</strong>
                         </div>
                     </div>
 
@@ -1645,14 +2311,6 @@
                         <form id="contact-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
                             <div class="admin-form-grid">
                                 <div class="form-group">
-                                    <label>Direccion</label>
-                                    <input type="text" class="form-control" id="contact-config-address" placeholder="Bogota, Colombia">
-                                </div>
-                                <div class="form-group">
-                                    <label>Ciudad / Sector</label>
-                                    <input type="text" class="form-control" id="contact-config-city" placeholder="Atencion nacional desde Bogota">
-                                </div>
-                                <div class="form-group">
                                     <label>Dias de Atencion</label>
                                     <input type="text" class="form-control" id="contact-config-days" placeholder="Ej: Lunes a Sabado">
                                 </div>
@@ -1665,28 +2323,16 @@
                                     <input type="text" class="form-control" id="contact-config-whatsapp" placeholder="Ej: 573112368622">
                                 </div>
                                 <div class="form-group">
+                                    <label>Facebook</label>
+                                    <input type="text" class="form-control" id="contact-config-facebook" placeholder="@blyxu o URL">
+                                </div>
+                                <div class="form-group">
+                                    <label>TikTok</label>
+                                    <input type="text" class="form-control" id="contact-config-tiktok" placeholder="@blyxu o URL">
+                                </div>
+                                <div class="form-group">
                                     <label>Instagram</label>
                                     <input type="text" class="form-control" id="contact-config-instagram" placeholder="@blyxu o URL">
-                                </div>
-                                <div class="form-group">
-                                    <label>Correo</label>
-                                    <input type="email" class="form-control" id="contact-config-email" placeholder="ventas@blyxu.com">
-                                </div>
-                                <div class="form-group">
-                                    <label>URL Google Maps</label>
-                                    <input type="url" class="form-control" id="contact-config-map" placeholder="https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6">
-                                </div>
-                                <div class="form-group admin-form-wide">
-                                    <label>Nota Principal</label>
-                                    <textarea class="form-control" id="contact-config-note" rows="2" placeholder="Texto principal de la pagina de contacto"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label>Titulo de Atencion</label>
-                                    <input type="text" class="form-control" id="contact-config-service-title" placeholder="Pedidos privados">
-                                </div>
-                                <div class="form-group">
-                                    <label>Detalle de Atencion</label>
-                                    <textarea class="form-control" id="contact-config-service-detail" rows="2" placeholder="Escribenos para coordinar compras, confirmar disponibilidad y programar atencion en boutique."></textarea>
                                 </div>
                             </div>
                             <button type="submit" class="admin-btn" id="btn-save-contact-config">Guardar Contacto</button>

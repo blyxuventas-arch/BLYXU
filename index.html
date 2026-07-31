@@ -107,6 +107,10 @@
 
     <!-- ===== CAROUSEL DE IMAGENES ===== -->
     <section class="image-marquee-section" id="image-carousel">
+        <div class="image-marquee-header">
+            <span>Reci&eacute;n llegados</span>
+            <h2>NUESTROS NUEVOS PRODUCTOS</h2>
+        </div>
         <div class="image-marquee" id="image-marquee-container">
             <!-- Se llenará con JS -->
         </div>
@@ -131,6 +135,16 @@
                     <select id="catalog-category-select" aria-label="Filtrar por categor&iacute;a">
                         <option value="todos">Todas las categor&iacute;as</option>
                     </select>
+                </label>
+                <label class="price-slider-wrap" for="catalog-price-slider">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        aria-hidden="true">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                    </svg>
+                    <span id="catalog-price-label">Todos los precios</span>
+                    <input id="catalog-price-slider" type="range" min="0" max="0" step="1000" value="0"
+                        aria-label="Filtrar cat&aacute;logo por precio">
                 </label>
             </div>
         </div>
@@ -164,6 +178,16 @@
                     <select id="wholesale-category-select" aria-label="Filtrar catálogo mayorista por categoría">
                         <option value="todos">Todas las categorías</option>
                     </select>
+                </label>
+                <label class="price-slider-wrap" for="wholesale-price-slider">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        aria-hidden="true">
+                        <line x1="12" y1="1" x2="12" y2="23" />
+                        <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                    </svg>
+                    <span id="wholesale-price-label">Todos los precios</span>
+                    <input id="wholesale-price-slider" type="range" min="0" max="0" step="1000" value="0"
+                        aria-label="Filtrar cat&aacute;logo mayorista por precio">
                 </label>
             </div>
         </div>

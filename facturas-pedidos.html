@@ -430,8 +430,8 @@
 
         @media print {
             @page {
-                size: A4;
-                margin: 14mm;
+                size: A4 portrait;
+                margin: 6mm 10mm 10mm 10mm;
             }
 
             body.invoice-print-mode {
@@ -563,6 +563,347 @@
                 color: #666;
                 font-size: 11px;
             }
+
+            body.invoice-print-mode #invoice-print-area {
+                width: 100%;
+                padding: 0;
+                background: #ffffff !important;
+                color: #1e1b4b !important;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                box-sizing: border-box;
+            }
+
+            .admin-inv-top-banner {
+                background: #ffffff !important;
+                padding: 20px 24px;
+                border-radius: 14px;
+                border: 2px solid #7c3aed !important;
+                color: #1e0a38 !important;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+
+            .admin-inv-brand-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .admin-inv-brand-wrapper img {
+                height: 58px;
+                width: auto;
+                object-fit: contain;
+                padding: 4px 10px;
+                border-radius: 10px;
+                border: 1.5px solid #c4b5fd;
+            }
+
+            .admin-inv-brand-wrapper h1 {
+                margin: 0;
+                font-size: 24px;
+                font-weight: 900;
+                letter-spacing: 1px;
+                color: #1e0a38 !important;
+            }
+
+            .admin-inv-brand-wrapper p {
+                margin: 5px 0 0;
+                font-size: 12.5px;
+                color: #475569 !important;
+                font-weight: 600;
+            }
+
+            .admin-inv-badge-box {
+                background: #ffffff !important;
+                border: 1.5px solid #a78bfa !important;
+                border-radius: 12px;
+                padding: 12px 20px;
+                text-align: right;
+            }
+
+            .admin-inv-badge-box h2 {
+                margin: 0;
+                font-size: 11px;
+                font-weight: 900;
+                letter-spacing: 2px;
+                color: #6b21a8 !important;
+                text-transform: uppercase;
+            }
+
+            .admin-inv-badge-box .inv-num {
+                font-size: 22px;
+                font-weight: 900;
+                color: #7c3aed !important;
+                margin: 3px 0;
+                font-family: monospace, monospace;
+                letter-spacing: 0.5px;
+            }
+
+            .admin-inv-badge-box .inv-date {
+                font-size: 12.5px;
+                color: #334155 !important;
+                font-weight: 600;
+            }
+
+            .admin-inv-badge-box .inv-status-chip {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                margin-top: 5px;
+                background: #ffffff !important;
+                border: 1.5px solid #22c55e !important;
+                color: #16a34a !important;
+                padding: 3px 10px;
+                border-radius: 20px;
+                font-size: 10px;
+                font-weight: 900;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .admin-inv-badge-box .status-dot {
+                width: 6px;
+                height: 6px;
+                background: #22c55e !important;
+                border-radius: 50%;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .invoice-details {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 16px;
+                margin-bottom: 20px;
+                page-break-inside: avoid;
+            }
+
+            .invoice-details-box {
+                background: #ffffff !important;
+                border: 1.5px solid #c4b5fd !important;
+                border-radius: 12px;
+                padding: 16px 18px;
+            }
+
+            .invoice-details-box.inv-box-cliente {
+                border-left: 4px solid #7c3aed !important;
+            }
+
+            .invoice-details-box.inv-box-emisor {
+                border-left: 4px solid #a855f7 !important;
+            }
+
+            .invoice-details-box .box-header-title {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin: 0 0 10px;
+                font-size: 11px;
+                font-weight: 900;
+                letter-spacing: 1.5px;
+                color: #6b21a8 !important;
+                text-transform: uppercase;
+                border-bottom: 1px solid #ddd6fe;
+                padding-bottom: 6px;
+            }
+
+            .invoice-details-box .cliente-nombre-title,
+            .invoice-details-box .emisor-nombre-title {
+                font-size: 17px;
+                font-weight: 900;
+                color: #1e0a38 !important;
+                display: block;
+                margin-bottom: 6px;
+            }
+
+            .invoice-details-box p {
+                margin: 4px 0;
+                font-size: 13.5px;
+                color: #334155 !important;
+                line-height: 1.5;
+                font-weight: 500;
+            }
+
+            .invoice-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 20px;
+                page-break-inside: auto;
+                border: 1.5px solid #c4b5fd;
+                border-radius: 0;
+            }
+
+            .invoice-table tr {
+                page-break-inside: avoid;
+            }
+
+            .invoice-table th {
+                background: #ffffff !important;
+                color: #6b21a8 !important;
+                font-size: 11px;
+                font-weight: 900;
+                text-transform: uppercase;
+                letter-spacing: 1.5px;
+                padding: 12px 14px;
+                border-bottom: 2px solid #7c3aed !important;
+                border-right: 1px solid #e9d5ff;
+            }
+
+            .invoice-table th:last-child {
+                border-right: none;
+            }
+
+            .invoice-table td {
+                padding: 12px 14px;
+                border-bottom: 1px solid #e9d5ff;
+                border-right: 1px solid #f0e6ff;
+                font-size: 14px;
+                color: #1e1b4b !important;
+                background: #ffffff !important;
+                font-weight: 600;
+            }
+
+            .invoice-table td:last-child {
+                border-right: none;
+            }
+
+            .invoice-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            .invoice-bottom-grid {
+                display: grid;
+                grid-template-columns: 1fr 340px;
+                gap: 16px;
+                align-items: start;
+                margin-top: 16px;
+                page-break-inside: avoid;
+            }
+
+            .invoice-notes-box {
+                background: #ffffff !important;
+                border: 1.5px dashed #c4b5fd !important;
+                border-radius: 12px;
+                padding: 14px 16px;
+                font-size: 12.5px;
+                color: #334155 !important;
+                line-height: 1.5;
+            }
+
+            .invoice-notes-box .notes-title {
+                font-size: 10.5px;
+                font-weight: 900;
+                letter-spacing: 1.2px;
+                color: #6b21a8 !important;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+            }
+
+            .invoice-notes-box p {
+                margin: 0;
+                line-height: 1.5;
+            }
+
+            .invoice-total-container {
+                display: flex;
+                justify-content: flex-end;
+            }
+
+            .invoice-total-box {
+                background: #ffffff !important;
+                color: #1e0a38 !important;
+                padding: 18px 22px;
+                border-radius: 14px;
+                width: 100%;
+                border: 2px solid #7c3aed !important;
+            }
+
+            .invoice-total-box .total-row-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+            }
+
+            .invoice-total-box .total-label {
+                font-size: 12px;
+                font-weight: 900;
+                letter-spacing: 2px;
+                color: #6b21a8 !important;
+                text-transform: uppercase;
+            }
+
+            .invoice-total-box .total-amount {
+                font-size: 28px;
+                font-weight: 900;
+                color: #1e0a38 !important;
+                font-family: monospace, monospace;
+            }
+
+            .invoice-total-box .total-sub-info {
+                margin-top: 8px;
+                padding-top: 6px;
+                border-top: 1px solid #ddd6fe;
+                font-size: 11px;
+                color: #64748b !important;
+                text-align: right;
+                font-weight: 600;
+            }
+
+            .invoice-store-box {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: #ffffff !important;
+                border: 1.5px solid #c4b5fd !important;
+                border-left: 4px solid #7c3aed !important;
+                border-radius: 12px;
+                padding: 12px 18px;
+                margin-top: 16px;
+                page-break-inside: avoid;
+            }
+
+            .invoice-store-box img {
+                width: 65px;
+                height: 65px;
+                border-radius: 8px;
+                border: 1px solid #c4b5fd;
+                padding: 3px;
+                background: #ffffff !important;
+            }
+
+            .invoice-footer-line {
+                height: 2px;
+                background: #7c3aed !important;
+                border-radius: 1px;
+                margin-top: 22px;
+                margin-bottom: 10px;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .invoice-footer {
+                text-align: center;
+                font-size: 12px;
+                color: #475569 !important;
+                page-break-inside: avoid;
+            }
+
+            .invoice-footer .thank-you {
+                font-size: 14px;
+                font-weight: 900;
+                color: #1e0a38 !important;
+                margin-bottom: 3px;
+            }
+
+            .invoice-footer .footer-subtext {
+                margin: 0;
+                font-size: 11.5px;
+                color: #64748b !important;
+                font-weight: 600;
+            }
         }
     </style>
 </head>
@@ -605,14 +946,14 @@
                 <div class="orders-intro">
                     <div class="orders-kicker">Panel de cliente</div>
                     <h1>Facturas y Pedidos</h1>
-                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu numero de contacto.</p>
+                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu numero de contacto o referencia.</p>
                 </div>
 
                 <div class="orders-login">
-                    <h2>Consulta por contacto</h2>
-                    <p>Escribe el mismo numero que usaste al realizar tu pedido.</p>
+                    <h2>Consulta por contacto o referencia</h2>
+                    <p>Escribe el numero de contacto o el ID de factura/pedido.</p>
                     <form class="orders-form" id="orders-lookup-form">
-                        <input type="tel" id="orders-phone-input" inputmode="tel" autocomplete="tel" placeholder="Numero de contacto" required>
+                        <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="Numero de contacto o referencia" required>
                         <button type="submit" id="orders-submit-btn">Ver mi panel</button>
                         <div class="orders-status" id="orders-status" aria-live="polite"></div>
                     </form>
@@ -682,6 +1023,27 @@
             function comparablePhone(value) {
                 const digits = onlyDigits(value);
                 return digits.length > 10 ? digits.slice(-10) : digits;
+            }
+
+            function matchesLookup(record, lookup, phoneKeys, referenceKeys) {
+                const targetPhone = comparablePhone(lookup);
+                const targetRef = onlyLetters(lookup);
+                const canMatchPhone = targetPhone.length >= 7;
+                const canMatchReference = targetRef.length >= 3;
+
+                if (canMatchPhone) {
+                    const recordPhone = comparablePhone(getField(record, phoneKeys));
+                    if (recordPhone === targetPhone || recordPhone.endsWith(targetPhone)) return true;
+                }
+
+                if (canMatchReference) {
+                    return referenceKeys.some(key => {
+                        const value = onlyLetters(getField(record, [key]));
+                        return value && (value === targetRef || value.includes(targetRef) || targetRef.includes(value));
+                    });
+                }
+
+                return false;
             }
 
             function getField(source, keys, fallback = '') {
@@ -802,12 +1164,13 @@
                     throw new Error(data?.error || 'No se pudo cargar la informacion.');
                 }
 
-                const target = comparablePhone(phone);
                 return data.data
-                    .filter(order => {
-                        const orderPhone = comparablePhone(getField(order, ['Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Telefono Cliente', 'Celular']));
-                        return orderPhone === target || (target.length >= 7 && orderPhone.endsWith(target));
-                    })
+                    .filter(order => matchesLookup(
+                        order,
+                        phone,
+                        ['Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Telefono Cliente', 'Celular', 'ID Cliente'],
+                        ['ID Pedido', 'ID', 'id', 'Referencia', 'Ref']
+                    ))
                     .reverse();
             }
 
@@ -824,12 +1187,13 @@
                     return [];
                 }
 
-                const target = comparablePhone(phone);
                 return data.data
-                    .filter(invoice => {
-                        const invoicePhone = comparablePhone(getField(invoice, ['ID Cliente', 'Telefono', 'Teléfono', 'TelÃ©fono', 'Celular']));
-                        return invoicePhone === target || (target.length >= 7 && invoicePhone.endsWith(target));
-                    })
+                    .filter(invoice => matchesLookup(
+                        invoice,
+                        phone,
+                        ['ID Cliente', 'Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Celular'],
+                        ['ID Factura', 'ID Pedido', 'ID', 'id', 'Referencia', 'Ref', 'Factura']
+                    ))
                     .reverse();
             }
 
@@ -947,7 +1311,7 @@
                                 ${renderItemsTable(items)}
                                 <div class="invoice-total"><span>Total factura</span>${formatMoney(total)}</div>
                                 <div class="invoice-actions">
-                                    <button type="button" class="orders-action-btn invoice-download-btn" onclick="downloadInvoicePdf(${index})">Descargar PDF</button>
+                                    <button type="button" class="orders-action-btn invoice-download-btn" onclick="downloadInvoicePdf(${index})">Abrir / guardar PDF</button>
                                 </div>
                             </div>
                         </article>
@@ -965,25 +1329,34 @@
                 const address = getField(order, ['Direccion', 'Direcci\u00f3n', 'Direcci\u00c3\u00b3n', 'M\u00e9todo Entrega', 'Metodo Entrega'], '-');
                 const state = getField(order, ['Estado Factura', 'Estado Pedido', 'Estado'], 'Finalizada');
                 const method = getField(order, ['Metodo Pago', 'M\u00e9todo Pago', 'Metodo Contacto', 'M\u00e9todo Contacto', 'M\u00c3\u00a9todo Contacto', 'M\u00c3\u0192\u00c2\u00a9todo Contacto', 'Metodo'], '-');
+                const note = getField(order, ['Nota Cliente', 'Nota', 'Observaciones'], '');
+                const customerType = getField(order, ['Tipo Cliente', 'Tipo', 'ClienteTipo'], 'Detal');
                 const items = parseItems(order);
                 const total = getOrderTotal(order, items);
-                const companyLogo = getConfigValue('Factura_Logo', 'Logo2.png') || 'Logo2.png';
-                const companyName = getConfigValue('Factura_Empresa', 'BLYXU');
-                const companyNit = getConfigValue('Factura_NIT', '');
-                const companyPhone = getConfigValue('Factura_Telefono', '');
-                const companyEmail = getConfigValue('Factura_Email', '');
+                const companyLogo = 'blyxu-invoice-logo.png';
+                const companyName = getConfigValue('Factura_Empresa', 'BLYXU Joyería & Accesorios');
+                const companyNit = getConfigValue('Factura_NIT', '000.000.000-0');
+                const companyPhone = getConfigValue('Factura_Telefono', '+57 311 2368622');
+                const companyEmail = getConfigValue('Factura_Email', 'contacto@blyxu.online');
+                let totalQty = 0;
 
                 const rows = items.length ? items.map(item => {
                     const itemName = getField(item, ['nombre', 'Nombre', 'Producto'], 'Producto');
-                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion'], '-');
+                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion', 'Ref'], '-');
                     const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
                     const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                    totalQty += qty;
                     return `
                         <tr>
-                            <td>${escapeHtml(itemName)}<br><small>Ref: ${escapeHtml(sku || '-')}</small></td>
-                            <td style="text-align:center;">${qty}</td>
-                            <td style="text-align:right;">${formatMoney(price)}</td>
-                            <td style="text-align:right;">${formatMoney(price * qty)}</td>
+                            <td style="text-align:center;">
+                                <span style="background:#ffffff; color:#6b21a8; font-weight:900; padding:4px 10px; border-radius:99px; font-size:13px; display:inline-block; border:1.5px solid #c4b5fd;">${qty}</span>
+                            </td>
+                            <td>
+                                <strong style="font-size:14.5px; color:#1e0a38; display:block; margin-bottom:2px; font-weight:800;">${escapeHtml(itemName)}</strong>
+                                <span style="display:inline-block; background:#ffffff; color:#6b21a8; font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; border:1px solid #ddd6fe;">Ref: ${escapeHtml(sku || '-')}</span>
+                            </td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:700; color:#334155; font-size:14px;">${formatMoney(price)}</td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:900; color:#1e0a38; font-size:14.5px;">${formatMoney(price * qty)}</td>
                         </tr>
                     `;
                 }).join('') : `
@@ -993,65 +1366,489 @@
                 `;
 
                 return `
-                    <section class="print-invoice">
-                        <header class="print-invoice-header">
-                            <div class="print-invoice-brand">
+                    <section>
+                        <div class="admin-inv-top-banner">
+                            <div class="admin-inv-brand-wrapper">
                                 <img src="${escapeHtml(companyLogo)}" alt="BLYXU">
                                 <div>
                                     <h1>${escapeHtml(companyName)}</h1>
-                                    ${companyNit ? `<p>NIT / DOC: ${escapeHtml(companyNit)}</p>` : ''}
-                                    ${companyPhone ? `<p>${escapeHtml(companyPhone)}</p>` : ''}
-                                    ${companyEmail ? `<p>${escapeHtml(companyEmail)}</p>` : ''}
+                                    <p>
+                                        <span>WhatsApp: ${escapeHtml(companyPhone)}</span> &bull;
+                                        <span>${escapeHtml(companyEmail)}</span> &bull;
+                                        <span>www.blyxu.online</span>
+                                    </p>
                                 </div>
                             </div>
-                            <div class="print-invoice-title">
-                                <h2>Factura</h2>
-                                <p><strong>${escapeHtml(id)}</strong></p>
-                                <p>${formatDate(date)}</p>
-                            </div>
-                        </header>
-
-                        <div class="print-invoice-grid">
-                            <div class="print-invoice-box">
-                                <h3>Facturar a</h3>
-                                <p><strong>${escapeHtml(name)}</strong></p>
-                                <p>Contacto: ${escapeHtml(phone || '-')}</p>
-                                <p>Direccion: ${escapeHtml(address || '-')}</p>
-                                <p>Ciudad: ${escapeHtml(city || '-')}</p>
-                            </div>
-                            <div class="print-invoice-box">
-                                <h3>Pedido</h3>
-                                <p>Estado: <strong>${escapeHtml(state)}</strong></p>
-                                <p>Metodo: ${escapeHtml(method)}</p>
-                                <p>ID Pedido: ${escapeHtml(orderId)}</p>
+                            <div class="admin-inv-badge-box">
+                                <h2>FACTURA DE VENTA</h2>
+                                <div class="inv-num">${escapeHtml(id)}</div>
+                                <div class="inv-date">Fecha: <strong>${formatDate(date)}</strong></div>
+                                <div class="inv-status-chip">
+                                    <span class="status-dot"></span> <span>${escapeHtml(String(state || 'COMPROBANTE OFICIAL').toUpperCase())}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <table class="print-invoice-table">
+                        <div class="invoice-details">
+                            <div class="invoice-details-box inv-box-cliente">
+                                <div class="box-header-title">FACTURAR A / CLIENTE</div>
+                                <strong class="cliente-nombre-title">${escapeHtml(name)}</strong>
+                                <p><strong>Teléfono / WhatsApp:</strong> ${escapeHtml(phone || '-')}</p>
+                                <p><strong>Dirección de Envío:</strong> ${escapeHtml(address || '-')}</p>
+                                <p><strong>Ciudad:</strong> ${escapeHtml(city || '-')}</p>
+                                <p><strong>Tipo de Cliente:</strong> <span style="font-weight:900; color:#6b21a8;">${escapeHtml(customerType || 'Detal')}</span></p>
+                            </div>
+                            <div class="invoice-details-box inv-box-emisor">
+                                <div class="box-header-title">EMISOR / DATOS CORPORATIVOS</div>
+                                <strong class="emisor-nombre-title">${escapeHtml(companyName)}</strong>
+                                <p><strong>Empresa:</strong> ${escapeHtml(companyName)}</p>
+                                <p><strong>NIT / DOC:</strong> ${escapeHtml(companyNit)}</p>
+                                <p><strong>Soporte Inmediato:</strong> ${escapeHtml(companyPhone)}</p>
+                                <p><strong>Método de Pago:</strong> ${escapeHtml(method)}</p>
+                                <p><strong>ID Pedido:</strong> ${escapeHtml(orderId)}</p>
+                            </div>
+                        </div>
+
+                        <table class="invoice-table">
                             <thead>
                                 <tr>
-                                    <th>Producto</th>
-                                    <th style="text-align:center;">Cant.</th>
-                                    <th style="text-align:right;">P. unit.</th>
-                                    <th style="text-align:right;">Subtotal</th>
+                                    <th style="width:10%; text-align:center;">CANT.</th>
+                                    <th style="width:52%;">DESCRIPCIÓN / PRODUCTO</th>
+                                    <th style="width:19%; text-align:right;">P. UNITARIO</th>
+                                    <th style="width:19%; text-align:right;">SUBTOTAL</th>
                                 </tr>
                             </thead>
                             <tbody>${rows}</tbody>
                         </table>
 
-                        <div class="print-invoice-total">Total: ${formatMoney(total)}</div>
-                        <div class="print-invoice-footer">
-                            <p><strong>Gracias por tu compra.</strong></p>
-                            <p>Esta factura fue generada desde el panel de cliente BLYXU.</p>
+                        <div class="invoice-bottom-grid">
+                            <div class="invoice-notes-box">
+                                <div class="notes-title">OBSERVACIONES & NOTAS DE COMPRA</div>
+                                <p>${escapeHtml(note || 'Gracias por preferir BLYXU Joyería. Cada una de nuestras piezas cuenta con sello y garantía de autenticidad BLYXU.')}</p>
+                            </div>
+                            <div class="invoice-total-container">
+                                <div class="invoice-total-box">
+                                    <div class="total-row-item">
+                                        <span class="total-label">TOTAL FACTURA</span>
+                                        <span class="total-amount">${formatMoney(total)}</span>
+                                    </div>
+                                    <div class="total-sub-info">
+                                        <span>Moneda: COP ($)</span> &bull; <span>${totalQty} ${totalQty === 1 ? 'Ítem' : 'Ítems'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="invoice-store-box">
+                            <div style="display:flex; align-items:center; gap:14px;">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.blyxu.online" alt="QR BLYXU">
+                                <div>
+                                    <strong style="font-size:13.5px; color:#1e0a38 !important; display:block; margin-bottom:2px;">Visita nuestra tienda online oficial BLYXU</strong>
+                                    <p style="margin:0; font-size:12px; color:#475569 !important;">Escanea este código QR o haz clic en el enlace:</p>
+                                    <a href="https://www.blyxu.online" target="_blank" style="display:inline-block; margin-top:3px; font-size:13.5px; font-weight:900; color:#7c3aed !important; text-decoration:underline;">www.blyxu.online</a>
+                                </div>
+                            </div>
+                            <div style="text-align:right; font-size:12px; color:#64748b !important;">
+                                <span style="font-weight:700;">Atención & Pedidos</span><br>
+                                <strong style="font-size:13px; color:#1e0a38 !important;">${escapeHtml(companyPhone)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="invoice-footer-line"></div>
+                        <div class="invoice-footer">
+                            <p class="thank-you">Gracias por elegir BLYXU Joyería & Accesorios</p>
+                            <p class="footer-subtext">Comprobante expedido digitalmente por BLYXU &bull; Tienda Web: <a href="https://www.blyxu.online" target="_blank" style="color:#64748b; font-weight:700;">www.blyxu.online</a> &bull; WhatsApp Soporte: ${escapeHtml(companyPhone)}</p>
                         </div>
                     </section>
                 `;
+            }
+
+            function isIOSDevice() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent)
+                    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            }
+
+            function getInvoiceDocumentStyles() {
+                return `
+                    * { box-sizing: border-box; }
+                    html, body {
+                        margin: 0;
+                        background: #f6f2ff;
+                        color: #1e1b4b;
+                        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    }
+                    body { padding: 18px; }
+                    .invoice-print-toolbar {
+                        position: sticky;
+                        top: 0;
+                        z-index: 20;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 10px;
+                        max-width: 900px;
+                        margin: 0 auto 14px;
+                        padding: 8px 0;
+                        background: #f6f2ff;
+                    }
+                    .invoice-print-button {
+                        min-height: 44px;
+                        border: 0;
+                        border-radius: 12px;
+                        padding: 0 18px;
+                        background: linear-gradient(135deg, #ffe477, #d8ac16 55%, #f4c441);
+                        color: #09030f;
+                        font: inherit;
+                        font-size: 12px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0;
+                    }
+                    #invoice-document-root {
+                        max-width: 900px;
+                        margin: 0 auto;
+                        padding: 22px;
+                        background: #ffffff;
+                        box-shadow: 0 18px 50px rgba(40, 12, 72, 0.16);
+                    }
+                    .admin-inv-top-banner {
+                        background: #ffffff;
+                        padding: 20px 24px;
+                        border-radius: 14px;
+                        border: 2px solid #7c3aed;
+                        color: #1e0a38;
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 18px;
+                        align-items: center;
+                        margin-bottom: 20px;
+                    }
+                    .admin-inv-brand-wrapper {
+                        display: flex;
+                        align-items: center;
+                        gap: 16px;
+                    }
+                    .admin-inv-brand-wrapper img {
+                        height: 58px;
+                        width: auto;
+                        object-fit: contain;
+                        padding: 4px 10px;
+                        border-radius: 10px;
+                        border: 1.5px solid #c4b5fd;
+                    }
+                    .admin-inv-brand-wrapper h1 {
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 900;
+                        letter-spacing: 0;
+                        color: #1e0a38;
+                    }
+                    .admin-inv-brand-wrapper p {
+                        margin: 5px 0 0;
+                        font-size: 12.5px;
+                        color: #475569;
+                        font-weight: 600;
+                    }
+                    .admin-inv-badge-box {
+                        background: #ffffff;
+                        border: 1.5px solid #a78bfa;
+                        border-radius: 12px;
+                        padding: 12px 20px;
+                        text-align: right;
+                        flex: 0 0 auto;
+                    }
+                    .admin-inv-badge-box h2 {
+                        margin: 0;
+                        font-size: 11px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        color: #6b21a8;
+                        text-transform: uppercase;
+                    }
+                    .admin-inv-badge-box .inv-num {
+                        font-size: 22px;
+                        font-weight: 900;
+                        color: #7c3aed;
+                        margin: 3px 0;
+                        font-family: monospace, monospace;
+                    }
+                    .admin-inv-badge-box .inv-date {
+                        font-size: 12.5px;
+                        color: #334155;
+                        font-weight: 600;
+                    }
+                    .admin-inv-badge-box .inv-status-chip {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        margin-top: 5px;
+                        background: #ffffff;
+                        border: 1.5px solid #22c55e;
+                        color: #16a34a;
+                        padding: 3px 10px;
+                        border-radius: 20px;
+                        font-size: 10px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0;
+                    }
+                    .admin-inv-badge-box .status-dot {
+                        width: 6px;
+                        height: 6px;
+                        background: #22c55e;
+                        border-radius: 50%;
+                    }
+                    .invoice-details {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 16px;
+                        margin-bottom: 20px;
+                    }
+                    .invoice-details-box {
+                        background: #ffffff;
+                        border: 1.5px solid #c4b5fd;
+                        border-radius: 12px;
+                        padding: 16px 18px;
+                    }
+                    .invoice-details-box.inv-box-cliente { border-left: 4px solid #7c3aed; }
+                    .invoice-details-box.inv-box-emisor { border-left: 4px solid #a855f7; }
+                    .invoice-details-box .box-header-title {
+                        margin: 0 0 10px;
+                        font-size: 11px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        color: #6b21a8;
+                        text-transform: uppercase;
+                        border-bottom: 1px solid #ddd6fe;
+                        padding-bottom: 6px;
+                    }
+                    .invoice-details-box .cliente-nombre-title,
+                    .invoice-details-box .emisor-nombre-title {
+                        font-size: 17px;
+                        font-weight: 900;
+                        color: #1e0a38;
+                        display: block;
+                        margin-bottom: 6px;
+                    }
+                    .invoice-details-box p {
+                        margin: 4px 0;
+                        font-size: 13.5px;
+                        color: #334155;
+                        line-height: 1.5;
+                        font-weight: 500;
+                    }
+                    .invoice-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 20px;
+                        border: 1.5px solid #c4b5fd;
+                    }
+                    .invoice-table th {
+                        background: #ffffff;
+                        color: #6b21a8;
+                        font-size: 11px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        padding: 12px 14px;
+                        border-bottom: 2px solid #7c3aed;
+                        border-right: 1px solid #e9d5ff;
+                    }
+                    .invoice-table td {
+                        padding: 12px 14px;
+                        border-bottom: 1px solid #e9d5ff;
+                        border-right: 1px solid #f0e6ff;
+                        font-size: 14px;
+                        color: #1e1b4b;
+                        background: #ffffff;
+                        font-weight: 600;
+                    }
+                    .invoice-table th:last-child,
+                    .invoice-table td:last-child { border-right: none; }
+                    .invoice-bottom-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 340px;
+                        gap: 16px;
+                        align-items: start;
+                        margin-top: 16px;
+                    }
+                    .invoice-notes-box {
+                        background: #ffffff;
+                        border: 1.5px dashed #c4b5fd;
+                        border-radius: 12px;
+                        padding: 14px 16px;
+                        font-size: 12.5px;
+                        color: #334155;
+                        line-height: 1.5;
+                    }
+                    .invoice-notes-box .notes-title {
+                        font-size: 10.5px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        color: #6b21a8;
+                        margin-bottom: 5px;
+                        text-transform: uppercase;
+                    }
+                    .invoice-total-container { display: flex; justify-content: flex-end; }
+                    .invoice-total-box {
+                        background: #ffffff;
+                        color: #1e0a38;
+                        padding: 18px 22px;
+                        border-radius: 14px;
+                        width: 100%;
+                        border: 2px solid #7c3aed;
+                    }
+                    .invoice-total-box .total-row-item {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                    }
+                    .invoice-total-box .total-label {
+                        font-size: 12px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        color: #6b21a8;
+                        text-transform: uppercase;
+                    }
+                    .invoice-total-box .total-amount {
+                        font-size: 28px;
+                        font-weight: 900;
+                        color: #1e0a38;
+                        font-family: monospace, monospace;
+                    }
+                    .invoice-total-box .total-sub-info {
+                        margin-top: 8px;
+                        padding-top: 6px;
+                        border-top: 1px solid #ddd6fe;
+                        font-size: 11px;
+                        color: #64748b;
+                        text-align: right;
+                        font-weight: 600;
+                    }
+                    .invoice-store-box {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        background: #ffffff;
+                        border: 1.5px solid #c4b5fd;
+                        border-left: 4px solid #7c3aed;
+                        border-radius: 12px;
+                        padding: 12px 18px;
+                        margin-top: 16px;
+                    }
+                    .invoice-store-box img {
+                        width: 65px;
+                        height: 65px;
+                        border-radius: 8px;
+                        border: 1px solid #c4b5fd;
+                        padding: 3px;
+                        background: #ffffff;
+                    }
+                    .invoice-footer-line {
+                        height: 2px;
+                        background: #7c3aed;
+                        border-radius: 1px;
+                        margin: 22px 0 10px;
+                    }
+                    .invoice-footer {
+                        text-align: center;
+                        font-size: 12px;
+                        color: #475569;
+                    }
+                    .invoice-footer .thank-you {
+                        font-size: 14px;
+                        font-weight: 900;
+                        color: #1e0a38;
+                        margin-bottom: 3px;
+                    }
+                    .invoice-footer .footer-subtext {
+                        margin: 0;
+                        font-size: 11.5px;
+                        color: #64748b;
+                        font-weight: 600;
+                    }
+                    @media (max-width: 640px) {
+                        body { padding: 0; background: #ffffff; }
+                        .invoice-print-toolbar { padding: 10px 12px; margin-bottom: 0; }
+                        .invoice-print-button { width: 100%; }
+                        #invoice-document-root { padding: 14px; box-shadow: none; }
+                        .admin-inv-top-banner,
+                        .admin-inv-brand-wrapper,
+                        .invoice-store-box,
+                        .invoice-store-box > div {
+                            align-items: flex-start !important;
+                            flex-direction: column;
+                        }
+                        .admin-inv-badge-box { width: 100%; text-align: left; }
+                        .invoice-details,
+                        .invoice-bottom-grid { grid-template-columns: 1fr; }
+                        .invoice-table { display: block; overflow-x: auto; white-space: nowrap; }
+                        .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
+                    }
+                    @media print {
+                        @page { size: A4 portrait; margin: 6mm 10mm 10mm 10mm; }
+                        html, body { background: #ffffff !important; }
+                        body { padding: 0 !important; }
+                        .invoice-print-toolbar { display: none !important; }
+                        #invoice-document-root { max-width: none; padding: 0; box-shadow: none; }
+                        .admin-inv-top-banner,
+                        .invoice-details,
+                        .invoice-bottom-grid,
+                        .invoice-store-box,
+                        .invoice-footer { page-break-inside: avoid; }
+                        .invoice-table tr { page-break-inside: avoid; }
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
+                `;
+            }
+
+            function openInvoicePrintWindow(order) {
+                const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'factura');
+                const title = 'Factura-BLYXU-' + String(id).replace(/[^a-z0-9_-]/gi, '');
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) return false;
+
+                const baseUrl = window.location.href.replace(/[^/]*$/, '');
+                printWindow.document.open();
+                printWindow.document.write(`<!DOCTYPE html>
+                    <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <base href="${escapeHtml(baseUrl)}">
+                        <title>${escapeHtml(title)}</title>
+                        <style>${getInvoiceDocumentStyles()}</style>
+                    </head>
+                    <body>
+                        <div class="invoice-print-toolbar">
+                            <button type="button" class="invoice-print-button" onclick="window.print()">Guardar / imprimir PDF</button>
+                        </div>
+                        <main id="invoice-document-root">${buildPrintableInvoice(order)}</main>
+                        <script>
+                            window.addEventListener('load', function () {
+                                if (!/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                                    setTimeout(function () { window.print(); }, 250);
+                                }
+                            });
+                        <\/script>
+                    </body>
+                    </html>`);
+                printWindow.document.close();
+                return true;
             }
 
             window.downloadInvoicePdf = function(index) {
                 const order = currentInvoices[index];
                 const printArea = document.getElementById('invoice-print-area');
                 if (!order || !printArea) return;
+
+                if ((isIOSDevice() || window.matchMedia('(max-width: 760px)').matches) && openInvoicePrintWindow(order)) {
+                    return;
+                }
 
                 const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'factura');
                 const previousTitle = document.title;
@@ -1091,11 +1888,12 @@
 
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const phone = input.value.trim();
-                const comparable = comparablePhone(phone);
+                const lookup = input.value.trim();
+                const comparable = comparablePhone(lookup);
+                const reference = onlyLetters(lookup);
 
-                if (comparable.length < 7) {
-                    status.textContent = 'Escribe un numero de contacto valido.';
+                if (comparable.length < 7 && reference.length < 3) {
+                    status.textContent = 'Escribe un numero de contacto o referencia valido.';
                     panel.classList.remove('open');
                     return;
                 }
@@ -1105,20 +1903,23 @@
                 btn.textContent = 'Buscando...';
 
                 try {
-                    currentPhone = phone;
+                    currentPhone = lookup;
                     [currentOrders, currentInvoices] = await Promise.all([
-                        fetchOrdersByPhone(phone),
-                        fetchInvoicesByPhone(phone)
+                        fetchOrdersByPhone(lookup),
+                        fetchInvoicesByPhone(lookup)
                     ]);
                     const firstRecord = currentOrders[0] || currentInvoices[0];
                     const totalRecords = currentOrders.length + currentInvoices.length;
                     const customer = firstRecord ? getField(firstRecord, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU') : 'Cliente BLYXU';
+                    const lookupLabel = comparable.length >= 7
+                        ? 'contacto terminado en ' + comparable.slice(-4)
+                        : 'referencia ' + lookup;
                     heading.textContent = totalRecords ? 'Panel de ' + customer : 'Sin registros';
                     summary.textContent = totalRecords === 1
-                        ? '1 registro encontrado para el contacto terminado en ' + comparable.slice(-4)
-                        : totalRecords + ' registros encontrados para el contacto terminado en ' + comparable.slice(-4);
+                        ? '1 registro encontrado para ' + lookupLabel
+                        : totalRecords + ' registros encontrados para ' + lookupLabel;
                     panel.classList.add('open');
-                    currentView = 'orders';
+                    currentView = currentOrders.length ? 'orders' : 'invoices';
                     renderCurrentView();
                 } catch (error) {
                     status.textContent = error.message || 'No se pudo consultar el panel.';

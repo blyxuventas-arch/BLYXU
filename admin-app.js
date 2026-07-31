@@ -4,17 +4,12 @@ let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
 const CONTACT_CONFIG_FIELDS = [
-    ['Contacto_Direccion', 'contact-config-address'],
-    ['Contacto_Ciudad', 'contact-config-city'],
     ['Contacto_Dias', 'contact-config-days'],
     ['Contacto_Horarios', 'contact-config-hours'],
     ['Contacto_WhatsApp', 'contact-config-whatsapp'],
-    ['Contacto_Instagram', 'contact-config-instagram'],
-    ['Contacto_Email', 'contact-config-email'],
-    ['Contacto_Mapa_URL', 'contact-config-map'],
-    ['Contacto_Nota', 'contact-config-note'],
-    ['Contacto_Titulo_Atencion', 'contact-config-service-title'],
-    ['Contacto_Detalle_Atencion', 'contact-config-service-detail']
+    ['Contacto_Facebook', 'contact-config-facebook'],
+    ['Contacto_TikTok', 'contact-config-tiktok'],
+    ['Contacto_Instagram', 'contact-config-instagram']
 ];
 const WHATSAPP_CONFIG_FIELDS = [
     ['WhatsApp_Comercial', 'whatsapp-config-commerce']
@@ -1002,7 +997,7 @@ function updateCategoryOptions() {
     if (select && select.tagName === 'SELECT') {
         const current = select.value;
         select.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
-        if (current && categories.includes(current)) select.value = current;
+        if (current) select.value = current;
     }
     if (inventorySelect) {
         const current = inventorySelect.value || 'todos';
@@ -1076,6 +1071,17 @@ function initAdminParticles() {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     
     const mouse = { x: -9999, y: -9999, active: false };
+
+    function hexToRgba(hex, alpha) {
+        const clean = String(hex || '#ffffff').replace('#', '');
+        const value = parseInt(clean.length === 3
+            ? clean.split('').map(char => char + char).join('')
+            : clean, 16);
+        const r = (value >> 16) & 255;
+        const g = (value >> 8) & 255;
+        const b = value & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
     
     const loginScreen = document.getElementById('admin-login-screen');
     if(loginScreen) {
@@ -1106,15 +1112,18 @@ function initAdminParticles() {
     function initNodes() {
         particles = [];
         const isMobile = window.innerWidth < 768;
-        const count = reduceMotion ? 0 : (isMobile ? 24 : 48);
+        const count = reduceMotion ? 0 : (isMobile ? 42 : 86);
+        const palette = ['#f4c441', '#a855f7', '#22d3ee', '#ffffff'];
         for (let i = 0; i < count; i++) {
             particles.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 1.5,
-                vy: (Math.random() - 0.5) * 1.5,
-                radius: Math.random() * 2 + 1,
-                color: Math.random() > 0.5 ? '#a855f7' : '#3b82f6'
+                vx: (Math.random() - 0.5) * 0.45,
+                vy: 1.4 + Math.random() * (isMobile ? 2.2 : 3.4),
+                radius: Math.random() * 1.7 + 0.8,
+                length: 22 + Math.random() * 60,
+                alpha: 0.32 + Math.random() * 0.48,
+                color: palette[Math.floor(Math.random() * palette.length)]
             });
         }
     }
@@ -1128,12 +1137,10 @@ function initAdminParticles() {
             return;
         }
 
-        ctx.shadowBlur = 0;
-        ctx.shadowColor = 'transparent';
-        ctx.fillStyle = 'rgba(10, 2, 20, 0.35)';
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(4, 1, 10, 0.22)';
         ctx.fillRect(0, 0, width, height);
 
-        const connectionDistance = 120;
         const mouseConnectionDistance = 180;
 
         for (let i = 0; i < particles.length; i++) {
@@ -1142,8 +1149,13 @@ function initAdminParticles() {
             p.x += p.vx;
             p.y += p.vy;
 
-            if (p.x < 0 || p.x > width) p.vx *= -1;
-            if (p.y < 0 || p.y > height) p.vy *= -1;
+            if (p.y > height + p.length) {
+                p.y = -p.length;
+                p.x = Math.random() * width;
+                p.vy = 1.4 + Math.random() * 3.4;
+            }
+            if (p.x < -30) p.x = width + 30;
+            if (p.x > width + 30) p.x = -30;
 
             if (mouse.active) {
                 const dx = mouse.x - p.x;
@@ -1151,39 +1163,35 @@ function initAdminParticles() {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist < mouseConnectionDistance) {
-                    p.x += dx * 0.015;
-                    p.y += dy * 0.015;
+                    p.x += dx * 0.006;
 
                     ctx.beginPath();
                     ctx.moveTo(p.x, p.y);
                     ctx.lineTo(mouse.x, mouse.y);
                     const opacity = 1 - (dist / mouseConnectionDistance);
-                    ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.5})`;
+                    ctx.strokeStyle = `rgba(244, 196, 65, ${opacity * 0.26})`;
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }
             }
 
-            for (let j = i + 1; j < particles.length; j++) {
-                let p2 = particles[j];
-                const dx = p.x - p2.x;
-                const dy = p.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+            const gradient = ctx.createLinearGradient(p.x, p.y - p.length, p.x, p.y);
+            gradient.addColorStop(0, 'rgba(255,255,255,0)');
+            gradient.addColorStop(1, hexToRgba(p.color, p.alpha));
 
-                if (dist < connectionDistance) {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    const opacity = 1 - (dist / connectionDistance);
-                    ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.3})`;
-                    ctx.lineWidth = 0.8;
-                    ctx.stroke();
-                }
-            }
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y - p.length);
+            ctx.lineTo(p.x + p.vx * 12, p.y);
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = p.radius;
+            ctx.lineCap = 'round';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.stroke();
 
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
+            ctx.fillStyle = hexToRgba(p.color, Math.min(0.9, p.alpha + 0.18));
             ctx.shadowBlur = 8;
             ctx.shadowColor = p.color;
             ctx.fill();
@@ -1296,10 +1304,11 @@ function initSettingsTabs() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // initAdminParticles(); // Desactivado para optimizar carga
+    initAdminParticles();
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initSettingsTabs();
     initOrdersAdminTabs();
+    initChinaOrdersBuilder();
     initRetailPriceToggle();
     initContactConfigAdmin();
     initWhatsAppConfigAdmin();
@@ -1464,7 +1473,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('login-box').style.transform = 'translateX(10px)';
                 setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(-10px)', 100);
                 setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(10px)', 200);
-                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(0)', 300);
+                setTimeout(() => document.getElementById('login-box').style.transform = '', 300);
             }
         });
     }
@@ -3672,6 +3681,553 @@ function switchDashboardView(viewId, title) {
 }
 
 // === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
+const CHINA_ORDER_DRAFT_KEY = 'blyxu_admin_china_order_draft_v1';
+const CHINA_ORDER_SAVED_KEY = 'blyxu_admin_china_saved_orders_v1';
+let activeChinaOrderId = '';
+
+function formatChinaUsd(value) {
+    return 'US$' + (Number(value) || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function formatChinaCop(value) {
+    return '$' + Math.round(Number(value) || 0).toLocaleString('es-CO');
+}
+
+function parseChinaNumber(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw) return 0;
+    const normalized = raw.includes(',') && !raw.includes('.')
+        ? raw.replace(',', '.')
+        : raw.replace(/,/g, '');
+    return parseFloat(normalized.replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function getChinaOrderRows() {
+    return Array.from(document.querySelectorAll('#china-order-items tr[data-china-order-row]'));
+}
+
+function collectChinaOrderDraft() {
+    const rows = getChinaOrderRows().map(row => ({
+        product: row.querySelector('[data-china-field="product"]')?.value || '',
+        reference: row.querySelector('[data-china-field="reference"]')?.value || '',
+        quantity: row.querySelector('[data-china-field="quantity"]')?.value || '1',
+        unitUsd: row.querySelector('[data-china-field="unitUsd"]')?.value || '',
+        image: row.dataset.image || ''
+    }));
+
+    return {
+        rate: document.getElementById('china-order-rate')?.value || '4000',
+        notes: document.getElementById('china-order-notes')?.value || '',
+        rows
+    };
+}
+
+function getChinaOrderTotalsFromDraft(draft) {
+    const rate = parseChinaNumber(draft?.rate || 0);
+    const rows = Array.isArray(draft?.rows) ? draft.rows : [];
+    const totalUsd = rows.reduce((sum, item) => {
+        const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
+        const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
+        return sum + (quantity * unitUsd);
+    }, 0);
+
+    return {
+        rate,
+        totalUsd,
+        totalCop: totalUsd * rate,
+        itemCount: rows.length,
+        totalQuantity: rows.reduce((sum, item) => sum + Math.max(0, parseChinaNumber(item.quantity || 0)), 0)
+    };
+}
+
+function getSavedChinaOrders() {
+    try {
+        const list = JSON.parse(localStorage.getItem(CHINA_ORDER_SAVED_KEY) || '[]');
+        return Array.isArray(list) ? list : [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function writeSavedChinaOrders(list) {
+    try {
+        localStorage.setItem(CHINA_ORDER_SAVED_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+        return true;
+    } catch (error) {
+        showToast('No se pudo guardar el pedido en el navegador', 'error');
+        return false;
+    }
+}
+
+function makeChinaOrderId() {
+    const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    return 'CHN-' + datePart + '-' + String(Date.now()).slice(-5);
+}
+
+function makeChinaOrderRecord(draft = collectChinaOrderDraft(), existing = null) {
+    const totals = getChinaOrderTotalsFromDraft(draft);
+    const now = new Date().toISOString();
+    return {
+        id: existing?.id || activeChinaOrderId || makeChinaOrderId(),
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+        rate: draft.rate || '4000',
+        notes: draft.notes || '',
+        rows: Array.isArray(draft.rows) ? draft.rows : [],
+        totalUsd: totals.totalUsd,
+        totalCop: totals.totalCop,
+        totalQuantity: totals.totalQuantity
+    };
+}
+
+function saveCurrentChinaOrder(options = {}) {
+    const draft = collectChinaOrderDraft();
+    const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
+    if (!hasProduct) {
+        showToast('Agrega al menos un producto antes de guardar', 'warning');
+        return null;
+    }
+
+    const saved = getSavedChinaOrders();
+    const existingIndex = activeChinaOrderId
+        ? saved.findIndex(order => order.id === activeChinaOrderId)
+        : -1;
+    const existing = existingIndex >= 0 ? saved[existingIndex] : null;
+    const record = makeChinaOrderRecord(draft, existing);
+
+    if (existingIndex >= 0) saved[existingIndex] = record;
+    else saved.unshift(record);
+
+    activeChinaOrderId = record.id;
+    if (!writeSavedChinaOrders(saved)) return null;
+    renderSavedChinaOrders();
+    saveChinaOrderDraft();
+    if (!options.silent) showToast('Pedido a China guardado', 'success');
+    return record;
+}
+
+function hydrateChinaOrderForm(orderOrDraft) {
+    const tbody = document.getElementById('china-order-items');
+    const rate = document.getElementById('china-order-rate');
+    const notes = document.getElementById('china-order-notes');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (rate) rate.value = orderOrDraft?.rate || '4000';
+    if (notes) notes.value = orderOrDraft?.notes || '';
+    const rows = Array.isArray(orderOrDraft?.rows) && orderOrDraft.rows.length ? orderOrDraft.rows : [{}];
+    rows.forEach(item => createChinaOrderRow(item));
+    calculateChinaOrderTotals();
+}
+
+function loadSavedChinaOrder(id) {
+    const order = getSavedChinaOrders().find(item => item.id === id);
+    if (!order) {
+        showToast('No se encontro el pedido guardado', 'error');
+        return;
+    }
+    activeChinaOrderId = order.id;
+    hydrateChinaOrderForm(order);
+    showToast('Pedido cargado para editar', 'success');
+}
+
+function deleteSavedChinaOrder(id) {
+    const next = getSavedChinaOrders().filter(item => item.id !== id);
+    writeSavedChinaOrders(next);
+    if (activeChinaOrderId === id) activeChinaOrderId = '';
+    renderSavedChinaOrders();
+    showToast('Pedido eliminado', 'success');
+}
+
+function formatChinaOrderDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '-';
+    return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+
+function renderSavedChinaOrders() {
+    const container = document.getElementById('china-saved-orders-list');
+    const badge = document.getElementById('china-saved-count');
+    if (!container) return;
+
+    const saved = getSavedChinaOrders();
+    if (badge) badge.textContent = saved.length;
+    if (!saved.length) {
+        container.innerHTML = '<div class="china-saved-empty">No hay pedidos guardados todavia.</div>';
+        return;
+    }
+
+    container.innerHTML = saved.map(order => `
+        <div class="china-saved-row" data-china-saved-id="${escapeHtml(order.id)}">
+            <div>
+                <strong>${escapeHtml(order.id)}</strong>
+                <span>${formatChinaOrderDate(order.updatedAt || order.createdAt)} - ${Number(order.rows?.length || 0)} producto(s)</span>
+            </div>
+            <div>
+                <strong>${formatChinaUsd(order.totalUsd || 0)}</strong>
+                <span>Total USD</span>
+            </div>
+            <div>
+                <strong>${formatChinaCop(order.totalCop || 0)}</strong>
+                <span>Total COP</span>
+            </div>
+            <div class="china-saved-actions">
+                <button type="button" class="china-mini-btn" data-china-saved-action="open">Abrir</button>
+                <button type="button" class="china-mini-btn pdf" data-china-saved-action="pdf">PDF</button>
+                <button type="button" class="china-mini-btn danger" data-china-saved-action="delete">Borrar</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function buildChinaOrderPrintHtml(order) {
+    const totals = getChinaOrderTotalsFromDraft(order);
+    const rows = Array.isArray(order.rows) ? order.rows : [];
+    const itemRows = rows.map((item, index) => {
+        const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
+        const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
+        const subtotalUsd = quantity * unitUsd;
+        const subtotalCop = subtotalUsd * totals.rate;
+        const imageHtml = item.image
+            ? `<img src="${escapeHtml(item.image)}" alt="">`
+            : '<span>Sin foto</span>';
+        return `
+            <tr>
+                <td style="text-align:center;">${imageHtml}</td>
+                <td>
+                    <strong>${escapeHtml(item.product || 'Producto sin nombre')}</strong><br>
+                    <span>Ref: ${escapeHtml(item.reference || 'S/N')}</span>
+                </td>
+                <td style="text-align:center;">${quantity}</td>
+                <td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>
+                <td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>
+                <td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>
+                <td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <div class="china-print-page">
+            <div class="china-print-header">
+                <div>
+                    <h1>BLYXU</h1>
+                    <p>Pedido a China / Orden de compra proveedor</p>
+                </div>
+                <div class="china-print-meta">
+                    <strong>${escapeHtml(order.id || makeChinaOrderId())}</strong>
+                    <p>Fecha: ${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</p>
+                    <p>TRM: ${formatChinaCop(totals.rate)} por USD</p>
+                </div>
+            </div>
+            <table class="china-print-table">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Producto / referencia</th>
+                        <th>Cant.</th>
+                        <th>Unit. USD</th>
+                        <th>Unit. COP</th>
+                        <th>Subtotal USD</th>
+                        <th>Subtotal COP</th>
+                    </tr>
+                </thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+            <div class="china-print-totals">
+                <div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>
+                <div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>
+            </div>
+            ${order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
+        </div>
+    `;
+}
+
+function printChinaOrderPdf(order) {
+    const container = document.getElementById('china-order-print-container');
+    if (!container || !order) return;
+    container.innerHTML = buildChinaOrderPrintHtml(order);
+
+    const previousTitle = document.title;
+    document.title = 'Pedido-China-' + String(order.id || 'BLYXU').replace(/[^a-z0-9_-]/gi, '');
+    document.body.classList.add('printing-china-order');
+    const cleanup = () => {
+        document.body.classList.remove('printing-china-order');
+        document.title = previousTitle;
+        window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => window.print(), 80);
+    setTimeout(cleanup, 1500);
+}
+
+function downloadCurrentChinaOrderPdf() {
+    const order = saveCurrentChinaOrder({ silent: true });
+    if (!order) return;
+    printChinaOrderPdf(order);
+}
+
+function saveChinaOrderDraft() {
+    try {
+        localStorage.setItem(CHINA_ORDER_DRAFT_KEY, JSON.stringify(collectChinaOrderDraft()));
+    } catch (error) {
+        console.warn('No se pudo guardar el borrador del pedido a China:', error);
+    }
+}
+
+function readChinaOrderDraft() {
+    try {
+        const draft = JSON.parse(localStorage.getItem(CHINA_ORDER_DRAFT_KEY) || 'null');
+        return draft && Array.isArray(draft.rows) ? draft : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function calculateChinaOrderTotals() {
+    const rate = parseChinaNumber(document.getElementById('china-order-rate')?.value || 0);
+    let totalUsd = 0;
+
+    getChinaOrderRows().forEach(row => {
+        const quantity = Math.max(0, parseChinaNumber(row.querySelector('[data-china-field="quantity"]')?.value || 0));
+        const unitUsd = Math.max(0, parseChinaNumber(row.querySelector('[data-china-field="unitUsd"]')?.value || 0));
+        const unitCop = unitUsd * rate;
+        const subtotalUsd = quantity * unitUsd;
+        const subtotalCop = subtotalUsd * rate;
+
+        const unitCopEl = row.querySelector('[data-china-output="unitCop"]');
+        const subtotalUsdEl = row.querySelector('[data-china-output="subtotalUsd"]');
+        const subtotalCopEl = row.querySelector('[data-china-output="subtotalCop"]');
+        if (unitCopEl) unitCopEl.textContent = formatChinaCop(unitCop);
+        if (subtotalUsdEl) subtotalUsdEl.textContent = formatChinaUsd(subtotalUsd);
+        if (subtotalCopEl) subtotalCopEl.textContent = formatChinaCop(subtotalCop);
+
+        totalUsd += subtotalUsd;
+    });
+
+    const totalUsdEl = document.getElementById('china-order-total-usd');
+    const totalCopEl = document.getElementById('china-order-total-cop');
+    if (totalUsdEl) totalUsdEl.textContent = formatChinaUsd(totalUsd);
+    if (totalCopEl) totalCopEl.textContent = formatChinaCop(totalUsd * rate);
+    saveChinaOrderDraft();
+}
+
+function setChinaOrderImage(row, src) {
+    if (!row || !src) return;
+    row.dataset.image = src;
+    const drop = row.querySelector('.china-order-photo-drop');
+    const img = row.querySelector('.china-order-photo-drop img');
+    if (drop) drop.classList.add('has-image');
+    if (img) img.src = src;
+    saveChinaOrderDraft();
+}
+
+async function prepareChinaOrderImageDataUrl(file) {
+    if (file.type === 'image/gif') {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error('No se pudo leer la imagen'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const img = await loadImageFile(file);
+    const maxEdge = 900;
+    const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+    canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No se pudo preparar la imagen');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.78);
+}
+
+async function readChinaOrderImageFile(row, file) {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+        showToast('Arrastra una imagen valida para el producto', 'warning');
+        return;
+    }
+    try {
+        const dataUrl = await prepareChinaOrderImageDataUrl(file);
+        setChinaOrderImage(row, dataUrl);
+    } catch (error) {
+        showToast('No se pudo leer la imagen', 'error');
+    }
+}
+
+function createChinaOrderRow(item = {}) {
+    const tbody = document.getElementById('china-order-items');
+    if (!tbody) return null;
+
+    const row = document.createElement('tr');
+    row.dataset.chinaOrderRow = 'true';
+    row.dataset.image = item.image || '';
+    row.innerHTML = `
+        <td>
+            <label class="china-order-photo-drop" title="Arrastra una foto o haz clic para subir">
+                <input type="file" accept="image/*" data-china-field="imageFile">
+                <img alt="Foto del producto">
+                <span>Arrastra<br>foto</span>
+            </label>
+        </td>
+        <td>
+            <div class="china-order-product-fields">
+                <input type="text" class="form-control" data-china-field="product" placeholder="Producto" value="${escapeHtml(item.product || '')}">
+                <input type="text" class="form-control" data-china-field="reference" placeholder="Referencia opcional" value="${escapeHtml(item.reference || '')}">
+            </div>
+        </td>
+        <td><input type="number" class="form-control" data-china-field="quantity" min="0" step="1" value="${escapeHtml(item.quantity || '1')}"></td>
+        <td><input type="number" class="form-control" data-china-field="unitUsd" min="0" step="0.01" placeholder="0.00" value="${escapeHtml(item.unitUsd || '')}"></td>
+        <td class="china-order-money muted" data-china-output="unitCop">$0</td>
+        <td class="china-order-money" data-china-output="subtotalUsd">US$0.00</td>
+        <td class="china-order-money" data-china-output="subtotalCop">$0</td>
+        <td><button type="button" class="china-order-remove" title="Eliminar producto">x</button></td>
+    `;
+    tbody.appendChild(row);
+
+    const fileInput = row.querySelector('[data-china-field="imageFile"]');
+    const drop = row.querySelector('.china-order-photo-drop');
+    if (item.image) setChinaOrderImage(row, item.image);
+
+    row.querySelectorAll('input:not([type="file"])').forEach(input => {
+        input.addEventListener('input', calculateChinaOrderTotals);
+        input.addEventListener('change', calculateChinaOrderTotals);
+    });
+    fileInput?.addEventListener('change', event => readChinaOrderImageFile(row, event.target.files?.[0]));
+    drop?.addEventListener('dragover', event => {
+        event.preventDefault();
+        drop.classList.add('drag-over');
+    });
+    drop?.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+    drop?.addEventListener('drop', event => {
+        event.preventDefault();
+        drop.classList.remove('drag-over');
+        readChinaOrderImageFile(row, event.dataTransfer.files?.[0]);
+    });
+    row.querySelector('.china-order-remove')?.addEventListener('click', () => {
+        row.remove();
+        if (!getChinaOrderRows().length) createChinaOrderRow();
+        calculateChinaOrderTotals();
+    });
+
+    calculateChinaOrderTotals();
+    return row;
+}
+
+function buildChinaOrderSummary() {
+    const draft = collectChinaOrderDraft();
+    const rate = parseChinaNumber(draft.rate || 0);
+    let totalUsd = 0;
+    const lines = draft.rows.map((item, index) => {
+        const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
+        const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
+        const subtotalUsd = quantity * unitUsd;
+        totalUsd += subtotalUsd;
+        const reference = item.reference ? ` | Ref: ${item.reference}` : '';
+        return `${index + 1}. ${item.product || 'Producto sin nombre'}${reference} | Cant: ${quantity} | Unit: ${formatChinaUsd(unitUsd)} / ${formatChinaCop(unitUsd * rate)} | Subtotal: ${formatChinaUsd(subtotalUsd)} / ${formatChinaCop(subtotalUsd * rate)}`;
+    });
+
+    return [
+        'Pedido a China - BLYXU',
+        `TRM: ${formatChinaCop(rate)} por USD`,
+        '',
+        ...lines,
+        '',
+        `TOTAL USD: ${formatChinaUsd(totalUsd)}`,
+        `TOTAL COP: ${formatChinaCop(totalUsd * rate)}`,
+        draft.notes ? `Notas: ${draft.notes}` : ''
+    ].filter(line => line !== '').join('\n');
+}
+
+function fallbackCopyChinaOrderSummary(summary) {
+    const textarea = document.createElement('textarea');
+    textarea.value = summary;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showToast('Resumen del pedido copiado', 'success');
+    } catch (error) {
+        showToast('No se pudo copiar el resumen', 'error');
+    }
+    textarea.remove();
+}
+
+function copyChinaOrderSummary() {
+    const summary = buildChinaOrderSummary();
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(summary)
+            .then(() => showToast('Resumen del pedido copiado', 'success'))
+            .catch(() => fallbackCopyChinaOrderSummary(summary));
+        return;
+    }
+    fallbackCopyChinaOrderSummary(summary);
+}
+
+function clearChinaOrderDraft() {
+    try {
+        localStorage.removeItem(CHINA_ORDER_DRAFT_KEY);
+    } catch (error) {
+        console.warn('No se pudo limpiar el borrador:', error);
+    }
+    activeChinaOrderId = '';
+    const tbody = document.getElementById('china-order-items');
+    if (tbody) tbody.innerHTML = '';
+    const rate = document.getElementById('china-order-rate');
+    const notes = document.getElementById('china-order-notes');
+    if (rate) rate.value = '4000';
+    if (notes) notes.value = '';
+    createChinaOrderRow();
+    calculateChinaOrderTotals();
+}
+
+function initChinaOrdersBuilder() {
+    const tbody = document.getElementById('china-order-items');
+    if (!tbody || tbody.dataset.ready === 'true') return;
+    tbody.dataset.ready = 'true';
+
+    const rate = document.getElementById('china-order-rate');
+    const notes = document.getElementById('china-order-notes');
+    const draft = readChinaOrderDraft();
+    if (draft) {
+        hydrateChinaOrderForm(draft);
+    } else {
+        createChinaOrderRow();
+    }
+
+    rate?.addEventListener('input', calculateChinaOrderTotals);
+    rate?.addEventListener('change', calculateChinaOrderTotals);
+    notes?.addEventListener('input', saveChinaOrderDraft);
+    document.getElementById('btn-add-china-order-item')?.addEventListener('click', () => createChinaOrderRow());
+    document.getElementById('btn-save-china-order')?.addEventListener('click', () => saveCurrentChinaOrder());
+    document.getElementById('btn-print-china-order')?.addEventListener('click', downloadCurrentChinaOrderPdf);
+    document.getElementById('btn-copy-china-order')?.addEventListener('click', copyChinaOrderSummary);
+    document.getElementById('btn-clear-china-order')?.addEventListener('click', clearChinaOrderDraft);
+    document.getElementById('china-saved-orders-list')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-china-saved-action]');
+        const row = event.target.closest('[data-china-saved-id]');
+        if (!button || !row) return;
+        const id = row.dataset.chinaSavedId;
+        const action = button.dataset.chinaSavedAction;
+        if (action === 'open') loadSavedChinaOrder(id);
+        if (action === 'pdf') {
+            const order = getSavedChinaOrders().find(item => item.id === id);
+            if (order) printChinaOrderPdf(order);
+        }
+        if (action === 'delete') deleteSavedChinaOrder(id);
+    });
+    renderSavedChinaOrders();
+    calculateChinaOrderTotals();
+}
+
 window.pedidosList = [];
 window.facturasList = [];
 window.activeOrdersAdminTab = 'orders-mayor';
@@ -3796,8 +4352,39 @@ function normalizeAdminCustomerType(value) {
     return '';
 }
 
+function getInvoiceCustomerTypeLabel(value, fallback = 'Detal') {
+    const raw = String(value || fallback || '').trim();
+    const normalized = normalizeAdminCustomerType(raw);
+    if (normalized === 'mayor') return 'Mayorista';
+    if (normalized === 'detal') return 'Detal';
+    return raw || 'Detal';
+}
+
+function inferAdminCustomerTypeFromId(value) {
+    const id = String(value || '').toLowerCase().trim();
+    if (id.startsWith('fac-may') || id.startsWith('may-') || id.includes('-may-')) return 'mayor';
+    if (id.startsWith('fac-det') || id.startsWith('det-') || id.includes('-det-')) return 'detal';
+    return '';
+}
+
+function setInvoiceCustomerTypeControl(value, fallback = 'Detal') {
+    const control = document.getElementById('inv-edit-tipo');
+    if (!control) return;
+    const label = getInvoiceCustomerTypeLabel(value, fallback);
+    if (control.tagName === 'SELECT' && !Array.from(control.options).some(option => option.value === label)) {
+        const option = document.createElement('option');
+        option.value = label;
+        option.textContent = label;
+        control.appendChild(option);
+    }
+    control.value = label;
+}
+
 function inferOrderCustomerType(order) {
     if (!order) return 'detal';
+    const idType = inferAdminCustomerTypeFromId(getOrderIdValue(order));
+    if (idType) return idType;
+
     const explicit = normalizeAdminCustomerType(order['Tipo Cliente'] || order.Tipo || order.tipo || order.ClienteTipo);
     if (explicit) return explicit;
 
@@ -3822,6 +4409,12 @@ function inferOrderCustomerType(order) {
 
 function inferInvoiceCustomerType(invoice) {
     if (!invoice) return 'detal';
+    const invoiceIdType = inferAdminCustomerTypeFromId(getInvoiceIdValue(invoice));
+    if (invoiceIdType) return invoiceIdType;
+
+    const orderIdType = inferAdminCustomerTypeFromId(getInvoiceOrderIdValue(invoice));
+    if (orderIdType) return orderIdType;
+
     const explicit = normalizeAdminCustomerType(invoice['Tipo Cliente'] || invoice.Tipo || invoice.tipo || invoice.ClienteTipo);
     if (explicit) return explicit;
 
@@ -4207,6 +4800,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     document.getElementById('inv-edit-estado').value = 'Finalizada';
     document.getElementById('inv-edit-metodo').value = 'Mostrador / Manual';
     document.getElementById('inv-edit-nota').value = '';
+    setInvoiceCustomerTypeControl('Detal');
     document.getElementById('inv-product-search').value = '';
     document.getElementById('inv-search-results').classList.remove('active');
     document.getElementById('inv-custom-name').value = '';
@@ -4236,9 +4830,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
         
         document.getElementById('inv-edit-nombre').value = editingInvoice ? getInvoiceCustomerName(p) : (p['Nombre Cliente'] || p.Nombre || '');
         document.getElementById('inv-edit-tel').value = editingInvoice ? (p['ID Cliente'] || '') : (p['Teléfono'] || p.Telefono || '');
-        if (document.getElementById('inv-edit-tipo')) {
-            document.getElementById('inv-edit-tipo').value = editingInvoice ? (p['Tipo Cliente'] || p.Tipo || 'Detal') : (window.invoiceCustomerType || 'Detal');
-        }
+        setInvoiceCustomerTypeControl(window.invoiceCustomerType, 'Detal');
         document.getElementById('inv-edit-dir').value = editingInvoice
             ? (p['Método Entrega'] || p['Metodo Entrega'] || p.entrega || p['Dirección'] || p.Direccion || '')
             : (p['Dirección'] || p.Direccion || '');
@@ -4533,18 +5125,18 @@ function renderItemsFactura() {
         total += subtotal;
         return `
             <tr>
-                <td>
+                <td data-label="Producto">
                     <input type="text" class="inv-item-name-input" value="${escapeHtml(item.nombre)}" onchange="modificarNombreItemFactura(${i}, this.value)">
                     <input type="text" class="inv-item-ref-input" value="${escapeHtml(item.sku || '')}" placeholder="Ref: S/N" onchange="modificarSkuItemFactura(${i}, this.value)">
                 </td>
-                <td style="text-align:center;">
+                <td data-label="Cantidad" style="text-align:center;">
                     <input type="number" class="inv-qty-input" value="${item.cantidad}" min="1" onchange="modificarCantidadFactura(${i}, this.value)">
                 </td>
-                <td style="text-align:right;">
+                <td data-label="Precio unitario" style="text-align:right;">
                     <input type="number" class="inv-qty-input" style="width:90px;" value="${item.precio}" onchange="modificarPrecioFactura(${i}, this.value)">
                 </td>
-                <td style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td>
-                <td style="text-align:right;">
+                <td data-label="Subtotal" style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td>
+                <td data-label="Accion" style="text-align:right;">
                     <button class="action-btn inv-remove-item-btn" type="button" onclick="eliminarItemFactura(${i})">x</button>
                 </td>
             </tr>
@@ -4552,6 +5144,366 @@ function renderItemsFactura() {
     }).join('');
     
     document.getElementById('inv-edit-total').textContent = '$' + total.toLocaleString('es-CO');
+}
+
+function isAdminInvoiceMobilePrint() {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return isIOS || window.matchMedia('(max-width: 760px)').matches;
+}
+
+function getAdminInvoicePrintWindowStyles() {
+    return `
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            background: #f6f2ff;
+            color: #1e1b4b;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        body { padding: 18px; }
+        .invoice-print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: flex-end;
+            max-width: 900px;
+            margin: 0 auto 14px;
+            padding: 8px 0;
+            background: #f6f2ff;
+        }
+        .invoice-print-button {
+            min-height: 44px;
+            border: 0;
+            border-radius: 12px;
+            padding: 0 18px;
+            background: linear-gradient(135deg, #ffe477, #d8ac16 55%, #f4c441);
+            color: #09030f;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+        #invoice-print-container {
+            display: block;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 22px;
+            background: #ffffff;
+            box-shadow: 0 18px 50px rgba(40, 12, 72, 0.16);
+        }
+        .admin-inv-top-banner {
+            background: #ffffff;
+            padding: 20px 24px;
+            border-radius: 14px;
+            border: 2px solid #7c3aed;
+            color: #1e0a38;
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .admin-inv-brand-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .admin-inv-brand-wrapper img {
+            height: 58px;
+            width: auto;
+            object-fit: contain;
+            padding: 4px 10px;
+            border-radius: 10px;
+            border: 1.5px solid #c4b5fd;
+        }
+        .admin-inv-brand-wrapper h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 0;
+            color: #1e0a38;
+        }
+        .admin-inv-brand-wrapper p {
+            margin: 5px 0 0;
+            font-size: 12.5px;
+            color: #475569;
+            font-weight: 600;
+        }
+        .admin-inv-badge-box {
+            background: #ffffff;
+            border: 1.5px solid #a78bfa;
+            border-radius: 12px;
+            padding: 12px 20px;
+            text-align: right;
+            flex: 0 0 auto;
+        }
+        .admin-inv-badge-box h2 {
+            margin: 0;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #6b21a8;
+            text-transform: uppercase;
+        }
+        .admin-inv-badge-box .inv-num {
+            font-size: 22px;
+            font-weight: 900;
+            color: #7c3aed;
+            margin: 3px 0;
+            font-family: monospace, monospace;
+        }
+        .admin-inv-badge-box .inv-date {
+            font-size: 12.5px;
+            color: #334155;
+            font-weight: 600;
+        }
+        .admin-inv-badge-box .inv-status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            background: #ffffff;
+            border: 1.5px solid #22c55e;
+            color: #16a34a;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+        .admin-inv-badge-box .status-dot {
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+        }
+        .invoice-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .invoice-details-box {
+            background: #ffffff;
+            border: 1.5px solid #c4b5fd;
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+        .invoice-details-box.inv-box-cliente { border-left: 4px solid #7c3aed; }
+        .invoice-details-box.inv-box-emisor { border-left: 4px solid #a855f7; }
+        .invoice-details-box .box-header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 10px;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #6b21a8;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd6fe;
+            padding-bottom: 6px;
+        }
+        .invoice-details-box .cliente-nombre-title,
+        .invoice-details-box .emisor-nombre-title {
+            font-size: 17px;
+            font-weight: 900;
+            color: #1e0a38;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .invoice-details-box p {
+            margin: 4px 0;
+            font-size: 13.5px;
+            color: #334155;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: 1.5px solid #c4b5fd;
+        }
+        .invoice-table th {
+            background: #ffffff;
+            color: #6b21a8;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 12px 14px;
+            border-bottom: 2px solid #7c3aed;
+            border-right: 1px solid #e9d5ff;
+        }
+        .invoice-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #e9d5ff;
+            border-right: 1px solid #f0e6ff;
+            font-size: 14px;
+            color: #1e1b4b;
+            background: #ffffff;
+            font-weight: 600;
+        }
+        .invoice-table th:last-child,
+        .invoice-table td:last-child { border-right: none; }
+        .invoice-bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 16px;
+            align-items: start;
+            margin-top: 16px;
+        }
+        .invoice-notes-box {
+            background: #ffffff;
+            border: 1.5px dashed #c4b5fd;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 12.5px;
+            color: #334155;
+            line-height: 1.5;
+        }
+        .invoice-notes-box .notes-title {
+            font-size: 10.5px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #6b21a8;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .invoice-total-container { display: flex; justify-content: flex-end; }
+        .invoice-total-box {
+            background: #ffffff;
+            color: #1e0a38;
+            padding: 18px 22px;
+            border-radius: 14px;
+            width: 100%;
+            border: 2px solid #7c3aed;
+        }
+        .invoice-total-box .total-row-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .invoice-total-box .total-label {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #6b21a8;
+            text-transform: uppercase;
+        }
+        .invoice-total-box .total-amount {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1e0a38;
+            font-family: monospace, monospace;
+        }
+        .invoice-total-box .total-sub-info {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid #ddd6fe;
+            font-size: 11px;
+            color: #64748b;
+            text-align: right;
+            font-weight: 600;
+        }
+        .invoice-footer-line {
+            height: 2px;
+            background: #7c3aed;
+            border-radius: 1px;
+            margin: 22px 0 10px;
+        }
+        .invoice-footer {
+            text-align: center;
+            font-size: 12px;
+            color: #475569;
+        }
+        .invoice-footer .thank-you {
+            font-size: 14px;
+            font-weight: 900;
+            color: #1e0a38;
+            margin-bottom: 3px;
+        }
+        .invoice-footer .footer-subtext {
+            margin: 0;
+            font-size: 11.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        @media (max-width: 640px) {
+            body { padding: 0; background: #ffffff; }
+            .invoice-print-toolbar { padding: 10px 12px; margin-bottom: 0; }
+            .invoice-print-button { width: 100%; }
+            #invoice-print-container { padding: 14px; box-shadow: none; }
+            .admin-inv-top-banner,
+            .admin-inv-brand-wrapper {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .admin-inv-badge-box { width: 100%; text-align: left; }
+            .invoice-details,
+            .invoice-bottom-grid { grid-template-columns: 1fr; }
+            .invoice-table { display: block; overflow-x: auto; white-space: nowrap; }
+            .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
+        }
+        @media print {
+            @page { size: A4 portrait; margin: 6mm 10mm 10mm 10mm; }
+            html, body { background: #ffffff !important; }
+            body { padding: 0 !important; }
+            .invoice-print-toolbar { display: none !important; }
+            #invoice-print-container { max-width: none; padding: 0; box-shadow: none; }
+            .admin-inv-top-banner,
+            .invoice-details,
+            .invoice-bottom-grid,
+            .invoice-footer { page-break-inside: avoid; }
+            .invoice-table tr { page-break-inside: avoid; }
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    `;
+}
+
+function openAdminInvoicePrintWindow(title) {
+    const printContainer = document.getElementById('invoice-print-container');
+    if (!printContainer) return false;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return false;
+
+    const baseUrl = window.location.href.replace(/[^/]*$/, '');
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <base href="${escapeHtml(baseUrl)}">
+            <title>${escapeHtml(title || 'Factura BLYXU')}</title>
+            <style>${getAdminInvoicePrintWindowStyles()}</style>
+        </head>
+        <body>
+            <div class="invoice-print-toolbar">
+                <button type="button" class="invoice-print-button" onclick="window.print()">Guardar / imprimir PDF</button>
+            </div>
+            ${printContainer.outerHTML}
+            <script>
+                window.addEventListener('load', function () {
+                    if (!/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        setTimeout(function () { window.print(); }, 250);
+                    }
+                });
+            <\/script>
+        </body>
+        </html>`);
+    printWindow.document.close();
+    return true;
 }
 
 window.imprimirFacturaEditor = function() {
@@ -4565,7 +5517,8 @@ window.imprimirFacturaEditor = function() {
     const estado = document.getElementById('inv-edit-estado')?.value || 'Finalizada';
     const metodo = document.getElementById('inv-edit-metodo')?.value || 'Digital / Directo';
     const nota = document.getElementById('inv-edit-nota')?.value || '';
-    const tipoCliente = (document.getElementById('inv-edit-tipo')?.value || window.invoiceCustomerType || 'Detal').trim();
+    const tipoCliente = getInvoiceCustomerTypeLabel(document.getElementById('inv-edit-tipo')?.value, window.invoiceCustomerType || 'Detal');
+    window.invoiceCustomerType = normalizeAdminCustomerType(tipoCliente) === 'mayor' ? 'Mayor' : 'Detal';
 
     // Rellenar campos en plantilla de impresión
     document.getElementById('inv-id').textContent = pId;
@@ -4595,7 +5548,7 @@ window.imprimirFacturaEditor = function() {
     // Configuración dinámicas de empresa BLYXU
     const cfg = window.storeConfig || {};
     const logoImg = document.getElementById('inv-company-logo');
-    if (logoImg && cfg['Factura_Logo']) logoImg.src = cfg['Factura_Logo'];
+    if (logoImg) logoImg.src = 'blyxu-invoice-logo.png';
 
     if (document.getElementById('inv-company-name')) {
         document.getElementById('inv-company-name').textContent = cfg['Factura_Empresa'] || 'BLYXU Joyería & Accesorios';
@@ -4637,14 +5590,14 @@ window.imprimirFacturaEditor = function() {
         return `
             <tr>
                 <td style="text-align:center;">
-                    <span style="background: #f3e8ff; color: #6d28d9; font-weight: 900; padding: 5px 12px; border-radius: 99px; font-size: 13px; display:inline-block; border: 1px solid #ddd6fe;">${cant}</span>
+                    <span style="background: #ffffff; color: #6b21a8; font-weight: 900; padding: 4px 10px; border-radius: 99px; font-size: 13px; display:inline-block; border: 1.5px solid #c4b5fd;">${cant}</span>
                 </td>
                 <td>
-                    <strong style="font-size:15.5px; color:#1e0a38; display:block; margin-bottom:3px; font-weight:800;">${escapeHtml(item.nombre)}</strong>
-                    <span style="display:inline-block; background:#ede9fe; color:#6d28d9; font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:6px;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
+                    <strong style="font-size:14.5px; color:#1e0a38; display:block; margin-bottom:2px; font-weight:800;">${escapeHtml(item.nombre)}</strong>
+                    <span style="display:inline-block; background:#ffffff; color:#6b21a8; font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; border: 1px solid #ddd6fe;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
                 </td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 700; color:#334155; font-size: 14.5px;">$${precio.toLocaleString('es-CO')}</td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 900; color:#1e0a38; font-size: 15.5px;">$${sub.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 700; color:#334155; font-size: 14px;">$${precio.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 900; color:#1e0a38; font-size: 14.5px;">$${sub.toLocaleString('es-CO')}</td>
             </tr>
         `;
     }).join('');
@@ -4657,6 +5610,11 @@ window.imprimirFacturaEditor = function() {
     // Nombre dinámico de archivo al imprimir/guardar PDF
     const safeName = nombre.replace(/[^a-zA-Z0-9]/g, '_');
     document.title = `Factura_${pId}_${safeName}`;
+
+    if (isAdminInvoiceMobilePrint() && openAdminInvoicePrintWindow(document.title)) {
+        document.title = origTitle;
+        return;
+    }
 
     setTimeout(() => {
         window.print();
@@ -4765,13 +5723,14 @@ window.guardarFacturaDB = async function() {
     const total = window.invoiceItems.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     const cantTotal = window.invoiceItems.reduce((sum, item) => sum + item.cantidad, 0);
     const metodo = document.getElementById('inv-edit-metodo').value.trim() || 'Mostrador / Manual';
-    const estadoFactura = window.invoiceEditSource === 'pedido'
-        ? 'Finalizada'
-        : (document.getElementById('inv-edit-estado').value.trim() || 'Finalizada');
+    const estadoFactura = document.getElementById('inv-edit-estado').value.trim() || 'Finalizada';
     const entrega = [document.getElementById('inv-edit-dir').value.trim(), document.getElementById('inv-edit-ciudad').value.trim()]
         .filter(Boolean)
         .join(' - ');
-    const tipoCliente = window.invoiceCustomerType === 'Mayor' ? 'Mayor' : 'Detal';
+    const tipoCliente = getInvoiceCustomerTypeLabel(document.getElementById('inv-edit-tipo')?.value, window.invoiceCustomerType || 'Detal');
+    const tipoClienteTab = normalizeAdminCustomerType(tipoCliente) === 'mayor' ? 'Mayor' : 'Detal';
+    window.invoiceCustomerType = tipoClienteTab;
+    const linkedOrderStatus = /final|complet|pagad|factur/i.test(estadoFactura) ? 'Facturado' : estadoFactura;
     
     const payload = {
         resource: 'facturas',
@@ -4807,14 +5766,14 @@ window.guardarFacturaDB = async function() {
                         resource: 'pedidos',
                         action: 'estado',
                         id: originalOrderId,
-                        estado: 'Facturado'
+                        estado: linkedOrderStatus
                     })
                 }).catch(error => console.warn('No se pudo marcar el pedido como facturado:', error));
             }
             showToast('Factura guardada exitosamente', 'success');
             document.getElementById('invoice-editor-modal').classList.remove('open');
             if (typeof window.switchOrdersAdminTab === 'function') {
-                window.switchOrdersAdminTab(tipoCliente === 'Mayor' ? 'invoices-mayor' : 'invoices-detal');
+                window.switchOrdersAdminTab(tipoClienteTab === 'Mayor' ? 'invoices-mayor' : 'invoices-detal');
             }
             cargarPedidos({ force: true });
         } else {
