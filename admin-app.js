@@ -791,7 +791,7 @@ function buildProductPayload() {
         'Galería JSON': getInputValue('prod-galeria'),
         SKU: getInputValue('prod-sku'),
         Estado: getInputValue('prod-estado') || 'Activo',
-        'Fecha de Creación': getInputValue('prod-fecha-creacion')
+        'Fecha de Creación': getInputValue('prod-fecha-creacion') || new Date().toISOString()
     };
 }
 
@@ -922,7 +922,7 @@ function buildVariantPayloadFromCard(card) {
         'GalerÃ­a JSON': getInputValue('prod-galeria'),
         Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
         Estado: getInputValue('prod-estado') || 'Activo',
-        'Fecha de CreaciÃ³n': getInputValue('prod-fecha-creacion')
+        'Fecha de CreaciÃ³n': getInputValue('prod-fecha-creacion') || new Date().toISOString()
     };
 }
 
@@ -3718,9 +3718,15 @@ function collectChinaOrderDraft() {
         image: row.dataset.image || ''
     }));
 
+    const showUsdEl = document.getElementById('china-show-usd');
+    const showCopEl = document.getElementById('china-show-cop');
+
     return {
+        factory: document.getElementById('china-order-factory')?.value || '',
         rate: document.getElementById('china-order-rate')?.value || '4000',
         notes: document.getElementById('china-order-notes')?.value || '',
+        showUsd: showUsdEl ? showUsdEl.checked : true,
+        showCop: showCopEl ? showCopEl.checked : true,
         rows
     };
 }
@@ -3774,8 +3780,11 @@ function makeChinaOrderRecord(draft = collectChinaOrderDraft(), existing = null)
         id: existing?.id || activeChinaOrderId || makeChinaOrderId(),
         createdAt: existing?.createdAt || now,
         updatedAt: now,
+        factory: draft.factory || '',
         rate: draft.rate || '4000',
         notes: draft.notes || '',
+        showUsd: draft.showUsd !== false,
+        showCop: draft.showCop !== false,
         rows: Array.isArray(draft.rows) ? draft.rows : [],
         totalUsd: totals.totalUsd,
         totalCop: totals.totalCop,
@@ -3811,13 +3820,19 @@ function saveCurrentChinaOrder(options = {}) {
 
 function hydrateChinaOrderForm(orderOrDraft) {
     const tbody = document.getElementById('china-order-items');
+    const factory = document.getElementById('china-order-factory');
     const rate = document.getElementById('china-order-rate');
     const notes = document.getElementById('china-order-notes');
+    const showUsdEl = document.getElementById('china-show-usd');
+    const showCopEl = document.getElementById('china-show-cop');
     if (!tbody) return;
 
     tbody.innerHTML = '';
+    if (factory) factory.value = orderOrDraft?.factory || '';
     if (rate) rate.value = orderOrDraft?.rate || '4000';
     if (notes) notes.value = orderOrDraft?.notes || '';
+    if (showUsdEl) showUsdEl.checked = orderOrDraft?.showUsd !== false;
+    if (showCopEl) showCopEl.checked = orderOrDraft?.showCop !== false;
     const rows = Array.isArray(orderOrDraft?.rows) && orderOrDraft.rows.length ? orderOrDraft.rows : [{}];
     rows.forEach(item => createChinaOrderRow(item));
     calculateChinaOrderTotals();
@@ -3864,7 +3879,7 @@ function renderSavedChinaOrders() {
         <div class="china-saved-row" data-china-saved-id="${escapeHtml(order.id)}">
             <div>
                 <strong>${escapeHtml(order.id)}</strong>
-                <span>${formatChinaOrderDate(order.updatedAt || order.createdAt)} - ${Number(order.rows?.length || 0)} producto(s)</span>
+                <span>${order.factory ? `Fábrica: <strong>${escapeHtml(order.factory)}</strong> · ` : ''}${formatChinaOrderDate(order.updatedAt || order.createdAt)} - ${Number(order.rows?.length || 0)} producto(s)</span>
             </div>
             <div>
                 <strong>${formatChinaUsd(order.totalUsd || 0)}</strong>
@@ -3885,7 +3900,10 @@ function renderSavedChinaOrders() {
 
 function buildChinaOrderPrintHtml(order) {
     const totals = getChinaOrderTotalsFromDraft(order);
+    const showUsd = order.showUsd !== false;
+    const showCop = order.showCop !== false;
     const rows = Array.isArray(order.rows) ? order.rows : [];
+
     const itemRows = rows.map((item, index) => {
         const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
         const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
@@ -3894,6 +3912,7 @@ function buildChinaOrderPrintHtml(order) {
         const imageHtml = item.image
             ? `<img src="${escapeHtml(item.image)}" alt="">`
             : '<span>Sin foto</span>';
+
         return `
             <tr>
                 <td style="text-align:center;">${imageHtml}</td>
@@ -3902,13 +3921,28 @@ function buildChinaOrderPrintHtml(order) {
                     <span>Ref: ${escapeHtml(item.reference || 'S/N')}</span>
                 </td>
                 <td style="text-align:center;">${quantity}</td>
-                <td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>
-                <td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>
-                <td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>
-                <td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>
+                ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
+                ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
+                ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
+                ${showCop ? `<td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>` : ''}
             </tr>
         `;
     }).join('');
+
+    const headers = [
+        '<th style="width:105px; text-align:center;">Foto</th>',
+        '<th>Producto / referencia</th>',
+        '<th style="text-align:center;">Cant.</th>',
+        showUsd ? '<th style="text-align:right;">Unit. USD</th>' : '',
+        showCop ? '<th style="text-align:right;">Unit. COP</th>' : '',
+        showUsd ? '<th style="text-align:right;">Subtotal USD</th>' : '',
+        showCop ? '<th style="text-align:right;">Subtotal COP</th>' : ''
+    ].filter(Boolean).join('');
+
+    const totalRowsHtml = [
+        showUsd ? `<div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>` : '',
+        showCop ? `<div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>` : ''
+    ].filter(Boolean).join('');
 
     return `
         <div class="china-print-page">
@@ -3916,31 +3950,21 @@ function buildChinaOrderPrintHtml(order) {
                 <div>
                     <h1>BLYXU</h1>
                     <p>Pedido a China / Orden de compra proveedor</p>
+                    ${order.factory ? `<p style="margin-top:6px; font-weight:bold; color:#581c87;">Fábrica: ${escapeHtml(order.factory)}</p>` : ''}
                 </div>
                 <div class="china-print-meta">
                     <strong>${escapeHtml(order.id || makeChinaOrderId())}</strong>
                     <p>Fecha: ${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</p>
-                    <p>TRM: ${formatChinaCop(totals.rate)} por USD</p>
+                    ${showCop ? `<p>TRM: ${formatChinaCop(totals.rate)} por USD</p>` : ''}
                 </div>
             </div>
             <table class="china-print-table">
                 <thead>
-                    <tr>
-                        <th>Foto</th>
-                        <th>Producto / referencia</th>
-                        <th>Cant.</th>
-                        <th>Unit. USD</th>
-                        <th>Unit. COP</th>
-                        <th>Subtotal USD</th>
-                        <th>Subtotal COP</th>
-                    </tr>
+                    <tr>${headers}</tr>
                 </thead>
                 <tbody>${itemRows}</tbody>
             </table>
-            <div class="china-print-totals">
-                <div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>
-                <div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>
-            </div>
+            ${totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
             ${order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
         </div>
     `;
@@ -4134,6 +4158,7 @@ function buildChinaOrderSummary() {
 
     return [
         'Pedido a China - BLYXU',
+        draft.factory ? `Fábrica: ${draft.factory}` : '',
         `TRM: ${formatChinaCop(rate)} por USD`,
         '',
         ...lines,
@@ -4181,10 +4206,16 @@ function clearChinaOrderDraft() {
     activeChinaOrderId = '';
     const tbody = document.getElementById('china-order-items');
     if (tbody) tbody.innerHTML = '';
+    const factory = document.getElementById('china-order-factory');
     const rate = document.getElementById('china-order-rate');
     const notes = document.getElementById('china-order-notes');
+    const showUsdEl = document.getElementById('china-show-usd');
+    const showCopEl = document.getElementById('china-show-cop');
+    if (factory) factory.value = '';
     if (rate) rate.value = '4000';
     if (notes) notes.value = '';
+    if (showUsdEl) showUsdEl.checked = true;
+    if (showCopEl) showCopEl.checked = true;
     createChinaOrderRow();
     calculateChinaOrderTotals();
 }
@@ -4194,6 +4225,7 @@ function initChinaOrdersBuilder() {
     if (!tbody || tbody.dataset.ready === 'true') return;
     tbody.dataset.ready = 'true';
 
+    const factory = document.getElementById('china-order-factory');
     const rate = document.getElementById('china-order-rate');
     const notes = document.getElementById('china-order-notes');
     const draft = readChinaOrderDraft();
@@ -4203,9 +4235,13 @@ function initChinaOrdersBuilder() {
         createChinaOrderRow();
     }
 
+    factory?.addEventListener('input', saveChinaOrderDraft);
+    factory?.addEventListener('change', saveChinaOrderDraft);
     rate?.addEventListener('input', calculateChinaOrderTotals);
     rate?.addEventListener('change', calculateChinaOrderTotals);
     notes?.addEventListener('input', saveChinaOrderDraft);
+    document.getElementById('china-show-usd')?.addEventListener('change', saveChinaOrderDraft);
+    document.getElementById('china-show-cop')?.addEventListener('change', saveChinaOrderDraft);
     document.getElementById('btn-add-china-order-item')?.addEventListener('click', () => createChinaOrderRow());
     document.getElementById('btn-save-china-order')?.addEventListener('click', () => saveCurrentChinaOrder());
     document.getElementById('btn-print-china-order')?.addEventListener('click', downloadCurrentChinaOrderPdf);

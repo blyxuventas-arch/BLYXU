@@ -833,9 +833,30 @@
                                 <span class="china-order-kicker">Compras proveedor</span>
                                 <h2>Crear pedido a China</h2>
                             </div>
-                            <div class="china-rate-control">
-                                <label for="china-order-rate">TRM USD a COP</label>
-                                <input type="number" class="form-control" id="china-order-rate" min="0" step="1" value="4000">
+                            <div class="china-header-controls" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+                                <div class="china-factory-control">
+                                    <label for="china-order-factory">Nombre de la fábrica</label>
+                                    <input type="text" class="form-control" id="china-order-factory" placeholder="Ej. Shenzhen / Yiwu Tech">
+                                </div>
+                                <div class="china-rate-control">
+                                    <label for="china-order-rate">TRM USD a COP</label>
+                                    <input type="number" class="form-control" id="china-order-rate" min="0" step="1" value="4000">
+                                </div>
+                                <div class="china-pdf-toggles-wrapper">
+                                    <span class="china-toggles-title">Precios en PDF</span>
+                                    <div class="china-pdf-toggles">
+                                        <label class="china-toggle-switch" title="Activar / desactivar costo en Dólares en el PDF">
+                                            <input type="checkbox" id="china-show-usd" checked>
+                                            <span class="china-toggle-slider"></span>
+                                            <span class="china-toggle-label">USD ($)</span>
+                                        </label>
+                                        <label class="china-toggle-switch" title="Activar / desactivar costo en Pesos en el PDF">
+                                            <input type="checkbox" id="china-show-cop" checked>
+                                            <span class="china-toggle-slider"></span>
+                                            <span class="china-toggle-label">COP ($)</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -928,10 +949,13 @@
                             font-weight: 900;
                             letter-spacing: 0;
                         }
-                        .china-rate-control {
+                        .china-rate-control,
+                        .china-factory-control {
                             width: min(220px, 100%);
                         }
                         .china-rate-control label,
+                        .china-factory-control label,
+                        .china-toggles-title,
                         .china-order-note label {
                             display: block;
                             margin-bottom: 7px;
@@ -940,6 +964,64 @@
                             font-weight: 900;
                             letter-spacing: .8px;
                             text-transform: uppercase;
+                        }
+                        .china-pdf-toggles-wrapper {
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        .china-pdf-toggles {
+                            display: flex;
+                            align-items: center;
+                            gap: 16px;
+                            height: 42px;
+                            padding: 0 14px;
+                            background: rgba(0, 0, 0, 0.25);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 12px;
+                        }
+                        .china-toggle-switch {
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                            cursor: pointer;
+                            user-select: none;
+                        }
+                        .china-toggle-switch input[type="checkbox"] {
+                            position: absolute;
+                            opacity: 0;
+                            width: 0;
+                            height: 0;
+                        }
+                        .china-toggle-slider {
+                            width: 36px;
+                            height: 20px;
+                            background: rgba(255, 255, 255, 0.18);
+                            border-radius: 20px;
+                            position: relative;
+                            transition: background 0.25s ease;
+                        }
+                        .china-toggle-slider::before {
+                            content: '';
+                            position: absolute;
+                            top: 2.5px;
+                            left: 2.5px;
+                            width: 15px;
+                            height: 15px;
+                            background: #ffffff;
+                            border-radius: 50%;
+                            transition: transform 0.25s ease;
+                        }
+                        .china-toggle-switch input:checked + .china-toggle-slider {
+                            background: linear-gradient(135deg, #10B981, #059669);
+                        }
+                        .china-toggle-switch input:checked + .china-toggle-slider::before {
+                            transform: translateX(16px);
+                        }
+                        .china-toggle-label {
+                            font-size: 11px;
+                            font-weight: 800;
+                            color: rgba(255, 255, 255, 0.9);
+                            letter-spacing: 0.3px;
                         }
                         .china-order-toolbar {
                             display: flex;
@@ -1242,9 +1324,14 @@
                                 letter-spacing: .5px;
                                 font-size: 10px;
                             }
+                            .china-print-table th:first-child,
+                            .china-print-table td:first-child {
+                                width: 105px;
+                                text-align: center;
+                            }
                             .china-print-table img {
-                                width: 54px;
-                                height: 54px;
+                                width: 95px;
+                                height: 95px;
                                 object-fit: cover;
                                 border-radius: 8px;
                                 border: 1px solid #ddd6fe;

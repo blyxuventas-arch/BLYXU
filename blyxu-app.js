@@ -1399,12 +1399,72 @@ function getProductStockStatus(stock) {
     return null;
 }
 
+function parseProductDate(rawDate) {
+    if (rawDate === undefined || rawDate === null || rawDate === '') return null;
+
+    if (typeof rawDate === 'number' && !Number.isNaN(rawDate) && rawDate > 0) {
+        return new Date(rawDate < 1e11 ? rawDate * 1000 : rawDate);
+    }
+
+    if (rawDate instanceof Date) {
+        return Number.isNaN(rawDate.getTime()) ? null : rawDate;
+    }
+
+    if (typeof rawDate === 'string' && rawDate.trim()) {
+        const str = rawDate.trim();
+        const parsed = Date.parse(str);
+        if (!Number.isNaN(parsed)) {
+            return new Date(parsed);
+        }
+
+        const match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (match) {
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1;
+            const year = parseInt(match[3], 10);
+            const hours = parseInt(match[4] || '0', 10);
+            const minutes = parseInt(match[5] || '0', 10);
+            const seconds = parseInt(match[6] || '0', 10);
+            const d = new Date(year, month, day, hours, minutes, seconds);
+            if (!Number.isNaN(d.getTime())) return d;
+        }
+    }
+
+    return null;
+}
+
+function isProductNew(product) {
+    if (!product) return false;
+    const rawDate = getProductField(product, [
+        'Fecha_Creacion',
+        'Fecha de Creación',
+        'Fecha de Creacion',
+        'Fecha_Creacion',
+        'Fecha de CreaciÃ³n',
+        'Fecha de CreaciÃ³n',
+        'Fecha',
+        'createdAt',
+        'created_at'
+    ], '');
+
+    const dateObj = parseProductDate(rawDate);
+    if (!dateObj) return false;
+
+    const ageInMs = Date.now() - dateObj.getTime();
+    const maxAgeInMs = 7 * 24 * 60 * 60 * 1000; // 7 días (168 horas)
+
+    return ageInMs >= 0 && ageInMs <= maxAgeInMs;
+}
+
 function getProductBadgeMarkup(product, index = -1) {
     const status = getProductStockStatus(getProductStock(product));
     if (status) {
         return `<span class="product-card-badge badge-${status.type}">${escapeHtml(status.label)}</span>`;
     }
-    return index >= 0 && index < 3 ? '<span class="product-card-badge badge-new">Nuevo</span>' : '';
+    if (isProductNew(product)) {
+        return '<span class="product-card-badge badge-new">Nuevo</span>';
+    }
+    return '';
 }
 
 function shouldShowProductPrices(mode = activeCatalogMode) {
@@ -2367,51 +2427,92 @@ function initWholesaleAccess() {
     const input = document.getElementById('wholesale-key');
     const error = document.getElementById('wholesale-error');
     const closeBtn = document.getElementById('wholesale-close');
-    const triggers = document.querySelectorAll('a[href="#mayorista"]');
+    const backBtn = document.getElementById('wholesale-back-btn');
+    const triggers = document.querySelectorAll('a[href="#mayorista"], a[href="mayorista.html"]');
 
     initWholesaleParticles(); // Iniciar partículas
 
-    window.openWholesaleOverlay = function() {
-        if(overlay) {
-            overlay.classList.add('open');
-            overlay.setAttribute('aria-hidden', 'false');
-            document.body.style.overflow = 'hidden';
-            if(input) setTimeout(() => input.focus(), 100);
-        }
-    };
-
-    triggers.forEach(t => {
-        t.addEventListener('click', (e) => {
-            e.preventDefault();
-            window.openWholesaleOverlay();
-        });
-    });
-    
-    const retailTriggers = document.querySelectorAll('a[href="#coleccion"]');
-    const wholesaleSection = document.getElementById('catalogo-mayorista');
-
-    if (!overlay || !form || !input) return;
+    let isModalHistoryPushed = false;
 
     function openWholesale(e) {
         e?.preventDefault();
+        if (!overlay) {
+            window.location.href = 'index.html#mayorista';
+            return;
+        }
         error?.classList.remove('show');
-        input.value = '';
-        overlay.classList.add('open');
-        overlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => input.focus(), 80);
+        if (input) input.value = '';
+
+        if (!overlay.classList.contains('open')) {
+            overlay.classList.add('open');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            if (input) setTimeout(() => input.focus(), 80);
+
+            if (window.history && window.history.pushState) {
+                try {
+                    history.pushState({ modal: 'wholesale' }, '', window.location.pathname + window.location.search + '#mayorista');
+                    isModalHistoryPushed = true;
+                } catch (err) {}
+            }
+        }
 
         document.getElementById('nav-toggle')?.classList.remove('open');
         document.getElementById('nav-links')?.classList.remove('open');
     }
 
-    function closeWholesale() {
-        overlay.classList.remove('open');
-        overlay.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+    function closeWholesale(goHome = false) {
+        if (overlay) {
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+
+        if (isModalHistoryPushed && window.history.state?.modal === 'wholesale') {
+            isModalHistoryPushed = false;
+            try {
+                window.history.back();
+            } catch (err) {}
+        } else if (window.location.hash === '#mayorista' && window.history.replaceState) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+
+        if (goHome) {
+            if (window.location.pathname.includes('mayorista.html')) {
+                window.location.href = 'index.html';
+            } else if (!window.location.hash || window.location.hash === '#mayorista') {
+                window.location.hash = 'inicio';
+            }
+        }
     }
 
-    triggers.forEach(trigger => trigger.addEventListener('click', openWholesale));
+    window.openWholesaleOverlay = openWholesale;
+
+    window.addEventListener('popstate', () => {
+        if (overlay && overlay.classList.contains('open')) {
+            isModalHistoryPushed = false;
+            overlay.classList.remove('open');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            if (window.location.hash === '#mayorista' && window.history.replaceState) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
+            }
+        }
+    });
+
+    triggers.forEach(t => {
+        t.addEventListener('click', (e) => {
+            if (sessionStorage.getItem('blyxu_wholesale_access') === '1') {
+                return;
+            }
+            e.preventDefault();
+            openWholesale(e);
+        });
+    });
+
+    const retailTriggers = document.querySelectorAll('a[href="#coleccion"]');
+    const wholesaleSection = document.getElementById('catalogo-mayorista');
+
     retailTriggers.forEach(trigger => trigger.addEventListener('click', () => {
         setCatalogCartMode('retail');
         activeFilter = 'todos';
@@ -2419,38 +2520,50 @@ function initWholesaleAccess() {
         wholesaleSection?.setAttribute('aria-hidden', 'true');
         renderCatalogProducts();
     }));
-    closeBtn?.addEventListener('click', closeWholesale);
-    input.addEventListener('input', () => error?.classList.remove('show'));
-    overlay.addEventListener('click', e => {
-        if (e.target === overlay) closeWholesale();
-    });
 
-    form.addEventListener('submit', async e => {
-        e.preventDefault();
-        if (input.value.trim() !== '53') {
-            error?.classList.add('show');
-            input.select();
-            return;
-        }
+    closeBtn?.addEventListener('click', () => closeWholesale(true));
+    backBtn?.addEventListener('click', () => closeWholesale(true));
 
-        closeWholesale();
-        sessionStorage.setItem('blyxu_wholesale_access', '1');
-        sessionStorage.setItem('blyxu_just_logged_in', '1');
-        
-        const loader = document.getElementById('brand-loader');
-        if (loader) {
-            loader.classList.remove('open');
-            void loader.offsetWidth; // force reflow
-            loader.classList.add('open');
-            loader.setAttribute('aria-hidden', 'false');
-        }
-        
-        // Esperamos a que la barra del loader avance un poco y redirigimos
-        // El loader se quedará cubriendo la pantalla durante la navegación
-        setTimeout(() => {
-            window.location.href = 'mayorista.html';
-        }, 800);
-    });
+    if (input) {
+        input.addEventListener('input', () => error?.classList.remove('show'));
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', e => {
+            if (e.target === overlay) closeWholesale(true);
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            if (input.value.trim() !== '53') {
+                error?.classList.add('show');
+                input.select();
+                return;
+            }
+
+            closeWholesale(false);
+            sessionStorage.setItem('blyxu_wholesale_access', '1');
+            sessionStorage.setItem('blyxu_just_logged_in', '1');
+
+            const loader = document.getElementById('brand-loader');
+            if (loader) {
+                loader.classList.remove('open');
+                void loader.offsetWidth;
+                loader.classList.add('open');
+                loader.setAttribute('aria-hidden', 'false');
+            }
+
+            setTimeout(() => {
+                window.location.href = 'mayorista.html';
+            }, 800);
+        });
+    }
+
+    if (window.location.hash === '#mayorista' && sessionStorage.getItem('blyxu_wholesale_access') !== '1') {
+        setTimeout(() => openWholesale(), 150);
+    }
 }
 
 function showBrandLoader() {
@@ -2888,6 +3001,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     
+    if (isWholesalePage && sessionStorage.getItem('blyxu_wholesale_access') !== '1') {
+        window.location.replace('index.html#mayorista');
+        return;
+    }
+
     renderFloatingWhatsApp();
     
     if (isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') === '1') {
