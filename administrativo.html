@@ -1303,139 +1303,227 @@
                         @media print {
                             @page {
                                 size: A4 portrait;
-                                margin: 10mm;
+                                margin: 8mm 10mm;
                             }
                             html,
-                            body,
-                            body.printing-china-order {
+                            body {
                                 height: auto !important;
                                 min-height: 0 !important;
                                 overflow: visible !important;
                                 background: #fff !important;
+                                color: #111827 !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
                             }
-                            body.printing-china-order * {
-                                visibility: hidden !important;
-                            }
-                            body.printing-china-order #invoice-print-container {
+                            body.printing-china-order > *:not(#china-order-print-container) {
                                 display: none !important;
-                                visibility: hidden !important;
-                            }
-                            body.printing-china-order #china-order-print-container,
-                            body.printing-china-order #china-order-print-container * {
-                                visibility: visible !important;
                             }
                             body.printing-china-order #china-order-print-container {
                                 display: block !important;
-                                position: absolute !important;
-                                inset: 0 auto auto 0;
-                                z-index: 999999;
-                                width: 100%;
-                                padding: 0;
+                                position: static !important;
+                                width: 100% !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
                                 background: #fff !important;
                                 color: #111827 !important;
-                                font-family: Arial, Helvetica, sans-serif;
+                                font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            }
+                            body.printing-china-order #china-order-print-container * {
+                                visibility: visible !important;
                             }
                             .china-print-page {
                                 box-sizing: border-box;
                                 padding: 0;
+                                min-height: 265mm;
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: space-between;
                                 break-after: page;
                                 page-break-after: always;
+                                break-inside: avoid;
+                                page-break-inside: avoid;
                             }
                             .china-print-page.last {
                                 break-after: auto;
                                 page-break-after: auto;
                             }
+                            .china-print-page-content {
+                                flex: 1;
+                            }
                             .china-print-header {
                                 display: flex;
                                 justify-content: space-between;
-                                align-items: flex-start;
+                                align-items: center;
                                 border: 2px solid #7c3aed;
-                                border-radius: 14px;
-                                padding: 18px;
-                                margin-bottom: 18px;
+                                border-radius: 12px;
+                                padding: 12px 16px;
+                                margin-bottom: 12px;
+                                background: #faf5ff;
                             }
-                            .china-print-header h1 {
+                            .china-print-header.compact {
+                                padding: 8px 14px;
+                                margin-bottom: 10px;
+                                border-width: 1.5px;
+                                background: #fdf4ff;
+                            }
+                            .china-print-brand {
+                                display: flex;
+                                align-items: center;
+                                gap: 14px;
+                            }
+                            .china-print-logo-box h1 {
                                 margin: 0;
-                                color: #1e0a38;
-                                font-size: 26px;
+                                color: #581c87;
+                                font-size: 24px;
+                                font-weight: 900;
+                                letter-spacing: 1px;
+                                line-height: 1;
                             }
-                            .china-print-header p,
-                            .china-print-meta p {
-                                margin: 5px 0 0;
-                                color: #475569;
-                                font-size: 12px;
+                            .china-print-brand h2 {
+                                margin: 0;
+                                color: #1e1b4b;
+                                font-size: 16px;
+                                font-weight: 800;
+                            }
+                            .china-print-brand p {
+                                margin: 2px 0 0;
+                                color: #64748b;
+                                font-size: 11px;
+                            }
+                            .china-print-factory {
+                                margin-top: 3px !important;
+                                color: #6b21a8 !important;
+                                font-size: 11px !important;
                             }
                             .china-print-meta {
                                 text-align: right;
-                                font-weight: 700;
+                                font-size: 11px;
+                                color: #334155;
+                            }
+                            .china-print-meta p {
+                                margin: 2px 0 0;
+                            }
+                            .china-print-order-id {
+                                font-size: 15px;
+                                font-weight: 800;
+                                color: #6b21a8;
                             }
                             .china-print-table {
                                 width: 100%;
                                 border-collapse: collapse;
-                                margin-top: 12px;
-                                page-break-inside: auto;
+                                margin-top: 4px;
                             }
                             .china-print-table thead {
-                                display: table-row-group;
+                                display: table-header-group;
                             }
                             .china-print-table tr {
                                 break-inside: avoid;
                                 page-break-inside: avoid;
                             }
-                            .china-print-table th,
-                            .china-print-table td {
-                                border: 1px solid #ddd6fe;
-                                padding: 9px;
-                                color: #111827;
-                                font-size: 12px;
-                                vertical-align: middle;
-                            }
                             .china-print-table th {
+                                background: #f3e8ff;
                                 color: #581c87;
                                 text-transform: uppercase;
                                 letter-spacing: .5px;
-                                font-size: 10px;
+                                font-size: 9.5px;
+                                font-weight: 800;
+                                border: 1px solid #ddd6fe;
+                                padding: 4px 6px;
                             }
-                            .china-print-table th:first-child,
-                            .china-print-table td:first-child {
-                                width: 105px;
-                                text-align: center;
+                            .china-print-table td {
+                                border: 1px solid #e9d5ff;
+                                padding: 4px 6px;
+                                color: #0f172a;
+                                font-size: 10.5px;
+                                vertical-align: middle;
+                            }
+                            .china-print-prod-name {
+                                font-weight: 700;
+                                color: #1e1b4b;
+                                font-size: 11px;
+                                line-height: 1.2;
+                            }
+                            .china-print-prod-ref {
+                                font-size: 9px;
+                                color: #64748b;
+                                margin-top: 1px;
                             }
                             .china-print-table img {
-                                width: 95px;
-                                height: 95px;
+                                width: 68px;
+                                height: 68px;
                                 object-fit: cover;
-                                border-radius: 8px;
+                                border-radius: 6px;
                                 border: 1px solid #ddd6fe;
+                                display: block;
+                                margin: 0 auto;
+                            }
+                            .china-print-no-photo {
+                                width: 68px;
+                                height: 68px;
+                                border-radius: 6px;
+                                border: 1px dashed #cbd5e1;
+                                background: #f8fafc;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                margin: 0 auto;
+                                color: #94a3b8;
+                                font-size: 9px;
+                                font-weight: 600;
+                            }
+                            .china-print-summary-wrap {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: flex-start;
+                                gap: 16px;
+                                margin-top: 14px;
+                                break-inside: avoid;
+                                page-break-inside: avoid;
+                            }
+                            .china-print-notes {
+                                flex: 1;
+                                padding: 10px 12px;
+                                border: 1px dashed #a78bfa;
+                                border-radius: 10px;
+                                background: #faf5ff;
+                                color: #334155;
+                                font-size: 11px;
+                                white-space: pre-wrap;
+                                break-inside: avoid;
+                                page-break-inside: avoid;
                             }
                             .china-print-totals {
-                                width: 330px;
-                                margin-left: auto;
-                                margin-top: 18px;
+                                width: 260px;
                                 border: 2px solid #7c3aed;
-                                border-radius: 12px;
-                                padding: 14px;
+                                border-radius: 10px;
+                                padding: 10px 14px;
+                                background: #fff;
                                 break-inside: avoid;
                                 page-break-inside: avoid;
                             }
                             .china-print-total-row {
                                 display: flex;
                                 justify-content: space-between;
-                                gap: 12px;
-                                font-size: 14px;
-                                font-weight: 900;
-                                margin: 6px 0;
-                            }
-                            .china-print-notes {
-                                margin-top: 18px;
-                                padding: 14px;
-                                border: 1px dashed #a78bfa;
-                                border-radius: 12px;
-                                color: #334155;
+                                align-items: center;
+                                gap: 10px;
                                 font-size: 12px;
-                                white-space: pre-wrap;
-                                break-inside: avoid;
-                                page-break-inside: avoid;
+                                font-weight: 800;
+                                margin: 4px 0;
+                                color: #1e1b4b;
+                            }
+                            .china-print-total-row strong {
+                                color: #581c87;
+                            }
+                            .china-print-footer {
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                border-top: 1px solid #e2e8f0;
+                                padding-top: 6px;
+                                margin-top: 10px;
+                                font-size: 9px;
+                                color: #94a3b8;
+                                font-weight: 600;
                             }
                         }
                         @media (max-width: 860px) {
@@ -2689,6 +2777,6 @@
     
 
 
-    <script src="admin-app.js?v=china-orders-products-pieces-20260804"></script>
+    <script src="admin-app.js?v=china-orders-pdf-6-models-20260804"></script>
 </body>
 </html>

@@ -4059,13 +4059,12 @@ function buildChinaOrderPrintHtml(order) {
     const rows = Array.isArray(order.rows) ? order.rows : [];
 
     const headers = [
-        '<th style="width:105px; text-align:center;">Foto</th>',
+        '<th style="width:95px; text-align:center;">Foto</th>',
         '<th>Producto / referencia</th>',
-        '<th style="text-align:center;">Cant.</th>',
-        showUsd ? '<th style="text-align:right;">Unit. USD</th>' : '',
-        showCop ? '<th style="text-align:right;">Unit. COP</th>' : '',
-        showUsd ? '<th style="text-align:right;">Subtotal USD</th>' : '',
-        showCop ? '<th style="text-align:right;">Subtotal COP</th>' : ''
+        '<th style="width:55px; text-align:center;">Cant.</th>',
+        showUsd ? '<th style="width:95px; text-align:right;">Unit. USD</th>' : '',
+        showCop ? '<th style="width:105px; text-align:right;">Unit. COP</th>' : '',
+        showUsd ? '<th style="width:115px; text-align:right;">Subtotal USD</th>' : ''
     ].filter(Boolean).join('');
 
     const totalRowsHtml = [
@@ -4076,22 +4075,11 @@ function buildChinaOrderPrintHtml(order) {
 
     function chunkRowsForPrint(items) {
         const pages = [];
-        let page = [];
-        let units = 0;
-
-        items.forEach(item => {
-            const rowUnits = item.image ? 2 : 1;
-            const limit = pages.length === 0 ? 10 : 11;
-            if (page.length && units + rowUnits > limit) {
-                pages.push(page);
-                page = [];
-                units = 0;
-            }
-            page.push(item);
-            units += rowUnits;
-        });
-
-        if (page.length || !pages.length) pages.push(page);
+        const rowsPerPage = 9;
+        for (let index = 0; index < items.length; index += rowsPerPage) {
+            pages.push(items.slice(index, index + rowsPerPage));
+        }
+        if (!pages.length) pages.push([]);
         return pages;
     }
 
@@ -4101,23 +4089,21 @@ function buildChinaOrderPrintHtml(order) {
             const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
             const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
             const subtotalUsd = quantity * unitUsd;
-            const subtotalCop = subtotalUsd * totals.rate;
             const imageHtml = item.image
                 ? `<img src="${escapeHtml(item.image)}" alt="">`
-                : '<span>Sin foto</span>';
+                : '<div class="china-print-no-photo"><span>Sin foto</span></div>';
 
             return `
                 <tr>
                     <td style="text-align:center;">${imageHtml}</td>
                     <td>
-                        <strong>${index + 1}. ${escapeHtml(item.product || 'Producto sin nombre')}</strong><br>
-                        <span>Ref: ${escapeHtml(item.reference || 'S/N')}</span>
+                        <div class="china-print-prod-name">${index + 1}. ${escapeHtml(item.product || 'Producto sin nombre')}</div>
+                        <div class="china-print-prod-ref">Ref: ${escapeHtml(item.reference || 'S/N')}</div>
                     </td>
-                    <td style="text-align:center;">${quantity}</td>
+                    <td style="text-align:center; font-weight:bold;">${quantity}</td>
                     ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
                     ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
-                    ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
-                    ${showCop ? `<td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>` : ''}
+                    ${showUsd ? `<td style="text-align:right; font-weight:bold; color:#581c87;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
                 </tr>
             `;
         }).join('');
@@ -4125,63 +4111,68 @@ function buildChinaOrderPrintHtml(order) {
 
     const pages = chunkRowsForPrint(rows);
     let printedRows = 0;
+    const totalPages = pages.length;
 
     return pages.map((pageRows, pageIndex) => {
-        const isLastPage = pageIndex === pages.length - 1;
-        const pageHtml = `
-        <div class="china-print-page${isLastPage ? ' last' : ''}">
-            ${pageIndex === 0 ? `<div class="china-print-header">
-                <div>
-                    <h1>BLYXU</h1>
-                    <p>Pedido a China / Orden de compra proveedor</p>
-                    ${order.factory ? `<p style="margin-top:6px; font-weight:bold; color:#581c87;">Fabrica: ${escapeHtml(order.factory)}</p>` : ''}
+        const isFirstPage = pageIndex === 0;
+        const isLastPage = pageIndex === totalPages - 1;
+
+        const headerHtml = isFirstPage ? `
+            <div class="china-print-header">
+                <div class="china-print-brand">
+                    <div class="china-print-logo-box">
+                        <h1>BLYXU</h1>
+                    </div>
+                    <div>
+                        <h2>Pedido a China</h2>
+                        <p>Orden de compra proveedor</p>
+                        ${order.factory ? `<p class="china-print-factory">Fábrica: <strong>${escapeHtml(order.factory)}</strong></p>` : ''}
+                    </div>
                 </div>
                 <div class="china-print-meta">
-                    <strong>${escapeHtml(order.id || makeChinaOrderId())}</strong>
-                    <p>Fecha: ${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</p>
-                    ${showCop ? `<p>TRM: ${formatChinaCop(totals.rate)} por USD</p>` : ''}
+                    <div class="china-print-order-id">${escapeHtml(order.id || makeChinaOrderId())}</div>
+                    <p>Fecha: <strong>${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</strong></p>
+                    ${showCop ? `<p>TRM: <strong>${formatChinaCop(totals.rate)}</strong> / USD</p>` : ''}
                 </div>
-            </div>` : ''}
-            <table class="china-print-table">
-                ${pageIndex === 0 ? `<thead>
-                    <tr>${headers}</tr>
-                </thead>` : ''}
-                <tbody>${buildPagedItemRows(pageRows, printedRows)}</tbody>
-            </table>
-            ${isLastPage && totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
-            ${isLastPage && order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
-        </div>
-    `;
+            </div>
+        ` : `
+            <div class="china-print-header compact">
+                <div class="china-print-brand">
+                    <h2 style="margin:0; font-size:15px;">BLYXU <span style="font-weight:normal; font-size:12px; color:#6b21a8;">| Pedido a China</span></h2>
+                    ${order.factory ? `<span style="font-size:11px; color:#581c87; margin-left:10px;">Fábrica: <strong>${escapeHtml(order.factory)}</strong></span>` : ''}
+                </div>
+                <div class="china-print-meta" style="display:flex; gap:12px; align-items:center;">
+                    <strong style="font-size:13px; color:#6b21a8;">${escapeHtml(order.id || makeChinaOrderId())}</strong>
+                </div>
+            </div>
+        `;
+
+        const pageHtml = `
+            <div class="china-print-page${isLastPage ? ' last' : ''}">
+                <div class="china-print-page-content">
+                    ${headerHtml}
+                    <table class="china-print-table">
+                        <thead>
+                            <tr>${headers}</tr>
+                        </thead>
+                        <tbody>${buildPagedItemRows(pageRows, printedRows)}</tbody>
+                    </table>
+                    ${isLastPage && (totalRowsHtml || order.notes) ? `
+                        <div class="china-print-summary-wrap">
+                            ${order.notes ? `<div class="china-print-notes"><strong>Notas del Pedido:</strong><br>${escapeHtml(order.notes)}</div>` : '<div></div>'}
+                            ${totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="china-print-footer">
+                    <span>BLYXU Promociones · Pedido a China ${escapeHtml(order.id || '')}</span>
+                    <span>Página ${pageIndex + 1} de ${totalPages}</span>
+                </div>
+            </div>
+        `;
         printedRows += pageRows.length;
         return pageHtml;
     }).join('');
-
-    /*
-    return `
-        <div class="china-print-page">
-            <div class="china-print-header">
-                <div>
-                    <h1>BLYXU</h1>
-                    <p>Pedido a China / Orden de compra proveedor</p>
-                    ${order.factory ? `<p style="margin-top:6px; font-weight:bold; color:#581c87;">Fábrica: ${escapeHtml(order.factory)}</p>` : ''}
-                </div>
-                <div class="china-print-meta">
-                    <strong>${escapeHtml(order.id || makeChinaOrderId())}</strong>
-                    <p>Fecha: ${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</p>
-                    ${showCop ? `<p>TRM: ${formatChinaCop(totals.rate)} por USD</p>` : ''}
-                </div>
-            </div>
-            <table class="china-print-table">
-                <thead>
-                    <tr>${headers}</tr>
-                </thead>
-                <tbody>${itemRows}</tbody>
-            </table>
-            ${totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
-            ${order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
-        </div>
-    `;
-    */
 }
 
 function printChinaOrderPdf(order) {
@@ -4189,17 +4180,34 @@ function printChinaOrderPdf(order) {
     if (!container || !order) return;
     container.innerHTML = buildChinaOrderPrintHtml(order);
 
+    const parent = container.parentElement;
+    const nextSib = container.nextSibling;
+    document.body.appendChild(container);
+
     const previousTitle = document.title;
     document.title = 'Pedido-China-' + String(order.id || 'BLYXU').replace(/[^a-z0-9_-]/gi, '');
     document.body.classList.add('printing-china-order');
+
+    let cleanedUp = false;
     const cleanup = () => {
+        if (cleanedUp) return;
+        cleanedUp = true;
         document.body.classList.remove('printing-china-order');
         document.title = previousTitle;
+        if (parent && container.parentElement === document.body) {
+            if (nextSib && parent.contains(nextSib)) parent.insertBefore(container, nextSib);
+            else parent.appendChild(container);
+        }
         window.removeEventListener('afterprint', cleanup);
+        window.removeEventListener('focus', cleanup);
     };
+
     window.addEventListener('afterprint', cleanup);
-    setTimeout(() => window.print(), 80);
-    setTimeout(cleanup, 1500);
+    window.addEventListener('focus', cleanup, { once: true });
+
+    setTimeout(() => {
+        window.print();
+    }, 120);
 }
 
 async function downloadCurrentChinaOrderPdf() {
