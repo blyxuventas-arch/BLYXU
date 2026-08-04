@@ -857,6 +857,23 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div class="china-header-totals">
+                                    <div class="china-total-card compact">
+                                        <span>Total dolares</span>
+                                        <strong id="china-order-total-usd">US$0.00</strong>
+                                    </div>
+                                    <div class="china-total-card compact cop">
+                                        <span>Total pesos</span>
+                                        <strong id="china-order-total-cop">$0</strong>
+                                    </div>
+                                    <div class="china-total-card compact pieces">
+                                        <span>Total productos</span>
+                                        <div class="china-products-pieces-line">
+                                            <strong id="china-order-total-products">0</strong>
+                                            <small><b id="china-order-total-pieces">0</b> piezas</small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -890,16 +907,6 @@
                             <div class="china-order-note">
                                 <label for="china-order-notes">Notas del pedido</label>
                                 <textarea class="form-control" id="china-order-notes" rows="3" placeholder="Proveedor, enlace, medidas, color, observaciones..."></textarea>
-                            </div>
-                            <div class="china-order-totals">
-                                <div class="china-total-card">
-                                    <span>Total en dolares</span>
-                                    <strong id="china-order-total-usd">US$0.00</strong>
-                                </div>
-                                <div class="china-total-card cop">
-                                    <span>Total en pesos</span>
-                                    <strong id="china-order-total-cop">$0</strong>
-                                </div>
                             </div>
                         </div>
 
@@ -968,6 +975,13 @@
                         .china-pdf-toggles-wrapper {
                             display: flex;
                             flex-direction: column;
+                        }
+                        .china-header-totals {
+                            display: grid;
+                            grid-template-columns: repeat(3, minmax(120px, 1fr));
+                            gap: 10px;
+                            flex: 1 1 440px;
+                            min-width: 360px;
                         }
                         .china-pdf-toggles {
                             display: flex;
@@ -1131,7 +1145,7 @@
                         }
                         .china-order-total-grid {
                             display: grid;
-                            grid-template-columns: minmax(280px, 1fr) minmax(320px, 440px);
+                            grid-template-columns: 1fr;
                             gap: 18px;
                             align-items: stretch;
                             margin-top: 22px;
@@ -1153,6 +1167,10 @@
                             padding: 18px;
                             background: rgba(244,196,65,0.06);
                         }
+                        .china-total-card.compact {
+                            min-height: 72px;
+                            padding: 12px 14px;
+                        }
                         .china-total-card span {
                             display: block;
                             margin-bottom: 7px;
@@ -1169,12 +1187,38 @@
                             letter-spacing: 0;
                             white-space: nowrap;
                         }
+                        .china-total-card.compact strong {
+                            font-size: 19px;
+                        }
                         .china-total-card.cop {
                             border-color: rgba(52,211,153,0.26);
                             background: rgba(16,185,129,0.07);
                         }
                         .china-total-card.cop strong {
                             color: #34d399;
+                        }
+                        .china-total-card.pieces {
+                            border-color: rgba(168,85,247,0.28);
+                            background: rgba(168,85,247,0.08);
+                        }
+                        .china-total-card.pieces strong {
+                            color: #d8b4fe;
+                        }
+                        .china-products-pieces-line {
+                            display: flex;
+                            align-items: baseline;
+                            gap: 10px;
+                            flex-wrap: wrap;
+                        }
+                        .china-products-pieces-line small {
+                            color: rgba(216,180,254,0.78);
+                            font-size: 12px;
+                            font-weight: 900;
+                            white-space: nowrap;
+                        }
+                        .china-products-pieces-line small b {
+                            color: #fff;
+                            font-size: 14px;
                         }
                         .china-saved-orders {
                             margin-top: 22px;
@@ -1257,6 +1301,18 @@
                             display: none;
                         }
                         @media print {
+                            @page {
+                                size: A4 portrait;
+                                margin: 10mm;
+                            }
+                            html,
+                            body,
+                            body.printing-china-order {
+                                height: auto !important;
+                                min-height: 0 !important;
+                                overflow: visible !important;
+                                background: #fff !important;
+                            }
                             body.printing-china-order * {
                                 visibility: hidden !important;
                             }
@@ -1270,8 +1326,9 @@
                             }
                             body.printing-china-order #china-order-print-container {
                                 display: block !important;
-                                position: absolute;
+                                position: absolute !important;
                                 inset: 0 auto auto 0;
+                                z-index: 999999;
                                 width: 100%;
                                 padding: 0;
                                 background: #fff !important;
@@ -1279,7 +1336,14 @@
                                 font-family: Arial, Helvetica, sans-serif;
                             }
                             .china-print-page {
-                                padding: 24px;
+                                box-sizing: border-box;
+                                padding: 0;
+                                break-after: page;
+                                page-break-after: always;
+                            }
+                            .china-print-page.last {
+                                break-after: auto;
+                                page-break-after: auto;
                             }
                             .china-print-header {
                                 display: flex;
@@ -1309,6 +1373,14 @@
                                 width: 100%;
                                 border-collapse: collapse;
                                 margin-top: 12px;
+                                page-break-inside: auto;
+                            }
+                            .china-print-table thead {
+                                display: table-row-group;
+                            }
+                            .china-print-table tr {
+                                break-inside: avoid;
+                                page-break-inside: avoid;
                             }
                             .china-print-table th,
                             .china-print-table td {
@@ -1343,6 +1415,8 @@
                                 border: 2px solid #7c3aed;
                                 border-radius: 12px;
                                 padding: 14px;
+                                break-inside: avoid;
+                                page-break-inside: avoid;
                             }
                             .china-print-total-row {
                                 display: flex;
@@ -1360,6 +1434,8 @@
                                 color: #334155;
                                 font-size: 12px;
                                 white-space: pre-wrap;
+                                break-inside: avoid;
+                                page-break-inside: avoid;
                             }
                         }
                         @media (max-width: 860px) {
@@ -1369,6 +1445,11 @@
                                 display: grid;
                             }
                             .china-rate-control {
+                                width: 100%;
+                            }
+                            .china-header-totals {
+                                grid-template-columns: 1fr;
+                                min-width: 0;
                                 width: 100%;
                             }
                             .china-order-product-fields {
@@ -2608,6 +2689,6 @@
     
 
 
-    <script src="admin-app.js?v=orders-invoices-tabs-20260623"></script>
+    <script src="admin-app.js?v=china-orders-products-pieces-20260804"></script>
 </body>
 </html>

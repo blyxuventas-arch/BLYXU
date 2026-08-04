@@ -3683,7 +3683,70 @@ function switchDashboardView(viewId, title) {
 // === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
 const CHINA_ORDER_DRAFT_KEY = 'blyxu_admin_china_order_draft_v1';
 const CHINA_ORDER_SAVED_KEY = 'blyxu_admin_china_saved_orders_v1';
+const CHINA_ORDER_DB_NAME = 'blyxu_admin_china_orders_db';
+const CHINA_ORDER_DB_VERSION = 1;
+const CHINA_ORDER_STORE_NAME = 'chinaOrders';
+const CHINA_ORDER_SAVED_RECORD_KEY = 'savedOrders';
+const CHINA_ORDER_DRAFT_RECORD_KEY = 'draft';
 let activeChinaOrderId = '';
+let chinaOrdersDbPromise = null;
+let savedChinaOrdersCache = [];
+let chinaOrderDraftSaveTimer = null;
+let isHydratingChinaOrder = false;
+
+function openChinaOrdersDb() {
+    if (!window.indexedDB) {
+        return Promise.reject(new Error('IndexedDB no esta disponible'));
+    }
+    if (chinaOrdersDbPromise) return chinaOrdersDbPromise;
+
+    chinaOrdersDbPromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(CHINA_ORDER_DB_NAME, CHINA_ORDER_DB_VERSION);
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(CHINA_ORDER_STORE_NAME)) {
+                db.createObjectStore(CHINA_ORDER_STORE_NAME, { keyPath: 'key' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('No se pudo abrir el almacen local'));
+    });
+
+    return chinaOrdersDbPromise;
+}
+
+function readChinaOrderStoreValue(key) {
+    return openChinaOrdersDb().then(db => new Promise((resolve, reject) => {
+        const transaction = db.transaction(CHINA_ORDER_STORE_NAME, 'readonly');
+        const request = transaction.objectStore(CHINA_ORDER_STORE_NAME).get(key);
+        request.onsuccess = () => resolve(request.result ? request.result.value : null);
+        request.onerror = () => reject(request.error || new Error('No se pudo leer el almacen local'));
+    }));
+}
+
+function writeChinaOrderStoreValue(key, value) {
+    return openChinaOrdersDb().then(db => new Promise((resolve, reject) => {
+        const transaction = db.transaction(CHINA_ORDER_STORE_NAME, 'readwrite');
+        transaction.objectStore(CHINA_ORDER_STORE_NAME).put({
+            key,
+            value,
+            updatedAt: Date.now()
+        });
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error || new Error('No se pudo guardar en el almacen local'));
+        transaction.onabort = () => reject(transaction.error || new Error('Guardado local cancelado'));
+    }));
+}
+
+function deleteChinaOrderStoreValue(key) {
+    return openChinaOrdersDb().then(db => new Promise((resolve, reject) => {
+        const transaction = db.transaction(CHINA_ORDER_STORE_NAME, 'readwrite');
+        transaction.objectStore(CHINA_ORDER_STORE_NAME).delete(key);
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error || new Error('No se pudo borrar del almacen local'));
+        transaction.onabort = () => reject(transaction.error || new Error('Borrado local cancelado'));
+    }));
+}
 
 function formatChinaUsd(value) {
     return 'US$' + (Number(value) || 0).toLocaleString('en-US', {
@@ -3750,6 +3813,10 @@ function getChinaOrderTotalsFromDraft(draft) {
 }
 
 function getSavedChinaOrders() {
+    return savedChinaOrdersCache;
+}
+
+function readSavedChinaOrdersFromLocalStorage() {
     try {
         const list = JSON.parse(localStorage.getItem(CHINA_ORDER_SAVED_KEY) || '[]');
         return Array.isArray(list) ? list : [];
@@ -3758,12 +3825,79 @@ function getSavedChinaOrders() {
     }
 }
 
-function writeSavedChinaOrders(list) {
+function readChinaOrderDraftFromLocalStorage() {
     try {
-        localStorage.setItem(CHINA_ORDER_SAVED_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+        const draft = JSON.parse(localStorage.getItem(CHINA_ORDER_DRAFT_KEY) || 'null');
+        return draft && Array.isArray(draft.rows) ? draft : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+async function readSavedChinaOrdersFromStorage() {
+    try {
+        const list = await readChinaOrderStoreValue(CHINA_ORDER_SAVED_RECORD_KEY);
+        if (Array.isArray(list)) return list;
+    } catch (error) {
+        console.warn('No se pudo leer IndexedDB para pedidos a China:', error);
+    }
+    return readSavedChinaOrdersFromLocalStorage();
+}
+
+async function readChinaOrderDraftFromStorage() {
+    try {
+        const draft = await readChinaOrderStoreValue(CHINA_ORDER_DRAFT_RECORD_KEY);
+        if (draft && Array.isArray(draft.rows)) return draft;
+    } catch (error) {
+        console.warn('No se pudo leer el borrador grande:', error);
+    }
+    return readChinaOrderDraftFromLocalStorage();
+}
+
+async function migrateLegacyChinaOrdersToIndexedDb() {
+    if (!window.indexedDB) return;
+
+    const legacySaved = readSavedChinaOrdersFromLocalStorage();
+    const legacyDraft = readChinaOrderDraftFromLocalStorage();
+
+    if (legacySaved.length) {
+        const savedInDb = await readChinaOrderStoreValue(CHINA_ORDER_SAVED_RECORD_KEY);
+        if (!Array.isArray(savedInDb) || !savedInDb.length) {
+            await writeChinaOrderStoreValue(CHINA_ORDER_SAVED_RECORD_KEY, legacySaved);
+        }
+        localStorage.removeItem(CHINA_ORDER_SAVED_KEY);
+    }
+
+    if (legacyDraft) {
+        const draftInDb = await readChinaOrderStoreValue(CHINA_ORDER_DRAFT_RECORD_KEY);
+        if (!draftInDb || !Array.isArray(draftInDb.rows)) {
+            await writeChinaOrderStoreValue(CHINA_ORDER_DRAFT_RECORD_KEY, legacyDraft);
+        }
+        localStorage.removeItem(CHINA_ORDER_DRAFT_KEY);
+    }
+}
+
+async function writeSavedChinaOrders(list) {
+    const normalizedList = Array.isArray(list) ? list : [];
+    try {
+        await writeChinaOrderStoreValue(CHINA_ORDER_SAVED_RECORD_KEY, normalizedList);
+        savedChinaOrdersCache = normalizedList;
+        try {
+            localStorage.removeItem(CHINA_ORDER_SAVED_KEY);
+        } catch (error) {
+            console.warn('No se pudo limpiar historial viejo:', error);
+        }
         return true;
     } catch (error) {
-        showToast('No se pudo guardar el pedido en el navegador', 'error');
+        console.warn('IndexedDB fallo al guardar pedido a China. Intentando respaldo pequeno:', error);
+    }
+
+    try {
+        localStorage.setItem(CHINA_ORDER_SAVED_KEY, JSON.stringify(normalizedList));
+        savedChinaOrdersCache = normalizedList;
+        return true;
+    } catch (error) {
+        showToast('No se pudo guardar: el navegador se quedo sin espacio. Quita fotos muy pesadas o libera almacenamiento del sitio.', 'error');
         return false;
     }
 }
@@ -3792,7 +3926,7 @@ function makeChinaOrderRecord(draft = collectChinaOrderDraft(), existing = null)
     };
 }
 
-function saveCurrentChinaOrder(options = {}) {
+async function saveCurrentChinaOrder(options = {}) {
     const draft = collectChinaOrderDraft();
     const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
     if (!hasProduct) {
@@ -3800,7 +3934,14 @@ function saveCurrentChinaOrder(options = {}) {
         return null;
     }
 
-    const saved = getSavedChinaOrders();
+    const saveButton = document.getElementById('btn-save-china-order');
+    const previousButtonText = saveButton ? saveButton.textContent : '';
+    if (saveButton && !options.silent) {
+        saveButton.disabled = true;
+        saveButton.textContent = 'Guardando...';
+    }
+
+    const saved = getSavedChinaOrders().slice();
     const existingIndex = activeChinaOrderId
         ? saved.findIndex(order => order.id === activeChinaOrderId)
         : -1;
@@ -3811,11 +3952,18 @@ function saveCurrentChinaOrder(options = {}) {
     else saved.unshift(record);
 
     activeChinaOrderId = record.id;
-    if (!writeSavedChinaOrders(saved)) return null;
-    renderSavedChinaOrders();
-    saveChinaOrderDraft();
-    if (!options.silent) showToast('Pedido a China guardado', 'success');
-    return record;
+    try {
+        if (!await writeSavedChinaOrders(saved)) return null;
+        renderSavedChinaOrders();
+        await saveChinaOrderDraft({ immediate: true });
+        if (!options.silent) showToast(`Pedido a China guardado completo (${record.rows.length} producto(s))`, 'success');
+        return record;
+    } finally {
+        if (saveButton && !options.silent) {
+            saveButton.disabled = false;
+            saveButton.textContent = previousButtonText || 'Guardar pedido';
+        }
+    }
 }
 
 function hydrateChinaOrderForm(orderOrDraft) {
@@ -3827,18 +3975,23 @@ function hydrateChinaOrderForm(orderOrDraft) {
     const showCopEl = document.getElementById('china-show-cop');
     if (!tbody) return;
 
-    tbody.innerHTML = '';
-    if (factory) factory.value = orderOrDraft?.factory || '';
-    if (rate) rate.value = orderOrDraft?.rate || '4000';
-    if (notes) notes.value = orderOrDraft?.notes || '';
-    if (showUsdEl) showUsdEl.checked = orderOrDraft?.showUsd !== false;
-    if (showCopEl) showCopEl.checked = orderOrDraft?.showCop !== false;
-    const rows = Array.isArray(orderOrDraft?.rows) && orderOrDraft.rows.length ? orderOrDraft.rows : [{}];
-    rows.forEach(item => createChinaOrderRow(item));
+    isHydratingChinaOrder = true;
+    try {
+        tbody.innerHTML = '';
+        if (factory) factory.value = orderOrDraft?.factory || '';
+        if (rate) rate.value = orderOrDraft?.rate || '4000';
+        if (notes) notes.value = orderOrDraft?.notes || '';
+        if (showUsdEl) showUsdEl.checked = orderOrDraft?.showUsd !== false;
+        if (showCopEl) showCopEl.checked = orderOrDraft?.showCop !== false;
+        const rows = Array.isArray(orderOrDraft?.rows) && orderOrDraft.rows.length ? orderOrDraft.rows : [{}];
+        rows.forEach(item => createChinaOrderRow(item, { append: true }));
+    } finally {
+        isHydratingChinaOrder = false;
+    }
     calculateChinaOrderTotals();
 }
 
-function loadSavedChinaOrder(id) {
+async function loadSavedChinaOrder(id) {
     const order = getSavedChinaOrders().find(item => item.id === id);
     if (!order) {
         showToast('No se encontro el pedido guardado', 'error');
@@ -3846,12 +3999,13 @@ function loadSavedChinaOrder(id) {
     }
     activeChinaOrderId = order.id;
     hydrateChinaOrderForm(order);
+    await saveChinaOrderDraft({ immediate: true });
     showToast('Pedido cargado para editar', 'success');
 }
 
-function deleteSavedChinaOrder(id) {
+async function deleteSavedChinaOrder(id) {
     const next = getSavedChinaOrders().filter(item => item.id !== id);
-    writeSavedChinaOrders(next);
+    await writeSavedChinaOrders(next);
     if (activeChinaOrderId === id) activeChinaOrderId = '';
     renderSavedChinaOrders();
     showToast('Pedido eliminado', 'success');
@@ -3904,31 +4058,6 @@ function buildChinaOrderPrintHtml(order) {
     const showCop = order.showCop !== false;
     const rows = Array.isArray(order.rows) ? order.rows : [];
 
-    const itemRows = rows.map((item, index) => {
-        const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
-        const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
-        const subtotalUsd = quantity * unitUsd;
-        const subtotalCop = subtotalUsd * totals.rate;
-        const imageHtml = item.image
-            ? `<img src="${escapeHtml(item.image)}" alt="">`
-            : '<span>Sin foto</span>';
-
-        return `
-            <tr>
-                <td style="text-align:center;">${imageHtml}</td>
-                <td>
-                    <strong>${escapeHtml(item.product || 'Producto sin nombre')}</strong><br>
-                    <span>Ref: ${escapeHtml(item.reference || 'S/N')}</span>
-                </td>
-                <td style="text-align:center;">${quantity}</td>
-                ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
-                ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
-                ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
-                ${showCop ? `<td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>` : ''}
-            </tr>
-        `;
-    }).join('');
-
     const headers = [
         '<th style="width:105px; text-align:center;">Foto</th>',
         '<th>Producto / referencia</th>',
@@ -3940,10 +4069,94 @@ function buildChinaOrderPrintHtml(order) {
     ].filter(Boolean).join('');
 
     const totalRowsHtml = [
+        `<div class="china-print-total-row"><span>Total piezas</span><strong>${Math.round(totals.totalQuantity || 0).toLocaleString('es-CO')}</strong></div>`,
         showUsd ? `<div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>` : '',
         showCop ? `<div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>` : ''
     ].filter(Boolean).join('');
 
+    function chunkRowsForPrint(items) {
+        const pages = [];
+        let page = [];
+        let units = 0;
+
+        items.forEach(item => {
+            const rowUnits = item.image ? 2 : 1;
+            const limit = pages.length === 0 ? 10 : 11;
+            if (page.length && units + rowUnits > limit) {
+                pages.push(page);
+                page = [];
+                units = 0;
+            }
+            page.push(item);
+            units += rowUnits;
+        });
+
+        if (page.length || !pages.length) pages.push(page);
+        return pages;
+    }
+
+    function buildPagedItemRows(pageRows, startIndex) {
+        return pageRows.map((item, offset) => {
+            const index = startIndex + offset;
+            const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
+            const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
+            const subtotalUsd = quantity * unitUsd;
+            const subtotalCop = subtotalUsd * totals.rate;
+            const imageHtml = item.image
+                ? `<img src="${escapeHtml(item.image)}" alt="">`
+                : '<span>Sin foto</span>';
+
+            return `
+                <tr>
+                    <td style="text-align:center;">${imageHtml}</td>
+                    <td>
+                        <strong>${index + 1}. ${escapeHtml(item.product || 'Producto sin nombre')}</strong><br>
+                        <span>Ref: ${escapeHtml(item.reference || 'S/N')}</span>
+                    </td>
+                    <td style="text-align:center;">${quantity}</td>
+                    ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
+                    ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
+                    ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
+                    ${showCop ? `<td style="text-align:right;">${formatChinaCop(subtotalCop)}</td>` : ''}
+                </tr>
+            `;
+        }).join('');
+    }
+
+    const pages = chunkRowsForPrint(rows);
+    let printedRows = 0;
+
+    return pages.map((pageRows, pageIndex) => {
+        const isLastPage = pageIndex === pages.length - 1;
+        const pageHtml = `
+        <div class="china-print-page${isLastPage ? ' last' : ''}">
+            ${pageIndex === 0 ? `<div class="china-print-header">
+                <div>
+                    <h1>BLYXU</h1>
+                    <p>Pedido a China / Orden de compra proveedor</p>
+                    ${order.factory ? `<p style="margin-top:6px; font-weight:bold; color:#581c87;">Fabrica: ${escapeHtml(order.factory)}</p>` : ''}
+                </div>
+                <div class="china-print-meta">
+                    <strong>${escapeHtml(order.id || makeChinaOrderId())}</strong>
+                    <p>Fecha: ${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</p>
+                    ${showCop ? `<p>TRM: ${formatChinaCop(totals.rate)} por USD</p>` : ''}
+                </div>
+            </div>` : ''}
+            <table class="china-print-table">
+                ${pageIndex === 0 ? `<thead>
+                    <tr>${headers}</tr>
+                </thead>` : ''}
+                <tbody>${buildPagedItemRows(pageRows, printedRows)}</tbody>
+            </table>
+            ${isLastPage && totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
+            ${isLastPage && order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
+        </div>
+    `;
+        printedRows += pageRows.length;
+        return pageHtml;
+    }).join('');
+
+    /*
     return `
         <div class="china-print-page">
             <div class="china-print-header">
@@ -3968,6 +4181,7 @@ function buildChinaOrderPrintHtml(order) {
             ${order.notes ? `<div class="china-print-notes"><strong>Notas:</strong><br>${escapeHtml(order.notes)}</div>` : ''}
         </div>
     `;
+    */
 }
 
 function printChinaOrderPdf(order) {
@@ -3988,34 +4202,57 @@ function printChinaOrderPdf(order) {
     setTimeout(cleanup, 1500);
 }
 
-function downloadCurrentChinaOrderPdf() {
-    const order = saveCurrentChinaOrder({ silent: true });
+async function downloadCurrentChinaOrderPdf() {
+    const order = await saveCurrentChinaOrder({ silent: true });
     if (!order) return;
     printChinaOrderPdf(order);
 }
 
-function saveChinaOrderDraft() {
+async function persistChinaOrderDraft(draft) {
     try {
-        localStorage.setItem(CHINA_ORDER_DRAFT_KEY, JSON.stringify(collectChinaOrderDraft()));
+        await writeChinaOrderStoreValue(CHINA_ORDER_DRAFT_RECORD_KEY, draft);
+        try {
+            localStorage.removeItem(CHINA_ORDER_DRAFT_KEY);
+        } catch (cleanupError) {
+            console.warn('No se pudo limpiar borrador viejo:', cleanupError);
+        }
+        return true;
+    } catch (error) {
+        console.warn('No se pudo guardar el borrador grande en IndexedDB:', error);
+    }
+
+    try {
+        localStorage.setItem(CHINA_ORDER_DRAFT_KEY, JSON.stringify(draft));
+        return true;
     } catch (error) {
         console.warn('No se pudo guardar el borrador del pedido a China:', error);
+        return false;
     }
 }
 
-function readChinaOrderDraft() {
-    try {
-        const draft = JSON.parse(localStorage.getItem(CHINA_ORDER_DRAFT_KEY) || 'null');
-        return draft && Array.isArray(draft.rows) ? draft : null;
-    } catch (error) {
-        return null;
+function saveChinaOrderDraft(options = {}) {
+    if (isHydratingChinaOrder) return Promise.resolve(false);
+
+    const draft = collectChinaOrderDraft();
+    if (options.immediate) {
+        clearTimeout(chinaOrderDraftSaveTimer);
+        return persistChinaOrderDraft(draft);
     }
+
+    clearTimeout(chinaOrderDraftSaveTimer);
+    chinaOrderDraftSaveTimer = setTimeout(() => {
+        persistChinaOrderDraft(draft);
+    }, 250);
+    return Promise.resolve(true);
 }
 
 function calculateChinaOrderTotals() {
     const rate = parseChinaNumber(document.getElementById('china-order-rate')?.value || 0);
     let totalUsd = 0;
+    let totalPieces = 0;
+    const rows = getChinaOrderRows();
 
-    getChinaOrderRows().forEach(row => {
+    rows.forEach(row => {
         const quantity = Math.max(0, parseChinaNumber(row.querySelector('[data-china-field="quantity"]')?.value || 0));
         const unitUsd = Math.max(0, parseChinaNumber(row.querySelector('[data-china-field="unitUsd"]')?.value || 0));
         const unitCop = unitUsd * rate;
@@ -4030,12 +4267,17 @@ function calculateChinaOrderTotals() {
         if (subtotalCopEl) subtotalCopEl.textContent = formatChinaCop(subtotalCop);
 
         totalUsd += subtotalUsd;
+        totalPieces += quantity;
     });
 
     const totalUsdEl = document.getElementById('china-order-total-usd');
     const totalCopEl = document.getElementById('china-order-total-cop');
+    const totalProductsEl = document.getElementById('china-order-total-products');
+    const totalPiecesEl = document.getElementById('china-order-total-pieces');
     if (totalUsdEl) totalUsdEl.textContent = formatChinaUsd(totalUsd);
     if (totalCopEl) totalCopEl.textContent = formatChinaCop(totalUsd * rate);
+    if (totalProductsEl) totalProductsEl.textContent = rows.length.toLocaleString('es-CO');
+    if (totalPiecesEl) totalPiecesEl.textContent = Math.round(totalPieces).toLocaleString('es-CO');
     saveChinaOrderDraft();
 }
 
@@ -4084,7 +4326,7 @@ async function readChinaOrderImageFile(row, file) {
     }
 }
 
-function createChinaOrderRow(item = {}) {
+function createChinaOrderRow(item = {}, options = {}) {
     const tbody = document.getElementById('china-order-items');
     if (!tbody) return null;
 
@@ -4112,7 +4354,8 @@ function createChinaOrderRow(item = {}) {
         <td class="china-order-money" data-china-output="subtotalCop">$0</td>
         <td><button type="button" class="china-order-remove" title="Eliminar producto">x</button></td>
     `;
-    tbody.appendChild(row);
+    if (options.append) tbody.appendChild(row);
+    else tbody.prepend(row);
 
     const fileInput = row.querySelector('[data-china-field="imageFile"]');
     const drop = row.querySelector('.china-order-photo-drop');
@@ -4147,11 +4390,13 @@ function buildChinaOrderSummary() {
     const draft = collectChinaOrderDraft();
     const rate = parseChinaNumber(draft.rate || 0);
     let totalUsd = 0;
+    let totalPieces = 0;
     const lines = draft.rows.map((item, index) => {
         const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
         const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
         const subtotalUsd = quantity * unitUsd;
         totalUsd += subtotalUsd;
+        totalPieces += quantity;
         const reference = item.reference ? ` | Ref: ${item.reference}` : '';
         return `${index + 1}. ${item.product || 'Producto sin nombre'}${reference} | Cant: ${quantity} | Unit: ${formatChinaUsd(unitUsd)} / ${formatChinaCop(unitUsd * rate)} | Subtotal: ${formatChinaUsd(subtotalUsd)} / ${formatChinaCop(subtotalUsd * rate)}`;
     });
@@ -4163,6 +4408,7 @@ function buildChinaOrderSummary() {
         '',
         ...lines,
         '',
+        `TOTAL PIEZAS: ${Math.round(totalPieces).toLocaleString('es-CO')}`,
         `TOTAL USD: ${formatChinaUsd(totalUsd)}`,
         `TOTAL COP: ${formatChinaCop(totalUsd * rate)}`,
         draft.notes ? `Notas: ${draft.notes}` : ''
@@ -4198,11 +4444,15 @@ function copyChinaOrderSummary() {
 }
 
 function clearChinaOrderDraft() {
+    clearTimeout(chinaOrderDraftSaveTimer);
     try {
         localStorage.removeItem(CHINA_ORDER_DRAFT_KEY);
     } catch (error) {
         console.warn('No se pudo limpiar el borrador:', error);
     }
+    deleteChinaOrderStoreValue(CHINA_ORDER_DRAFT_RECORD_KEY).catch(error => {
+        console.warn('No se pudo limpiar el borrador grande:', error);
+    });
     activeChinaOrderId = '';
     const tbody = document.getElementById('china-order-items');
     if (tbody) tbody.innerHTML = '';
@@ -4220,7 +4470,7 @@ function clearChinaOrderDraft() {
     calculateChinaOrderTotals();
 }
 
-function initChinaOrdersBuilder() {
+async function initChinaOrdersBuilder() {
     const tbody = document.getElementById('china-order-items');
     if (!tbody || tbody.dataset.ready === 'true') return;
     tbody.dataset.ready = 'true';
@@ -4228,12 +4478,6 @@ function initChinaOrdersBuilder() {
     const factory = document.getElementById('china-order-factory');
     const rate = document.getElementById('china-order-rate');
     const notes = document.getElementById('china-order-notes');
-    const draft = readChinaOrderDraft();
-    if (draft) {
-        hydrateChinaOrderForm(draft);
-    } else {
-        createChinaOrderRow();
-    }
 
     factory?.addEventListener('input', saveChinaOrderDraft);
     factory?.addEventListener('change', saveChinaOrderDraft);
@@ -4260,6 +4504,24 @@ function initChinaOrdersBuilder() {
         }
         if (action === 'delete') deleteSavedChinaOrder(id);
     });
+
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:22px; color:rgba(255,255,255,0.55);">Cargando pedidos guardados...</td></tr>';
+    try {
+        await migrateLegacyChinaOrdersToIndexedDb();
+    } catch (error) {
+        console.warn('No se pudo migrar el historial de pedidos a China:', error);
+    }
+
+    savedChinaOrdersCache = await readSavedChinaOrdersFromStorage();
+    const draft = await readChinaOrderDraftFromStorage();
+
+    if (draft) {
+        hydrateChinaOrderForm(draft);
+    } else {
+        tbody.innerHTML = '';
+        createChinaOrderRow();
+    }
+
     renderSavedChinaOrders();
     calculateChinaOrderTotals();
 }
