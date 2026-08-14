@@ -2587,7 +2587,7 @@ function initCarouselImageAdmin() {
             }
 
             const title = titleInput.value.trim() || 'BLYXU';
-            const description = descriptionInput.value.trim() || 'Nueva imagen del carrusel de inicio';
+            const description = descriptionInput.value.trim();
             const mode = modeInput?.value || 'replace';
             const bannerId = mode === 'replace' ? fixedHomeBannerId : makeCarouselBannerId();
             const bannerPayload = {
