@@ -944,6 +944,28 @@ function setProductFormMode(isEditing) {
     if (btn) btn.textContent = isEditing ? 'Guardar cambios' : 'Guardar producto y variantes';
 }
 
+function updateProductImagePreviewBox(url) {
+    const box = document.getElementById('prod-image-drop-zone');
+    const placeholder = document.getElementById('prod-image-placeholder');
+    const previewWrapper = document.getElementById('prod-image-preview-wrapper');
+    const previewThumb = document.getElementById('prod-image-preview-thumb');
+    
+    if (!box || !placeholder || !previewThumb) return;
+    
+    const trimmed = String(url || '').trim();
+    if (trimmed) {
+        previewThumb.src = trimmed;
+        if (previewWrapper) previewWrapper.style.display = 'flex';
+        placeholder.style.display = 'none';
+        box.classList.add('has-image');
+    } else {
+        previewThumb.src = '';
+        if (previewWrapper) previewWrapper.style.display = 'none';
+        placeholder.style.display = 'flex';
+        box.classList.remove('has-image');
+    }
+}
+
 function resetProductForm() {
     const form = el('product-form');
     if (form) form.reset();
@@ -953,8 +975,10 @@ function resetProductForm() {
     const currentMotherId = getInputValue('prod-id-producto');
     setInputValue('prod-id', `${currentMotherId}-V01`);
     setInputValue('prod-fecha-creacion', '');
-    setInputValue('prod-stock-inicial', '0');
-    setInputValue('prod-stock', '0');
+    setInputValue('prod-stock-inicial', '12');
+    setInputValue('prod-stock', '12');
+    setInputValue('prod-imagen', '');
+    updateProductImagePreviewBox('');
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
     setInputValue('prod-estilo', '');
@@ -1318,42 +1342,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initInventorySearch();
     initInventoryActions();
     initCarouselImageAdmin();
+    initProductImageUpload();
     resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
     const adminLoginButton = document.querySelector('#admin-login-form .admin-btn');
     if (adminLoginButton) adminLoginButton.textContent = 'Autenticar';
-
-    // Configurar Drag & Drop para Productos
-    setupDragAndDrop('prod-image-drop-zone', (url) => {
-        const input = document.getElementById('prod-imagen');
-        if (input) {
-            input.value = url;
-            input.dispatchEvent(new Event('input')); // Para actualizar preview con URL final
-        }
-    }, (localUrl) => {
-        // Vista previa local inmediata antes de que termine de subir
-        const imgEl = document.getElementById('preview-img-el');
-        if (imgEl) {
-            imgEl.src = localUrl;
-            imgEl.dataset.localPreviewSrc = localUrl;
-            imgEl.style.opacity = '0.7';
-        }
-        const saveBtn = document.getElementById('btn-save');
-        if (saveBtn) {
-            saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Subiendo imagen...';
-        }
-        showToast('Subiendo imagen a Google Drive...');
-    }, () => {
-        const saveBtn = document.getElementById('btn-save');
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar producto';
-            delete saveBtn.dataset.readyText;
-        }
-    });
 
     // Delegación de eventos para drag & drop en variantes dinámicas
     document.addEventListener('dragover', (e) => {
@@ -1614,10 +1608,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" class="form-control var-precio-mayor" placeholder="${getInputValue('prod-precio-mayorista')}" value="${getInputValue('prod-precio-mayorista')}">
                 </div>
                 <div class="form-group">
-                    <label>SKU Variante</label>
-                    <input type="text" class="form-control var-sku">
-                </div>
-                <div class="form-group">
                     <label>Estilo</label>
                     <input type="text" class="form-control var-estilo" value="${getInputValue('prod-estilo')}" placeholder="Ej: flor, corazon">
                 </div>
@@ -1632,7 +1622,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="form-group">
                     <label>Stock</label>
-                    <input type="number" class="form-control var-stock" value="0">
+                    <input type="number" class="form-control var-stock" value="12">
                 </div>
                 <div class="form-group" style="grid-column: 1 / -1;">
                     <label>Imagen de Variante (Arrastra o URL)</label>
@@ -1673,21 +1663,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     Categoria: getInputValue('prod-categoria'),
                     Catalogo: getInputValue('prod-catalogo') || 'Ambos',
                     'Categoría': getInputValue('prod-categoria'),
-                    Cantidad: Number(card.querySelector('.var-stock').value || 0),
-                    Stock: Number(card.querySelector('.var-stock').value || 0),
-                    'Stock Inicial': Number(card.querySelector('.var-stock').value || 0),
+                    Cantidad: Number(card.querySelector('.var-stock')?.value || 12),
+                    Stock: Number(card.querySelector('.var-stock')?.value || 12),
+                    'Stock Inicial': Number(card.querySelector('.var-stock')?.value || 12),
                     Descripcion: getInputValue('prod-descripcion'),
                     'Caracteristicas del producto': getInputValue('prod-descripcion'),
-                    Tamano: card.querySelector('.var-tamano').value,
-                    Talla: card.querySelector('.var-tamano').value,
-                    'TamaÃ±o': card.querySelector('.var-tamano').value,
-                    Color: card.querySelector('.var-color').value,
+                    Tamano: card.querySelector('.var-tamano')?.value || '',
+                    Talla: card.querySelector('.var-tamano')?.value || '',
+                    'Tamaño': card.querySelector('.var-tamano')?.value || '',
+                    Color: card.querySelector('.var-color')?.value || '',
                     Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
-                    SKU: card.querySelector('.var-sku').value,
-                    Imagen: card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
-                    'Imagen Principal': card.querySelector('.var-imagen').value || getInputValue('prod-imagen'),
-                    'Galeria JSON': getInputValue('prod-galeria'),
-                    'GalerÃ­a JSON': getInputValue('prod-galeria'),
+                    SKU: card.querySelector('.var-sku')?.value || '',
+                    Imagen: card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
+                    'Imagen Principal': card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
+                    'Galeria JSON': '',
+                    'Galería JSON': '',
                     Estado: getInputValue('prod-estado') || 'Activo'
                 };
 
@@ -2487,6 +2477,125 @@ function setupDragAndDrop(containerId, onFileProcessed, onLocalPreview, onUpload
             showToast('Por favor, arrastra solo archivos de imagen', 'warning');
         }
     }, false);
+}
+
+function initProductImageUpload() {
+    const dropZone = document.getElementById('prod-image-drop-zone');
+    const fileInput = document.getElementById('prod-image-file');
+    const imageInput = document.getElementById('prod-imagen');
+    const removeBtn = document.getElementById('prod-image-remove-btn');
+    const changeBtn = document.getElementById('prod-image-change-btn');
+
+    if (!dropZone || !fileInput) return;
+
+    const handleFileSelection = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('Por favor, selecciona un archivo de imagen', 'warning');
+            return;
+        }
+
+        const localUrl = URL.createObjectURL(file);
+        updateProductImagePreviewBox(localUrl);
+
+        const imgEl = document.getElementById('preview-img-el');
+        if (imgEl) {
+            imgEl.src = localUrl;
+            imgEl.dataset.localPreviewSrc = localUrl;
+            imgEl.style.opacity = '0.7';
+        }
+
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Subiendo imagen...';
+        }
+
+        showToast('Subiendo imagen a Google Drive...');
+        try {
+            const uploadedUrl = await uploadCarouselImage(file);
+            if (imageInput) {
+                imageInput.value = uploadedUrl;
+                imageInput.dispatchEvent(new Event('input'));
+            }
+            updateProductImagePreviewBox(uploadedUrl);
+            showToast('Imagen subida con éxito', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Error al subir imagen: ' + (err.message || err), 'error');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar producto';
+                delete saveBtn.dataset.readyText;
+            }
+            fileInput.value = '';
+        }
+    };
+
+    dropZone.addEventListener('click', (e) => {
+        if (e.target.closest('#prod-image-remove-btn') || e.target.closest('input')) return;
+        fileInput.click();
+    });
+
+    if (changeBtn) {
+        changeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (file) handleFileSelection(file);
+    });
+
+    if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (imageInput) {
+                imageInput.value = '';
+                imageInput.dispatchEvent(new Event('input'));
+            }
+            updateProductImagePreviewBox('');
+        });
+    }
+
+    if (imageInput) {
+        imageInput.addEventListener('input', (e) => {
+            updateProductImagePreviewBox(e.target.value);
+        });
+    }
+
+    setupDragAndDrop('prod-image-drop-zone', (url) => {
+        if (imageInput) {
+            imageInput.value = url;
+            imageInput.dispatchEvent(new Event('input'));
+        }
+        updateProductImagePreviewBox(url);
+    }, (localUrl) => {
+        updateProductImagePreviewBox(localUrl);
+        const imgEl = document.getElementById('preview-img-el');
+        if (imgEl) {
+            imgEl.src = localUrl;
+            imgEl.dataset.localPreviewSrc = localUrl;
+            imgEl.style.opacity = '0.7';
+        }
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Subiendo imagen...';
+        }
+        showToast('Subiendo imagen a Google Drive...');
+    }, () => {
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar producto';
+            delete saveBtn.dataset.readyText;
+        }
+    });
 }
 
 function initCarouselImageAdmin() {
@@ -3326,6 +3435,7 @@ function editarProducto(index) {
     var elStock = document.getElementById('prod-stock');
     if (elStock) elStock.value = stockVal;
     document.getElementById('prod-imagen').value = p.Imagen || '';
+    updateProductImagePreviewBox(p.Imagen || '');
     document.getElementById('prod-color').value = p.Color || '';
     var stockInicialVal = [p.Stock_Inicial, p['Stock Inicial'], p.Stock, p.Cantidad, ''].find(v => v !== undefined && String(v).trim() !== '');
     if (stockInicialVal === undefined) stockInicialVal = '';
