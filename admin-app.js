@@ -1,4 +1,4 @@
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
+const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
@@ -4537,7 +4537,7 @@ async function initChinaOrdersBuilder() {
 window.pedidosList = [];
 window.facturasList = [];
 window.activeOrdersAdminTab = 'orders-mayor';
-const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v1';
+const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
 const ADMIN_ORDERS_CACHE_TTL = 45 * 1000;
 let adminOrdersLoadPromise = null;
 
@@ -4645,6 +4645,54 @@ function getInvoiceOrderIdValue(invoice) {
 
 function getInvoiceCustomerName(invoice) {
     return invoice && (invoice.Nombre || invoice['Nombre Cliente'] || invoice.Cliente || '-');
+}
+
+function parseAdminInvoiceMoney(value) {
+    if (value === undefined || value === null || value === '') return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const cleaned = String(value)
+        .replace(/[^\d,.-]/g, '')
+        .replace(/\.(?=\d{3}(\D|$))/g, '')
+        .replace(',', '.');
+    const parsed = Number(cleaned);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatAdminInvoiceMoney(value) {
+    const number = Math.max(0, Math.round(Number(value) || 0));
+    return '$' + number.toLocaleString('es-CO');
+}
+
+function getInvoiceTotalFromItems(items) {
+    return (items || []).reduce((sum, item) => {
+        const qty = Number(item.cantidad || item.Cantidad || item.qty || 1) || 1;
+        const price = Number(item.precio || item.Precio || item.price || 0) || 0;
+        return sum + (qty * price);
+    }, 0);
+}
+
+function getInvoicePaidValue(invoice) {
+    if (!invoice) return 0;
+    return parseAdminInvoiceMoney(
+        invoice['Valor Abonado'] ??
+        invoice['Total Abonado'] ??
+        invoice.Abonado ??
+        invoice.abonado ??
+        invoice['Pago Recibido'] ??
+        invoice.Pagado ??
+        0
+    );
+}
+
+function getInvoiceBalanceInfo(invoice, totalOverride) {
+    const total = Number(totalOverride) || parseAdminInvoiceMoney(invoice?.Subtotal || invoice?.Total || 0);
+    let paid = Math.min(Math.max(0, getInvoicePaidValue(invoice)), Math.max(0, total));
+    const storedBalance = parseAdminInvoiceMoney(invoice?.['Saldo Pendiente'] ?? invoice?.Saldo ?? invoice?.saldo ?? '');
+    if (paid === 0 && storedBalance > 0 && total > storedBalance) {
+        paid = total - storedBalance;
+    }
+    const balance = Math.max(0, total - paid);
+    return { total, paid, balance };
 }
 
 function normalizeAdminCustomerType(value) {
@@ -4830,7 +4878,8 @@ function buildInvoiceRowHtml(f, idx) {
     const idPedido = getInvoiceOrderIdValue(f) || '-';
     const fecha = f.Fecha || '-';
     const cliente = getInvoiceCustomerName(f);
-    const total = parseFloat(f.Subtotal || f.Total || 0);
+    const total = parseAdminInvoiceMoney(f.Subtotal || f.Total || 0);
+    const balanceInfo = getInvoiceBalanceInfo(f, total);
     const estado = f['Estado Factura'] || f.Estado || 'Finalizada';
     const colorEstado = getInvoiceStatusColor(estado);
 
@@ -4840,7 +4889,11 @@ function buildInvoiceRowHtml(f, idx) {
             <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(idPedido)}</td>
             <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
             <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
-            <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+            <td style="font-weight:800; color:#fff;">
+                <div>${formatAdminInvoiceMoney(total)}</div>
+                <div style="font-size:10px; color:#34d399; font-weight:800;">Abonado: ${formatAdminInvoiceMoney(balanceInfo.paid)}</div>
+                <div style="font-size:10px; color:${balanceInfo.balance > 0 ? '#fbbf24' : '#34d399'}; font-weight:800;">Saldo: ${formatAdminInvoiceMoney(balanceInfo.balance)}</div>
+            </td>
             <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
             <td class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver / Editar factura">
@@ -4943,7 +4996,9 @@ function renderFacturas() {
             f['ID Cliente'],
             f['Estado Factura'],
             f.Estado,
-            f.Subtotal
+            f.Subtotal,
+            f['Valor Abonado'],
+            f['Saldo Pendiente']
         ]));
 
     getInvoiceTableTargets().forEach(target => {
@@ -5041,6 +5096,7 @@ window.invoiceCustomerType = 'Detal';
 window.invoiceSearchResults = [];
 window.invoiceInventoryLoadingPromise = null;
 window.invoiceInventoryLoadTried = false;
+window.invoicePreviousPayment = 0;
 
 function readInvoiceField(source, fields, fallback = '') {
     return getProductField(source || {}, fields, fallback);
@@ -5096,6 +5152,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     window.invoiceEditSource = idx === null ? 'manual' : source;
     window.invoiceOriginalInvoiceId = '';
     window.invoiceCustomerType = 'Detal';
+    window.invoicePreviousPayment = 0;
     
     document.getElementById('inv-original-id').value = '';
     document.getElementById('inv-edit-nombre').value = '';
@@ -5112,6 +5169,9 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     document.getElementById('inv-custom-name').value = '';
     document.getElementById('inv-custom-sku').value = '';
     document.getElementById('inv-custom-price').value = '';
+    if (document.getElementById('inv-edit-abono')) {
+        document.getElementById('inv-edit-abono').value = '';
+    }
     
     if (idx !== null) {
         const editingInvoice = source === 'factura';
@@ -5123,7 +5183,12 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
 
         const orderId = editingInvoice ? getInvoiceOrderIdValue(p) : getOrderIdValue(p);
         const invoiceId = editingInvoice ? getInvoiceIdValue(p) : '';
-        window.invoiceOriginalInvoiceId = invoiceId || '';
+        const linkedExistingInvoice = (!editingInvoice && orderId)
+            ? (window.facturasList || []).find(f => String(getInvoiceOrderIdValue(f)).trim() === String(orderId).trim())
+            : null;
+        const linkedExistingInvoiceId = linkedExistingInvoice ? getInvoiceIdValue(linkedExistingInvoice) : '';
+        window.invoiceOriginalInvoiceId = invoiceId || linkedExistingInvoiceId || '';
+        window.invoicePreviousPayment = editingInvoice ? getInvoicePaidValue(p) : getInvoicePaidValue(linkedExistingInvoice);
         window.invoiceCustomerType = editingInvoice
             ? (inferInvoiceCustomerType(p) === 'mayor' ? 'Mayor' : 'Detal')
             : (inferOrderCustomerType(p) === 'mayor' ? 'Mayor' : 'Detal');
@@ -5132,7 +5197,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
             ? 'Editar Factura: ' + (invoiceId || orderId)
             : 'Ajustar Factura del Pedido: ' + orderId;
         document.getElementById('inv-original-id').value = orderId;
-        document.getElementById('inv-edit-id').value = editingInvoice ? (invoiceId || orderId) : `FAC-${orderId}`;
+        document.getElementById('inv-edit-id').value = editingInvoice ? (invoiceId || orderId) : (linkedExistingInvoiceId || `FAC-${orderId}`);
         
         document.getElementById('inv-edit-nombre').value = editingInvoice ? getInvoiceCustomerName(p) : (p['Nombre Cliente'] || p.Nombre || '');
         document.getElementById('inv-edit-tel').value = editingInvoice ? (p['ID Cliente'] || '') : (p['Teléfono'] || p.Telefono || '');
@@ -5159,6 +5224,12 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
                 precio: parseFloat(i.precio || i.Precio || 0)
             }));
         } catch(e) { console.error("Error cargando ítems", e); }
+        if (editingInvoice || linkedExistingInvoice) {
+            window.invoicePreviousPayment = getInvoiceBalanceInfo(
+                editingInvoice ? p : linkedExistingInvoice,
+                getInvoiceTotalFromItems(window.invoiceItems)
+            ).paid;
+        }
     } else {
         // Nueva
         window.invoiceEditSource = 'manual';
@@ -5423,6 +5494,7 @@ function renderItemsFactura() {
     if (window.invoiceItems.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Busca y añade productos para comenzar</td></tr>';
         document.getElementById('inv-edit-total').textContent = '$0';
+        updateInvoicePaymentSummary();
         return;
     }
     
@@ -5449,8 +5521,30 @@ function renderItemsFactura() {
         `;
     }).join('');
     
-    document.getElementById('inv-edit-total').textContent = '$' + total.toLocaleString('es-CO');
+    document.getElementById('inv-edit-total').textContent = formatAdminInvoiceMoney(total);
+    updateInvoicePaymentSummary();
 }
+
+window.updateInvoicePaymentSummary = function() {
+    const total = getInvoiceTotalFromItems(window.invoiceItems || []);
+    const previousPaid = Math.min(Math.max(0, Number(window.invoicePreviousPayment) || 0), Math.max(0, total));
+    const newPaymentInput = document.getElementById('inv-edit-abono');
+    const newPayment = Math.max(0, parseAdminInvoiceMoney(newPaymentInput?.value || 0));
+    const acceptedNewPayment = Math.min(newPayment, Math.max(0, total - previousPaid));
+    const paidAfter = previousPaid + acceptedNewPayment;
+    const balanceBefore = Math.max(0, total - previousPaid);
+    const balanceAfter = Math.max(0, total - paidAfter);
+
+    if (document.getElementById('inv-paid-before')) {
+        document.getElementById('inv-paid-before').textContent = formatAdminInvoiceMoney(previousPaid);
+    }
+    if (document.getElementById('inv-balance-before')) {
+        document.getElementById('inv-balance-before').textContent = formatAdminInvoiceMoney(balanceBefore);
+    }
+    if (document.getElementById('inv-balance-after')) {
+        document.getElementById('inv-balance-after').textContent = formatAdminInvoiceMoney(balanceAfter);
+    }
+};
 
 function isAdminInvoiceMobilePrint() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -5696,6 +5790,20 @@ function getAdminInvoicePrintWindowStyles() {
             justify-content: space-between;
             gap: 16px;
         }
+        .invoice-total-box .payment-row-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd6fe;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .invoice-total-box .payment-row-item.balance {
+            color: #6b21a8;
+        }
         .invoice-total-box .total-label {
             font-size: 12px;
             font-weight: 900;
@@ -5908,7 +6016,19 @@ window.imprimirFacturaEditor = function() {
         `;
     }).join('');
 
-    document.getElementById('inv-total').textContent = '$' + total.toLocaleString('es-CO');
+    const previousPaid = Math.min(Math.max(0, Number(window.invoicePreviousPayment) || 0), Math.max(0, total));
+    const requestedNewPayment = Math.max(0, parseAdminInvoiceMoney(document.getElementById('inv-edit-abono')?.value || 0));
+    const acceptedNewPayment = Math.min(requestedNewPayment, Math.max(0, total - previousPaid));
+    const paidAfter = previousPaid + acceptedNewPayment;
+    const balanceAfter = Math.max(0, total - paidAfter);
+
+    document.getElementById('inv-total').textContent = formatAdminInvoiceMoney(total);
+    if (document.getElementById('inv-paid-total')) {
+        document.getElementById('inv-paid-total').textContent = formatAdminInvoiceMoney(paidAfter);
+    }
+    if (document.getElementById('inv-balance-total')) {
+        document.getElementById('inv-balance-total').textContent = formatAdminInvoiceMoney(balanceAfter);
+    }
     if (document.getElementById('inv-total-items-count')) {
         document.getElementById('inv-total-items-count').textContent = totalQty + (totalQty === 1 ? ' Ítem' : ' Ítems');
     }
@@ -6028,8 +6148,22 @@ window.guardarFacturaDB = async function() {
     const isUpdate = Boolean(editingExistingInvoice || existingInvoiceId);
     const total = window.invoiceItems.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
     const cantTotal = window.invoiceItems.reduce((sum, item) => sum + item.cantidad, 0);
+    const existingPaymentInfo = existingInvoiceForOrder ? getInvoiceBalanceInfo(existingInvoiceForOrder, total) : null;
+    const previousPaid = Math.min(
+        Math.max(0, existingPaymentInfo ? existingPaymentInfo.paid : (Number(window.invoicePreviousPayment) || 0)),
+        Math.max(0, total)
+    );
+    const requestedNewPayment = Math.max(0, parseAdminInvoiceMoney(document.getElementById('inv-edit-abono')?.value || 0));
+    const acceptedNewPayment = Math.min(requestedNewPayment, Math.max(0, total - previousPaid));
+    const paidAfter = previousPaid + acceptedNewPayment;
+    const saldoPendiente = Math.max(0, total - paidAfter);
     const metodo = document.getElementById('inv-edit-metodo').value.trim() || 'Mostrador / Manual';
-    const estadoFactura = document.getElementById('inv-edit-estado').value.trim() || 'Finalizada';
+    let estadoFactura = document.getElementById('inv-edit-estado').value.trim() || 'Finalizada';
+    if (saldoPendiente > 0 && /^(finalizada|finalizado|pagada|pagado)$/i.test(estadoFactura)) {
+        estadoFactura = 'Pendiente';
+    } else if (saldoPendiente === 0 && paidAfter > 0 && /pendiente|parcial|abono/i.test(estadoFactura)) {
+        estadoFactura = 'Pagada';
+    }
     const entrega = [document.getElementById('inv-edit-dir').value.trim(), document.getElementById('inv-edit-ciudad').value.trim()]
         .filter(Boolean)
         .join(' - ');
@@ -6051,6 +6185,9 @@ window.guardarFacturaDB = async function() {
         'Productos JSON': JSON.stringify(window.invoiceItems),
         'Cantidad Total': cantTotal,
         'Subtotal': total,
+        'Valor Abonado': paidAfter,
+        'Saldo Pendiente': saldoPendiente,
+        'Ultimo Abono': acceptedNewPayment,
         'Estado Factura': estadoFactura,
         pago: metodo,
         entrega,

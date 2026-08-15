@@ -78,6 +78,9 @@ const SHEETS = {
       'Productos JSON',
       'Cantidad Total',
       'Subtotal',
+      'Valor Abonado',
+      'Saldo Pendiente',
+      'Ultimo Abono',
       'Estado Factura',
       'Método Pago',
       'Método Entrega',
@@ -422,6 +425,13 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
     rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
+    const subtotal = toNumber_(rowObject['Subtotal']);
+    const abonado = Math.max(0, toNumber_(rowObject['Valor Abonado']));
+    rowObject['Valor Abonado'] = abonado;
+    rowObject['Saldo Pendiente'] = rowObject['Saldo Pendiente'] === undefined || rowObject['Saldo Pendiente'] === ''
+      ? Math.max(0, subtotal - abonado)
+      : Math.max(0, toNumber_(rowObject['Saldo Pendiente']));
+    rowObject['Ultimo Abono'] = Math.max(0, toNumber_(rowObject['Ultimo Abono']));
   }
 
   const row = headers.map(header => getObjectValueByHeader_(rowObject, header, ''));
@@ -738,7 +748,7 @@ function inferCustomerType_(rowObject) {
   if (id.indexOf('may-') === 0) return 'Mayor';
   if (id.indexOf('det-') === 0) return 'Detal';
 
-  const method = String(rowObject['MÃ©todo Contacto'] || rowObject['Metodo Contacto'] || rowObject['MÃƒÂ©todo Contacto'] || '').toLowerCase();
+  const method = String(rowObject['Método Contacto'] || rowObject['Metodo Contacto'] || '').toLowerCase();
   if (method.indexOf('mayor') >= 0 || method.indexOf('wholesale') >= 0) return 'Mayor';
   if (method.indexOf('detal') >= 0 || method.indexOf('minor') >= 0 || method.indexOf('retail') >= 0) return 'Detal';
 
@@ -806,9 +816,9 @@ function findHeader_(headers, key, sheetName) {
       clientetipo: 'Tipo Cliente',
       estado: 'Estado Pedido',
       estadopedido: 'Estado Pedido',
-      metodo: 'MÃ©todo Contacto',
-      metodocontacto: 'MÃ©todo Contacto',
-      metodopago: 'MÃ©todo Contacto',
+      metodo: 'Método Contacto',
+      metodocontacto: 'Método Contacto',
+      metodopago: 'Método Contacto',
       nota: 'Nota Cliente',
       notacliente: 'Nota Cliente'
     },
@@ -822,6 +832,20 @@ function findHeader_(headers, key, sheetName) {
       productos: 'Productos JSON',
       items: 'Productos JSON',
       total: 'Subtotal',
+      abono: 'Valor Abonado',
+      abonado: 'Valor Abonado',
+      valorAbonado: 'Valor Abonado',
+      valorabonado: 'Valor Abonado',
+      totalAbonado: 'Valor Abonado',
+      totalabonado: 'Valor Abonado',
+      pagoRecibido: 'Valor Abonado',
+      pagorecibido: 'Valor Abonado',
+      pagado: 'Valor Abonado',
+      saldo: 'Saldo Pendiente',
+      saldoPendiente: 'Saldo Pendiente',
+      saldopendiente: 'Saldo Pendiente',
+      ultimoAbono: 'Ultimo Abono',
+      ultimoabono: 'Ultimo Abono',
       tipo: 'Tipo Cliente',
       tipoCliente: 'Tipo Cliente',
       tipocliente: 'Tipo Cliente',

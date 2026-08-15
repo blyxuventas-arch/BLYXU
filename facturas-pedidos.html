@@ -8,7 +8,7 @@
     <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="stylesheet" href="blyxu-style.css?v=cart-variant-20260814">
+    <link rel="stylesheet" href="blyxu-style.css?v=cart-mobile-zoom-20260815">
     <style>
         .orders-page {
             position: relative;
@@ -827,6 +827,22 @@
                 gap: 16px;
             }
 
+            .invoice-total-box .payment-row-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px solid #ddd6fe;
+                font-size: 12px;
+                font-weight: 800;
+            }
+
+            .invoice-total-box .payment-row-item.balance {
+                color: #6b21a8 !important;
+            }
+
             .invoice-total-box .total-label {
                 font-size: 12px;
                 font-weight: 900;
@@ -1035,7 +1051,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-app.js?v=cart-variant-20260814"></script>
+    <script src="blyxu-app.js?v=cart-mobile-zoom-20260815"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
@@ -1049,7 +1065,7 @@
             const tabs = Array.from(document.querySelectorAll('[data-orders-view]'));
             const apiUrl = typeof GOOGLE_SHEET_API !== 'undefined'
                 ? GOOGLE_SHEET_API
-                : 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
+                : 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
             let currentOrders = [];
             let currentInvoices = [];
             let currentView = 'orders';
@@ -1154,6 +1170,39 @@
                     const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
                     return sum + (qty * price);
                 }, 0);
+            }
+
+            function parseInvoiceMoney(value) {
+                if (value === undefined || value === null || value === '') return 0;
+                if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+                const cleaned = String(value)
+                    .replace(/[^\d,.-]/g, '')
+                    .replace(/\.(?=\d{3}(\D|$))/g, '')
+                    .replace(',', '.');
+                const parsed = Number(cleaned);
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+
+            function getInvoicePaidValue(order) {
+                return parseInvoiceMoney(getField(order, [
+                    'Valor Abonado',
+                    'Total Abonado',
+                    'Abonado',
+                    'Pago Recibido',
+                    'Pagado'
+                ], 0));
+            }
+
+            function getInvoiceBalanceInfo(order, total) {
+                let paid = Math.min(Math.max(0, getInvoicePaidValue(order)), Math.max(0, total));
+                const storedBalance = parseInvoiceMoney(getField(order, ['Saldo Pendiente', 'Saldo', 'saldo'], 0));
+                if (paid === 0 && storedBalance > 0 && total > storedBalance) {
+                    paid = total - storedBalance;
+                }
+                return {
+                    paid,
+                    balance: Math.max(0, total - paid)
+                };
             }
 
             function getConfigValue(key, fallback = '') {
@@ -1330,6 +1379,7 @@
                     const state = getField(order, ['Estado Factura', 'Estado'], 'Finalizada');
                     const items = parseItems(order);
                     const total = getOrderTotal(order, items);
+                    const balanceInfo = getInvoiceBalanceInfo(order, total);
 
                     return `
                         <article class="order-card invoice-card">
@@ -1349,6 +1399,8 @@
                                 </div>
                                 ${renderItemsTable(items)}
                                 <div class="invoice-total"><span>Total factura</span>${formatMoney(total)}</div>
+                                <div class="invoice-total"><span>Abonado</span>${formatMoney(balanceInfo.paid)}</div>
+                                <div class="invoice-total"><span>Saldo pendiente</span>${formatMoney(balanceInfo.balance)}</div>
                                 <div class="invoice-actions">
                                     <button type="button" class="orders-action-btn invoice-download-btn" onclick="downloadInvoicePdf(${index})">Abrir / guardar PDF</button>
                                 </div>
@@ -1372,6 +1424,7 @@
                 const customerType = getField(order, ['Tipo Cliente', 'Tipo', 'ClienteTipo'], 'Detal');
                 const items = parseItems(order);
                 const total = getOrderTotal(order, items);
+                const balanceInfo = getInvoiceBalanceInfo(order, total);
                 const companyLogo = 'blyxu-invoice-logo.png';
                 const companyName = getConfigValue('Factura_Empresa', 'BLYXU Joyería & Accesorios');
                 const companyNit = getConfigValue('Factura_NIT', '000.000.000-0');
@@ -1470,6 +1523,14 @@
                                     <div class="total-row-item">
                                         <span class="total-label">TOTAL FACTURA</span>
                                         <span class="total-amount">${formatMoney(total)}</span>
+                                    </div>
+                                    <div class="payment-row-item">
+                                        <span>ABONADO</span>
+                                        <strong>${formatMoney(balanceInfo.paid)}</strong>
+                                    </div>
+                                    <div class="payment-row-item balance">
+                                        <span>SALDO PENDIENTE</span>
+                                        <strong>${formatMoney(balanceInfo.balance)}</strong>
                                     </div>
                                     <div class="total-sub-info">
                                         <span>Moneda: COP ($)</span> &bull; <span>${totalQty} ${totalQty === 1 ? 'Ítem' : 'Ítems'}</span>
@@ -1741,6 +1802,20 @@
                         align-items: center;
                         justify-content: space-between;
                         gap: 16px;
+                    }
+                    .invoice-total-box .payment-row-item {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 16px;
+                        margin-top: 8px;
+                        padding-top: 8px;
+                        border-top: 1px solid #ddd6fe;
+                        font-size: 12px;
+                        font-weight: 800;
+                    }
+                    .invoice-total-box .payment-row-item.balance {
+                        color: #6b21a8;
                     }
                     .invoice-total-box .total-label {
                         font-size: 12px;

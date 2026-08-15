@@ -8,7 +8,7 @@
 // 3. Pega el codigo del archivo google-apps-script.gs
 // 4. Despliega como aplicacion web
 // 5. Pega la URL aqui abajo:
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbx7ofcNdOvxv07cvLZkSemb2mTyBlzs3a7VHbTk7QNIRitLjWQPFjnYl2PnEfEDGHYo3w/exec';
+const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 const BLYXU_WHATSAPP_PHONE = '573112368622';
 const BLYXU_DEFAULT_MAP_URL = 'https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6';
@@ -2566,7 +2566,7 @@ function updateCartUI() {
 
         return `
         <div class="cart-item">
-            <button class="cart-item-preview-btn" type="button" onclick="openCartItemPreview(${i})" aria-label="Ver producto ${escapeHtml(c.name)}">
+            <button class="cart-item-preview-btn" type="button" onclick="openCartItemPreview(${i})" aria-label="Ampliar imagen de ${escapeHtml(c.name)}" title="Ampliar imagen">
                 ${c.img ? `<img src="${escapeHtml(c.img)}" class="cart-item-img" alt="">` : '<span class="cart-item-img cart-item-img-empty">?</span>'}
             </button>
             <div class="cart-item-info">

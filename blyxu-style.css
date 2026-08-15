@@ -2340,28 +2340,44 @@ body {
     overflow: hidden;
 }
 
+.cart-item-preview-btn::before,
 .cart-item-preview-btn::after {
     content: '';
     position: absolute;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.cart-item-preview-btn::after {
     right: 5px;
     bottom: 5px;
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background:
-        linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,.9)) center / 8px 2px no-repeat,
-        linear-gradient(90deg, rgba(255,255,255,.9), rgba(255,255,255,.9)) center / 2px 8px no-repeat,
-        rgba(9, 3, 17, .78);
-    border: 1px solid rgba(244, 196, 65, .38);
-    opacity: 0;
-    transform: scale(.86);
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'%3E%3C/circle%3E%3Cpath d='m20 20-4.5-4.5'%3E%3C/path%3E%3C/svg%3E") center / 14px 14px no-repeat,
+        rgba(9, 3, 17, .82);
+    border: 1px solid rgba(244, 196, 65, .58);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .38);
+    opacity: .95;
+    transform: scale(1);
     transition: opacity .2s ease, transform .2s ease;
+}
+
+.cart-item-preview-btn::before {
+    display: none;
 }
 
 .cart-item-preview-btn:hover::after,
 .cart-item-preview-btn:focus-visible::after {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.08);
+}
+
+.cart-item-preview-btn:hover::before,
+.cart-item-preview-btn:focus-visible::before {
+    opacity: 1;
+    transform: rotate(-45deg) scale(1.08);
 }
 
 .cart-item-preview-btn:hover {
@@ -5615,11 +5631,140 @@ textarea {
     }
 
     .cart-item {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr) 36px;
         gap: 10px;
+        align-items: start;
+        padding: 16px 0;
+    }
+
+    .cart-item-preview-btn,
+    .cart-item-img {
+        width: 64px;
+        height: 64px;
+    }
+
+    .cart-item-preview-btn {
+        grid-column: 1;
+        grid-row: 1;
+        flex: none;
+        border-radius: 12px;
+    }
+
+    .cart-item-img {
+        border-radius: 12px;
+    }
+
+    .cart-item-info {
+        grid-column: 2;
+        grid-row: 1;
+        min-width: 0;
+        display: grid;
+        justify-items: start;
+    }
+
+    .cart-item-name {
+        width: 100%;
+        font-size: 12px;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+    }
+
+    .cart-item-price {
+        margin-top: 3px;
+        font-size: 13px;
+        line-height: 1.2;
+    }
+
+    .cart-item-variant {
+        width: 100%;
+        margin-top: 8px;
     }
 
     .cart-item-qty {
-        grid-template-columns: 28px 42px 28px;
+        grid-template-columns: 30px 40px 30px;
+        gap: 4px;
+        margin-top: 8px;
+        padding: 3px;
+    }
+
+    .cart-item-qty button {
+        width: 30px;
+        height: 30px;
+    }
+
+    .cart-item-qty input {
+        width: 40px;
+        height: 30px;
+    }
+
+    .cart-item-subtotal {
+        margin-top: 7px;
+        font-size: 12px;
+    }
+
+    .cart-item-remove {
+        grid-column: 3;
+        grid-row: 1;
+        justify-self: end;
+        width: 34px;
+        height: 34px;
+    }
+
+    .cart-preview-modal {
+        align-items: stretch;
+        padding: 12px;
+    }
+
+    .cart-preview-dialog {
+        width: 100%;
+        max-height: calc(100dvh - 24px);
+        border-radius: 14px;
+        overflow-y: auto;
+    }
+
+    .cart-preview-content {
+        display: block;
+        max-height: none;
+    }
+
+    .cart-preview-media {
+        min-height: 0;
+        padding: 16px;
+        padding-top: 52px;
+    }
+
+    .cart-preview-media img {
+        max-height: 42dvh;
+        border-radius: 10px;
+    }
+
+    .cart-preview-info {
+        padding: 0 18px 20px;
+        overflow: visible;
+    }
+
+    .cart-preview-info h3 {
+        font-size: 24px;
+        line-height: 1.08;
+        overflow-wrap: anywhere;
+    }
+
+    .cart-preview-price {
+        margin-top: 12px;
+        font-size: 20px;
+    }
+
+    .cart-preview-variants {
+        margin-top: 18px;
+    }
+
+    .cart-preview-variant-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cart-preview-link {
+        width: 100%;
     }
 
     .wholesale-panel,
