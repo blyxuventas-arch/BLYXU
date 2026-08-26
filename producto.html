@@ -14,6 +14,75 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="blyxu-style.css?v=cart-mobile-zoom-20260815">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        .product-info-price {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 18px 0 24px;
+            flex-wrap: wrap;
+        }
+        #detail-price {
+            font-size: 36px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+        #detail-price.discount-active {
+            color: #ffd969;
+            text-shadow: 0 0 24px rgba(255, 217, 105, 0.45);
+        }
+        #detail-old-price {
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.42);
+            text-decoration: line-through;
+            font-weight: 600;
+        }
+        .detail-promo-badge {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #ec4899 100%);
+            border: 1.5px solid rgba(255, 255, 255, 0.55);
+            color: #ffffff;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 22px rgba(192, 38, 211, 0.5), 0 0 14px rgba(124, 58, 237, 0.35);
+            animation: promoCirclePulse 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            line-height: 1.1;
+            text-align: center;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        .promo-circle-num {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            line-height: 1;
+        }
+        .promo-circle-text {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffd969;
+            text-transform: uppercase;
+            margin-top: 2px;
+            line-height: 1;
+        }
+        @keyframes promoCirclePulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(192, 38, 211, 0.45), 0 0 12px rgba(124, 58, 237, 0.35);
+            }
+            50% {
+                transform: scale(1.06);
+                box-shadow: 0 8px 26px rgba(192, 38, 211, 0.75), 0 0 18px rgba(236, 72, 153, 0.55);
+            }
+        }
+    </style>
 </head>
 <body class="dark-mode">
 
@@ -233,7 +302,7 @@
             // Rellenar datos
             const name = product.Nombre || product.nombre || product.Producto || 'Producto';
             const price = getProductPrice(product, detailCatalogMode);
-            const oldPrice = parseFloat(detailCatalogMode === 'wholesale' ? (product.PrecioMayoristaOriginal || 0) : (product.Precio_Anterior || 0));
+            const oldPrice = getProductDisplayOldPrice(product, detailCatalogMode, price);
             const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
             const cat = product.Categoria || product.categoria || '';
             const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
@@ -365,13 +434,23 @@
                 if (thumbsContainer) thumbsContainer.style.display = 'none';
             }
 
+            const promoBadgeEl = document.getElementById('detail-promo-badge');
+            const oldEl = document.getElementById('detail-old-price');
             if (detailShowsPrices && oldPrice > price) {
-                const oldEl = document.getElementById('detail-old-price');
-                oldEl.textContent = formatMoney(oldPrice);
-                oldEl.style.display = 'inline';
+                if (oldEl) {
+                    oldEl.textContent = formatMoney(oldPrice);
+                    oldEl.style.display = 'inline';
+                }
                 document.getElementById('detail-price').classList.add('discount-active');
+                if (promoBadgeEl) {
+                    const discountPercent = Math.round(((oldPrice - price) / oldPrice) * 100);
+                    promoBadgeEl.innerHTML = `<span class="promo-circle-num">-${discountPercent}%</span><span class="promo-circle-text">DCTO</span>`;
+                    promoBadgeEl.style.display = 'inline-flex';
+                }
             } else {
                 document.getElementById('detail-price').classList.remove('discount-active');
+                if (oldEl) oldEl.style.display = 'none';
+                if (promoBadgeEl) promoBadgeEl.style.display = 'none';
             }
 
             const detailCartBtn = document.getElementById('btn-add-to-cart-detail');

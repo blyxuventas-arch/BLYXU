@@ -652,9 +652,16 @@
                                             <label>Precio Mayorista</label>
                                             <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
                                         </div>
-                                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-                                            <input type="checkbox" id="prod-promocion" style="width:18px; height:18px; accent-color:var(--primary); cursor:pointer;">
-                                            <label for="prod-promocion" style="margin:0; cursor:pointer;">Aplica Promoción</label>
+                                        <div class="form-group">
+                                            <label style="color:#ffd969; font-weight:800; display:flex; align-items:center; gap:6px;">
+                                                <span>🔥</span> Promoción / Descuento
+                                            </label>
+                                            <select class="form-control" id="prod-promocion" name="Promocion" style="border:1.5px solid rgba(255,217,105,0.45); background:rgba(255,217,105,0.08); color:#ffd969; font-weight:800; border-radius:10px;">
+                                                <option value="FALSO" style="color:#fff; background:#180d2b;">❌ No aplica promoción</option>
+                                                <option value="Ambos" style="color:#ffd969; background:#180d2b;">⚡ Aplica a Ambos (Detal y Mayorista)</option>
+                                                <option value="Minorista" style="color:#ffd969; background:#180d2b;">🛍️ Solo Minorista (Detal)</option>
+                                                <option value="Mayorista" style="color:#ffd969; background:#180d2b;">📦 Solo Mayorista</option>
+                                            </select>
                                         </div>
                                         <div class="form-group admin-form-wide">
                                             <label>Características / Descripción</label>

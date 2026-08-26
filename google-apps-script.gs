@@ -96,6 +96,25 @@ const SHEETS = {
       'Valor',
       'Fecha Actualización'
     ]
+  },
+
+  PedidosChina: {
+    primary: 'ID Pedido',
+    headers: [
+      'ID Pedido',
+      'Fecha',
+      'Fábrica',
+      'TRM',
+      'Total USD',
+      'Total COP',
+      'Total Productos',
+      'Total Piezas',
+      'Productos JSON',
+      'Notas',
+      'Mostrar USD',
+      'Mostrar COP',
+      'Fecha Actualización'
+    ]
   }
 };
 
@@ -432,6 +451,12 @@ function appendRow_(sheetName, inputData) {
       ? Math.max(0, subtotal - abonado)
       : Math.max(0, toNumber_(rowObject['Saldo Pendiente']));
     rowObject['Ultimo Abono'] = Math.max(0, toNumber_(rowObject['Ultimo Abono']));
+  }
+
+  if (sheetName === 'PedidosChina') {
+    rowObject['ID Pedido'] = rowObject['ID Pedido'] || makeId_('CHN');
+    rowObject['Fecha'] = rowObject['Fecha'] || now;
+    rowObject['Fecha Actualización'] = now;
   }
 
   const row = headers.map(header => getObjectValueByHeader_(rowObject, header, ''));
@@ -853,6 +878,26 @@ function findHeader_(headers, key, sheetName) {
       clientetipo: 'Tipo Cliente',
       pago: 'Método Pago',
       entrega: 'Método Entrega'
+    },
+    PedidosChina: {
+      id: 'ID Pedido',
+      idpedido: 'ID Pedido',
+      idPedido: 'ID Pedido',
+      fecha: 'Fecha',
+      fabrica: 'Fábrica',
+      fábrica: 'Fábrica',
+      trm: 'TRM',
+      totalusd: 'Total USD',
+      totalcop: 'Total COP',
+      totalproductos: 'Total Productos',
+      totalpiezas: 'Total Piezas',
+      productos: 'Productos JSON',
+      items: 'Productos JSON',
+      notas: 'Notas',
+      showusd: 'Mostrar USD',
+      showcop: 'Mostrar COP',
+      mostrarusd: 'Mostrar USD',
+      mostrarcop: 'Mostrar COP'
     }
   };
 
@@ -972,7 +1017,11 @@ function sheetFromResource_(resource) {
     factura: 'Facturas',
     facturas: 'Facturas',
     configuracion: 'Configuracion',
-    config: 'Configuracion'
+    config: 'Configuracion',
+    pedidoschina: 'PedidosChina',
+    pedidochina: 'PedidosChina',
+    chinapedidos: 'PedidosChina',
+    china: 'PedidosChina'
   };
 
   return map[key] || null;
@@ -983,6 +1032,7 @@ function getStatusHeader_(sheetName) {
   if (sheetName === 'Pedidos') return 'Estado Pedido';
   if (sheetName === 'Clientes') return 'Estado Cliente';
   if (sheetName === 'Facturas') return 'Estado Factura';
+  if (sheetName === 'PedidosChina') return 'ID Pedido';
   throw new Error('Hoja no valida.');
 }
 

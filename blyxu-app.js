@@ -679,39 +679,63 @@ function cleanProductStyleValue(value) {
 }
 
 function normalizePromotionValue(value) {
-    if (typeof value === 'boolean') return value ? 'VERDADERO' : 'FALSO';
+    if (value === true) return 'Ambos';
+    if (value === false || value === null || value === undefined) return 'FALSO';
     const clean = String(value ?? '')
         .trim()
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
-    return ['verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa'].includes(clean) ? 'VERDADERO' : 'FALSO';
+
+    if (['ambos', 'todos', 'verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa', 'ambas'].includes(clean)) {
+        return 'Ambos';
+    }
+    if (['minorista', 'detal', 'retail', 'solo minorista', 'solo detal'].includes(clean)) {
+        return 'Minorista';
+    }
+    if (['mayorista', 'mayor', 'wholesale', 'solo mayorista', 'solo mayor'].includes(clean)) {
+        return 'Mayorista';
+    }
+    return 'FALSO';
 }
 
-function isProductPromotionEnabled(product) {
-    return normalizePromotionValue(getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, false)) === 'VERDADERO';
+function isProductPromotionEnabled(product, mode = activeCatalogMode) {
+    const promo = normalizePromotionValue(getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, false));
+    if (promo === 'FALSO') return false;
+    if (promo === 'Ambos') return true;
+    if (mode === 'wholesale' && promo === 'Mayorista') return true;
+    if ((mode === 'retail' || mode === 'detal') && promo === 'Minorista') return true;
+    return false;
 }
 
 function getPromotionDiscountPercent() {
     const promoTitle = getSiteConfigValue('Promo_Title', '');
     const match = String(promoTitle || '').match(/(\d+)%/);
-    if (!match) return 0;
+    if (match) {
+        const discountPercentage = parseInt(match[1], 10);
+        if (discountPercentage > 0 && discountPercentage < 100) return discountPercentage;
+    }
 
-    const discountPercentage = parseInt(match[1], 10);
-    return discountPercentage > 0 && discountPercentage < 100 ? discountPercentage : 0;
+    const promoDiscount = parseInt(getSiteConfigValue('Promo_Discount', ''), 10);
+    if (promoDiscount > 0 && promoDiscount < 100) return promoDiscount;
+
+    return 20;
 }
 
 function getProductDisplayOldPrice(product, mode = activeCatalogMode, currentPrice = 0) {
     const oldPrice = parseCatalogAmount(mode === 'wholesale'
-        ? (product?.PrecioMayoristaOriginal || 0)
+        ? (product?.PrecioMayoristaOriginal || product?.Precio_Mayorista_Original || product?.Precio_Anterior || product?.PrecioOriginal || 0)
         : (product?.Precio_Anterior || product?.PrecioOriginal || 0));
     return oldPrice > currentPrice ? oldPrice : 0;
 }
 
-function getProductPromotionBadgeMarkup(product) {
+function getProductPromotionBadgeMarkup(product, mode = activeCatalogMode) {
     const discountPercentage = getPromotionDiscountPercent();
-    if (!discountPercentage || !isProductPromotionEnabled(product)) return '';
-    return `<span class="product-card-badge badge-sale">-${discountPercentage}%</span>`;
+    if (!discountPercentage || !isProductPromotionEnabled(product, mode)) return '';
+    return `<div class="product-promo-circle badge-sale" title="-${discountPercentage}% de descuento">
+        <span class="promo-circle-num">-${discountPercentage}%</span>
+        <span class="promo-circle-text">DCTO</span>
+    </div>`;
 }
 
 function normalizeSearchText(value) {
@@ -869,32 +893,50 @@ function collapseCatalogProductsToRepresentatives(products, mode = activeCatalog
 }
 
 function applyPromotionsToProducts() {
-    const promoTitle = getSiteConfigValue('Promo_Title', '');
-    const match = promoTitle.match(/(\d+)%/);
-    if (!match) return; // Si no hay porcentaje en el título, no podemos aplicar descuento
-    
     const discountPercentage = getPromotionDiscountPercent();
     if (!discountPercentage) return;
     
     const factor = 1 - (discountPercentage / 100);
     
     allProducts.forEach(product => {
-        const isPromo = isProductPromotionEnabled(product);
-        if (isPromo) {
-            // Descuento en precio al detal
-            const retailPrice = parseCatalogAmount(product.PrecioOriginal || product.Precio);
-            if (retailPrice > 0) {
-                product.PrecioOriginal = retailPrice;
-                product.Precio = Math.round(retailPrice * factor);
-                if (!product.Precio_Anterior) product.Precio_Anterior = product.PrecioOriginal;
+        const promoVal = normalizePromotionValue(getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, false));
+        if (promoVal === 'FALSO') return;
+
+        const appliesRetail = promoVal === 'Ambos' || promoVal === 'Minorista';
+        const appliesWholesale = promoVal === 'Ambos' || promoVal === 'Mayorista';
+
+        // 1. Detal
+        const rawRetail = parseCatalogAmount(product.PrecioOriginal || product.Precio || product.precio);
+        if (rawRetail > 0) {
+            product.PrecioOriginal = rawRetail;
+            product.Precio_Anterior = rawRetail;
+            if (appliesRetail) {
+                product.Precio = Math.round(rawRetail * factor);
             }
-            
-            // Descuento en precio mayorista
-            const wholesaleKey = Object.keys(product).find(k => ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'].includes(k));
-            const wholesalePrice = wholesaleKey ? parseCatalogAmount(product.PrecioMayoristaOriginal || product[wholesaleKey]) : 0;
-            if (wholesaleKey && wholesalePrice > 0) {
-                product.PrecioMayoristaOriginal = wholesalePrice;
-                product[wholesaleKey] = Math.round(wholesalePrice * factor);
+        }
+        
+        // 2. Mayorista
+        const rawWholesale = parseCatalogAmount(
+            product.PrecioMayoristaOriginal || 
+            product.Precio_Mayorista || 
+            product['Precio Mayor'] || 
+            product['Precio Mayorista'] || 
+            product.precio_mayorista || 
+            rawRetail
+        );
+
+        if (rawWholesale > 0) {
+            product.PrecioMayoristaOriginal = rawWholesale;
+            product.Precio_Mayorista_Original = rawWholesale;
+            if (appliesWholesale) {
+                const discountedWholesale = Math.round(rawWholesale * factor);
+                product.Precio_Mayorista = discountedWholesale;
+                product['Precio Mayor'] = discountedWholesale;
+                product['Precio Mayorista'] = discountedWholesale;
+                product.precio_mayorista = discountedWholesale;
+                product.Mayorista = discountedWholesale;
+            } else {
+                product.Precio_Mayorista = rawWholesale;
             }
         }
     });
@@ -909,11 +951,13 @@ async function loadProducts(options = {}) {
     const usedConfigCache = useCache && Object.keys(siteConfig).length === 0 && hydrateSiteConfigFromCache();
     const configCacheIsFresh = usedConfigCache && isCacheFresh(SITE_CONFIG_CACHE_KEY, SITE_CONFIG_CACHE_TTL);
 
-    if (renderCatalog && usedProductCache) {
+    if (usedProductCache) {
         applyPromotionsToProducts();
-        renderBanners(bannerProducts);
-        renderInventorySpotlight();
-        renderCatalogProducts();
+        if (renderCatalog) {
+            renderBanners(bannerProducts);
+            renderInventorySpotlight();
+            renderCatalogProducts();
+        }
     }
 
     if (!productsLoadPromise && !productCacheIsFresh) {
@@ -1476,10 +1520,37 @@ function renderBanners(banners) {
 
         return `
         <div class="main-banner-slide ${i===0?'active':''}">
-            <img src="${normalizeImageUrl(b.Imagen || b.imagen || b.Foto || 'hero_necklace.png')}" alt="${escapeHtml(b.Nombre || b.nombre || 'Banner BLYXU')}" style="filter: brightness(0.6);" onerror="this.src='hero_necklace.png'">
+            <img src="${normalizeImageUrl(b.Imagen || b.imagen || b.Foto || 'hero_necklace.png')}" alt="Banner BLYXU" style="filter: brightness(0.55);" onerror="this.src='hero_necklace.png'">
             <div class="main-banner-overlay"></div>
             <div class="main-banner-content">
-                <h1 class="main-banner-title">${escapeHtml(b.Nombre || b.nombre || '')}</h1>
+                <h1 class="main-banner-title">
+                    <svg class="blyxu-svg-title" viewBox="0 0 226 100" xmlns="http://www.w3.org/2000/svg" aria-label="BLYXU">
+                        <defs>
+                            <linearGradient id="blyxuG${i}" x1="0" y1="0" x2="226" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#ffffff"/>
+                                <stop offset="40%" stop-color="#c4b5fd"/>
+                                <stop offset="100%" stop-color="#7c3aed"/>
+                            </linearGradient>
+                        </defs>
+                        <g class="blyxu-letter-g g1">
+                            <path class="blyxu-line" stroke="url(#blyxuG${i})" d="M 8,86 L 8,14 Q 44,14 44,32 Q 44,50 8,50 Q 46,50 46,68 Q 46,86 8,86"/>
+                        </g>
+                        <g class="blyxu-letter-g g2">
+                            <polyline class="blyxu-line" stroke="url(#blyxuG${i})" points="54,14 54,86 82,86"/>
+                        </g>
+                        <g class="blyxu-letter-g g3">
+                            <polyline class="blyxu-line" stroke="url(#blyxuG${i})" points="90,14 106,52 106,86"/>
+                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="122" y1="14" x2="106" y2="52"/>
+                        </g>
+                        <g class="blyxu-letter-g g4">
+                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="130" y1="14" x2="166" y2="86"/>
+                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="166" y1="14" x2="130" y2="86"/>
+                        </g>
+                        <g class="blyxu-letter-g g5">
+                            <path class="blyxu-line" stroke="url(#blyxuG${i})" d="M 174,14 L 174,68 Q 174,86 193,86 Q 212,86 212,68 L 212,14"/>
+                        </g>
+                    </svg>
+                </h1>
                 ${descHtml}
                 <div class="main-banner-actions">
                     <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
@@ -1549,16 +1620,25 @@ function getCatalogScope(product) {
 function getCurrentCatalogProducts() {
     if (activeCatalogMode === 'wholesale') {
         return allProducts.filter(p => {
+            const category = String(p.Categoria || p.categoria || '').toUpperCase();
+            if (category === 'BANNER') return false;
+            if (!isActiveProduct(p)) return false;
+
             const scope = getCatalogScope(p);
-            const hasWholesaleScope = scope && (scope.includes('mayorista') || scope.includes('ambos') || scope.includes('wholesale'));
-            const wholesalePrice = getProductField(p, ['Precio_Mayorista', 'Precio Mayor', 'Precio Mayorista', 'precio_mayorista', 'PrecioMayorista', 'Mayorista'], '');
-            return hasWholesaleScope || parseFloat(wholesalePrice) > 0;
+            const isRetailOnly = scope.includes('solo minorista') || (scope.includes('minorista') && !scope.includes('mayorista') && !scope.includes('ambos') && !scope.includes('todos'));
+            if (isRetailOnly) return false;
+
+            return true;
         });
     }
 
     return allProducts.filter(p => {
+        const category = String(p.Categoria || p.categoria || '').toUpperCase();
+        if (category === 'BANNER') return false;
+        if (!isActiveProduct(p)) return false;
+
         const scope = getCatalogScope(p);
-        const isWholesaleOnly = scope.includes('mayorista') && !scope.includes('minorista') && !scope.includes('ambos');
+        const isWholesaleOnly = scope.includes('solo mayorista') || (scope.includes('mayorista') && !scope.includes('minorista') && !scope.includes('ambos') && !scope.includes('todos'));
         return !isWholesaleOnly;
     });
 }
@@ -2003,10 +2083,9 @@ function getVariantSummary(product) {
     return Array.from(new Set(parts)).join(' / ');
 }
 
-// -- RENDER PRODUCTS --
 function renderProducts(products, options = {}) {
     const {
-        featuredFirst = !document.getElementById('product-detail'),
+        featuredFirst = false,
         mode = activeCatalogMode,
         gridId = 'products-grid',
         filter = activeFilter,
@@ -2075,7 +2154,7 @@ function renderProducts(products, options = {}) {
                 ${img ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
-                ${getProductPromotionBadgeMarkup(p)}
+                ${getProductPromotionBadgeMarkup(p, mode)}
                 ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${showPrices ? 'Agregar al carrito' : 'Agregar a consulta general'}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
@@ -3094,11 +3173,16 @@ function initWholesaleAccess() {
         }
     });
 
+    try {
+        localStorage.removeItem('blyxu_wholesale_access');
+    } catch (e) {}
+
+    function hasWholesaleAuth() {
+        return sessionStorage.getItem('blyxu_wholesale_access') === '1';
+    }
+
     triggers.forEach(t => {
         t.addEventListener('click', (e) => {
-            if (sessionStorage.getItem('blyxu_wholesale_access') === '1') {
-                return;
-            }
             e.preventDefault();
             openWholesale(e);
         });
@@ -3141,22 +3225,28 @@ function initWholesaleAccess() {
             sessionStorage.setItem('blyxu_wholesale_access', '1');
             sessionStorage.setItem('blyxu_just_logged_in', '1');
 
-            const loader = document.getElementById('brand-loader');
-            if (loader) {
-                loader.classList.remove('open');
-                void loader.offsetWidth;
-                loader.classList.add('open');
-                loader.setAttribute('aria-hidden', 'false');
-            }
+            if (window.location.pathname.includes('mayorista.html')) {
+                if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
+                loadProducts({ renderCatalog: true });
+            } else {
+                const loader = document.getElementById('brand-loader');
+                if (loader) {
+                    loader.classList.remove('open');
+                    void loader.offsetWidth;
+                    loader.classList.add('open');
+                    loader.setAttribute('aria-hidden', 'false');
+                }
 
-            setTimeout(() => {
-                window.location.href = 'mayorista.html';
-            }, 800);
+                setTimeout(() => {
+                    window.location.href = 'mayorista.html';
+                }, 400);
+            }
         });
     }
 
-    if (window.location.hash === '#mayorista' && sessionStorage.getItem('blyxu_wholesale_access') !== '1') {
-        setTimeout(() => openWholesale(), 150);
+    const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
+    if ((isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') !== '1') || window.location.hash === '#mayorista') {
+        setTimeout(() => openWholesale(), 50);
     }
 }
 
@@ -3599,9 +3689,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     
-    if (isWholesalePage && sessionStorage.getItem('blyxu_wholesale_access') !== '1') {
-        window.location.replace('index.html#mayorista');
-        return;
+    const hasWholesaleAccess = localStorage.getItem('blyxu_wholesale_access') === '1' || sessionStorage.getItem('blyxu_wholesale_access') === '1';
+    
+    if (isWholesalePage && !hasWholesaleAccess) {
+        const overlay = document.getElementById('wholesale-overlay');
+        if (overlay && typeof window.openWholesaleOverlay === 'function') {
+            window.openWholesaleOverlay();
+        } else {
+            window.location.replace('index.html#mayorista');
+            return;
+        }
     }
 
     renderFloatingWhatsApp();
@@ -3609,23 +3706,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') === '1') {
         sessionStorage.removeItem('blyxu_just_logged_in');
         
-        // Mantener el loader abierto desde el HTML (si no lo estaba, lo abrimos)
         const loader = document.getElementById('brand-loader');
-        if(loader) {
+        if (loader) {
             loader.classList.add('open');
             loader.setAttribute('aria-hidden', 'false');
             
-            // Simular el final de la carga y cerrar
             setTimeout(() => {
                 loader.classList.remove('open');
                 loader.setAttribute('aria-hidden', 'true');
-                launchWholesaleConfetti();
-            }, 800);
+                if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
+            }, 600);
         } else {
-            launchWholesaleConfetti();
+            if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
-    } else if (isWholesalePage) {
-        // Si simplemente recargó la página, ocultar el loader inmediatamente si estuviera abierto
+    } else {
         const loader = document.getElementById('brand-loader');
         if (loader) {
             loader.classList.remove('open');

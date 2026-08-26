@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bebas+Neue&family=Barlow+Condensed:wght@700;800;900&display=swap');
 
 :root {
     --bg-dark: #0a0514;
@@ -426,6 +426,7 @@ body {
     overflow: hidden;
     display: flex;
     align-items: center;
+    justify-content: center;
     padding: 0 8%;
 }
 
@@ -447,27 +448,86 @@ body {
 }
 
 .main-banner-content {
-    max-width: 600px;
+    width: 100%;
+    max-width: 100%;
     z-index: 2;
     opacity: 0;
     transition: opacity 0.8s 0.4s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .main-banner-slide.active .main-banner-content {
     opacity: 1;
 }
 
+/* ====== BLYXU HERO TITLE — MONOLINE SVG PATHS ====== */
+
 .main-banner-title {
-    font-size: clamp(40px, 6vw, 80px);
-    font-weight: 900;
+    margin-bottom: 36px;
     line-height: 1;
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, #fff, var(--secondary));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-transform: uppercase;
-    letter-spacing: -2px;
+    display: block;
+    text-align: center;
+    width: 100%;
+}
+
+.blyxu-svg-title {
+    display: block;
+    width: 100%;
+    max-width: clamp(180px, 36vw, 400px);
+    height: auto;
+    overflow: visible;
+    margin: 0 auto;
+    filter:
+        drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))
+        drop-shadow(0 0 32px rgba(109, 40, 217, 0.35));
+    animation: blyxuSvgGlow 4s ease-in-out infinite;
+}
+
+/* Cada trazo individual */
+.blyxu-line {
+    fill: none;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+    animation: blyxuDrawStroke 3.2s ease-in-out infinite;
+}
+
+/*
+  Replica draw: ['0 0', '0 1', '1 1'] de AnimeJS
+  0%→35%  : se DIBUJA  (dashoffset 500 → 0)
+  35%→62% : hold visible
+  62%→100%: se BORRA  (dashoffset 0 → -500)
+*/
+@keyframes blyxuDrawStroke {
+    0%   { stroke-dashoffset:  500; }
+    35%  { stroke-dashoffset:    0; }
+    62%  { stroke-dashoffset:    0; }
+    100% { stroke-dashoffset: -500; }
+}
+
+/* Stagger por grupo de letra */
+.blyxu-letter-g.g1 .blyxu-line { animation-delay:   0ms; }
+.blyxu-letter-g.g2 .blyxu-line { animation-delay: 130ms; }
+.blyxu-letter-g.g3 .blyxu-line { animation-delay: 260ms; }
+.blyxu-letter-g.g4 .blyxu-line { animation-delay: 390ms; }
+.blyxu-letter-g.g5 .blyxu-line { animation-delay: 520ms; }
+
+@keyframes blyxuSvgGlow {
+    0%, 100% {
+        filter:
+            drop-shadow(0 0 10px rgba(139, 92, 246, 0.6))
+            drop-shadow(0 0 32px rgba(109, 40, 217, 0.35));
+    }
+    50% {
+        filter:
+            drop-shadow(0 0 20px rgba(167, 139, 250, 0.95))
+            drop-shadow(0 0 52px rgba(139, 92, 246, 0.6));
+    }
 }
 
 .main-banner-desc {
@@ -490,11 +550,7 @@ body {
 
 @media (min-width: 769px) {
     .main-banner-actions {
-        position: absolute;
-        left: 8%;
-        bottom: clamp(72px, 10vh, 112px);
-        z-index: 3;
-        width: min(620px, 84vw);
+        justify-content: center;
         margin-top: 0;
     }
 
@@ -2007,30 +2063,10 @@ body {
     opacity: .62;
 }
 
-/* Featured card (first big one) */
+/* Product card uniform grid sizing */
 .product-card.featured {
-    grid-column: span 2;
-    grid-row: span 2;
-}
-
-.product-card.featured .product-card-img {
-    aspect-ratio: auto;
-    height: 100%;
-    min-height: 500px;
-}
-
-.product-card.featured .product-card-info {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 30px;
-    background: linear-gradient(transparent, rgba(10, 5, 20, .9));
-}
-
-.product-card.featured .product-card-name {
-    font-size: 20px;
-    font-weight: 800;
+    grid-column: span 1;
+    grid-row: span 1;
 }
 
 /* ===== LOADING ===== */
@@ -3242,9 +3278,33 @@ body {
 }
 
 .wholesale-logo,
-.wholesale-panel h2,
-.wholesale-close {
+.wholesale-panel h2 {
     display: none;
+}
+
+.wholesale-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(244, 196, 65, 0.25);
+    background: rgba(255, 255, 255, 0.05);
+    color: #f4c441;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.wholesale-close:hover {
+    background: rgba(244, 196, 65, 0.15);
+    transform: scale(1.1);
+    color: #ffffff;
 }
 
 .wholesale-panel::before {
@@ -3264,6 +3324,8 @@ body {
     font-size: 10px;
     letter-spacing: 5px;
     margin-bottom: 24px;
+    font-weight: 800;
+    text-transform: uppercase;
 }
 
 .wholesale-form input {
@@ -5914,4 +5976,81 @@ textarea {
 
 .cart-highlight-active {
     animation: cartHighlight 0.9s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+/* ===== PROMOTIONAL CIRCLE BADGE (CYBER-LUXURY) ===== */
+.product-promo-circle,
+.product-card-badge.badge-sale {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 6;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #ec4899 100%);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(192, 38, 211, 0.45), 0 0 12px rgba(124, 58, 237, 0.35);
+    animation: promoCirclePulse 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+    line-height: 1.1;
+    text-align: center;
+    backdrop-filter: blur(4px);
+}
+
+.promo-circle-num {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.promo-circle-text {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #ffd969;
+    text-transform: uppercase;
+    margin-top: 1px;
+    line-height: 1;
+}
+
+@keyframes promoCirclePulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 6px 20px rgba(192, 38, 211, 0.45), 0 0 12px rgba(124, 58, 237, 0.35);
+    }
+    50% {
+        transform: scale(1.06);
+        box-shadow: 0 8px 26px rgba(192, 38, 211, 0.75), 0 0 18px rgba(236, 72, 153, 0.55);
+    }
+}
+
+.product-card-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.product-card-price.discount-active {
+    color: #ffd969 !important;
+    text-shadow: 0 0 16px rgba(255, 217, 105, 0.4);
+}
+
+.product-card-price .old {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.45) !important;
+    text-decoration: line-through;
+    font-weight: 600;
 }

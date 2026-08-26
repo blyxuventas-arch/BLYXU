@@ -29,6 +29,15 @@ const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_MAX_EDGE = 1800;
 const IMAGE_UPLOAD_QUALITY = 0.82;
+
+function clearPublicProductsCache() {
+    try {
+        localStorage.removeItem(PUBLIC_PRODUCTS_CACHE_KEY);
+        localStorage.removeItem(SITE_CONFIG_CACHE_KEY);
+    } catch (e) {
+        console.warn('No se pudo limpiar caché pública:', e);
+    }
+}
 let siteConfigPromise = null;
 let inventoryRenderedRows = 0;
 let inventoryRenderToken = 0;
@@ -60,10 +69,15 @@ function getAdminPromotionDiscountPercent() {
     const titleInput = document.getElementById('promo-config-title');
     const promoTitle = titleInput?.value?.trim() || readAdminCachedSiteConfigValue('Promo_Title', '');
     const match = String(promoTitle || '').match(/(\d+)%/);
-    if (!match) return 0;
+    if (match) {
+        const percent = parseInt(match[1], 10);
+        if (percent > 0 && percent < 100) return percent;
+    }
 
-    const percent = parseInt(match[1], 10);
-    return percent > 0 && percent < 100 ? percent : 0;
+    const promoDiscount = parseInt(readAdminCachedSiteConfigValue('Promo_Discount', ''), 10);
+    if (promoDiscount > 0 && promoDiscount < 100) return promoDiscount;
+
+    return 20;
 }
 
 function updateLivePreview() {
@@ -101,26 +115,30 @@ function updateLivePreview() {
     const parsedPrecio = parseAmount(precio);
     const parsedMayorista = parseAmount(precioMayorista);
 
-    const promoCheck = document.getElementById('prod-promocion');
-    const discountPercent = promoCheck?.checked ? getAdminPromotionDiscountPercent() : 0;
+    const promoSelect = document.getElementById('prod-promocion');
+    const promoScope = normalizePromotionValue(promoSelect?.value || 'FALSO');
+    const discountPercent = promoScope !== 'FALSO' ? getAdminPromotionDiscountPercent() : 0;
     const discountFactor = discountPercent ? 1 - (discountPercent / 100) : 1;
+
+    const retailApplies = discountPercent > 0 && (promoScope === 'Ambos' || promoScope === 'Minorista');
+    const wholesaleApplies = discountPercent > 0 && (promoScope === 'Ambos' || promoScope === 'Mayorista');
 
     let priceHtml = '';
     if (parsedPrecio > 0) {
-        if (discountPercent) {
+        if (retailApplies) {
             const promoPrice = Math.round(parsedPrecio * discountFactor);
             priceHtml = `<span style="color:#ffd969; text-shadow:0 0 12px rgba(255,217,105,.35);">${formatAdminMoney(promoPrice)}</span> <span style="font-size:12px; color:rgba(255,255,255,.38); text-decoration:line-through; margin-left:6px;">${formatAdminMoney(parsedPrecio)}</span> <span style="font-size:10px; color:#ffd969; border:1px solid rgba(255,217,105,.28); border-radius:4px; padding:2px 5px; margin-left:6px;">-${discountPercent}%</span>`;
         } else {
             priceHtml = formatAdminMoney(parsedPrecio);
         }
         if (parsedMayorista > 0) {
-            const wholesaleText = discountPercent
-                ? `${formatAdminMoney(Math.round(parsedMayorista * discountFactor))} <span style="text-decoration:line-through; color:rgba(255,255,255,.35); margin-left:4px;">${formatAdminMoney(parsedMayorista)}</span>`
+            const wholesaleText = wholesaleApplies
+                ? `${formatAdminMoney(Math.round(parsedMayorista * discountFactor))} <span style="text-decoration:line-through; color:rgba(255,255,255,.35); margin-left:4px;">${formatAdminMoney(parsedMayorista)}</span> <span style="color:#ffd969; font-size:10px;">-${discountPercent}%</span>`
                 : formatAdminMoney(parsedMayorista);
             priceHtml += ` <span style="font-size:11px; font-weight:600; color:var(--text-muted); margin-left:8px; border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: ${wholesaleText}</span>`;
         }
     } else if (parsedMayorista > 0) {
-        if (discountPercent) {
+        if (wholesaleApplies) {
             const promoWholesale = Math.round(parsedMayorista * discountFactor);
             priceHtml = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); border: 1px solid rgba(255,255,255,0.1); padding: 2px 6px; border-radius:4px;">Por mayor: <span style="color:#ffd969;">${formatAdminMoney(promoWholesale)}</span> <span style="text-decoration:line-through; color:rgba(255,255,255,.35); margin-left:4px;">${formatAdminMoney(parsedMayorista)}</span> <span style="color:#ffd969; margin-left:4px;">-${discountPercent}%</span></span>`;
         } else {
@@ -658,10 +676,10 @@ function normalizeProductPayloadForSubmit(data) {
     const cantidad = payload.Cantidad ?? payload.Stock ?? payload.stock ?? payload['Stock Inicial'] ?? '';
     const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
     const categoria = getProductField(payload, PRODUCT_CATEGORY_FIELD_KEYS, getInputValue('prod-categoria'));
-    const promoCheck = document.getElementById('prod-promocion');
-    const promocion = promoCheck
-        ? (promoCheck.checked ? 'VERDADERO' : 'FALSO')
-        : getProductPromotionValue(payload, false);
+    const promoSelect = document.getElementById('prod-promocion');
+    const promocion = promoSelect
+        ? promoSelect.value
+        : getProductPromotionValue(payload, 'FALSO');
 
     payload['ID Producto'] = idProducto;
     payload['ID Producto Madre'] = idProducto;
@@ -696,16 +714,27 @@ function setProductCategoryAliases(payload, categoria) {
 }
 
 function normalizePromotionValue(value) {
-    if (typeof value === 'boolean') return value ? 'VERDADERO' : 'FALSO';
+    if (value === true) return 'Ambos';
+    if (value === false || value === null || value === undefined) return 'FALSO';
     const clean = String(value ?? '')
         .trim()
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
-    return ['verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa'].includes(clean) ? 'VERDADERO' : 'FALSO';
+
+    if (['ambos', 'todos', 'verdadero', 'true', 'si', 's', '1', 'yes', 'activo', 'activa', 'ambas'].includes(clean)) {
+        return 'Ambos';
+    }
+    if (['minorista', 'detal', 'retail', 'solo minorista', 'solo detal'].includes(clean)) {
+        return 'Minorista';
+    }
+    if (['mayorista', 'mayor', 'wholesale', 'solo mayorista', 'solo mayor'].includes(clean)) {
+        return 'Mayorista';
+    }
+    return 'FALSO';
 }
 
-function getProductPromotionValue(product, fallback = false) {
+function getProductPromotionValue(product, fallback = 'FALSO') {
     const rawValue = getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, fallback);
     return normalizePromotionValue(rawValue);
 }
@@ -992,8 +1021,8 @@ function resetProductForm() {
     if (variationPanel) variationPanel.style.display = 'none';
     const variationFields = document.getElementById('variation-generator-fields');
     if (variationFields) variationFields.style.display = 'none';
-    const promoCheck = document.getElementById('prod-promocion');
-    if (promoCheck) promoCheck.checked = false;
+    const promoSelect = document.getElementById('prod-promocion');
+    if (promoSelect) promoSelect.value = 'FALSO';
     setProductFormMode(false);
     updateLivePreview();
     var badge = document.getElementById('variant-editing-badge');
@@ -3444,9 +3473,9 @@ function editarProducto(index) {
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
     setInputValue('prod-estilo', cleanProductStyleValue(p.Estilo || ''));
     
-    var isPromo = getProductPromotionValue(p, false) === 'VERDADERO';
-    var promoCheck = document.getElementById('prod-promocion');
-    if (promoCheck) promoCheck.checked = isPromo;
+    var promoScope = getProductPromotionValue(p, 'FALSO');
+    var promoSelect = document.getElementById('prod-promocion');
+    if (promoSelect) promoSelect.value = promoScope;
 
     setInputValue('prod-galeria', p.Galeria || p['Galeria JSON'] || '');
     setInputValue('prod-sku', p.SKU || '');
@@ -3788,6 +3817,9 @@ function switchDashboardView(viewId, title) {
     if (viewId === 'orders') {
         cargarPedidos();
     }
+    if (viewId === 'china-orders') {
+        fetchChinaOrdersFromServer();
+    }
 }
 
 // === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
@@ -4036,6 +4068,70 @@ function makeChinaOrderRecord(draft = collectChinaOrderDraft(), existing = null)
     };
 }
 
+async function uploadChinaImageToDrive(dataUrl) {
+    if (!dataUrl || !dataUrl.startsWith('data:image/')) return dataUrl;
+    try {
+        const parts = dataUrl.split(',');
+        const mimeMatch = parts[0].match(/:(.*?);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const base64Data = parts[1];
+        const fileName = 'china_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.jpg';
+        
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'uploadimage',
+                mimeType,
+                fileName,
+                base64Data
+            })
+        });
+        const json = await res.json();
+        if (json && json.ok && json.url) {
+            return json.url;
+        }
+    } catch (e) {
+        console.warn('Error subiendo imagen de China a Drive:', e);
+    }
+    return dataUrl;
+}
+
+async function fetchChinaOrdersFromServer() {
+    try {
+        const res = await fetch(`${GOOGLE_SHEET_API}?resource=pedidoschina&t=${Date.now()}`);
+        const result = await res.json();
+        if (result && (result.ok || result.status === 'success') && Array.isArray(result.data)) {
+            const mapped = result.data.map(row => {
+                let rows = row['Productos JSON'] || row.productos || [];
+                if (typeof rows === 'string') {
+                    try { rows = JSON.parse(rows); } catch (e) { rows = []; }
+                }
+                return {
+                    id: row['ID Pedido'] || row.id || '',
+                    createdAt: row['Fecha'] || row.createdAt || new Date().toISOString(),
+                    updatedAt: row['Fecha Actualización'] || row['Fecha'] || new Date().toISOString(),
+                    factory: row['Fábrica'] || row.fabrica || '',
+                    rate: row['TRM'] || '4000',
+                    notes: row['Notas'] || '',
+                    showUsd: String(row['Mostrar USD'] || '').toLowerCase() !== 'falso',
+                    showCop: String(row['Mostrar COP'] || '').toLowerCase() !== 'falso',
+                    rows: Array.isArray(rows) ? rows : [],
+                    totalUsd: Number(row['Total USD']) || 0,
+                    totalCop: Number(row['Total COP']) || 0,
+                    totalQuantity: Number(row['Total Piezas']) || 0
+                };
+            });
+            savedChinaOrdersCache = mapped;
+            await writeSavedChinaOrders(mapped);
+            renderSavedChinaOrders();
+            return mapped;
+        }
+    } catch (err) {
+        console.warn('Error cargando pedidos a China desde la nube:', err);
+    }
+    return savedChinaOrdersCache;
+}
+
 async function saveCurrentChinaOrder(options = {}) {
     const draft = collectChinaOrderDraft();
     const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
@@ -4048,7 +4144,14 @@ async function saveCurrentChinaOrder(options = {}) {
     const previousButtonText = saveButton ? saveButton.textContent : '';
     if (saveButton && !options.silent) {
         saveButton.disabled = true;
-        saveButton.textContent = 'Guardando...';
+        saveButton.textContent = 'Guardando en la nube...';
+    }
+
+    // Subir fotos locales a Drive para no saturar las celdas de Sheets
+    for (let i = 0; i < draft.rows.length; i++) {
+        if (draft.rows[i].image && draft.rows[i].image.startsWith('data:image/')) {
+            draft.rows[i].image = await uploadChinaImageToDrive(draft.rows[i].image);
+        }
     }
 
     const saved = getSavedChinaOrders().slice();
@@ -4063,10 +4166,39 @@ async function saveCurrentChinaOrder(options = {}) {
 
     activeChinaOrderId = record.id;
     try {
+        // 1. Guardar en Google Sheets (Nube)
+        try {
+            await fetch(GOOGLE_SHEET_API, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: existingIndex >= 0 ? 'actualizar' : 'crear',
+                    resource: 'pedidoschina',
+                    id: record.id,
+                    data: {
+                        'ID Pedido': record.id,
+                        'Fecha': record.createdAt,
+                        'Fábrica': record.factory,
+                        'TRM': record.rate,
+                        'Total USD': record.totalUsd,
+                        'Total COP': record.totalCop,
+                        'Total Productos': record.rows.length,
+                        'Total Piezas': record.totalQuantity,
+                        'Productos JSON': record.rows,
+                        'Notas': record.notes,
+                        'Mostrar USD': record.showUsd ? 'VERDADERO' : 'FALSO',
+                        'Mostrar COP': record.showCop ? 'VERDADERO' : 'FALSO'
+                    }
+                })
+            });
+        } catch (serverErr) {
+            console.warn('Error guardando en Google Sheets:', serverErr);
+        }
+
+        // 2. Guardar en almacenamiento local/caché
         if (!await writeSavedChinaOrders(saved)) return null;
         renderSavedChinaOrders();
         await saveChinaOrderDraft({ immediate: true });
-        if (!options.silent) showToast(`Pedido a China guardado completo (${record.rows.length} producto(s))`, 'success');
+        if (!options.silent) showToast(`✅ Pedido guardado en la nube (${record.rows.length} producto(s))`, 'success');
         return record;
     } finally {
         if (saveButton && !options.silent) {
@@ -4114,11 +4246,32 @@ async function loadSavedChinaOrder(id) {
 }
 
 async function deleteSavedChinaOrder(id) {
-    const next = getSavedChinaOrders().filter(item => item.id !== id);
-    await writeSavedChinaOrders(next);
-    if (activeChinaOrderId === id) activeChinaOrderId = '';
-    renderSavedChinaOrders();
-    showToast('Pedido eliminado', 'success');
+    showModal(
+        'Eliminar Pedido a China',
+        '¿Deseas eliminar permanentemente el pedido ' + id + ' de la base de datos?',
+        'Sí, eliminar',
+        async function () {
+            showToast('Eliminando pedido...');
+            try {
+                await fetch(GOOGLE_SHEET_API, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'eliminar',
+                        resource: 'pedidoschina',
+                        id: id
+                    })
+                });
+            } catch (err) {
+                console.warn('Error eliminando pedido en el servidor:', err);
+            }
+
+            const next = getSavedChinaOrders().filter(item => item.id !== id);
+            await writeSavedChinaOrders(next);
+            if (activeChinaOrderId === id) activeChinaOrderId = '';
+            renderSavedChinaOrders();
+            showToast('✅ Pedido eliminado', 'success');
+        }
+    );
 }
 
 function formatChinaOrderDate(value) {
@@ -4642,6 +4795,7 @@ async function initChinaOrdersBuilder() {
 
     renderSavedChinaOrders();
     calculateChinaOrderTotals();
+    fetchChinaOrdersFromServer();
 }
 
 window.pedidosList = [];

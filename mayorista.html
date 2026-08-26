@@ -147,7 +147,25 @@
         </div>
     </div>
 
-    <div class="brand-loader open" id="brand-loader" aria-hidden="false">
+    <!-- ===== WHOLESALE ACCESS OVERLAY ===== -->
+    <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
+        <canvas id="wholesale-particles" class="wholesale-particles-canvas"></canvas>
+        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
+            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">✕</button>
+            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
+            <div class="wholesale-kicker">Área Exclusiva</div>
+            <h2 id="wholesale-title">Mayoristas BLYXU</h2>
+            <form class="wholesale-form" id="wholesale-form">
+                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave de acceso" autocomplete="off"
+                    required>
+                <button type="submit">Desbloquear Catálogo Mayorista</button>
+            </form>
+            <button type="button" class="wholesale-back-home" id="wholesale-back-btn">← Volver al inicio</button>
+            <div class="wholesale-error" id="wholesale-error">Clave de acceso incorrecta</div>
+        </div>
+    </div>
+
+    <div class="brand-loader" id="brand-loader" aria-hidden="true">
         <div class="brand-loader-card">
             <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
             <span>BLYXU</span>
