@@ -113,6 +113,7 @@ const SHEETS = {
       'Notas',
       'Mostrar USD',
       'Mostrar COP',
+      'Mostrar Ref',
       'Fecha Actualización'
     ]
   }
@@ -131,8 +132,6 @@ function doPost(e) {
 
 function handleRequest_(e, method) {
   try {
-    ensureSheets_();
-
     const params = e.parameter || {};
     const body = parseBody_(e);
 
@@ -156,10 +155,13 @@ function handleRequest_(e, method) {
       const file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
+      const fileId = file.getId();
       return json_({
         ok: true,
         status: 'success',
-        url: 'https://drive.google.com/uc?export=view&id=' + file.getId()
+        url: 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000',
+        directUrl: 'https://lh3.googleusercontent.com/d/' + fileId,
+        id: fileId
       });
     }
 
@@ -705,7 +707,12 @@ function getSpreadsheet_() {
 }
 
 function getSheet_(sheetName) {
-  const sheet = getSpreadsheet_().getSheetByName(sheetName);
+  const ss = getSpreadsheet_();
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    ensureSheets_();
+    sheet = ss.getSheetByName(sheetName);
+  }
   if (!sheet) throw new Error('No existe la hoja: ' + sheetName);
   return sheet;
 }
@@ -896,8 +903,10 @@ function findHeader_(headers, key, sheetName) {
       notas: 'Notas',
       showusd: 'Mostrar USD',
       showcop: 'Mostrar COP',
+      showref: 'Mostrar Ref',
       mostrarusd: 'Mostrar USD',
-      mostrarcop: 'Mostrar COP'
+      mostrarcop: 'Mostrar COP',
+      mostrarref: 'Mostrar Ref'
     }
   };
 

@@ -3925,13 +3925,16 @@ function collectChinaOrderDraft() {
 
     const showUsdEl = document.getElementById('china-show-usd');
     const showCopEl = document.getElementById('china-show-cop');
+    const showRefEl = document.getElementById('china-show-ref');
 
     return {
+        id: activeChinaOrderId || '',
         factory: document.getElementById('china-order-factory')?.value || '',
         rate: document.getElementById('china-order-rate')?.value || '4000',
         notes: document.getElementById('china-order-notes')?.value || '',
         showUsd: showUsdEl ? showUsdEl.checked : true,
         showCop: showCopEl ? showCopEl.checked : true,
+        showRef: showRefEl ? showRefEl.checked : true,
         rows
     };
 }
@@ -4020,7 +4023,17 @@ async function migrateLegacyChinaOrdersToIndexedDb() {
 }
 
 async function writeSavedChinaOrders(list) {
-    const normalizedList = Array.isArray(list) ? list : [];
+    const rawList = Array.isArray(list) ? list : [];
+    const seen = new Set();
+    const normalizedList = [];
+    for (const item of rawList) {
+        const id = String(item?.id || '').trim();
+        if (id) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+        }
+        normalizedList.push(item);
+    }
     try {
         await writeChinaOrderStoreValue(CHINA_ORDER_SAVED_RECORD_KEY, normalizedList);
         savedChinaOrdersCache = normalizedList;
@@ -4052,20 +4065,46 @@ function makeChinaOrderId() {
 function makeChinaOrderRecord(draft = collectChinaOrderDraft(), existing = null) {
     const totals = getChinaOrderTotalsFromDraft(draft);
     const now = new Date().toISOString();
+    const orderId = existing?.id || draft?.id || activeChinaOrderId || makeChinaOrderId();
+    activeChinaOrderId = orderId;
     return {
-        id: existing?.id || activeChinaOrderId || makeChinaOrderId(),
-        createdAt: existing?.createdAt || now,
+        id: orderId,
+        createdAt: existing?.createdAt || draft?.createdAt || now,
         updatedAt: now,
         factory: draft.factory || '',
         rate: draft.rate || '4000',
         notes: draft.notes || '',
         showUsd: draft.showUsd !== false,
         showCop: draft.showCop !== false,
+        showRef: draft.showRef !== false,
         rows: Array.isArray(draft.rows) ? draft.rows : [],
         totalUsd: totals.totalUsd,
         totalCop: totals.totalCop,
         totalQuantity: totals.totalQuantity
     };
+}
+
+function formatChinaOrderImageUrl(url) {
+    if (!url) return '';
+    if (typeof url !== 'string') return '';
+    const raw = url.trim();
+    if (!raw) return '';
+    if (raw.startsWith('data:image/')) return raw;
+    if (raw.startsWith('blob:')) return raw;
+
+    const driveMatch = raw.match(/drive\.google\.com\/file\/d\/([^/?&#]+)/) ||
+                       raw.match(/drive\.google\.com\/uc\?(?:[^&]+&)*id=([^&#]+)/) ||
+                       raw.match(/drive\.google\.com\/open\?(?:[^&]+&)*id=([^&#]+)/) ||
+                       raw.match(/drive\.google\.com\/thumbnail\?(?:[^&]+&)*id=([^&#]+)/) ||
+                       raw.match(/lh3\.googleusercontent\.com\/d\/([^/?&#]+)/) ||
+                       raw.match(/[?&]id=([^&#]+)/);
+
+    if (driveMatch && driveMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w800`;
+    }
+
+    if (raw.startsWith('//')) return `https:${raw}`;
+    return raw;
 }
 
 async function uploadChinaImageToDrive(dataUrl) {
@@ -4077,6 +4116,9 @@ async function uploadChinaImageToDrive(dataUrl) {
         const base64Data = parts[1];
         const fileName = 'china_' + Date.now() + '_' + Math.floor(Math.random() * 1000) + '.jpg';
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 14000);
+
         const res = await fetch(GOOGLE_SHEET_API, {
             method: 'POST',
             body: JSON.stringify({
@@ -4084,11 +4126,13 @@ async function uploadChinaImageToDrive(dataUrl) {
                 mimeType,
                 fileName,
                 base64Data
-            })
+            }),
+            signal: controller.signal
         });
+        clearTimeout(timeoutId);
         const json = await res.json();
-        if (json && json.ok && json.url) {
-            return json.url;
+        if (json && (json.ok || json.status === 'success') && (json.url || json.directUrl)) {
+            return json.url || json.directUrl;
         }
     } catch (e) {
         console.warn('Error subiendo imagen de China a Drive:', e);
@@ -4101,13 +4145,19 @@ async function fetchChinaOrdersFromServer() {
         const res = await fetch(`${GOOGLE_SHEET_API}?resource=pedidoschina&t=${Date.now()}`);
         const result = await res.json();
         if (result && (result.ok || result.status === 'success') && Array.isArray(result.data)) {
-            const mapped = result.data.map(row => {
+            const seen = new Set();
+            const mapped = [];
+            for (const row of result.data) {
+                const id = String(row['ID Pedido'] || row.id || '').trim();
+                if (id && seen.has(id)) continue;
+                if (id) seen.add(id);
+
                 let rows = row['Productos JSON'] || row.productos || [];
                 if (typeof rows === 'string') {
                     try { rows = JSON.parse(rows); } catch (e) { rows = []; }
                 }
-                return {
-                    id: row['ID Pedido'] || row.id || '',
+                mapped.push({
+                    id: id || makeChinaOrderId(),
                     createdAt: row['Fecha'] || row.createdAt || new Date().toISOString(),
                     updatedAt: row['Fecha Actualización'] || row['Fecha'] || new Date().toISOString(),
                     factory: row['Fábrica'] || row.fabrica || '',
@@ -4115,12 +4165,13 @@ async function fetchChinaOrdersFromServer() {
                     notes: row['Notas'] || '',
                     showUsd: String(row['Mostrar USD'] || '').toLowerCase() !== 'falso',
                     showCop: String(row['Mostrar COP'] || '').toLowerCase() !== 'falso',
+                    showRef: String(row['Mostrar Ref'] || '').toLowerCase() !== 'falso' && row.showRef !== false,
                     rows: Array.isArray(rows) ? rows : [],
                     totalUsd: Number(row['Total USD']) || 0,
                     totalCop: Number(row['Total COP']) || 0,
                     totalQuantity: Number(row['Total Piezas']) || 0
-                };
-            });
+                });
+            }
             savedChinaOrdersCache = mapped;
             await writeSavedChinaOrders(mapped);
             renderSavedChinaOrders();
@@ -4136,7 +4187,7 @@ async function saveCurrentChinaOrder(options = {}) {
     const draft = collectChinaOrderDraft();
     const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
     if (!hasProduct) {
-        showToast('Agrega al menos un producto antes de guardar', 'warning');
+        if (!options.silent) showToast('Agrega al menos un producto antes de guardar', 'warning');
         return null;
     }
 
@@ -4144,29 +4195,55 @@ async function saveCurrentChinaOrder(options = {}) {
     const previousButtonText = saveButton ? saveButton.textContent : '';
     if (saveButton && !options.silent) {
         saveButton.disabled = true;
-        saveButton.textContent = 'Guardando en la nube...';
+        saveButton.textContent = 'Guardando pedido...';
     }
 
-    // Subir fotos locales a Drive para no saturar las celdas de Sheets
-    for (let i = 0; i < draft.rows.length; i++) {
-        if (draft.rows[i].image && draft.rows[i].image.startsWith('data:image/')) {
-            draft.rows[i].image = await uploadChinaImageToDrive(draft.rows[i].image);
-        }
-    }
-
+    // 1. Guardar primero en almacenamiento local / borrador para respuesta y seguridad inmediata
+    const currentId = activeChinaOrderId || draft.id;
     const saved = getSavedChinaOrders().slice();
-    const existingIndex = activeChinaOrderId
-        ? saved.findIndex(order => order.id === activeChinaOrderId)
+    const existingIndex = currentId
+        ? saved.findIndex(order => String(order.id).trim() === String(currentId).trim())
         : -1;
     const existing = existingIndex >= 0 ? saved[existingIndex] : null;
     const record = makeChinaOrderRecord(draft, existing);
 
+    activeChinaOrderId = record.id;
     if (existingIndex >= 0) saved[existingIndex] = record;
     else saved.unshift(record);
 
-    activeChinaOrderId = record.id;
+    await writeSavedChinaOrders(saved);
+    renderSavedChinaOrders();
+    await saveChinaOrderDraft({ immediate: true });
+
+    // 2. Subir fotos locales a Drive en PARALELO para máxima velocidad
+    const domRows = getChinaOrderRows();
+    const imagesToUpload = [];
+    draft.rows.forEach((item, idx) => {
+        if (item.image && item.image.startsWith('data:image/')) {
+            imagesToUpload.push({ index: idx, dataUrl: item.image });
+        }
+    });
+
+    if (imagesToUpload.length > 0) {
+        if (saveButton && !options.silent) {
+            saveButton.textContent = `Subiendo ${imagesToUpload.length} foto(s)...`;
+        }
+        await Promise.all(imagesToUpload.map(async entry => {
+            const uploadedUrl = await uploadChinaImageToDrive(entry.dataUrl);
+            draft.rows[entry.index].image = uploadedUrl;
+            record.rows[entry.index].image = uploadedUrl;
+            if (domRows[entry.index]) {
+                domRows[entry.index].dataset.image = uploadedUrl;
+            }
+        }));
+        await writeSavedChinaOrders(saved);
+    }
+
     try {
-        // 1. Guardar en Google Sheets (Nube)
+        // 3. Sincronizar con Google Sheets (Nube)
+        if (saveButton && !options.silent) {
+            saveButton.textContent = 'Sincronizando en la nube...';
+        }
         try {
             await fetch(GOOGLE_SHEET_API, {
                 method: 'POST',
@@ -4183,10 +4260,11 @@ async function saveCurrentChinaOrder(options = {}) {
                         'Total COP': record.totalCop,
                         'Total Productos': record.rows.length,
                         'Total Piezas': record.totalQuantity,
-                        'Productos JSON': record.rows,
+                        'Productos JSON': JSON.stringify(record.rows),
                         'Notas': record.notes,
                         'Mostrar USD': record.showUsd ? 'VERDADERO' : 'FALSO',
-                        'Mostrar COP': record.showCop ? 'VERDADERO' : 'FALSO'
+                        'Mostrar COP': record.showCop ? 'VERDADERO' : 'FALSO',
+                        'Mostrar Ref': record.showRef ? 'VERDADERO' : 'FALSO'
                     }
                 })
             });
@@ -4194,10 +4272,6 @@ async function saveCurrentChinaOrder(options = {}) {
             console.warn('Error guardando en Google Sheets:', serverErr);
         }
 
-        // 2. Guardar en almacenamiento local/caché
-        if (!await writeSavedChinaOrders(saved)) return null;
-        renderSavedChinaOrders();
-        await saveChinaOrderDraft({ immediate: true });
         if (!options.silent) showToast(`✅ Pedido guardado en la nube (${record.rows.length} producto(s))`, 'success');
         return record;
     } finally {
@@ -4215,17 +4289,28 @@ function hydrateChinaOrderForm(orderOrDraft) {
     const notes = document.getElementById('china-order-notes');
     const showUsdEl = document.getElementById('china-show-usd');
     const showCopEl = document.getElementById('china-show-cop');
+    const showRefEl = document.getElementById('china-show-ref');
     if (!tbody) return;
+
+    if (orderOrDraft?.id || orderOrDraft?.['ID Pedido']) {
+        activeChinaOrderId = String(orderOrDraft.id || orderOrDraft['ID Pedido']).trim();
+    }
 
     isHydratingChinaOrder = true;
     try {
         tbody.innerHTML = '';
-        if (factory) factory.value = orderOrDraft?.factory || '';
-        if (rate) rate.value = orderOrDraft?.rate || '4000';
-        if (notes) notes.value = orderOrDraft?.notes || '';
-        if (showUsdEl) showUsdEl.checked = orderOrDraft?.showUsd !== false;
-        if (showCopEl) showCopEl.checked = orderOrDraft?.showCop !== false;
-        const rows = Array.isArray(orderOrDraft?.rows) && orderOrDraft.rows.length ? orderOrDraft.rows : [{}];
+        if (factory) factory.value = orderOrDraft?.factory || orderOrDraft?.['Fábrica'] || orderOrDraft?.fabrica || '';
+        if (rate) rate.value = orderOrDraft?.rate || orderOrDraft?.['TRM'] || '4000';
+        if (notes) notes.value = orderOrDraft?.notes || orderOrDraft?.['Notas'] || '';
+        if (showUsdEl) showUsdEl.checked = String(orderOrDraft?.showUsd ?? orderOrDraft?.['Mostrar USD'] ?? '').toLowerCase() !== 'falso' && orderOrDraft?.showUsd !== false;
+        if (showCopEl) showCopEl.checked = String(orderOrDraft?.showCop ?? orderOrDraft?.['Mostrar COP'] ?? '').toLowerCase() !== 'falso' && orderOrDraft?.showCop !== false;
+        if (showRefEl) showRefEl.checked = String(orderOrDraft?.showRef ?? orderOrDraft?.['Mostrar Ref'] ?? '').toLowerCase() !== 'falso' && orderOrDraft?.showRef !== false;
+
+        let rawRows = orderOrDraft?.rows || orderOrDraft?.['Productos JSON'] || orderOrDraft?.productos || [];
+        if (typeof rawRows === 'string') {
+            try { rawRows = JSON.parse(rawRows); } catch (e) { rawRows = []; }
+        }
+        const rows = Array.isArray(rawRows) && rawRows.length ? rawRows : [{}];
         rows.forEach(item => createChinaOrderRow(item, { append: true }));
     } finally {
         isHydratingChinaOrder = false;
@@ -4234,7 +4319,8 @@ function hydrateChinaOrderForm(orderOrDraft) {
 }
 
 async function loadSavedChinaOrder(id) {
-    const order = getSavedChinaOrders().find(item => item.id === id);
+    const saved = getSavedChinaOrders();
+    const order = saved.find(item => String(item.id).trim() === String(id).trim());
     if (!order) {
         showToast('No se encontro el pedido guardado', 'error');
         return;
@@ -4319,26 +4405,55 @@ function buildChinaOrderPrintHtml(order) {
     const totals = getChinaOrderTotalsFromDraft(order);
     const showUsd = order.showUsd !== false;
     const showCop = order.showCop !== false;
+    const showRef = order.showRef !== false;
     const rows = Array.isArray(order.rows) ? order.rows : [];
 
+    // Calcular tamaño de imagen y proporciones de columnas según toggles activos
+    const priceColsCount = (showUsd ? 2 : 0) + (showCop ? 1 : 0); // USD unit + subtotal + COP
+    let imgSize, photoColWidth, prodColWidth, rowsPerPage;
+    if (priceColsCount === 0) {
+        // Sin precios (máxima prioridad visual a las imágenes)
+        rowsPerPage = 4;
+        if (!showRef) {
+            imgSize = 210;
+            photoColWidth = '62%';
+            prodColWidth = '30%';
+        } else {
+            imgSize = 195;
+            photoColWidth = '54%';
+            prodColWidth = '38%';
+        }
+    } else if (priceColsCount <= 1) {
+        // Un solo precio visible
+        rowsPerPage = 5;
+        imgSize = showRef ? 140 : 150;
+        photoColWidth = showRef ? '38%' : '42%';
+        prodColWidth = showRef ? '36%' : '32%';
+    } else {
+        // Todos los precios visibles
+        rowsPerPage = 6;
+        imgSize = showRef ? 95 : 105;
+        photoColWidth = showRef ? '120px' : '130px';
+        prodColWidth = 'auto';
+    }
+
     const headers = [
-        '<th style="width:95px; text-align:center;">Foto</th>',
-        '<th>Producto / referencia</th>',
-        '<th style="width:55px; text-align:center;">Cant.</th>',
-        showUsd ? '<th style="width:95px; text-align:right;">Unit. USD</th>' : '',
-        showCop ? '<th style="width:105px; text-align:right;">Unit. COP</th>' : '',
-        showUsd ? '<th style="width:115px; text-align:right;">Subtotal USD</th>' : ''
+        `<th style="width:${photoColWidth}; text-align:center;">Foto</th>`,
+        `<th style="width:${prodColWidth}; text-align:left;">${showRef ? 'Producto / Referencia' : 'Producto'}</th>`,
+        '<th style="width:55px; text-align:center;">PCS</th>',
+        showUsd ? '<th style="width:85px; text-align:right;">Unit. USD</th>' : '',
+        showCop ? '<th style="width:95px; text-align:right;">Unit. COP</th>' : '',
+        showUsd ? '<th style="width:105px; text-align:right;">Subtotal USD</th>' : ''
     ].filter(Boolean).join('');
 
     const totalRowsHtml = [
-        `<div class="china-print-total-row"><span>Total piezas</span><strong>${Math.round(totals.totalQuantity || 0).toLocaleString('es-CO')}</strong></div>`,
+        `<div class="china-print-total-row"><span>Total PCS</span><strong>${Math.round(totals.totalQuantity || 0).toLocaleString('es-CO')}</strong></div>`,
         showUsd ? `<div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>` : '',
         showCop ? `<div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>` : ''
     ].filter(Boolean).join('');
 
     function chunkRowsForPrint(items) {
         const pages = [];
-        const rowsPerPage = 9;
         for (let index = 0; index < items.length; index += rowsPerPage) {
             pages.push(items.slice(index, index + rowsPerPage));
         }
@@ -4352,21 +4467,30 @@ function buildChinaOrderPrintHtml(order) {
             const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
             const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
             const subtotalUsd = quantity * unitUsd;
-            const imageHtml = item.image
-                ? `<img src="${escapeHtml(item.image)}" alt="">`
-                : '<div class="china-print-no-photo"><span>Sin foto</span></div>';
+            const imageSrc = formatChinaOrderImageUrl(item.image);
+            const imgStyle = `width:${imgSize}px; height:${imgSize}px; max-width:100%; object-fit:contain; background:#fff; border-radius:8px; border:1px solid #ddd6fe; display:block; margin:0 auto;`;
+            const noPhotoStyle = `width:${imgSize}px; height:${imgSize}px; max-width:100%; border-radius:8px; border:1px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; margin:0 auto; color:#94a3b8; font-size:10px; font-weight:600;`;
+            const imageHtml = imageSrc
+                ? `<img src="${escapeHtml(imageSrc)}" alt="" loading="eager" crossorigin="anonymous" style="${imgStyle}">`
+                : `<div style="${noPhotoStyle}"><span>Sin foto</span></div>`;
+
+            const refHtml = showRef
+                ? (item.reference
+                    ? `<div class="china-print-prod-ref" style="font-size:9px; margin-top:3px; color:#6b7280;">Ref: <strong style="color:#4b5563;">${escapeHtml(item.reference)}</strong></div>`
+                    : '<div class="china-print-prod-ref" style="font-size:8px; margin-top:1px; color:#cbd5e1;">Sin ref.</div>')
+                : '';
 
             return `
                 <tr>
-                    <td style="text-align:center;">${imageHtml}</td>
-                    <td>
-                        <div class="china-print-prod-name">${index + 1}. ${escapeHtml(item.product || 'Producto sin nombre')}</div>
-                        <div class="china-print-prod-ref">Ref: ${escapeHtml(item.reference || 'S/N')}</div>
+                    <td style="text-align:center; padding:5px 6px; width:${photoColWidth};">${imageHtml}</td>
+                    <td style="padding:6px 12px; vertical-align:middle; width:${prodColWidth};">
+                        <div class="china-print-prod-name" style="font-size:12.5px; font-weight:700; line-height:1.35; color:#1e1b4b;">${index + 1}. ${escapeHtml(item.product || 'Producto')}</div>
+                        ${refHtml}
                     </td>
-                    <td style="text-align:center; font-weight:bold;">${quantity}</td>
+                    <td style="text-align:center; font-weight:bold; font-size:12.5px; width:55px;">${quantity}</td>
                     ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
                     ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
-                    ${showUsd ? `<td style="text-align:right; font-weight:bold; color:#581c87;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
+                    ${showUsd ? `<td style="text-align:right; font-weight:bold; color:#581c87; font-size:11.5px;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
                 </tr>
             `;
         }).join('');
@@ -4438,7 +4562,47 @@ function buildChinaOrderPrintHtml(order) {
     }).join('');
 }
 
-function printChinaOrderPdf(order) {
+async function waitForPrintImages(container) {
+    const images = Array.from(container.querySelectorAll('img'));
+    if (!images.length) return;
+
+    const promises = images.map(img => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+                if (!settled) {
+                    settled = true;
+                    resolve();
+                }
+            };
+            const timer = setTimeout(finish, 3500);
+
+            img.onload = () => {
+                clearTimeout(timer);
+                finish();
+            };
+            img.onerror = () => {
+                clearTimeout(timer);
+                const src = img.src || '';
+                const driveMatch = src.match(/[?&]id=([^&#]+)/) || src.match(/lh3\.googleusercontent\.com\/d\/([^/?&#]+)/);
+                if (driveMatch && driveMatch[1] && !img.dataset.retried) {
+                    img.dataset.retried = '1';
+                    img.src = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+                    img.onload = finish;
+                    img.onerror = finish;
+                } else {
+                    finish();
+                }
+            };
+        });
+    });
+
+    await Promise.all(promises);
+    await new Promise(resolve => setTimeout(resolve, 80));
+}
+
+async function printChinaOrderPdf(order) {
     const container = document.getElementById('china-order-print-container');
     if (!container || !order) return;
     container.innerHTML = buildChinaOrderPrintHtml(order);
@@ -4468,15 +4632,28 @@ function printChinaOrderPdf(order) {
     window.addEventListener('afterprint', cleanup);
     window.addEventListener('focus', cleanup, { once: true });
 
-    setTimeout(() => {
-        window.print();
-    }, 120);
+    // Esperar a que las imágenes se descarguen y procesen completamente
+    await waitForPrintImages(container);
+
+    window.print();
 }
 
 async function downloadCurrentChinaOrderPdf() {
-    const order = await saveCurrentChinaOrder({ silent: true });
-    if (!order) return;
-    printChinaOrderPdf(order);
+    const draft = collectChinaOrderDraft();
+    const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
+    if (!hasProduct) {
+        showToast('Agrega al menos un producto antes de descargar el PDF', 'warning');
+        return;
+    }
+    const currentId = activeChinaOrderId || draft.id;
+    const saved = getSavedChinaOrders();
+    const existing = currentId ? saved.find(item => String(item.id).trim() === String(currentId).trim()) : null;
+    const order = makeChinaOrderRecord(draft, existing);
+    activeChinaOrderId = order.id;
+    // Lanzar PDF inmediatamente con imágenes locales nítidas
+    await printChinaOrderPdf(order);
+    // Guardar en segundo plano sin congelar al usuario
+    saveCurrentChinaOrder({ silent: true }).catch(err => console.warn('Error en guardado segundo plano:', err));
 }
 
 async function persistChinaOrderDraft(draft) {
@@ -4552,13 +4729,61 @@ function calculateChinaOrderTotals() {
     saveChinaOrderDraft();
 }
 
+function openChinaPhotoModal(src, title = 'Foto del producto') {
+    if (!src) return;
+    let modal = document.getElementById('china-photo-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'china-photo-modal';
+        modal.className = 'china-photo-modal';
+        modal.innerHTML = `
+            <div class="china-photo-modal-backdrop"></div>
+            <div class="china-photo-modal-content">
+                <button type="button" class="china-photo-modal-close" title="Cerrar">&times;</button>
+                <div class="china-photo-modal-title"></div>
+                <div class="china-photo-modal-img-wrap">
+                    <img src="" alt="Foto ampliada">
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.china-photo-modal-backdrop').addEventListener('click', () => modal.classList.remove('active'));
+        modal.querySelector('.china-photo-modal-close').addEventListener('click', () => modal.classList.remove('active'));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    const img = modal.querySelector('img');
+    const titleEl = modal.querySelector('.china-photo-modal-title');
+    const formatted = formatChinaOrderImageUrl(src) || src;
+    img.src = formatted;
+    if (titleEl) titleEl.textContent = title || 'Foto del producto';
+    modal.classList.add('active');
+}
+
 function setChinaOrderImage(row, src) {
     if (!row || !src) return;
     row.dataset.image = src;
+    const formatted = formatChinaOrderImageUrl(src);
+    const wrapper = row.querySelector('.china-order-photo-wrapper');
     const drop = row.querySelector('.china-order-photo-drop');
     const img = row.querySelector('.china-order-photo-drop img');
+    if (wrapper) wrapper.classList.add('has-image');
     if (drop) drop.classList.add('has-image');
-    if (img) img.src = src;
+    if (img) {
+        img.src = formatted || src;
+        img.onerror = () => {
+            const driveMatch = (formatted || src).match(/[?&]id=([^&#]+)/) || (formatted || src).match(/lh3\.googleusercontent\.com\/d\/([^/?&#]+)/);
+            if (driveMatch && driveMatch[1] && !img.dataset.retried) {
+                img.dataset.retried = '1';
+                img.src = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+            }
+        };
+    }
     saveChinaOrderDraft();
 }
 
@@ -4573,15 +4798,15 @@ async function prepareChinaOrderImageDataUrl(file) {
     }
 
     const img = await loadImageFile(file);
-    const maxEdge = 900;
-    const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    const maxEdge = 600;
+    const scale = Math.min(1, maxEdge / Math.max(img.naturalWidth || img.width || 1, img.naturalHeight || img.height || 1));
     const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
-    canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+    canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width || 1) * scale));
+    canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height || 1) * scale));
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('No se pudo preparar la imagen');
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.78);
+    return canvas.toDataURL('image/jpeg', 0.72);
 }
 
 async function readChinaOrderImageFile(row, file) {
@@ -4606,11 +4831,19 @@ function createChinaOrderRow(item = {}, options = {}) {
     row.dataset.image = item.image || '';
     row.innerHTML = `
         <td>
-            <label class="china-order-photo-drop" title="Arrastra una foto o haz clic para subir">
-                <input type="file" accept="image/*" data-china-field="imageFile">
-                <img alt="Foto del producto">
-                <span>Arrastra<br>foto</span>
-            </label>
+            <div class="china-order-photo-wrapper${item.image ? ' has-image' : ''}">
+                <label class="china-order-photo-drop" title="Arrastra una foto o haz clic para subir">
+                    <input type="file" accept="image/*" data-china-field="imageFile">
+                    <img alt="Foto del producto">
+                    <span>Arrastra<br>foto</span>
+                </label>
+                <button type="button" class="china-photo-preview-btn" title="Ver foto ampliada">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+            </div>
         </td>
         <td>
             <div class="china-order-product-fields">
@@ -4630,7 +4863,18 @@ function createChinaOrderRow(item = {}, options = {}) {
 
     const fileInput = row.querySelector('[data-china-field="imageFile"]');
     const drop = row.querySelector('.china-order-photo-drop');
+    const previewBtn = row.querySelector('.china-photo-preview-btn');
+
     if (item.image) setChinaOrderImage(row, item.image);
+
+    previewBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const imgSrc = row.dataset.image;
+        if (!imgSrc) return;
+        const prodName = row.querySelector('[data-china-field="product"]')?.value || 'Producto';
+        openChinaPhotoModal(imgSrc, prodName);
+    });
 
     row.querySelectorAll('input:not([type="file"])').forEach(input => {
         input.addEventListener('input', calculateChinaOrderTotals);
@@ -4732,11 +4976,13 @@ function clearChinaOrderDraft() {
     const notes = document.getElementById('china-order-notes');
     const showUsdEl = document.getElementById('china-show-usd');
     const showCopEl = document.getElementById('china-show-cop');
+    const showRefEl = document.getElementById('china-show-ref');
     if (factory) factory.value = '';
     if (rate) rate.value = '4000';
     if (notes) notes.value = '';
     if (showUsdEl) showUsdEl.checked = true;
     if (showCopEl) showCopEl.checked = true;
+    if (showRefEl) showRefEl.checked = true;
     createChinaOrderRow();
     calculateChinaOrderTotals();
 }
@@ -4757,6 +5003,7 @@ async function initChinaOrdersBuilder() {
     notes?.addEventListener('input', saveChinaOrderDraft);
     document.getElementById('china-show-usd')?.addEventListener('change', saveChinaOrderDraft);
     document.getElementById('china-show-cop')?.addEventListener('change', saveChinaOrderDraft);
+    document.getElementById('china-show-ref')?.addEventListener('change', saveChinaOrderDraft);
     document.getElementById('btn-add-china-order-item')?.addEventListener('click', () => createChinaOrderRow());
     document.getElementById('btn-save-china-order')?.addEventListener('click', () => saveCurrentChinaOrder());
     document.getElementById('btn-print-china-order')?.addEventListener('click', downloadCurrentChinaOrderPdf);
@@ -6130,11 +6377,11 @@ function getAdminInvoicePrintWindowStyles() {
             .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
         }
         @media print {
-            @page { size: A4 portrait; margin: 6mm 10mm 10mm 10mm; }
+            @page { size: A4 portrait; margin: 0; }
             html, body { background: #ffffff !important; }
             body { padding: 0 !important; }
             .invoice-print-toolbar { display: none !important; }
-            #invoice-print-container { max-width: none; padding: 0; box-shadow: none; }
+            #invoice-print-container { max-width: none; padding: 8mm 10mm; box-shadow: none; }
             .admin-inv-top-banner,
             .invoice-details,
             .invoice-bottom-grid,

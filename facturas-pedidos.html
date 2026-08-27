@@ -431,7 +431,7 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 6mm 10mm 10mm 10mm;
+                margin: 0;
             }
 
             body.invoice-print-mode {
@@ -445,6 +445,7 @@
 
             body.invoice-print-mode #invoice-print-area {
                 display: block !important;
+                padding: 8mm 10mm;
             }
 
             .print-invoice {
@@ -1901,11 +1902,11 @@
                         .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
                     }
                     @media print {
-                        @page { size: A4 portrait; margin: 6mm 10mm 10mm 10mm; }
+                        @page { size: A4 portrait; margin: 0; }
                         html, body { background: #ffffff !important; }
                         body { padding: 0 !important; }
                         .invoice-print-toolbar { display: none !important; }
-                        #invoice-document-root { max-width: none; padding: 0; box-shadow: none; }
+                        #invoice-document-root { max-width: none; padding: 8mm 10mm; box-shadow: none; }
                         .admin-inv-top-banner,
                         .invoice-details,
                         .invoice-bottom-grid,
