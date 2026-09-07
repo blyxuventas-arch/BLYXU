@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=cart-mobile-zoom-20260815">
+    <link rel="stylesheet" href="blyxu-style.css?v=cart-section-20260906">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <style>
         .product-info-price {
@@ -106,7 +106,7 @@
             </ul>
 
             <div class="nav-actions">
-                <button class="nav-icon-btn" id="cart-btn">
+                <button class="nav-icon-btn" id="cart-btn" onclick="openCart()" aria-label="Ver Carrito de Compras">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                     <span class="cart-badge" id="cart-count">0</span>
                 </button>
@@ -208,7 +208,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=cart-mobile-zoom-20260815"></script>
+    <script src="blyxu-app.js?v=cart-section-20260906"></script>
     <script>
         // Lógica específica para la página de producto
         document.addEventListener('DOMContentLoaded', async () => {
