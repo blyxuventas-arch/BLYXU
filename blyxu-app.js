@@ -11,6 +11,7 @@
 const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 const BLYXU_WHATSAPP_PHONE = '573112368622';
+const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-72ab41d6-5fc7-4867-8e02-564ab0ae9f99';
 const BLYXU_DEFAULT_MAP_URL = 'https://maps.app.goo.gl/xa5Ebxsc7MDwUz5a6';
 const LOW_STOCK_THRESHOLD = 3;
 
@@ -2681,10 +2682,19 @@ function updateCartUI() {
     }
     const checkoutBtn = document.getElementById('btn-checkout');
     if (checkoutBtn) {
+        const isWholesale = normalizeCartMode(activeCartMode) === 'wholesale';
         const isRegisteredOrder = shouldRegisterCartOrder();
-        checkoutBtn.textContent = isRegisteredOrder ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp';
+        const showMpCheckout = !isWholesale && isRegisteredOrder;
 
-        // Manejo del form inline para pedidos registrados
+        if (showMpCheckout) {
+            checkoutBtn.innerHTML = '<span>Comprar con Mercado Pago ✦</span>';
+            checkoutBtn.className = 'btn-checkout btn-mercadopago';
+        } else {
+            checkoutBtn.textContent = isRegisteredOrder ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp';
+            checkoutBtn.className = 'btn-checkout';
+        }
+
+        // Manejo del form inline para checkout
         let formContainer = document.getElementById('cart-wholesale-form');
         if (!isRegisteredOrder && formContainer) formContainer.style.display = 'none';
         if (!formContainer) {
@@ -2692,136 +2702,214 @@ function updateCartUI() {
             formContainer.id = 'cart-wholesale-form';
             formContainer.style.display = 'none';
             formContainer.style.marginTop = '16px';
-            formContainer.innerHTML = `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px; margin-bottom:12px;">
-                    <h4 style="margin:0 0 12px; font-size:14px; font-weight:800; color:#fff;">Datos de Envío</h4>
-                    <input type="text" id="ws-nombre" class="form-control" placeholder="Nombre completo" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <input type="tel" id="ws-telefono" class="form-control" placeholder="Número de celular" required style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <input type="text" id="ws-direccion" class="form-control" placeholder="Dirección de entrega (opcional)" style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <input type="text" id="ws-ciudad" class="form-control" placeholder="Ciudad (opcional)" style="margin-bottom:8px; font-size:13px; padding:8px 12px; border-radius:8px;">
-                    <textarea id="ws-nota" class="form-control" placeholder="Nota adicional (opcional)" style="margin-bottom:12px; min-height:50px; font-size:13px; padding:8px 12px; border-radius:8px; resize:vertical;"></textarea>
-                    
-                    <button class="btn-checkout" id="btn-confirm-ws" type="button" style="background:linear-gradient(135deg, #10B981, #059669); margin-bottom:8px;">Confirmar y Enviar Pedido</button>
-                    <button class="btn-filter" id="btn-cancel-ws" type="button" style="width:100%; border:1px solid rgba(255,255,255,0.2);">Cancelar</button>
-                </div>
-            `;
             const footer = document.querySelector('.cart-footer');
             if (footer) footer.insertBefore(formContainer, checkoutBtn);
+        }
 
-            const customerCard = formContainer.firstElementChild;
-            if (customerCard) {
-                customerCard.classList.add('cart-customer-card');
-                customerCard.removeAttribute('style');
-            }
-            const customerTitle = customerCard?.querySelector('h4');
-            if (customerTitle) {
-                customerTitle.className = 'cart-customer-title';
-                customerTitle.removeAttribute('style');
-                customerTitle.innerHTML = `<span>Datos de Envio</span><span class="cart-required-pill">${getCartOrderLabel()}</span>`;
-            }
-
-            const decorateCartField = (id, label, required = false) => {
-                const input = document.getElementById(id);
-                if (!input || input.closest('.cart-field')) return;
-                const field = document.createElement('div');
-                field.className = 'cart-field';
-                if (required) field.dataset.requiredField = id;
-                const labelEl = document.createElement('label');
-                labelEl.setAttribute('for', id);
-                labelEl.innerHTML = required
-                    ? `${label} <span class="cart-field-required">Requerido</span>`
-                    : label;
-                input.removeAttribute('style');
-                input.parentNode.insertBefore(field, input);
-                field.appendChild(labelEl);
-                field.appendChild(input);
-            };
-            decorateCartField('ws-nombre', 'Nombre', true);
-            decorateCartField('ws-telefono', 'Numero de celular', true);
-            decorateCartField('ws-direccion', 'Direccion de entrega');
-            decorateCartField('ws-ciudad', 'Ciudad');
-            decorateCartField('ws-nota', 'Nota adicional');
-            const placeholderText = {
-                'ws-nombre': 'Nombre',
-                'ws-telefono': 'Numero de celular',
-                'ws-direccion': 'Direccion de entrega (opcional)',
-                'ws-ciudad': 'Ciudad (opcional)',
-                'ws-nota': 'Nota adicional (opcional)'
-            };
-            Object.entries(placeholderText).forEach(([id, placeholder]) => {
-                const field = document.getElementById(id);
-                if (field) field.placeholder = placeholder;
-            });
-
-            let initialErrorBox = document.getElementById('ws-form-error');
-            if (!initialErrorBox && customerCard) {
-                initialErrorBox = document.createElement('div');
-                initialErrorBox.id = 'ws-form-error';
-                initialErrorBox.className = 'cart-form-error';
-                initialErrorBox.setAttribute('aria-live', 'polite');
-                const firstField = customerCard.querySelector('.cart-field');
-                customerCard.insertBefore(initialErrorBox, firstField || customerCard.firstChild);
-            }
-
-            document.getElementById('btn-cancel-ws').addEventListener('click', () => {
-                formContainer.style.display = 'none';
-                const currentCheckoutBtn = document.getElementById('btn-checkout');
-                if (currentCheckoutBtn) currentCheckoutBtn.style.display = 'block';
-            });
-
-            ['ws-nombre', 'ws-telefono'].forEach(inputId => {
-                document.getElementById(inputId)?.addEventListener('input', event => {
-                    event.currentTarget.closest('.cart-field')?.classList.remove('is-invalid');
-                    const errorBox = document.getElementById('ws-form-error');
-                    if (errorBox) errorBox.style.display = 'none';
-                });
-            });
-
-            document.getElementById('btn-confirm-ws').addEventListener('click', () => {
-                const nameInput = document.getElementById('ws-nombre');
-                const phoneInput = document.getElementById('ws-telefono');
-                const n = nameInput.value.trim();
-                const t = phoneInput.value.trim();
-                const d = document.getElementById('ws-direccion').value.trim();
-                const c = document.getElementById('ws-ciudad').value.trim();
-                [nameInput, phoneInput].forEach(input => input.closest('.cart-field')?.classList.remove('is-invalid'));
-                
-                let errorBox = document.getElementById('ws-form-error');
-                if (!errorBox) {
-                    errorBox = document.createElement('div');
-                    errorBox.id = 'ws-form-error';
-                    errorBox.style.cssText = 'color:#ef4444; font-size:12px; margin-bottom:12px; font-weight:600; display:none; text-align:center; background:rgba(239,68,68,0.1); padding:8px; border-radius:6px;';
-                    const nameInput = document.getElementById('ws-nombre');
-                    if (nameInput && nameInput.parentNode) {
-                        nameInput.parentNode.insertBefore(errorBox, nameInput);
-                    } else {
-                        formContainer.appendChild(errorBox);
-                    }
-                }
-                
-                if(!n || !t) {
-                    if (!n) nameInput.closest('.cart-field')?.classList.add('is-invalid');
-                    if (!t) phoneInput.closest('.cart-field')?.classList.add('is-invalid');
-                    errorBox.textContent = '✦ Por favor completa nombre y celular.';
-                    errorBox.textContent = 'Completa el nombre y el numero de celular para registrar el pedido.';
-                    errorBox.style.display = 'block';
-                    (n ? phoneInput : nameInput).focus();
-                    return;
-                }
-                
-                errorBox.style.display = 'none';
-                window.wsClienteTemp = { nombre: n, telefono: t, direccion: d, ciudad: c, nota: document.getElementById('ws-nota').value.trim() };
-                
+        const renderCartForm = () => {
+            if (showMpCheckout) {
+                // Formulario Minorista con Mercado Pago
                 formContainer.innerHTML = `
-                    <div class="cart-customer-card cart-registering">
-                        <div class="cart-loading-track"><span></span></div>
-                        <h4>Registrando pedido...</h4>
-                        <p>Un momento, ya casi queda listo.</p>
+                    <div class="cart-customer-card">
+                        <div class="cart-customer-title">
+                            <span>Datos para tu Compra</span>
+                            <span class="cart-required-pill">Minorista</span>
+                        </div>
+                        <div id="ws-form-error" class="cart-form-error" aria-live="polite"></div>
+                        <div class="cart-field" data-required-field="rt-nombre">
+                            <label for="rt-nombre">Nombre completo <span class="cart-field-required">Requerido</span></label>
+                            <input type="text" id="rt-nombre" class="form-control" placeholder="Nombre y apellido" required>
+                        </div>
+                        <div class="cart-field" data-required-field="rt-telefono">
+                            <label for="rt-telefono">Número de celular / WhatsApp <span class="cart-field-required">Requerido</span></label>
+                            <input type="tel" id="rt-telefono" class="form-control" placeholder="Ej: 3112368622" required>
+                        </div>
+                        <div class="cart-field">
+                            <label for="rt-email">Correo electrónico (para confirmación de pago)</label>
+                            <input type="email" id="rt-email" class="form-control" placeholder="ejemplo@correo.com">
+                        </div>
+                        <div class="cart-field">
+                            <label for="rt-direccion">Dirección de entrega (opcional)</label>
+                            <input type="text" id="rt-direccion" class="form-control" placeholder="Dirección de envío">
+                        </div>
+                        <div class="cart-field">
+                            <label for="rt-ciudad">Ciudad (opcional)</label>
+                            <input type="text" id="rt-ciudad" class="form-control" placeholder="Ciudad de entrega">
+                        </div>
+                        <div class="cart-field">
+                            <label for="rt-nota">Nota adicional (opcional)</label>
+                            <textarea id="rt-nota" class="form-control" placeholder="Indicaciones especiales de entrega..." style="min-height:50px; resize:vertical;"></textarea>
+                        </div>
+
+                        <div class="cart-mp-trust-badge">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                            <span>Pago 100% Seguro con Mercado Pago</span>
+                        </div>
+                        <div class="cart-mp-payment-methods">
+                            <span class="cart-mp-chip">💳 Tarjetas</span>
+                            <span class="cart-mp-chip">🏦 PSE</span>
+                            <span class="cart-mp-chip">📱 Nequi</span>
+                            <span class="cart-mp-chip">💵 Efecty</span>
+                        </div>
+
+                        <button class="btn-mercadopago" id="btn-confirm-retail-mp" type="button" style="margin-bottom:8px;">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                            Pagar con Mercado Pago
+                        </button>
+                        <button class="cart-secondary-ws-btn" id="btn-confirm-retail-ws" type="button" style="margin-bottom:8px;">
+                            💬 O pedir por WhatsApp
+                        </button>
+                        <button class="btn-filter" id="btn-cancel-retail" type="button" style="width:100%; border:1px solid rgba(255,255,255,0.2);">Cancelar</button>
                     </div>
                 `;
-                checkout(true);
-            });
-        }
+
+                document.getElementById('btn-cancel-retail')?.addEventListener('click', () => {
+                    formContainer.style.display = 'none';
+                    const currentCheckoutBtn = document.getElementById('btn-checkout');
+                    if (currentCheckoutBtn) currentCheckoutBtn.style.display = 'block';
+                });
+
+                ['rt-nombre', 'rt-telefono'].forEach(id => {
+                    document.getElementById(id)?.addEventListener('input', e => {
+                        e.currentTarget.closest('.cart-field')?.classList.remove('is-invalid');
+                        const err = document.getElementById('ws-form-error');
+                        if (err) err.style.display = 'none';
+                    });
+                });
+
+                document.getElementById('btn-confirm-retail-mp')?.addEventListener('click', () => {
+                    const nameInput = document.getElementById('rt-nombre');
+                    const phoneInput = document.getElementById('rt-telefono');
+                    const n = nameInput ? nameInput.value.trim() : '';
+                    const t = phoneInput ? phoneInput.value.trim() : '';
+                    const email = document.getElementById('rt-email')?.value.trim() || '';
+                    const d = document.getElementById('rt-direccion')?.value.trim() || '';
+                    const c = document.getElementById('rt-ciudad')?.value.trim() || '';
+                    const nota = document.getElementById('rt-nota')?.value.trim() || '';
+
+                    [nameInput, phoneInput].forEach(inp => inp?.closest('.cart-field')?.classList.remove('is-invalid'));
+                    const errorBox = document.getElementById('ws-form-error');
+
+                    if (!n || !t) {
+                        if (!n) nameInput?.closest('.cart-field')?.classList.add('is-invalid');
+                        if (!t) phoneInput?.closest('.cart-field')?.classList.add('is-invalid');
+                        if (errorBox) {
+                            errorBox.textContent = 'Completa tu nombre y celular para proceder con el pago.';
+                            errorBox.style.display = 'block';
+                        }
+                        (n ? phoneInput : nameInput)?.focus();
+                        return;
+                    }
+
+                    if (errorBox) errorBox.style.display = 'none';
+                    checkoutWithMercadoPago({
+                        nombre: n,
+                        telefono: t,
+                        email: email,
+                        direccion: d,
+                        ciudad: c,
+                        nota: nota
+                    });
+                });
+
+                document.getElementById('btn-confirm-retail-ws')?.addEventListener('click', () => {
+                    const nameInput = document.getElementById('rt-nombre');
+                    const phoneInput = document.getElementById('rt-telefono');
+                    const n = nameInput ? nameInput.value.trim() : '';
+                    const t = phoneInput ? phoneInput.value.trim() : '';
+                    const d = document.getElementById('rt-direccion')?.value.trim() || '';
+                    const c = document.getElementById('rt-ciudad')?.value.trim() || '';
+                    const nota = document.getElementById('rt-nota')?.value.trim() || '';
+
+                    if (n || t) {
+                        window.wsClienteTemp = { nombre: n, telefono: t, direccion: d, ciudad: c, nota: nota };
+                    }
+                    checkout(false);
+                });
+
+            } else {
+                // Formulario Mayorista Tradicional (Sin Mercado Pago)
+                formContainer.innerHTML = `
+                    <div class="cart-customer-card">
+                        <div class="cart-customer-title">
+                            <span>Datos de Envio</span>
+                            <span class="cart-required-pill">Mayorista</span>
+                        </div>
+                        <div id="ws-form-error" class="cart-form-error" aria-live="polite"></div>
+                        <div class="cart-field" data-required-field="ws-nombre">
+                            <label for="ws-nombre">Nombre <span class="cart-field-required">Requerido</span></label>
+                            <input type="text" id="ws-nombre" class="form-control" placeholder="Nombre completo" required>
+                        </div>
+                        <div class="cart-field" data-required-field="ws-telefono">
+                            <label for="ws-telefono">Numero de celular <span class="cart-field-required">Requerido</span></label>
+                            <input type="tel" id="ws-telefono" class="form-control" placeholder="Numero de celular" required>
+                        </div>
+                        <div class="cart-field">
+                            <label for="ws-direccion">Direccion de entrega (opcional)</label>
+                            <input type="text" id="ws-direccion" class="form-control" placeholder="Direccion de entrega (opcional)">
+                        </div>
+                        <div class="cart-field">
+                            <label for="ws-ciudad">Ciudad (opcional)</label>
+                            <input type="text" id="ws-ciudad" class="form-control" placeholder="Ciudad (opcional)">
+                        </div>
+                        <div class="cart-field">
+                            <label for="ws-nota">Nota adicional (opcional)</label>
+                            <textarea id="ws-nota" class="form-control" placeholder="Nota adicional (opcional)" style="min-height:50px; resize:vertical;"></textarea>
+                        </div>
+                        <button class="btn-checkout" id="btn-confirm-ws" type="button" style="background:linear-gradient(135deg, #10B981, #059669); margin-bottom:8px;">Confirmar y Enviar Pedido</button>
+                        <button class="btn-filter" id="btn-cancel-ws" type="button" style="width:100%; border:1px solid rgba(255,255,255,0.2);">Cancelar</button>
+                    </div>
+                `;
+
+                document.getElementById('btn-cancel-ws')?.addEventListener('click', () => {
+                    formContainer.style.display = 'none';
+                    const currentCheckoutBtn = document.getElementById('btn-checkout');
+                    if (currentCheckoutBtn) currentCheckoutBtn.style.display = 'block';
+                });
+
+                ['ws-nombre', 'ws-telefono'].forEach(inputId => {
+                    document.getElementById(inputId)?.addEventListener('input', event => {
+                        event.currentTarget.closest('.cart-field')?.classList.remove('is-invalid');
+                        const errorBox = document.getElementById('ws-form-error');
+                        if (errorBox) errorBox.style.display = 'none';
+                    });
+                });
+
+                document.getElementById('btn-confirm-ws')?.addEventListener('click', () => {
+                    const nameInput = document.getElementById('ws-nombre');
+                    const phoneInput = document.getElementById('ws-telefono');
+                    const n = nameInput ? nameInput.value.trim() : '';
+                    const t = phoneInput ? phoneInput.value.trim() : '';
+                    const d = document.getElementById('ws-direccion')?.value.trim() || '';
+                    const c = document.getElementById('ws-ciudad')?.value.trim() || '';
+                    [nameInput, phoneInput].forEach(input => input?.closest('.cart-field')?.classList.remove('is-invalid'));
+                    
+                    const errorBox = document.getElementById('ws-form-error');
+                    if(!n || !t) {
+                        if (!n) nameInput?.closest('.cart-field')?.classList.add('is-invalid');
+                        if (!t) phoneInput?.closest('.cart-field')?.classList.add('is-invalid');
+                        if (errorBox) {
+                            errorBox.textContent = 'Completa el nombre y el numero de celular para registrar el pedido.';
+                            errorBox.style.display = 'block';
+                        }
+                        (n ? phoneInput : nameInput)?.focus();
+                        return;
+                    }
+                    
+                    if (errorBox) errorBox.style.display = 'none';
+                    window.wsClienteTemp = { nombre: n, telefono: t, direccion: d, ciudad: c, nota: document.getElementById('ws-nota')?.value.trim() || '' };
+                    
+                    formContainer.innerHTML = `
+                        <div class="cart-customer-card cart-registering">
+                            <div class="cart-loading-track"><span></span></div>
+                            <h4>Registrando pedido mayorista...</h4>
+                            <p>Un momento, ya casi queda listo.</p>
+                        </div>
+                    `;
+                    checkout(true);
+                });
+            }
+        };
 
         // Remover event listener previo limpiando el elemento
         const newBtn = checkoutBtn.cloneNode(true);
@@ -2829,10 +2917,9 @@ function updateCartUI() {
         
         newBtn.addEventListener('click', () => {
             if (isRegisteredOrder) {
+                renderCartForm();
                 formContainer.style.display = 'block';
                 newBtn.style.display = 'none';
-                const customerTitle = formContainer.querySelector('.cart-customer-title');
-                if (customerTitle) customerTitle.innerHTML = `<span>Datos de Envio</span><span class="cart-required-pill">${getCartOrderLabel()}</span>`;
             } else {
                 checkout(false);
             }
@@ -3446,6 +3533,81 @@ function getDemoProducts() {
 }
 
 // -- INIT --
+async function checkoutWithMercadoPago(cliente) {
+    if (!cart.length) return;
+    const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+    const formContainer = document.getElementById('cart-wholesale-form');
+    
+    if (formContainer) {
+        formContainer.innerHTML = `
+            <div class="cart-customer-card cart-registering">
+                <div class="cart-loading-track"><span></span></div>
+                <h4>Conectando con Mercado Pago...</h4>
+                <p>Generando pasarela de pago seguro. Un momento por favor.</p>
+            </div>
+        `;
+    }
+
+    const payload = {
+        action: 'createpreference',
+        resource: 'pedidos',
+        customerType: 'Detal',
+        mode: 'retail',
+        cliente: {
+            nombre: cliente.nombre,
+            telefono: cliente.telefono,
+            email: cliente.email || '',
+            direccion: cliente.direccion || '',
+            ciudad: cliente.ciudad || '',
+            nota: cliente.nota || ''
+        },
+        items: cart.map(item => ({
+            idVariacion: item.idVariacion || item.sku || item.name,
+            nombre: item.name,
+            opcion: item.variantLabel || '',
+            cantidad: item.qty,
+            precio: item.price,
+            img: item.img || ''
+        })),
+        total: total,
+        origin: window.location.origin
+    };
+
+    try {
+        const response = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result && result.ok && result.init_point) {
+            // Vaciar carrito minorista
+            cart = [];
+            saveCart('retail');
+            updateCartUI();
+
+            // Redirigir a Mercado Pago
+            window.location.href = result.init_point;
+            return;
+        }
+
+        throw new Error(result?.error || result?.message || 'No se pudo generar la pasarela de pago.');
+    } catch (error) {
+        console.error('Error al conectar con Mercado Pago:', error);
+        if (formContainer) {
+            formContainer.innerHTML = `
+                <div class="cart-customer-card cart-error-card">
+                    <div style="font-size:32px; margin-bottom:12px;">⚠️</div>
+                    <h4 style="color:#ef4444;">Error en la pasarela</h4>
+                    <p>${escapeHtml(error.message || 'Error al conectar con Mercado Pago. Intenta nuevamente.')}</p>
+                    <button class="btn-checkout" onclick="updateCartUI()" style="margin-top:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);">Reintentar</button>
+                </div>
+            `;
+        }
+    }
+}
+
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';

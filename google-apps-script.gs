@@ -3,6 +3,11 @@
  ***************/
 const SPREADSHEET_ID = '';
 
+// Credenciales Mercado Pago (Checkout Pro - Catálogo Minorista)
+const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-72ab41d6-5fc7-4867-8e02-564ab0ae9f99';
+const MERCADO_PAGO_ACCESS_TOKEN = 'APP_USR-6488035886423576-090622-ecbd77219d0a97a024815ad58c2b97c1-3665799663';
+const SITE_URL = 'https://blyxu.online';
+
 const SHEETS = {
   Productos: {
     primary: 'ID Variación',
@@ -182,6 +187,29 @@ function handleRequest_(e, method) {
       return json_({ ok: true, status: 'success' });
     }
 
+    // ==========================================
+    // 3) MERCADO PAGO - CHECKOUT PRO (SOLO MINORISTA)
+    // ==========================================
+    if (
+      action === 'createpreference' ||
+      action === 'create_preference' ||
+      action === 'crearpreferencia' ||
+      action === 'mercadopago' ||
+      action === 'mpcheckout' ||
+      action === 'checkoutmercadopago' ||
+      action === 'pagar'
+    ) {
+      if (method === 'GET') {
+        return json_({
+          ok: true,
+          status: 'success',
+          message: 'Ruta de Mercado Pago activa y lista en Apps Script.',
+          version: 'MercadoPago-CheckoutPro-v1'
+        });
+      }
+      return handleMercadoPagoPreference_(body);
+    }
+
     const sheetName = sheetFromResource_(resource || action);
 
     if (!sheetName) {
@@ -285,6 +313,207 @@ function handleRequest_(e, method) {
       status: 'error',
       error: error.message,
       stack: error.stack
+    });
+  }
+}
+
+/***************
+ * MERCADO PAGO (CHECKOUT PRO - SOLO MINORISTAS)
+ ***************/
+function handleMercadoPagoPreference_(body) {
+  const token = MERCADO_PAGO_ACCESS_TOKEN;
+  if (!token || token.indexOf('PEGA_AQUÍ') >= 0 || token.trim() === '') {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'Mercado Pago no está configurado. Por favor ingresa el Access Token en el Apps Script.'
+    });
+  }
+
+  // 1) VALIDACIÓN ESTRICTA: Exclusivo para catálogo público / minoristas (Detal)
+  const explicitType = String(body.tipoCliente || body.TipoCliente || body.customerType || (body.cliente && body.cliente.tipo) || '').trim();
+  const explicitMode = String(body.mode || body.modo || '').trim();
+  const customerType = inferCustomerType_({
+    'Tipo Cliente': explicitType,
+    'Productos JSON': body.items || body.productos || body.cart || []
+  });
+
+  const isWholesale = customerType === 'Mayor' ||
+    normalizeKey_(explicitType).indexOf('mayor') >= 0 ||
+    normalizeKey_(explicitMode) === 'wholesale';
+
+  if (isWholesale) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'Mercado Pago está reservado exclusivamente para compras del catálogo público minorista. Las órdenes mayoristas deben gestionarse mediante el canal mayorista privado.'
+    });
+  }
+
+  // 2) Parsear datos del cliente y carrito
+  const cliente = body.cliente || body.customer || {};
+  const rawItems = body.items || body.productos || body.cart || [];
+  const items = Array.isArray(rawItems) ? rawItems : parseMaybeJson_(rawItems);
+
+  if (!items || items.length === 0) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'El carrito no contiene productos para procesar el pago.'
+    });
+  }
+
+  const clientName = String(cliente.nombre || body.nombre || body['Nombre Cliente'] || 'Cliente Minorista').trim();
+  const clientPhone = String(cliente.telefono || body.telefono || body['Teléfono'] || '').trim();
+  const clientEmail = String(cliente.email || body.email || '').trim();
+  const clientAddress = String(cliente.direccion || body.direccion || body['Dirección'] || '').trim();
+  const clientCity = String(cliente.ciudad || body.ciudad || body['Ciudad'] || '').trim();
+  const clientNote = String(cliente.nota || body.nota || body['Nota Cliente'] || '').trim();
+
+  // 3) Pre-registrar pedido en la hoja 'Pedidos'
+  const now = new Date();
+  const orderId = body['ID Pedido'] || body.idPedido || makeId_('DET');
+
+  const totalQty = items.reduce((sum, item) => sum + toNumber_(item.cantidad || item.qty || item.quantity || 1), 0);
+  const calculatedTotal = items.reduce((sum, item) => {
+    const qty = toNumber_(item.cantidad || item.qty || item.quantity || 1);
+    const price = toNumber_(item.precio || item.price || 0);
+    return sum + (qty * price);
+  }, 0);
+  const total = toNumber_(body.total || body.subtotal) || calculatedTotal;
+
+  const orderData = {
+    'ID Pedido': orderId,
+    'Fecha': now,
+    'Nombre Cliente': clientName,
+    'Tipo Cliente': 'Detal',
+    'Teléfono': clientPhone,
+    'Dirección': clientAddress,
+    'Ciudad': clientCity,
+    'Productos JSON': JSON.stringify(items),
+    'Cantidad Total': totalQty,
+    'Subtotal': total,
+    'Estado Pedido': 'Pendiente de Pago',
+    'Método Contacto': 'Mercado Pago Checkout Pro',
+    'Nota Cliente': clientNote,
+    'Fecha Actualización': now
+  };
+
+  try {
+    const pedidoGuardado = appendRow_('Pedidos', orderData);
+    upsertClientFromOrder_(pedidoGuardado);
+  } catch (sheetErr) {
+    Logger.log('Aviso al guardar pedido previo a MP: ' + sheetErr.message);
+  }
+
+  // 4) Armar Items para la API de Preferencias de Mercado Pago
+  const mpItems = items.map((item, idx) => {
+    const qty = Math.max(1, parseInt(item.cantidad || item.qty || item.quantity || 1, 10));
+    const price = toNumber_(item.precio || item.price || 0);
+    const title = String(item.nombre || item.name || item.title || ('Producto ' + (idx + 1))).trim().substring(0, 250);
+    const desc = String(item.opcion || item.variantLabel || item.descripcion || item.description || '').trim().substring(0, 250);
+    const img = item.img || item.imagen || item.picture_url || '';
+
+    const mpItem = {
+      id: String(item.idVariacion || item.sku || item.id || ('item-' + (idx + 1))),
+      title: title,
+      quantity: qty,
+      currency_id: 'COP',
+      unit_price: price
+    };
+
+    if (desc) mpItem.description = desc;
+    if (img && typeof img === 'string' && img.indexOf('http') === 0) {
+      mpItem.picture_url = img;
+    }
+
+    return mpItem;
+  });
+
+  // 5) Payer y URLs de retorno
+  const rawOrigin = String(body.origin || '').trim();
+  const origin = (rawOrigin.indexOf('http') === 0 && !rawOrigin.includes('localhost') && !rawOrigin.includes('127.0.0.1') && !rawOrigin.includes('file:'))
+    ? rawOrigin
+    : SITE_URL;
+
+  const backUrls = {
+    success: origin + '/facturas-pedidos.html?status=approved&id=' + orderId,
+    pending: origin + '/facturas-pedidos.html?status=pending&id=' + orderId,
+    failure: origin + '/facturas-pedidos.html?status=failure&id=' + orderId
+  };
+
+  const payerData = {
+    name: clientName,
+    email: clientEmail && clientEmail.indexOf('@') >= 0 ? clientEmail : 'compras@blyxu.online'
+  };
+
+  const cleanPh = cleanPhone_(clientPhone);
+  if (cleanPh) {
+    payerData.phone = {
+      number: cleanPh
+    };
+  }
+
+  if (clientAddress || clientCity) {
+    payerData.address = {
+      street_name: [clientAddress, clientCity].filter(Boolean).join(', ')
+    };
+  }
+
+  const mpPayload = {
+    items: mpItems,
+    payer: payerData,
+    back_urls: backUrls,
+    auto_return: 'approved',
+    external_reference: orderId,
+    statement_descriptor: 'BLYXU',
+    payment_methods: {
+      excluded_payment_types: [],
+      installments: 12
+    }
+  };
+
+  // 6) Petición HTTP a Mercado Pago mediante UrlFetchApp
+  const mpUrl = 'https://api.mercadopago.com/checkout/preferences';
+  const response = UrlFetchApp.fetch(mpUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'Authorization': 'Bearer ' + token
+    },
+    payload: JSON.stringify(mpPayload),
+    muteHttpExceptions: true
+  });
+
+  const statusCode = response.getResponseCode();
+  const responseText = response.getContentText();
+  let resultJson = {};
+
+  try {
+    resultJson = JSON.parse(responseText);
+  } catch (e) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'Respuesta inválida de Mercado Pago: ' + responseText
+    });
+  }
+
+  if (statusCode >= 200 && statusCode < 300 && resultJson.init_point) {
+    return json_({
+      ok: true,
+      status: 'success',
+      idPedido: orderId,
+      preferenceId: resultJson.id,
+      init_point: resultJson.init_point,
+      sandbox_init_point: resultJson.sandbox_init_point || resultJson.init_point
+    });
+  } else {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: resultJson.message || resultJson.error || 'Error al generar la preferencia de pago en Mercado Pago.',
+      details: resultJson
     });
   }
 }
