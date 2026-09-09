@@ -23,17 +23,17 @@
             flex-wrap: wrap;
         }
         #detail-price {
-            font-size: 36px;
+            font-size: 30px;
             font-weight: 900;
             color: #ffffff;
-            letter-spacing: -0.5px;
+            letter-spacing: 0;
         }
         #detail-price.discount-active {
             color: #ffd969;
             text-shadow: 0 0 24px rgba(255, 217, 105, 0.45);
         }
         #detail-old-price {
-            font-size: 22px;
+            font-size: 18px;
             color: rgba(255, 255, 255, 0.42);
             text-decoration: line-through;
             font-weight: 600;
@@ -212,6 +212,8 @@
     <script>
         // Lógica específica para la página de producto
         document.addEventListener('DOMContentLoaded', async () => {
+            // Renderizador anterior desactivado. La ficha actual se controla en el bloque siguiente.
+            return;
             const urlParams = new URLSearchParams(window.location.search);
             const productId = Number.parseInt(urlParams.get('id'), 10);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
@@ -220,6 +222,14 @@
             activeCatalogMode = detailCatalogMode;
             setCartMode(detailCatalogMode);
             updateCartUI();
+
+            if (detailCatalogMode === 'wholesale') {
+                const catalogLink = document.querySelector('.nav-links a[href="index.html#coleccion"]');
+                if (catalogLink) {
+                    catalogLink.href = 'mayorista.html';
+                    catalogLink.textContent = 'Mayorista';
+                }
+            }
 
             function isCatalogOnlyValue(value) {
                 const clean = normalizeSearchText(value);
@@ -231,7 +241,7 @@
                 const clean = normalizeSearchText(raw);
                 if (!raw) return false;
                 if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
-                return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+                return [product?.idVariacion, product?.['ID Variación'], product?.['ID Variacion'], product?.idProducto, product?.['ID Producto'], product?.ID, product?.SKU]
                     .some(ref => ref && clean === normalizeSearchText(ref));
             }
 
@@ -244,7 +254,7 @@
 
                 return rawParts
                     .map(value => String(value || '').trim())
-                    .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
+                    .filter(value => !isEmptyDisplayValue(value) && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
                     .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
             }
 
@@ -255,7 +265,7 @@
                         ? (product.Tamano || product.tamano || product.Talla)
                         : (product.Color || product.color);
                 const raw = String(value || '').trim();
-                return raw && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
+                return !isEmptyDisplayValue(raw) && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
             }
 
             function getGroupVariantDimension(siblings) {
@@ -454,6 +464,7 @@
             }
 
             const detailCartBtn = document.getElementById('btn-add-to-cart-detail');
+            const detailPayBtn = document.getElementById('btn-pay-now-detail');
             const detailConsultBtn = document.getElementById('btn-consult-product-detail');
             const detailCartNote = document.getElementById('detail-cart-note');
             detailCartBtn.disabled = stock <= 0;
@@ -464,6 +475,12 @@
                 if (stock <= 0) return;
                 addToCart(productId, null, detailCatalogMode);
             };
+            if (detailPayBtn) {
+                const canPayOnline = detailCatalogMode === 'retail' && detailShowsPrices && stock > 0;
+                detailPayBtn.style.display = canPayOnline ? 'inline-flex' : 'none';
+                detailPayBtn.disabled = !canPayOnline;
+                detailPayBtn.onclick = canPayOnline ? () => buyNowWithMercadoPago(productId, detailPayBtn, detailCatalogMode) : null;
+            }
             if (!detailShowsPrices && stock > 0) {
                 detailCartBtn.closest('.product-info-actions')?.classList.add('has-consult-actions');
                 if (detailConsultBtn) {
@@ -494,6 +511,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
+            const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
             let detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
             let currentDetailProductId = Number.parseInt(urlParams.get('id'), 10);
             activeCatalogMode = detailCatalogMode;
@@ -514,6 +532,61 @@
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
 
+            if (!Number.isInteger(currentDetailProductId) || !allProducts[currentDetailProductId]) {
+                document.getElementById('product-detail').innerHTML = `
+                    <div class="product-not-found">
+                        <h2>Producto no encontrado</h2>
+                        <a href="${catalogBackUrl}" class="main-banner-btn">Volver al catalogo</a>
+                    </div>
+                `;
+                return;
+            }
+
+            function isEmptyDisplayValue(value) {
+                const clean = String(value ?? '').trim();
+                return !clean || ['null', 'undefined', 'nan', 'n/a', 'na', '-'].includes(clean.toLowerCase());
+            }
+
+            function getDisplayValue(...values) {
+                const value = values.find(item => !isEmptyDisplayValue(item));
+                return value === undefined ? '' : String(value).trim();
+            }
+
+            function getProductDisplayName(product) {
+                return getDisplayValue(
+                    product.Nombre,
+                    product.nombre,
+                    product['Nombre del Producto'],
+                    product.Producto,
+                    product.SKU,
+                    'Producto BLYXU'
+                );
+            }
+
+            function getReferenceKey(product) {
+                return normalizeSearchText(getDisplayValue(
+                    product.idProducto,
+                    product['ID Producto'],
+                    product.Referencia,
+                    product.referencia,
+                    product.SKU
+                ));
+            }
+
+            function getProductVariantGroup(product) {
+                const ref = getReferenceKey(product);
+                if (!ref) return [product];
+
+                return allProducts.filter(item => {
+                    if (String(item.Categoria || item.categoria || '').toLowerCase() === 'banner') return false;
+                    return getReferenceKey(item) === ref;
+                });
+            }
+
+            function getVariantLabel(product, index) {
+                return getVisibleVariantParts(product).join(' - ') || getDisplayValue(product.SKU, product.idVariacion) || `Opcion ${index + 1}`;
+            }
+
             function isCatalogOnlyValue(value) {
                 const clean = normalizeSearchText(value);
                 return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
@@ -524,7 +597,7 @@
                 const clean = normalizeSearchText(raw);
                 if (!raw) return false;
                 if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
-                return [product?.idVariacion, product?.idProducto, product?.ID, product?.SKU]
+                return [product?.idVariacion, product?.['ID Variación'], product?.['ID Variacion'], product?.idProducto, product?.['ID Producto'], product?.ID, product?.SKU]
                     .some(ref => ref && clean === normalizeSearchText(ref));
             }
 
@@ -570,7 +643,7 @@
                 const target = document.getElementById(valueId);
                 if (!row || !target) return;
                 const activeProduct = allProducts[currentDetailProductId];
-                const visibleValue = (isCatalogOnlyValue(value) || isReferenceValue(value, activeProduct)) ? '' : value;
+                const visibleValue = (isEmptyDisplayValue(value) || isCatalogOnlyValue(value) || isReferenceValue(value, activeProduct)) ? '' : value;
                 row.style.display = visibleValue ? 'flex' : 'none';
                 target.textContent = visibleValue || '';
             }
@@ -585,6 +658,7 @@
 
                 const preloader = new Image();
                 preloader.onload = () => {
+                    detailImgContainer.classList.remove('is-fallback');
                     detailImg.onerror = () => {
                         detailImg.onerror = null;
                         detailImg.src = 'Logo2.png';
@@ -607,25 +681,76 @@
                 preloader.src = nextSrc;
             }
 
-            function renderVariantThumbnails(product, name) {
-                const images = getProductImageSet(product);
+            function getGalleryItems(product, activeProductId) {
+                const group = getProductVariantGroup(product);
+                const items = [];
+                const seen = new Set();
+
+                function addImage(src, label, productIndex) {
+                    const normalizedSrc = normalizeImageUrl(src);
+                    if (!normalizedSrc || seen.has(normalizedSrc)) return;
+                    seen.add(normalizedSrc);
+                    items.push({
+                        src: normalizedSrc,
+                        label,
+                        productIndex
+                    });
+                }
+
+                getProductImageSet(product).forEach((src, index) => {
+                    addImage(src, index === 0 ? 'Principal' : `Vista ${index + 1}`, activeProductId);
+                });
+
+                group.forEach((sibling, siblingIndex) => {
+                    const siblingProductId = allProducts.indexOf(sibling);
+                    if (siblingProductId === activeProductId) return;
+                    const siblingLabel = getVariantLabel(sibling, siblingIndex);
+                    getProductImageSet(sibling).forEach((src, imageIndex) => {
+                        addImage(src, imageIndex === 0 ? siblingLabel : `${siblingLabel} ${imageIndex + 1}`, siblingProductId);
+                    });
+                });
+
+                return items.slice(0, 14);
+            }
+
+            function renderVariantThumbnails(product, name, activeSrc) {
+                const images = getGalleryItems(product, currentDetailProductId);
                 thumbsContainer.innerHTML = '';
+                const gallery = thumbsContainer.closest('.product-gallery');
 
                 if (images.length <= 1) {
+                    gallery?.classList.add('has-single-image');
                     thumbsContainer.style.display = 'none';
                     return;
                 }
 
-                images.forEach((imgUrl, index) => {
-                    const thumb = document.createElement('img');
-                    thumb.src = imgUrl;
-                    thumb.alt = name;
-                    thumb.className = `gallery-thumb ${index === 0 ? 'active' : ''}`;
-                    thumb.onerror = () => { thumb.style.display = 'none'; };
+                gallery?.classList.remove('has-single-image');
+                const activeImage = activeSrc ? normalizeImageUrl(activeSrc) : images[0]?.src;
+                images.forEach((item, index) => {
+                    const thumb = document.createElement('button');
+                    thumb.type = 'button';
+                    thumb.className = `gallery-thumb ${item.src === activeImage ? 'active' : ''}`;
+                    thumb.dataset.src = item.src;
+                    thumb.dataset.productIndex = String(item.productIndex);
+
+                    const thumbImg = document.createElement('img');
+                    thumbImg.src = item.src;
+                    thumbImg.alt = item.label || name;
+                    thumbImg.onerror = () => { thumb.style.display = 'none'; };
+                    thumb.appendChild(thumbImg);
+
+                    const thumbLabel = document.createElement('span');
+                    thumbLabel.textContent = item.label || `Vista ${index + 1}`;
+                    thumb.appendChild(thumbLabel);
+
                     thumb.addEventListener('click', () => {
                         thumbsContainer.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
                         thumb.classList.add('active');
-                        switchMainImage(imgUrl, name);
+                        if (item.productIndex !== currentDetailProductId) {
+                            renderVariantInPlace(item.productIndex, true, item.src);
+                        } else {
+                            switchMainImage(item.src, name);
+                        }
                     });
                     thumbsContainer.appendChild(thumb);
                 });
@@ -634,12 +759,16 @@
             }
 
             function renderVariantChips(productId, product) {
-                const parentId = product.idProducto;
-                const siblings = parentId ? allProducts.filter(p => p.idProducto === parentId && String(p.Categoria || p.categoria || '').toLowerCase() !== 'banner') : [];
+                const siblings = getProductVariantGroup(product);
 
-                if (!variationContainer || siblings.length <= 1) return;
+                if (!variationContainer) return;
+                if (siblings.length <= 1) {
+                    variationContainer.innerHTML = '';
+                    variationContainer.style.display = 'none';
+                    return;
+                }
 
-                variationContainer.innerHTML = '<h3>Variantes disponibles</h3><div class="detail-variant-list"></div>';
+                variationContainer.innerHTML = '<h3>Opciones disponibles</h3><div class="detail-variant-list"></div>';
                 const list = variationContainer.querySelector('.detail-variant-list');
                 const variantDimension = getGroupVariantDimension(siblings);
 
@@ -652,28 +781,54 @@
 
                     const dimensionLabel = getVariantFieldValue(sib, variantDimension);
                     const labelParts = getVisibleVariantParts(sib);
-                    chip.textContent = dimensionLabel || labelParts.join(' - ') || `Opcion ${index + 1}`;
+                    const label = dimensionLabel || labelParts.join(' - ') || `Opcion ${index + 1}`;
+                    const variantImg = getProductImageSet(sib)[0] || 'Logo2.png';
+
+                    const img = document.createElement('img');
+                    img.src = variantImg;
+                    img.alt = label;
+                    img.onerror = () => { img.src = 'Logo2.png'; };
+                    chip.appendChild(img);
+
+                    const text = document.createElement('span');
+                    text.textContent = label;
+                    chip.appendChild(text);
+
                     list.appendChild(chip);
                 });
 
                 variationContainer.style.display = 'block';
             }
 
-            function renderVariantInPlace(productId, updateUrl = true) {
+            function renderRecommendations(productId, product) {
+                const cat = getDisplayValue(product.Categoria, product.categoria).toLowerCase();
+                const recommendationSource = getCurrentCatalogProducts();
+                const sameCategory = recommendationSource.filter(item =>
+                    allProducts.indexOf(item) !== productId &&
+                    getDisplayValue(item.Categoria, item.categoria).toLowerCase() === cat
+                );
+                const otherProducts = recommendationSource.filter(item =>
+                    allProducts.indexOf(item) !== productId &&
+                    getDisplayValue(item.Categoria, item.categoria).toLowerCase() !== cat
+                );
+                renderProducts([...sameCategory, ...otherProducts].slice(0, 4), { featuredFirst: false, mode: detailCatalogMode });
+            }
+
+            function renderVariantInPlace(productId, updateUrl = true, preferredImage = '') {
                 const product = allProducts[productId];
                 if (!product) return;
 
                 currentDetailProductId = productId;
-                const name = product.Nombre || product.nombre || product.Producto || 'Producto';
+                const name = getProductDisplayName(product);
                 const price = getProductPrice(product, detailCatalogMode);
-                const oldPrice = parseFloat(detailCatalogMode === 'wholesale' ? (product.PrecioMayoristaOriginal || 0) : (product.Precio_Anterior || 0));
-                const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
-                const cat = product.Categoria || product.categoria || '';
-                const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
+                const oldPrice = getProductDisplayOldPrice(product, detailCatalogMode, price);
+                const img = normalizeImageUrl(preferredImage || product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
+                const cat = getDisplayValue(product.Categoria, product.categoria);
+                const desc = getDisplayValue(product.Descripcion, product.descripcion, 'Sin descripcion disponible.');
                 const stock = getProductStock(product);
 
                 document.getElementById('detail-name').textContent = name;
-                document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
+                document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista - ${cat}` : cat;
                 document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
                 document.getElementById('detail-desc').textContent = desc;
                 document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
@@ -700,18 +855,26 @@
                 setSpec('spec-style-row', 'detail-style', product.Estilo || product.estilo || '');
 
                 const oldEl = document.getElementById('detail-old-price');
+                const promoBadgeEl = document.getElementById('detail-promo-badge');
                 if (detailShowsPrices && oldPrice > price) {
                     oldEl.textContent = formatMoney(oldPrice);
                     oldEl.style.display = 'inline';
                     document.getElementById('detail-price').classList.add('discount-active');
+                    if (promoBadgeEl) {
+                        const discountPercent = Math.round(((oldPrice - price) / oldPrice) * 100);
+                        promoBadgeEl.innerHTML = `<span class="promo-circle-num">-${discountPercent}%</span><span class="promo-circle-text">DCTO</span>`;
+                        promoBadgeEl.style.display = 'inline-flex';
+                    }
                 } else {
                     oldEl.style.display = 'none';
                     document.getElementById('detail-price').classList.remove('discount-active');
+                    if (promoBadgeEl) promoBadgeEl.style.display = 'none';
                 }
 
                 switchMainImage(img, name);
                 renderVariantChips(productId, product);
-                renderVariantThumbnails(product, name);
+                renderVariantThumbnails(product, name, img);
+                renderRecommendations(productId, product);
 
                 cartBtn.disabled = stock <= 0;
                 cartBtn.textContent = stock > 0 ? (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general') : 'Agotado por ahora';
@@ -719,6 +882,7 @@
                     if (stock <= 0) return;
                     addToCart(productId, null, detailCatalogMode);
                 };
+                cartBtn.closest('.product-info-actions')?.classList.remove('has-online-payment');
 
                 cartBtn.closest('.product-info-actions')?.classList.toggle('has-consult-actions', !detailShowsPrices && stock > 0);
                 if (consultBtn) {
@@ -735,6 +899,34 @@
                 }
             }
 
+            function initDetailZoom() {
+                const zoomOverlay = document.getElementById('product-zoom-overlay');
+                const zoomImg = document.getElementById('product-zoom-img');
+                const closeZoomBtn = document.getElementById('product-zoom-close');
+                if (!zoomOverlay || !zoomImg || !detailImgContainer) return;
+
+                const closeZoom = () => {
+                    zoomOverlay.classList.remove('open', 'zoomed');
+                    zoomOverlay.setAttribute('aria-hidden', 'true');
+                };
+
+                detailImgContainer.addEventListener('click', () => {
+                    zoomImg.src = detailImg.src;
+                    zoomImg.alt = detailImg.alt || '';
+                    zoomOverlay.classList.add('open');
+                    zoomOverlay.setAttribute('aria-hidden', 'false');
+                });
+
+                zoomImg.addEventListener('click', event => {
+                    event.stopPropagation();
+                    zoomOverlay.classList.toggle('zoomed');
+                });
+
+                zoomOverlay.addEventListener('click', closeZoom);
+                closeZoomBtn?.addEventListener('click', closeZoom);
+            }
+
+            initDetailZoom();
             setTimeout(() => {
                 if (Number.isInteger(currentDetailProductId)) {
                     renderVariantInPlace(currentDetailProductId, false);

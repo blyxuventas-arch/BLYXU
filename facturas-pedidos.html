@@ -1246,6 +1246,31 @@
                 return data;
             }
 
+            async function verifyMercadoPagoReturn() {
+                const params = new URLSearchParams(window.location.search);
+                const paymentId = params.get('payment_id') || params.get('collection_id');
+                const mpStatus = params.get('status') || params.get('collection_status');
+                const orderId = params.get('id') || params.get('external_reference');
+                if (!paymentId) return;
+
+                status.textContent = 'Verificando pago de Mercado Pago...';
+                try {
+                    const url = apiUrl
+                        + '?action=verifymppayment'
+                        + '&payment_id=' + encodeURIComponent(paymentId)
+                        + (orderId ? '&id=' + encodeURIComponent(orderId) : '');
+                    const result = await readOrdersResponse(await fetch(url, { cache: 'no-store' }));
+                    if (!result || result.ok === false) {
+                        throw new Error(result?.error || 'No se pudo verificar el pago.');
+                    }
+                    status.textContent = mpStatus === 'approved' || result.paymentStatus === 'approved'
+                        ? 'Pago aprobado. Tu pedido fue actualizado y el stock fue descontado.'
+                        : 'Pago recibido con estado: ' + (result.paymentStatus || mpStatus || 'pendiente') + '.';
+                } catch (error) {
+                    status.textContent = error.message || 'No se pudo verificar el pago de Mercado Pago.';
+                }
+            }
+
             async function fetchOrdersByPhone(phone) {
                 const data = await fetchResourceData('pedidos');
 
@@ -2044,6 +2069,8 @@
                     btn.textContent = 'Ver mi panel';
                 }
             });
+
+            verifyMercadoPagoReturn();
         });
     </script>
 </body>

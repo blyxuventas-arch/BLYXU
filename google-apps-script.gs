@@ -5,6 +5,7 @@ const SPREADSHEET_ID = '';
 
 // Credenciales Mercado Pago (Checkout Pro - Catálogo Minorista)
 const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-72ab41d6-5fc7-4867-8e02-564ab0ae9f99';
+// Token privado de prueba. No lo subas a repositorios públicos.
 const MERCADO_PAGO_ACCESS_TOKEN = 'APP_USR-6488035886423576-090622-ecbd77219d0a97a024815ad58c2b97c1-3665799663';
 const SITE_URL = 'https://blyxu.online';
 
@@ -51,6 +52,9 @@ const SHEETS = {
       'Estado Pedido',
       'Método Contacto',
       'Nota Cliente',
+      'MP Payment ID',
+      'MP Preference ID',
+      'Stock Descontado',
       'Fecha Actualización'
     ]
   },
@@ -67,7 +71,12 @@ const SHEETS = {
       'Total Gastado',
       'Último Pedido',
       'Estado Cliente',
-      'Fecha Registro'
+      'Fecha Registro',
+      'Password Hash',
+      'Password Salt',
+      'Session Token',
+      'Session Expira',
+      'Fecha Actualización'
     ]
   },
 
@@ -135,6 +144,15 @@ function doPost(e) {
   return handleRequest_(e, 'POST');
 }
 
+function autorizarMercadoPago() {
+  const response = UrlFetchApp.fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'get',
+    muteHttpExceptions: true
+  });
+
+  return 'Permiso de llamadas externas autorizado. Respuesta Mercado Pago: ' + response.getResponseCode();
+}
+
 function handleRequest_(e, method) {
   try {
     const params = e.parameter || {};
@@ -187,6 +205,36 @@ function handleRequest_(e, method) {
       return json_({ ok: true, status: 'success' });
     }
 
+    if (
+      action === 'registrarcliente' ||
+      action === 'customerregister' ||
+      action === 'registercustomer'
+    ) {
+      return handleCustomerRegister_(body);
+    }
+
+    if (
+      action === 'logincliente' ||
+      action === 'iniciarsesion' ||
+      action === 'customerlogin'
+    ) {
+      return handleCustomerLogin_(body);
+    }
+
+    if (
+      action === 'perfilcliente' ||
+      action === 'customerprofile'
+    ) {
+      return handleCustomerProfile_(body, params);
+    }
+
+    if (
+      action === 'cerrarsesion' ||
+      action === 'customerlogout'
+    ) {
+      return handleCustomerLogout_(body, params);
+    }
+
     // ==========================================
     // 3) MERCADO PAGO - CHECKOUT PRO (SOLO MINORISTA)
     // ==========================================
@@ -208,6 +256,17 @@ function handleRequest_(e, method) {
         });
       }
       return handleMercadoPagoPreference_(body);
+    }
+
+    if (
+      action === 'mpwebhook' ||
+      action === 'mercadopagowebhook' ||
+      action === 'verifymppayment' ||
+      action === 'verificarpagomp' ||
+      action === 'verificar_pago_mp' ||
+      isMercadoPagoPaymentNotification_(body, params)
+    ) {
+      return handleMercadoPagoPaymentUpdate_(body, params);
     }
 
     const sheetName = sheetFromResource_(resource || action);
@@ -321,7 +380,8 @@ function handleRequest_(e, method) {
  * MERCADO PAGO (CHECKOUT PRO - SOLO MINORISTAS)
  ***************/
 function handleMercadoPagoPreference_(body) {
-  const token = MERCADO_PAGO_ACCESS_TOKEN;
+  ensureSheets_();
+  const token = getMercadoPagoAccessToken_();
   if (!token || token.indexOf('PEGA_AQUÍ') >= 0 || token.trim() === '') {
     return json_({
       ok: false,
@@ -360,6 +420,16 @@ function handleMercadoPagoPreference_(body) {
       ok: false,
       status: 'error',
       error: 'El carrito no contiene productos para procesar el pago.'
+    });
+  }
+
+  const stockValidation = validateStockAvailability_(items);
+  if (!stockValidation.ok) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'No hay stock suficiente para completar el pago.',
+      details: stockValidation.errors
     });
   }
 
@@ -473,6 +543,11 @@ function handleMercadoPagoPreference_(body) {
     }
   };
 
+  const notificationUrl = getWebAppUrl_();
+  if (notificationUrl) {
+    mpPayload.notification_url = notificationUrl + '?action=mpwebhook';
+  }
+
   // 6) Petición HTTP a Mercado Pago mediante UrlFetchApp
   const mpUrl = 'https://api.mercadopago.com/checkout/preferences';
   const response = UrlFetchApp.fetch(mpUrl, {
@@ -500,6 +575,15 @@ function handleMercadoPagoPreference_(body) {
   }
 
   if (statusCode >= 200 && statusCode < 300 && resultJson.init_point) {
+    try {
+      updateRow_('Pedidos', orderId, {
+        'MP Preference ID': resultJson.id || '',
+        'Estado Pedido': 'Pendiente de Pago'
+      });
+    } catch (updateErr) {
+      Logger.log('Aviso al guardar preference ID: ' + updateErr.message);
+    }
+
     return json_({
       ok: true,
       status: 'success',
@@ -516,6 +600,198 @@ function handleMercadoPagoPreference_(body) {
       details: resultJson
     });
   }
+}
+
+function getMercadoPagoAccessToken_() {
+  try {
+    const tokenFromProperties = PropertiesService.getScriptProperties().getProperty('MERCADO_PAGO_ACCESS_TOKEN');
+    if (tokenFromProperties) return tokenFromProperties;
+  } catch (error) {
+    Logger.log('No se pudo leer Script Properties: ' + error.message);
+  }
+  return MERCADO_PAGO_ACCESS_TOKEN;
+}
+
+function getWebAppUrl_() {
+  try {
+    return ScriptApp.getService().getUrl();
+  } catch (error) {
+    return '';
+  }
+}
+
+function isMercadoPagoPaymentNotification_(body, params) {
+  const paymentId = getMercadoPagoPaymentId_(body, params);
+  const type = normalizeKey_((body && (body.type || body.topic)) || (params && (params.type || params.topic)) || '');
+  const action = normalizeKey_((body && body.action) || (params && params.action) || '');
+  return Boolean(paymentId && (type.indexOf('payment') >= 0 || action.indexOf('payment') >= 0 || action.indexOf('pago') >= 0));
+}
+
+function getMercadoPagoPaymentId_(body, params) {
+  body = body || {};
+  params = params || {};
+  const data = body.data || {};
+  return String(
+    data.id ||
+    body.payment_id ||
+    body.paymentId ||
+    body.collection_id ||
+    body.id ||
+    body['data.id'] ||
+    params['data.id'] ||
+    params.payment_id ||
+    params.paymentId ||
+    params.collection_id ||
+    params.id ||
+    ''
+  ).trim();
+}
+
+function handleMercadoPagoPaymentUpdate_(body, params) {
+  ensureSheets_();
+  const paymentId = getMercadoPagoPaymentId_(body, params);
+  if (!paymentId) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'No se recibio el ID del pago de Mercado Pago.'
+    });
+  }
+
+  const payment = fetchMercadoPagoPayment_(paymentId);
+  const result = applyMercadoPagoPaymentToOrder_(payment);
+  return json_({
+    ok: true,
+    status: 'success',
+    paymentStatus: payment.status || '',
+    data: result
+  });
+}
+
+function fetchMercadoPagoPayment_(paymentId) {
+  const token = getMercadoPagoAccessToken_();
+  const response = UrlFetchApp.fetch('https://api.mercadopago.com/v1/payments/' + encodeURIComponent(paymentId), {
+    method: 'get',
+    headers: {
+      'Authorization': 'Bearer ' + token
+    },
+    muteHttpExceptions: true
+  });
+
+  const statusCode = response.getResponseCode();
+  const responseText = response.getContentText();
+  let payment = {};
+
+  try {
+    payment = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error('Respuesta invalida de Mercado Pago al verificar pago: ' + responseText);
+  }
+
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(payment.message || payment.error || 'No se pudo verificar el pago en Mercado Pago.');
+  }
+
+  return payment;
+}
+
+function applyMercadoPagoPaymentToOrder_(payment) {
+  const orderId = String(payment.external_reference || '').trim();
+  if (!orderId) {
+    return { applied: false, reason: 'El pago no tiene external_reference con ID de pedido.' };
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const sheet = getSheet_('Pedidos');
+    const headers = getHeaders_(sheet);
+    const rowIndex = findRowIndex_(sheet, 'ID Pedido', orderId);
+    if (!rowIndex) {
+      return { applied: false, reason: 'No se encontro el pedido ' + orderId + '.' };
+    }
+
+    const current = rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
+    const paymentStatus = String(payment.status || '').toLowerCase();
+    const alreadyDiscounted = ['si', 'sí', 'true', '1', 'descontado'].indexOf(normalizeKey_(current['Stock Descontado'])) >= 0;
+    const updates = {
+      'MP Payment ID': payment.id || '',
+      'MP Preference ID': payment.preference_id || current['MP Preference ID'] || ''
+    };
+
+    if (paymentStatus === 'approved') {
+      updates['Estado Pedido'] = 'Pagado';
+      updates['Stock Descontado'] = 'SI';
+      updateRow_('Pedidos', orderId, updates);
+      if (!alreadyDiscounted) {
+        updateStockFromOrder_(current['Productos JSON']);
+      }
+      return { applied: true, orderId: orderId, stockDiscounted: !alreadyDiscounted, orderStatus: 'Pagado' };
+    }
+
+    if (paymentStatus === 'pending' || paymentStatus === 'in_process') {
+      updates['Estado Pedido'] = 'Pendiente de Pago';
+    } else if (paymentStatus === 'rejected') {
+      updates['Estado Pedido'] = 'Pago Rechazado';
+    } else if (paymentStatus === 'cancelled') {
+      updates['Estado Pedido'] = 'Pago Cancelado';
+    } else if (paymentStatus === 'refunded' || paymentStatus === 'charged_back') {
+      updates['Estado Pedido'] = 'Pago Devuelto';
+    } else {
+      updates['Estado Pedido'] = 'Pago ' + (payment.status || 'Actualizado');
+    }
+
+    updateRow_('Pedidos', orderId, updates);
+    return { applied: true, orderId: orderId, stockDiscounted: false, orderStatus: updates['Estado Pedido'] };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function validateStockAvailability_(items) {
+  const sheet = getSheet_('Productos');
+  const headers = getHeaders_(sheet);
+  const idHeader = resolveHeader_(headers, 'ID Variación', 'Productos');
+  const qtyHeader = resolveHeader_(headers, 'Cantidad', 'Productos');
+  const nameHeader = resolveHeader_(headers, 'Nombre del Producto', 'Productos');
+  const idCol = headers.indexOf(idHeader);
+  const qtyCol = headers.indexOf(qtyHeader);
+  const nameCol = headers.indexOf(nameHeader);
+  const errors = [];
+
+  if (idCol < 0 || qtyCol < 0) {
+    return { ok: true, errors: [] };
+  }
+
+  const lastRow = sheet.getLastRow();
+  const values = lastRow >= 2 ? sheet.getRange(2, 1, lastRow - 1, headers.length).getValues() : [];
+  const stockById = {};
+
+  values.forEach(row => {
+    const id = String(row[idCol] || '').trim();
+    if (!id) return;
+    stockById[id] = {
+      qty: toNumber_(row[qtyCol]),
+      name: nameCol >= 0 ? String(row[nameCol] || '') : id
+    };
+  });
+
+  items.forEach(item => {
+    const id = String(item.idVariacion || item.id || item.sku || item['ID Variación'] || item['ID Variacion'] || '').trim();
+    const requested = Math.max(1, toNumber_(item.cantidad || item.Cantidad || item.qty || item.quantity || 1));
+    if (!id || !stockById[id]) return;
+    if (stockById[id].qty < requested) {
+      errors.push({
+        id: id,
+        nombre: stockById[id].name,
+        disponible: stockById[id].qty,
+        solicitado: requested
+      });
+    }
+  });
+
+  return { ok: errors.length === 0, errors: errors };
 }
 
 /***************
@@ -812,6 +1088,245 @@ function listRows_(sheetName, filters) {
   }
 
   return rows;
+}
+
+/***************
+ * CUENTAS DE CLIENTES
+ ***************/
+function handleCustomerRegister_(body) {
+  ensureSheets_();
+
+  const cliente = body.cliente || body.customer || body;
+  const nombre = String(cliente.nombre || cliente.Nombre || '').trim();
+  const telefono = cleanPhone_(cliente.telefono || cliente.Telefono || cliente['Teléfono']);
+  const email = normalizeEmail_(cliente.email || cliente.Email);
+  const direccion = String(cliente.direccion || cliente.Direccion || cliente['Dirección'] || '').trim();
+  const ciudad = String(cliente.ciudad || cliente.Ciudad || '').trim();
+  const password = String(cliente.password || cliente.contrasena || cliente['Contraseña'] || '').trim();
+
+  if (!nombre || !telefono || !email || !password) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'Completa nombre, telefono, correo y contraseña.'
+    });
+  }
+
+  if (telefono.length < 7) {
+    return json_({ ok: false, status: 'error', error: 'Ingresa un telefono valido.' });
+  }
+
+  if (!isValidEmail_(email)) {
+    return json_({ ok: false, status: 'error', error: 'Ingresa un correo valido.' });
+  }
+
+  if (password.length < 6) {
+    return json_({ ok: false, status: 'error', error: 'La contraseña debe tener minimo 6 caracteres.' });
+  }
+
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const existingByPhone = findRowIndex_(sheet, 'Teléfono', telefono);
+  const existingByEmail = findCustomerRowByEmail_(email);
+  const existingRow = existingByPhone || existingByEmail;
+
+  if (existingByEmail && existingByPhone && existingByEmail !== existingByPhone) {
+    return json_({ ok: false, status: 'error', error: 'Ese correo ya esta registrado con otro telefono.' });
+  }
+
+  const salt = makeCustomerSalt_();
+  const token = makeSessionToken_();
+  const now = new Date();
+  const sessionExpires = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
+  const data = {
+    'Nombre': nombre,
+    'Teléfono': telefono,
+    'Email': email,
+    'Dirección': direccion,
+    'Ciudad': ciudad,
+    'Estado Cliente': 'Activo',
+    'Password Hash': hashCustomerPassword_(password, salt),
+    'Password Salt': salt,
+    'Session Token': token,
+    'Session Expira': sessionExpires,
+    'Fecha Actualización': now
+  };
+
+  let saved;
+  if (existingRow) {
+    const current = rowToObject_(headers, sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0]);
+    saved = Object.assign({}, current, data);
+    saved['Total Pedidos'] = current['Total Pedidos'] || 0;
+    saved['Total Gastado'] = current['Total Gastado'] || 0;
+    saved['Último Pedido'] = current['Último Pedido'] || current['Ãšltimo Pedido'] || '';
+    saved['Fecha Registro'] = current['Fecha Registro'] || now;
+    sheet.getRange(existingRow, 1, 1, headers.length).setValues([headers.map(header => getObjectValueByHeader_(saved, header, ''))]);
+  } else {
+    data['Total Pedidos'] = 0;
+    data['Total Gastado'] = 0;
+    data['Fecha Registro'] = now;
+    saved = appendRow_('Clientes', data);
+  }
+
+  return json_({
+    ok: true,
+    status: 'success',
+    token: token,
+    cliente: publicCustomer_(saved || data)
+  });
+}
+
+function handleCustomerLogin_(body) {
+  ensureSheets_();
+
+  const emailOrPhone = String(body.email || body.telefono || body.usuario || body.identifier || '').trim();
+  const password = String(body.password || body.contrasena || body['Contraseña'] || '').trim();
+
+  if (!emailOrPhone || !password) {
+    return json_({ ok: false, status: 'error', error: 'Ingresa tu correo o telefono y contraseña.' });
+  }
+
+  const found = findCustomerByIdentifier_(emailOrPhone);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'No encontramos una cuenta con esos datos.' });
+  }
+
+  const customer = found.data;
+  const salt = String(customer['Password Salt'] || '').trim();
+  const expectedHash = String(customer['Password Hash'] || '').trim();
+  if (!salt || !expectedHash || hashCustomerPassword_(password, salt) !== expectedHash) {
+    return json_({ ok: false, status: 'error', error: 'Contraseña incorrecta.' });
+  }
+
+  const token = makeSessionToken_();
+  const sessionExpires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+  const telefono = customer['Teléfono'] || customer['Telefono'];
+  const saved = updateRow_('Clientes', telefono, {
+    'Session Token': token,
+    'Session Expira': sessionExpires,
+    'Estado Cliente': 'Activo'
+  });
+
+  return json_({
+    ok: true,
+    status: 'success',
+    token: token,
+    cliente: publicCustomer_(saved)
+  });
+}
+
+function handleCustomerProfile_(body, params) {
+  ensureSheets_();
+  const token = String((body && body.token) || (params && params.token) || '').trim();
+  const found = findCustomerBySessionToken_(token);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+
+  return json_({
+    ok: true,
+    status: 'success',
+    cliente: publicCustomer_(found.data)
+  });
+}
+
+function handleCustomerLogout_(body, params) {
+  ensureSheets_();
+  const token = String((body && body.token) || (params && params.token) || '').trim();
+  const found = findCustomerBySessionToken_(token, true);
+  if (found) {
+    updateRow_('Clientes', found.data['Teléfono'] || found.data['Telefono'], {
+      'Session Token': '',
+      'Session Expira': ''
+    });
+  }
+  return json_({ ok: true, status: 'success' });
+}
+
+function findCustomerByIdentifier_(identifier) {
+  const cleanIdentifier = cleanPhone_(identifier);
+  const email = normalizeEmail_(identifier);
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const data = rowToObject_(headers, values[i]);
+    const phone = cleanPhone_(data['Teléfono'] || data['Telefono']);
+    const customerEmail = normalizeEmail_(data.Email);
+    if ((cleanIdentifier && phone === cleanIdentifier) || (email && customerEmail === email)) {
+      return { rowIndex: i + 2, data: data };
+    }
+  }
+  return null;
+}
+
+function findCustomerRowByEmail_(email) {
+  const found = findCustomerByIdentifier_(email);
+  return found ? found.rowIndex : null;
+}
+
+function findCustomerBySessionToken_(token, allowExpired) {
+  if (!token) return null;
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const data = rowToObject_(headers, values[i]);
+    if (String(data['Session Token'] || '').trim() !== token) continue;
+    const expires = new Date(data['Session Expira']);
+    if (!allowExpired && (!data['Session Expira'] || Number.isNaN(expires.getTime()) || expires.getTime() < Date.now())) {
+      return null;
+    }
+    return { rowIndex: i + 2, data: data };
+  }
+  return null;
+}
+
+function publicCustomer_(customer) {
+  return {
+    nombre: customer['Nombre'] || '',
+    telefono: customer['Teléfono'] || customer['Telefono'] || '',
+    email: customer['Email'] || '',
+    direccion: customer['Dirección'] || customer['Direccion'] || '',
+    ciudad: customer['Ciudad'] || '',
+    totalPedidos: customer['Total Pedidos'] || 0,
+    totalGastado: customer['Total Gastado'] || 0,
+    ultimoPedido: customer['Último Pedido'] || customer['Ãšltimo Pedido'] || ''
+  };
+}
+
+function normalizeEmail_(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidEmail_(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''));
+}
+
+function makeCustomerSalt_() {
+  return Utilities.getUuid() + '-' + Date.now();
+}
+
+function makeSessionToken_() {
+  return Utilities.getUuid() + '-' + Utilities.getUuid();
+}
+
+function hashCustomerPassword_(password, salt) {
+  const raw = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    salt + '|' + password,
+    Utilities.Charset.UTF_8
+  );
+  return raw.map(function(byte) {
+    const value = byte < 0 ? byte + 256 : byte;
+    return ('0' + value.toString(16)).slice(-2);
+  }).join('');
 }
 
 /***************

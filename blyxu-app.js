@@ -28,6 +28,7 @@ const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
 const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
+const CUSTOMER_SESSION_KEY = 'blyxu_customer_session_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
 const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
@@ -2233,7 +2234,7 @@ function normalizeCartMode(mode) {
 function getInitialCartMode() {
     try {
         const params = new URLSearchParams(window.location.search);
-        if (document.body?.dataset.catalogMode === 'wholesale' || params.get('catalogo') === 'mayorista') {
+        if (document.body?.dataset.catalogMode === 'wholesale' || params.get('catalogo') === 'mayorista' || params.get('modo') === 'mayorista') {
             return 'wholesale';
         }
     } catch (error) {
@@ -2669,6 +2670,11 @@ function updateCartUI() {
     const formattedTotal = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
     if (secSubtotalEl) secSubtotalEl.textContent = formattedTotal;
     if (secTotalEl) secTotalEl.textContent = formattedTotal;
+    const browseCatalogUrl = document.body?.dataset.page === 'carrito'
+        ? (isWholesale ? 'mayorista.html' : 'index.html#coleccion')
+        : '#coleccion';
+    const continueBtn = document.getElementById('cart-btn-continue');
+    if (continueBtn) continueBtn.setAttribute('href', browseCatalogUrl);
 
     // Render Standalone Section Table Items
     if (secItemsEl) {
@@ -2678,7 +2684,7 @@ function updateCartUI() {
                     <div class="cart-empty-icon">🛍️</div>
                     <h3>Tu carrito ${getCartModeLabel()} está vacío ✦</h3>
                     <p>Descubre nuestras joyas y accesorios exclusivos y añade tus piezas preferidas.</p>
-                    <a href="#coleccion" class="cart-btn-browse">Explorar Catálogo</a>
+                    <a href="${browseCatalogUrl}" class="cart-btn-browse">Explorar Catálogo</a>
                 </div>
             `;
             if (secCheckoutBtn) {
@@ -2828,6 +2834,8 @@ function updateCartUI() {
         });
     }
 
+    hydrateCustomerCheckoutFields();
+
     // Sidebar Fallback update (if present)
     if (itemsEl) {
         if (!cart.length) {
@@ -2900,6 +2908,17 @@ function openCart() {
     updateCartUI();
     syncRetailPriceVisibility().then(updateCartUI);
 
+    if (document.body?.dataset.page === 'carrito') {
+        const cartSection = document.getElementById('carrito-seccion');
+        if (cartSection) cartSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+
+    window.location.href = normalizeCartMode(activeCartMode) === 'wholesale'
+        ? 'carrito.html?modo=mayorista'
+        : 'carrito.html';
+    return;
+
     const cartSection = document.getElementById('carrito-seccion');
     if (cartSection) {
         cartSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2914,7 +2933,7 @@ function openCart() {
     }
 
     // Si estamos en cualquier otra página, ir directamente a index.html#carrito-seccion
-    window.location.href = 'index.html#carrito-seccion';
+    window.location.href = 'carrito.html';
 }
 function closeCart() {
     clearWholesaleOrderNotice();
@@ -3515,10 +3534,380 @@ function getDemoProducts() {
 }
 
 // -- INIT --
-async function checkoutWithMercadoPago(cliente) {
-    if (!cart.length) return;
-    const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+function ensureMercadoPagoLoadingOverlay() {
+    let overlay = document.getElementById('mp-loading-overlay');
+    if (overlay) return overlay;
+
+    overlay = document.createElement('div');
+    overlay.id = 'mp-loading-overlay';
+    overlay.className = 'mp-loading-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+        <div class="mp-loading-card" role="status" aria-live="polite">
+            <div class="mp-loading-logo">
+                <span>MP</span>
+            </div>
+            <div class="mp-loading-rings" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <p class="mp-loading-kicker">Pago seguro</p>
+            <h2>Conectando con Mercado Pago</h2>
+            <p class="mp-loading-copy">Estamos preparando tu pasarela. Esto puede tardar unos segundos.</p>
+            <div class="mp-loading-bar"><span></span></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+function showMercadoPagoLoading() {
+    const overlay = ensureMercadoPagoLoadingOverlay();
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('mp-loading-active');
+}
+
+function hideMercadoPagoLoading() {
+    const overlay = document.getElementById('mp-loading-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('mp-loading-active');
+}
+
+function getCustomerSession() {
+    try {
+        const session = JSON.parse(localStorage.getItem(CUSTOMER_SESSION_KEY) || 'null');
+        return session && session.token && session.cliente ? session : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function setCustomerSession(token, cliente) {
+    const session = {
+        token,
+        cliente,
+        savedAt: Date.now()
+    };
+    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
+    renderCustomerAccountState();
+    hydrateCustomerCheckoutFields();
+}
+
+function clearCustomerSession() {
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
+    renderCustomerAccountState();
+}
+
+function getCurrentCustomer() {
+    return getCustomerSession()?.cliente || null;
+}
+
+function hydrateCustomerCheckoutFields() {
+    const customer = getCurrentCustomer();
+    if (!customer) return;
+
+    const fields = [
+        ['cart-sec-nombre', customer.nombre],
+        ['cart-sec-telefono', customer.telefono],
+        ['cart-sec-email', customer.email],
+        ['cart-sec-direccion', customer.direccion],
+        ['cart-sec-ciudad', customer.ciudad]
+    ];
+
+    fields.forEach(([id, value]) => {
+        const input = document.getElementById(id);
+        if (input && !input.value && value) input.value = value;
+    });
+}
+
+function customerAuthRequest(action, payload) {
+    return fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify({
+            action,
+            resource: 'clientes',
+            ...payload
+        })
+    }).then(async response => {
+        const text = await response.text();
+        let data = null;
+        try {
+            data = JSON.parse(text);
+        } catch (error) {
+            throw new Error('No se pudo conectar con el sistema de clientes.');
+        }
+        if (!data || data.ok === false) {
+            throw new Error(data?.error || 'No se pudo completar la solicitud.');
+        }
+        return data;
+    });
+}
+
+function ensureCustomerAuthModal() {
+    let modal = document.getElementById('customer-auth-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'customer-auth-modal';
+    modal.className = 'customer-auth-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="customer-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="customer-auth-title">
+            <button class="customer-auth-close" type="button" aria-label="Cerrar">×</button>
+            <div class="customer-auth-brand">
+                <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
+                <span>Cuenta BLYXU</span>
+            </div>
+            <div class="customer-auth-tabs" role="tablist" aria-label="Cuenta de cliente">
+                <button type="button" class="active" data-auth-view="login">Ingresar</button>
+                <button type="button" data-auth-view="register">Registrarme</button>
+            </div>
+            <div class="customer-auth-message" id="customer-auth-message" aria-live="polite"></div>
+            <section class="customer-auth-view active" data-auth-panel="login">
+                <h2 id="customer-auth-title">Iniciar sesión</h2>
+                <form id="customer-login-form" class="customer-auth-form">
+                    <label>
+                        <span>Correo o celular</span>
+                        <input type="text" name="usuario" autocomplete="username" required>
+                    </label>
+                    <label>
+                        <span>Contraseña</span>
+                        <input type="password" name="password" autocomplete="current-password" required>
+                    </label>
+                    <button type="submit">Entrar a mi cuenta</button>
+                </form>
+            </section>
+            <section class="customer-auth-view" data-auth-panel="register">
+                <h2>Crear cuenta</h2>
+                <form id="customer-register-form" class="customer-auth-form">
+                    <label>
+                        <span>Nombre completo</span>
+                        <input type="text" name="nombre" autocomplete="name" required>
+                    </label>
+                    <label>
+                        <span>Celular / WhatsApp</span>
+                        <input type="tel" name="telefono" autocomplete="tel" required>
+                    </label>
+                    <label>
+                        <span>Correo electrónico</span>
+                        <input type="email" name="email" autocomplete="email" required>
+                    </label>
+                    <div class="customer-auth-row">
+                        <label>
+                            <span>Dirección</span>
+                            <input type="text" name="direccion" autocomplete="street-address">
+                        </label>
+                        <label>
+                            <span>Ciudad</span>
+                            <input type="text" name="ciudad" autocomplete="address-level2">
+                        </label>
+                    </div>
+                    <label>
+                        <span>Contraseña</span>
+                        <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+                    </label>
+                    <button type="submit">Crear mi cuenta</button>
+                </form>
+            </section>
+            <section class="customer-auth-view" data-auth-panel="profile">
+                <h2>Mi cuenta</h2>
+                <div class="customer-profile-card" id="customer-profile-card"></div>
+                <button type="button" class="customer-auth-secondary" id="customer-logout-btn">Cerrar sesión</button>
+            </section>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('.customer-auth-close')) {
+            closeCustomerAuthModal();
+        }
+    });
+
+    modal.querySelectorAll('[data-auth-view]').forEach(button => {
+        button.addEventListener('click', () => setCustomerAuthView(button.dataset.authView));
+    });
+
+    modal.querySelector('#customer-login-form')?.addEventListener('submit', handleCustomerLoginSubmit);
+    modal.querySelector('#customer-register-form')?.addEventListener('submit', handleCustomerRegisterSubmit);
+    modal.querySelector('#customer-logout-btn')?.addEventListener('click', handleCustomerLogout);
+
+    return modal;
+}
+
+function setCustomerAuthMessage(message, type = '') {
+    const box = document.getElementById('customer-auth-message');
+    if (!box) return;
+    box.textContent = message || '';
+    box.className = `customer-auth-message ${type}`.trim();
+    box.style.display = message ? 'block' : 'none';
+}
+
+function setCustomerAuthView(view) {
+    const modal = ensureCustomerAuthModal();
+    modal.querySelectorAll('[data-auth-view]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.authView === view);
+    });
+    modal.querySelectorAll('[data-auth-panel]').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.authPanel === view);
+    });
+    setCustomerAuthMessage('');
+}
+
+function renderCustomerProfile() {
+    const customer = getCurrentCustomer();
+    const card = document.getElementById('customer-profile-card');
+    if (!card || !customer) return;
+
+    card.innerHTML = `
+        <strong>${escapeHtml(customer.nombre || 'Cliente BLYXU')}</strong>
+        <span>${escapeHtml(customer.email || '')}</span>
+        <span>${escapeHtml(customer.telefono || '')}</span>
+        ${customer.direccion || customer.ciudad ? `<small>${escapeHtml([customer.direccion, customer.ciudad].filter(Boolean).join(', '))}</small>` : ''}
+    `;
+}
+
+function openCustomerAuthModal(view) {
+    const modal = ensureCustomerAuthModal();
+    const hasSession = Boolean(getCustomerSession());
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('customer-auth-open');
+    setCustomerAuthView(view || (hasSession ? 'profile' : 'login'));
+    renderCustomerProfile();
+}
+
+function closeCustomerAuthModal() {
+    const modal = document.getElementById('customer-auth-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('customer-auth-open');
+}
+
+async function handleCustomerLoginSubmit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fields = form.elements;
+    const submit = form.querySelector('button[type="submit"]');
+    const originalText = submit.textContent;
+    submit.disabled = true;
+    submit.textContent = 'Ingresando...';
+    setCustomerAuthMessage('');
+
+    try {
+        const data = await customerAuthRequest('logincliente', {
+            usuario: fields.usuario.value.trim(),
+            password: fields.password.value
+        });
+        setCustomerSession(data.token, data.cliente);
+        setCustomerAuthMessage('Sesión iniciada correctamente.', 'success');
+        setCustomerAuthView('profile');
+        renderCustomerProfile();
+    } catch (error) {
+        setCustomerAuthMessage(error.message, 'error');
+    } finally {
+        submit.disabled = false;
+        submit.textContent = originalText;
+    }
+}
+
+async function handleCustomerRegisterSubmit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const fields = form.elements;
+    const submit = form.querySelector('button[type="submit"]');
+    const originalText = submit.textContent;
+    submit.disabled = true;
+    submit.textContent = 'Creando cuenta...';
+    setCustomerAuthMessage('');
+
+    try {
+        const data = await customerAuthRequest('registrarcliente', {
+            cliente: {
+                nombre: fields.nombre.value.trim(),
+                telefono: fields.telefono.value.trim(),
+                email: fields.email.value.trim(),
+                direccion: fields.direccion.value.trim(),
+                ciudad: fields.ciudad.value.trim(),
+                password: fields.password.value
+            }
+        });
+        setCustomerSession(data.token, data.cliente);
+        setCustomerAuthMessage('Cuenta creada correctamente.', 'success');
+        setCustomerAuthView('profile');
+        renderCustomerProfile();
+    } catch (error) {
+        setCustomerAuthMessage(error.message, 'error');
+    } finally {
+        submit.disabled = false;
+        submit.textContent = originalText;
+    }
+}
+
+async function handleCustomerLogout() {
+    const session = getCustomerSession();
+    clearCustomerSession();
+    closeCustomerAuthModal();
+    if (session?.token) {
+        customerAuthRequest('cerrarsesion', { token: session.token }).catch(() => {});
+    }
+}
+
+function renderCustomerAccountState() {
+    const button = document.getElementById('customer-account-btn');
+    if (!button) return;
+    const customer = getCurrentCustomer();
+    const label = button.querySelector('.customer-account-label');
+    const initial = button.querySelector('.customer-account-initial');
+    button.classList.toggle('is-logged', Boolean(customer));
+    button.setAttribute('aria-label', customer ? 'Ver mi cuenta BLYXU' : 'Iniciar sesión o registrarme');
+    if (label) label.textContent = customer ? 'Mi cuenta' : 'Cuenta';
+    if (initial) initial.textContent = customer?.nombre ? customer.nombre.trim().charAt(0).toUpperCase() : '';
+}
+
+function initCustomerAuth() {
+    const navActions = document.querySelector('.nav-actions');
+    if (navActions && !document.getElementById('customer-account-btn')) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.id = 'customer-account-btn';
+        button.className = 'customer-account-btn';
+        button.innerHTML = `
+            <span class="customer-account-initial"></span>
+            <svg class="customer-account-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21a8 8 0 0 0-16 0"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span class="customer-account-label">Cuenta</span>
+        `;
+        button.addEventListener('click', () => openCustomerAuthModal());
+        const cartBtn = document.getElementById('cart-btn');
+        navActions.insertBefore(button, cartBtn || navActions.firstChild);
+    }
+
+    renderCustomerAccountState();
+    hydrateCustomerCheckoutFields();
+
+    const session = getCustomerSession();
+    if (session?.token) {
+        customerAuthRequest('perfilcliente', { token: session.token })
+            .then(data => setCustomerSession(session.token, data.cliente))
+            .catch(() => clearCustomerSession());
+    }
+}
+
+async function checkoutWithMercadoPago(cliente, options = {}) {
+    const checkoutItems = Array.isArray(options.items) && options.items.length ? options.items : cart;
+    if (!checkoutItems.length) return;
+    const shouldClearCart = options.clearCart !== false;
+    const total = checkoutItems.reduce((s, c) => s + c.price * c.qty, 0);
     const formContainer = document.getElementById('cart-wholesale-form');
+    showMercadoPagoLoading();
     
     if (formContainer) {
         formContainer.innerHTML = `
@@ -3543,7 +3932,7 @@ async function checkoutWithMercadoPago(cliente) {
             ciudad: cliente.ciudad || '',
             nota: cliente.nota || ''
         },
-        items: cart.map(item => ({
+        items: checkoutItems.map(item => ({
             idVariacion: item.idVariacion || item.sku || item.name,
             nombre: item.name,
             opcion: item.variantLabel || '',
@@ -3564,18 +3953,20 @@ async function checkoutWithMercadoPago(cliente) {
         const result = await response.json();
 
         if (result && result.ok && result.init_point) {
-            // Vaciar carrito minorista
-            cart = [];
-            saveCart('retail');
-            updateCartUI();
+            if (shouldClearCart) {
+                cart = [];
+                saveCart('retail');
+                updateCartUI();
+            }
 
             // Redirigir a Mercado Pago
-            window.location.href = result.init_point;
+            window.location.href = result.sandbox_init_point || result.init_point;
             return;
         }
 
         throw new Error(result?.error || result?.message || 'No se pudo generar la pasarela de pago.');
     } catch (error) {
+        hideMercadoPagoLoading();
         console.error('Error al conectar con Mercado Pago:', error);
         const secErrorBox = document.getElementById('cart-section-form-error');
         if (secErrorBox) {
@@ -3594,6 +3985,61 @@ async function checkoutWithMercadoPago(cliente) {
             `;
         }
     }
+}
+
+function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogMode) {
+    const normalizedMode = normalizeCartMode(mode);
+    if (normalizedMode === 'wholesale') {
+        alert('Mercado Pago está disponible solo para compras del catálogo minorista.');
+        return;
+    }
+
+    const product = allProducts[Number(productIndex)];
+    if (!product) {
+        alert('No se encontró el producto seleccionado.');
+        return;
+    }
+
+    if (getProductStock(product) <= 0) {
+        alert('Este producto está agotado por ahora.');
+        return;
+    }
+
+    if (!shouldShowProductPrices('retail')) {
+        alert('Este producto está disponible para consulta por WhatsApp.');
+        return;
+    }
+
+    const item = getCartItemFromProduct(product, 'retail', 1);
+    if (!item || !item.price || item.price <= 0) {
+        alert('Este producto no tiene precio disponible para pago en línea.');
+        return;
+    }
+
+    const btn = sourceButton || null;
+    const previousHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Generando pago seguro...';
+    }
+
+    const customer = getCurrentCustomer();
+    checkoutWithMercadoPago({
+        nombre: customer?.nombre || 'Cliente Minorista',
+        telefono: customer?.telefono || '',
+        email: customer?.email || '',
+        direccion: customer?.direccion || '',
+        ciudad: customer?.ciudad || '',
+        nota: 'Compra directa desde ficha de producto'
+    }, {
+        items: [item],
+        clearCart: false
+    }).finally(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = previousHtml;
+        }
+    });
 }
 
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
@@ -3833,10 +4279,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initWholesaleAccess();
     initCustomCursor();
     initGlassSelects();
+    initCustomerAuth();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));
     const isContactPage = document.body?.dataset.page === 'contact';
     const isPaymentsPage = document.body?.dataset.page === 'pagos';
     const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
+    const isCartPage = document.body?.dataset.page === 'carrito';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     
     const hasWholesaleAccess = localStorage.getItem('blyxu_wholesale_access') === '1' || sessionStorage.getItem('blyxu_wholesale_access') === '1';
@@ -3884,10 +4332,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPromoWidget();
         });
     } else {
-        loadProducts({ renderCatalog: !isProductDetailPage }).then(() => {
+        loadProducts({ renderCatalog: !isProductDetailPage && !isCartPage }).then(() => {
             renderFloatingWhatsApp();
             renderFooterSocialLinks();
             renderPromoWidget();
+            if (isCartPage) updateCartUI();
         });
     }
     updateCartUI();
@@ -3900,6 +4349,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auto-scroll si el hash es #carrito-seccion
     const handleCartHashNavigation = () => {
         if (window.location.hash === '#carrito-seccion' || window.location.hash === '#carrito') {
+            if (document.body?.dataset.page !== 'carrito') {
+                window.location.replace('carrito.html');
+                return;
+            }
             const sec = document.getElementById('carrito-seccion');
             if (sec) {
                 sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
