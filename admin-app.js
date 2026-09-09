@@ -1367,9 +1367,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initWhatsAppConfigAdmin();
     initInvoiceConfigAdmin();
     initPromoConfigAdmin();
+    initHomeAdConfigAdmin();
+    initCustomerPromoAdmin();
     initQRConfigAdmin();
     initInventorySearch();
     initInventoryActions();
+    initInventoryPdfExport();
     initCarouselImageAdmin();
     initProductImageUpload();
     resetProductForm(); // Initialize the form with auto-generated IDs
@@ -2094,6 +2097,148 @@ function initPromoConfigAdmin() {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText;
+            }
+        }
+    });
+}
+
+const HOME_AD_CONFIG_FIELDS = [
+    ['Home_Ad_Enabled', 'home-ad-config-enabled'],
+    ['Home_Ad_Kicker', 'home-ad-config-kicker'],
+    ['Home_Ad_Title', 'home-ad-config-title'],
+    ['Home_Ad_Message', 'home-ad-config-message'],
+    ['Home_Category_Seconds', 'home-category-config-seconds'],
+    ['Home_Ad_Image', 'home-ad-config-image'],
+    ['Home_Ad_Cta', 'home-ad-config-cta'],
+    ['Home_Ad_Link', 'home-ad-config-link']
+];
+
+function fillHomeAdConfigForm(config) {
+    if (!config) return;
+    window.storeConfig = window.storeConfig || {};
+    HOME_AD_CONFIG_FIELDS.forEach(([key, id]) => {
+        window.storeConfig[key] = config[key] || '';
+        const input = document.getElementById(id);
+        if (!input) return;
+        if (input.type === 'checkbox') {
+            input.checked = config[key] === undefined ? true : config[key] !== 'false';
+        } else {
+            input.value = config[key] || '';
+        }
+    });
+}
+
+function initHomeAdConfigAdmin() {
+    const form = document.getElementById('home-ad-config-form');
+    if (!form) return;
+
+    loadSiteConfigForAdmin().then(fillHomeAdConfigForm);
+
+    const fileInput = document.getElementById('home-ad-config-file');
+    const imageInput = document.getElementById('home-ad-config-image');
+    fileInput?.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const previousPlaceholder = imageInput?.placeholder || '';
+        try {
+            if (imageInput) imageInput.placeholder = 'Subiendo imagen...';
+            const uploadedUrl = await uploadCarouselImage(file);
+            if (imageInput) imageInput.value = uploadedUrl;
+            showToast('Imagen del banner subida correctamente');
+        } catch (error) {
+            console.error('Error subiendo imagen del banner del home:', error);
+            showToast('No se pudo subir la imagen del banner', true);
+        } finally {
+            if (imageInput) imageInput.placeholder = previousPlaceholder || 'https://...';
+            fileInput.value = '';
+        }
+    });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-save-home-ad-config');
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            const savedConfig = {};
+            await Promise.all(HOME_AD_CONFIG_FIELDS.map(([key, id]) => {
+                const input = document.getElementById(id);
+                let value = '';
+                if (input) {
+                    value = input.type === 'checkbox'
+                        ? (input.checked ? 'true' : 'false')
+                        : input.value.trim();
+                }
+                savedConfig[key] = value;
+                return saveSiteConfig(key, value);
+            }));
+            window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
+            showToast('Banner del home guardado correctamente');
+        } catch (error) {
+            console.error('Error guardando banner del home:', error);
+            showToast('Error al guardar banner del home: ' + error.message, true);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText || 'Guardar Banner del Home';
+            }
+        }
+    });
+}
+
+function initCustomerPromoAdmin() {
+    const form = document.getElementById('customer-promo-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const btn = document.getElementById('btn-save-customer-promo');
+        const originalText = btn ? btn.textContent : '';
+        const identifier = document.getElementById('customer-promo-identifier')?.value.trim() || '';
+        const discount = document.getElementById('customer-promo-discount')?.value.trim() || '0';
+        const title = document.getElementById('customer-promo-title')?.value.trim() || '';
+        const expires = document.getElementById('customer-promo-expire')?.value.trim() || '';
+
+        if (!identifier) {
+            showToast('Ingresa el telefono o correo del cliente', 'warning');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+        }
+
+        try {
+            const response = await fetch(GOOGLE_SHEET_API, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'promocliente',
+                    resource: 'clientes',
+                    identifier,
+                    discount,
+                    title,
+                    expires
+                })
+            });
+            const result = await response.json();
+            if (!result || result.ok === false) {
+                throw new Error(result?.error || 'No se pudo guardar la promocion.');
+            }
+
+            showToast(result.message || 'Promocion del cliente guardada', 'success');
+            form.reset();
+        } catch (error) {
+            console.error('Error guardando promocion de cliente:', error);
+            showToast('Error al guardar promocion: ' + error.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText || 'Guardar promocion del cliente';
             }
         }
     });
@@ -3272,6 +3417,272 @@ function observeInventoryLoadMore(renderToken) {
     }, { rootMargin: '250px' });
 
     inventoryLoadMoreObserver.observe(marker);
+}
+
+// === EXPORTACIÓN DE CATÁLOGO PDF POR CATEGORÍA CON TOGGLES ===
+function getInventoryProductsForCatalogPdf(selectedCategory) {
+    const rawCategory = selectedCategory || adminInventoryCategoryFilter || 'todos';
+    const cleanCategory = normalizeSearchText(rawCategory);
+
+    // Filtrar productos visibles excluyendo BANNER e inactivos
+    let list = (inventario || []).filter(p => {
+        const cat = normalizeSearchText(p.Categoria);
+        if (cat === 'banner') return false;
+        const estado = String(p.Estado || p.estado || '').toLowerCase();
+        if (estado === 'inactivo' || estado === 'eliminado') return false;
+        return isVisibleInventoryProduct(p);
+    });
+
+    if (cleanCategory && cleanCategory !== 'todos') {
+        list = list.filter(p => normalizeSearchText(p.Categoria) === cleanCategory);
+    }
+
+    if (adminInventorySearchQuery) {
+        const q = normalizeSearchText(adminInventorySearchQuery);
+        list = list.filter(p => scoreInventorySearch(p, q) > 0);
+    }
+
+    // Agrupar y consolidar variantes ignorando diferencias de color y tamaño/talla (1 sola tarjeta por producto/modelo)
+    const groupedMap = new Map();
+
+    list.forEach(p => {
+        const motherId = getInventoryMotherId(p);
+        const name = String(p.Nombre || p.Producto || '').trim();
+        const cat = normalizeSearchText(p.Categoria || '');
+
+        // Clave única por producto madre o por nombre + categoría (ignora color, estilo y tamaño)
+        const baseKey = motherId
+            ? `mother___${motherId}`
+            : `name___${normalizeSearchText(name)}___${cat}`;
+
+        if (!groupedMap.has(baseKey)) {
+            groupedMap.set(baseKey, {
+                product: p,
+                sizes: new Set(),
+                colors: new Set(),
+                allVariants: []
+            });
+        }
+
+        const group = groupedMap.get(baseKey);
+        group.allVariants.push(p);
+
+        // Si encontramos una variante con mejor imagen o datos más completos, actualizar el producto base
+        const currentImg = normalizeImageUrl(group.product?.Imagen || group.product?.['Imagen Principal'] || '');
+        const candidateImg = normalizeImageUrl(p?.Imagen || p?.['Imagen Principal'] || '');
+        if ((!currentImg || currentImg === 'Logo2.png') && candidateImg && candidateImg !== 'Logo2.png') {
+            group.product = p;
+        }
+
+        const sizeVal = String(p.Tamano || p.Tamaño || p.Talla || p['Tamaño'] || p['Tamano'] || '').trim();
+        if (sizeVal && !['ambos', 'minorista', 'mayorista', '-', 'n/a'].includes(sizeVal.toLowerCase())) {
+            group.sizes.add(sizeVal);
+        }
+
+        const colorVal = String(p.Color || '').trim();
+        if (colorVal && !['ambos', 'minorista', 'mayorista', '-', 'n/a', 'unico'].includes(colorVal.toLowerCase())) {
+            group.colors.add(colorVal);
+        }
+    });
+
+    const consolidatedList = Array.from(groupedMap.values()).map(item => {
+        const rep = { ...item.product };
+        const sizesArr = Array.from(item.sizes);
+        const colorsArr = Array.from(item.colors);
+        rep._availableSizes = sizesArr;
+        rep._availableColors = colorsArr;
+
+        const motherId = getInventoryMotherId(rep);
+        rep._displayRef = motherId || rep.idVariacion || rep.ID || rep.SKU || '';
+        return rep;
+    });
+
+    // Ordenar alfabéticamente por nombre
+    consolidatedList.sort((a, b) => {
+        const nameA = String(a.Nombre || a.Producto || '').trim();
+        const nameB = String(b.Nombre || b.Producto || '').trim();
+        return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
+    });
+
+    return consolidatedList;
+}
+
+function buildInventoryCatalogPrintHtml(products, options = {}) {
+    const showDetal = options.showDetal !== false;
+    const showMayorista = options.showMayorista !== false;
+    const categoryTitle = options.categoryTitle || 'Todas las categorías';
+    const items = Array.isArray(products) ? products : [];
+    const itemsPerPage = 4; // 2 columnas x 2 filas por página (imágenes grandes e imponentes)
+
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    const timeFormatted = now.toLocaleTimeString('es-CO', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    const fullDateString = `${dateFormatted} - ${timeFormatted}`;
+    const dateShort = now.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+
+    const pages = [];
+    for (let i = 0; i < items.length; i += itemsPerPage) {
+        pages.push(items.slice(i, i + itemsPerPage));
+    }
+    if (!pages.length) pages.push([]);
+
+    const totalPages = pages.length;
+
+    return pages.map((pageItems, pageIndex) => {
+        const isLastPage = pageIndex === totalPages - 1;
+
+        const cardsHtml = pageItems.map(p => {
+            const name = p.Nombre || p.Producto || 'Producto BLYXU';
+            const rawImg = normalizeImageUrl(p.Imagen || p['Imagen Principal'] || '');
+            const imgSrc = rawImg || 'Logo2.png';
+            const ref = p._displayRef || p.idVariacion || p.ID || p.idProducto || p['ID Producto'] || p['ID Variacion'] || p.SKU || '';
+            const price = Number(p.Precio || 0) || 0;
+            const wholesalePrice = Number(p.Precio_Mayorista || p['Precio Mayor'] || p['Precio_Mayor'] || 0) || 0;
+
+            const priceBadges = [];
+            if (showDetal && price > 0) {
+                priceBadges.push(`<span class="catalog-price-badge detal">Detal: $${price.toLocaleString('es-CO')}</span>`);
+            }
+            if (showMayorista && wholesalePrice > 0) {
+                priceBadges.push(`<span class="catalog-price-badge mayor">Mayorista: $${wholesalePrice.toLocaleString('es-CO')}</span>`);
+            }
+            const pricesHtml = priceBadges.length
+                ? `<div class="catalog-card-prices">${priceBadges.join('')}</div>`
+                : '';
+
+            const sizesLabel = (p._availableSizes && p._availableSizes.length > 1)
+                ? `<span class="catalog-card-sizes" title="Tallas / Medidas disponibles">Tallas: ${escapeHtml(p._availableSizes.join(', '))}</span>`
+                : (p._availableSizes && p._availableSizes.length === 1 && p._availableSizes[0]
+                    ? `<span class="catalog-card-sizes" title="Talla / Medida">Talla: ${escapeHtml(p._availableSizes[0])}</span>`
+                    : '');
+
+            const refHtml = ref
+                ? `<span class="catalog-card-ref">Ref: ${escapeHtml(ref)}</span>`
+                : '<span class="catalog-card-ref"></span>';
+
+            const metaLineHtml = (ref || sizesLabel)
+                ? `<div class="catalog-card-meta-line">${refHtml}${sizesLabel}</div>`
+                : '<div class="catalog-card-meta-line">&nbsp;</div>';
+
+            return `
+                <div class="catalog-card">
+                    <div class="catalog-card-img-wrap">
+                        <img src="${escapeHtml(imgSrc)}" alt="" class="catalog-card-img" loading="eager" crossorigin="anonymous" onerror="this.src='Logo2.png'">
+                    </div>
+                    <div class="catalog-card-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+                    ${metaLineHtml}
+                    ${pricesHtml}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="catalog-print-page${isLastPage ? ' last' : ''}">
+                <div class="catalog-print-page-content">
+                    <div class="catalog-print-header">
+                        <div class="catalog-print-brand">
+                            <img src="Logo2.png" alt="BLYXU" class="catalog-print-logo-img" onerror="this.style.display='none'">
+                            <div>
+                                <h1>Catálogo de Productos</h1>
+                                <p>Categoría: <strong>${escapeHtml(categoryTitle)}</strong></p>
+                            </div>
+                        </div>
+                        <div class="catalog-print-meta">
+                            <div>Fecha de expedición: <strong>${escapeHtml(fullDateString)}</strong></div>
+                            <div>Total de productos: <strong>${items.length}</strong></div>
+                        </div>
+                    </div>
+                    <div class="catalog-print-grid">
+                        ${cardsHtml}
+                    </div>
+                </div>
+                <div class="catalog-print-footer">
+                    <span>BLYXU · Catálogo Oficial (${escapeHtml(categoryTitle)})</span>
+                    <span>Expedido el ${escapeHtml(dateShort)}</span>
+                    <span>Página ${pageIndex + 1} de ${totalPages}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function downloadInventoryCatalogPdf() {
+    const categorySelect = document.getElementById('admin-inventory-category-filter');
+    const category = categorySelect?.value || adminInventoryCategoryFilter || 'todos';
+    const categoryText = categorySelect && categorySelect.options[categorySelect.selectedIndex]
+        ? categorySelect.options[categorySelect.selectedIndex].textContent.trim()
+        : (category === 'todos' ? 'Todas las categorías' : category);
+
+    const showDetal = document.getElementById('inventory-pdf-show-detal')?.checked !== false;
+    const showMayorista = document.getElementById('inventory-pdf-show-mayorista')?.checked !== false;
+
+    const products = getInventoryProductsForCatalogPdf(category);
+    if (!products.length) {
+        showToast('No hay productos disponibles para exportar en esta categoría', 'warning');
+        return;
+    }
+
+    const container = document.getElementById('inventory-catalog-print-container');
+    if (!container) return;
+
+    showToast('Generando catálogo PDF...', 'info');
+
+    container.innerHTML = buildInventoryCatalogPrintHtml(products, {
+        categoryTitle: categoryText,
+        showDetal,
+        showMayorista
+    });
+
+    const parent = container.parentElement;
+    const nextSib = container.nextSibling;
+    document.body.appendChild(container);
+
+    const previousTitle = document.title;
+    const cleanCategorySlug = String(categoryText).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+    const dateSlug = new Date().toISOString().slice(0, 10);
+    document.title = `Catalogo-BLYXU-${cleanCategorySlug}-${dateSlug}`;
+
+    document.body.classList.add('printing-inventory-catalog');
+
+    let cleanedUp = false;
+    const cleanup = () => {
+        if (cleanedUp) return;
+        cleanedUp = true;
+        document.body.classList.remove('printing-inventory-catalog');
+        document.title = previousTitle;
+        if (parent && container.parentElement === document.body) {
+            if (nextSib && parent.contains(nextSib)) parent.insertBefore(container, nextSib);
+            else parent.appendChild(container);
+        }
+        window.removeEventListener('afterprint', cleanup);
+        window.removeEventListener('focus', cleanup);
+    };
+
+    window.addEventListener('afterprint', cleanup);
+    window.addEventListener('focus', cleanup, { once: true });
+
+    // Esperar a que las imágenes se descarguen y procesen completamente
+    await waitForPrintImages(container);
+
+    window.print();
+}
+
+function initInventoryPdfExport() {
+    const btn = document.getElementById('btn-download-inventory-pdf');
+    if (!btn || btn.dataset.ready === 'true') return;
+    btn.dataset.ready = 'true';
+    btn.addEventListener('click', downloadInventoryCatalogPdf);
 }
 
 function cargarVariantesAlFormulario(idProducto, idVariacionActual) {

@@ -31,6 +31,7 @@ const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const CUSTOMER_SESSION_KEY = 'blyxu_customer_session_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
 const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
+const HOME_CATEGORY_INTERVAL_MS = 3200;
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
 const LEGACY_CART_KEY = 'blyxu_cart';
 const CART_STORAGE_KEYS = {
@@ -54,8 +55,10 @@ let activeWholesalePriceFilter = 'todos';
 let activeWholesaleSearchQuery = '';
 let heroProductCarouselTimer = null;
 let mainBannerCarouselTimer = null;
+let homeCategoryCarouselTimer = null;
 let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
+let googleIdentityLoadPromise = null;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 
 // -- PARTICLES --
@@ -957,7 +960,9 @@ async function loadProducts(options = {}) {
         applyPromotionsToProducts();
         if (renderCatalog) {
             renderBanners(bannerProducts);
+            renderHomeCategories();
             renderInventorySpotlight();
+            renderHomeAdBanner();
             renderCatalogProducts();
         }
     }
@@ -976,7 +981,9 @@ async function loadProducts(options = {}) {
                 applyPromotionsToProducts();
                 if (renderCatalog) {
                     renderBanners(bannerProducts);
+                    renderHomeCategories();
                     renderInventorySpotlight();
+                    renderHomeAdBanner();
                     renderCatalogProducts();
                 }
                 renderFloatingWhatsApp();
@@ -992,7 +999,9 @@ async function loadProducts(options = {}) {
         await Promise.all(requiredLoads);
         applyPromotionsToProducts();
         renderBanners(bannerProducts);
+        renderHomeCategories();
         renderInventorySpotlight();
+        renderHomeAdBanner();
         renderCatalogProducts();
     } else {
         await Promise.all(requiredLoads);
@@ -1240,6 +1249,120 @@ function getNewestProductsForMarquee(products, limit = 15) {
     return Array.from(uniqueByGeneralReference.values()).slice(0, limit);
 }
 
+function renderHomeCategories() {
+    const track = document.getElementById('home-category-track');
+    if (!track) return;
+    if (homeCategoryCarouselTimer) {
+        clearInterval(homeCategoryCarouselTimer);
+        homeCategoryCarouselTimer = null;
+    }
+
+    const counts = new Map();
+    allProducts.forEach(product => {
+        const category = getProductCategory(product);
+        if (!category || normalizeSearchText(category) === 'banner') return;
+        const key = normalizeSearchText(category);
+        const current = counts.get(key) || { label: category, count: 0 };
+        current.count += Math.max(1, getProductStock(product));
+        counts.set(key, current);
+    });
+
+    const categories = Array.from(counts.values())
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'es'))
+        .slice(0, 8);
+
+    if (!categories.length) {
+        track.innerHTML = '<a class="home-category-pill" href="#coleccion">Catalogo</a>';
+        track.classList.add('is-centered');
+        return;
+    }
+
+    track.classList.toggle('is-centered', categories.length <= 4);
+    track.innerHTML = categories.map((category, index) => `
+        <button class="home-category-pill ${index === 0 ? 'active' : ''}" type="button" data-category="${escapeHtml(category.label)}">
+            <span>${escapeHtml(category.label)}</span>
+            <small>${category.count}</small>
+        </button>
+    `).join('');
+
+    const buttons = Array.from(track.querySelectorAll('.home-category-pill'));
+    let currentIndex = 0;
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            track.querySelectorAll('.home-category-pill').forEach(item => item.classList.remove('active'));
+            button.classList.add('active');
+            currentIndex = Math.max(0, buttons.indexOf(button));
+            const category = button.dataset.category || 'todos';
+            const select = document.getElementById('catalog-category-select');
+            if (select) {
+                select.value = category;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+                activeFilter = category;
+                renderCatalogProducts();
+            }
+            document.getElementById('coleccion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    if (buttons.length <= 1) return;
+
+    const goToCategory = (nextIndex) => {
+        if (!buttons.length || track.matches(':hover')) return;
+        currentIndex = nextIndex % buttons.length;
+        const nextButton = buttons[currentIndex];
+        buttons.forEach(item => item.classList.remove('active'));
+        nextButton.classList.add('active');
+        track.scrollTo({
+            left: Math.max(0, nextButton.offsetLeft - 12),
+            behavior: 'smooth'
+        });
+    };
+
+    const configuredSeconds = parseFloat(getSiteConfigValue('Home_Category_Seconds', '3.2'));
+    const intervalMs = Number.isFinite(configuredSeconds)
+        ? Math.max(1600, configuredSeconds * 1000)
+        : HOME_CATEGORY_INTERVAL_MS;
+
+    homeCategoryCarouselTimer = setInterval(() => {
+        goToCategory(currentIndex + 1);
+    }, intervalMs);
+}
+
+function renderHomeAdBanner() {
+    const banner = document.getElementById('home-ad-banner');
+    if (!banner) return;
+
+    const enabled = String(getSiteConfigValue('Home_Ad_Enabled', 'true')).trim() !== 'false';
+    if (!enabled) {
+        banner.style.display = 'none';
+        return;
+    }
+
+    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', 'hero_necklace.png'));
+    const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
+    const title = getSiteConfigValue('Home_Ad_Title', 'Brilla con tus favoritos');
+    const message = getSiteConfigValue('Home_Ad_Message', 'Descubre piezas seleccionadas, promociones y anuncios especiales de BLYXU.');
+    const cta = getSiteConfigValue('Home_Ad_Cta', 'Ver productos');
+    const link = getSiteConfigValue('Home_Ad_Link', '#coleccion');
+
+    banner.style.display = '';
+    const img = document.getElementById('home-ad-image');
+    if (img) {
+        img.src = image || 'hero_necklace.png';
+        img.onerror = () => { img.src = 'hero_necklace.png'; };
+    }
+    setTextById('home-ad-kicker', kicker);
+    setTextById('home-ad-title', title);
+    setTextById('home-ad-message', message);
+    const linkEl = document.getElementById('home-ad-link');
+    if (linkEl) {
+        linkEl.textContent = cta;
+        linkEl.href = link || '#coleccion';
+    }
+}
+
 function renderInventorySpotlight() {
     const marqueeContainer = document.getElementById('image-marquee-container');
     const marqueeSection = document.getElementById('image-carousel');
@@ -1258,9 +1381,16 @@ function renderInventorySpotlight() {
         const img = getProductImageSet(p)[0];
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
         const stockBadge = getProductBadgeMarkup(p);
+        const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
+        const price = getProductPrice(p, 'retail');
+        const priceText = shouldShowProductPrices('retail') ? formatMoney(price) : 'Precio por consultar';
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
-                    <img src="${escapeHtml(img)}" alt="${escapeHtml(p.Nombre || '')}" loading="lazy" onerror="this.parentElement.style.display='none'">
+                    <img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.parentElement.style.display='none'">
                     ${stockBadge}
+                    <div class="marquee-item-info">
+                        <strong>${escapeHtml(name)}</strong>
+                        <span>${escapeHtml(priceText)}</span>
+                    </div>
                 </div>`;
     }).join('');
 
@@ -2157,6 +2287,9 @@ function renderProducts(products, options = {}) {
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
+                <button class="product-card-favorite" type="button" onclick="event.stopPropagation(); saveCustomerFavorite(${productIndex}, this)" title="Guardar favorito" aria-label="Guardar ${escapeHtml(name)} en favoritos">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>
+                </button>
                 ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${showPrices ? 'Agregar al carrito' : 'Agregar a consulta general'}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
@@ -2655,7 +2788,8 @@ function updateCartUI() {
     if (cartNeedsSave) saveCart();
 
     const count = cart.reduce((s, c) => s + c.qty, 0);
-    const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+    const pricingSummary = getCartPricingSummary(cart);
+    const total = pricingSummary.total;
     const hasHiddenPrices = cart.some(c => !cartItemShowsPrice(c));
     const isWholesale = normalizeCartMode(activeCartMode) === 'wholesale';
     const isRegisteredOrder = shouldRegisterCartOrder();
@@ -2667,9 +2801,27 @@ function updateCartUI() {
     if (secModeBadge) secModeBadge.textContent = `Catálogo ${getCartModeLabel()}`;
 
     // Update Standalone Section Summary Totals
+    const formattedSubtotal = hasHiddenPrices ? 'Por consultar' : formatMoney(pricingSummary.subtotal);
     const formattedTotal = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
-    if (secSubtotalEl) secSubtotalEl.textContent = formattedTotal;
+    if (secSubtotalEl) secSubtotalEl.textContent = formattedSubtotal;
     if (secTotalEl) secTotalEl.textContent = formattedTotal;
+    const summaryBox = secSubtotalEl?.closest('.cart-summary-box');
+    if (summaryBox) {
+        let discountRow = document.getElementById('cart-summary-customer-discount');
+        if (!discountRow) {
+            discountRow = document.createElement('div');
+            discountRow.id = 'cart-summary-customer-discount';
+            discountRow.className = 'cart-summary-line cart-summary-discount';
+            const totalRow = summaryBox.querySelector('.cart-summary-total');
+            summaryBox.insertBefore(discountRow, totalRow || null);
+        }
+        if (!hasHiddenPrices && pricingSummary.discount > 0) {
+            discountRow.innerHTML = `<span>${escapeHtml(pricingSummary.promotion.label)}:</span><strong>-${formatMoney(pricingSummary.discount)}</strong>`;
+            discountRow.style.display = 'flex';
+        } else {
+            discountRow.style.display = 'none';
+        }
+    }
     const browseCatalogUrl = document.body?.dataset.page === 'carrito'
         ? (isWholesale ? 'mayorista.html' : 'index.html#coleccion')
         : '#coleccion';
@@ -3595,15 +3747,62 @@ function setCustomerSession(token, cliente) {
     localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
     renderCustomerAccountState();
     hydrateCustomerCheckoutFields();
+    if (typeof updateCartUI === 'function') updateCartUI();
 }
 
 function clearCustomerSession() {
     localStorage.removeItem(CUSTOMER_SESSION_KEY);
     renderCustomerAccountState();
+    if (typeof updateCartUI === 'function') updateCartUI();
 }
 
 function getCurrentCustomer() {
     return getCustomerSession()?.cliente || null;
+}
+
+function getCurrentCustomerPromotion() {
+    const customer = getCurrentCustomer();
+    const percent = Number(customer?.descuentoCliente || 0);
+    if (!customer || !Number.isFinite(percent) || percent <= 0) {
+        return { percent: 0, label: '', expires: '' };
+    }
+
+    if (customer.promoExpira) {
+        const expiresAt = new Date(customer.promoExpira).getTime();
+        if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+            return { percent: 0, label: '', expires: customer.promoExpira };
+        }
+    }
+
+    return {
+        percent: Math.min(90, Math.max(0, percent)),
+        label: customer.promoCliente || 'Promo cliente registrado',
+        expires: customer.promoExpira || ''
+    };
+}
+
+function getCartPricingSummary(items = cart) {
+    const subtotal = items.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 1)), 0);
+    const hasWholesaleItem = normalizeCartMode(activeCartMode) === 'wholesale' ||
+        items.some(item => normalizeCartMode(item.mode || activeCartMode) === 'wholesale');
+    const promotion = hasWholesaleItem ? { percent: 0, label: '', expires: '' } : getCurrentCustomerPromotion();
+    const discount = promotion.percent > 0 ? Math.round(subtotal * (promotion.percent / 100)) : 0;
+    return {
+        subtotal,
+        discount,
+        total: Math.max(0, subtotal - discount),
+        promotion
+    };
+}
+
+function getProductIdentity(product, productIndex = -1) {
+    return {
+        idProducto: product?.idProducto || product?.['ID Producto'] || product?.Referencia || product?.referencia || product?.SKU || '',
+        idVariacion: product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || product?.SKU || productIndex,
+        nombre: product?.Nombre || product?.nombre || product?.['Nombre del Producto'] || product?.Producto || 'Producto BLYXU',
+        imagen: normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || ''),
+        precio: getProductPrice(product || {}, activeCatalogMode)
+    };
 }
 
 function hydrateCustomerCheckoutFields() {
@@ -3627,6 +3826,9 @@ function hydrateCustomerCheckoutFields() {
 function customerAuthRequest(action, payload) {
     return fetch(GOOGLE_SHEET_API, {
         method: 'POST',
+        headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+        },
         body: JSON.stringify({
             action,
             resource: 'clientes',
@@ -3667,6 +3869,10 @@ function ensureCustomerAuthModal() {
                 <button type="button" data-auth-view="register">Registrarme</button>
             </div>
             <div class="customer-auth-message" id="customer-auth-message" aria-live="polite"></div>
+            <div class="customer-google-box" id="customer-google-box">
+                <div id="customer-google-signin" class="customer-google-signin"></div>
+                <div class="customer-auth-divider"><span>o usa tu contraseña</span></div>
+            </div>
             <section class="customer-auth-view active" data-auth-panel="login">
                 <h2 id="customer-auth-title">Iniciar sesión</h2>
                 <form id="customer-login-form" class="customer-auth-form">
@@ -3716,6 +3922,20 @@ function ensureCustomerAuthModal() {
             <section class="customer-auth-view" data-auth-panel="profile">
                 <h2>Mi cuenta</h2>
                 <div class="customer-profile-card" id="customer-profile-card"></div>
+                <div class="customer-dashboard-tabs" role="tablist" aria-label="Panel de cliente">
+                    <button type="button" class="active" data-customer-dashboard-tab="orders">Mis pedidos</button>
+                    <button type="button" data-customer-dashboard-tab="favorites">Favoritos</button>
+                </div>
+                <div class="customer-dashboard-panel active" id="customer-dashboard-orders">
+                    <div class="customer-dashboard-list" id="customer-orders-list">
+                        <div class="customer-dashboard-empty">Cargando pedidos...</div>
+                    </div>
+                </div>
+                <div class="customer-dashboard-panel" id="customer-dashboard-favorites">
+                    <div class="customer-dashboard-list" id="customer-favorites-list">
+                        <div class="customer-dashboard-empty">Cargando favoritos...</div>
+                    </div>
+                </div>
                 <button type="button" class="customer-auth-secondary" id="customer-logout-btn">Cerrar sesión</button>
             </section>
         </div>
@@ -3735,6 +3955,9 @@ function ensureCustomerAuthModal() {
     modal.querySelector('#customer-login-form')?.addEventListener('submit', handleCustomerLoginSubmit);
     modal.querySelector('#customer-register-form')?.addEventListener('submit', handleCustomerRegisterSubmit);
     modal.querySelector('#customer-logout-btn')?.addEventListener('click', handleCustomerLogout);
+    modal.querySelectorAll('[data-customer-dashboard-tab]').forEach(button => {
+        button.addEventListener('click', () => setCustomerDashboardTab(button.dataset.customerDashboardTab));
+    });
 
     return modal;
 }
@@ -3762,23 +3985,202 @@ function renderCustomerProfile() {
     const customer = getCurrentCustomer();
     const card = document.getElementById('customer-profile-card');
     if (!card || !customer) return;
+    const promotion = getCurrentCustomerPromotion();
 
     card.innerHTML = `
         <strong>${escapeHtml(customer.nombre || 'Cliente BLYXU')}</strong>
         <span>${escapeHtml(customer.email || '')}</span>
         <span>${escapeHtml(customer.telefono || '')}</span>
         ${customer.direccion || customer.ciudad ? `<small>${escapeHtml([customer.direccion, customer.ciudad].filter(Boolean).join(', '))}</small>` : ''}
+        ${promotion.percent > 0 ? `<div class="customer-promo-badge"><b>-${promotion.percent}%</b><span>${escapeHtml(promotion.label)}</span></div>` : ''}
     `;
 }
 
+function setCustomerDashboardTab(tab = 'orders') {
+    const modal = ensureCustomerAuthModal();
+    modal.querySelectorAll('[data-customer-dashboard-tab]').forEach(button => {
+        button.classList.toggle('active', button.dataset.customerDashboardTab === tab);
+    });
+    const ordersPanel = document.getElementById('customer-dashboard-orders');
+    const favoritesPanel = document.getElementById('customer-dashboard-favorites');
+    ordersPanel?.classList.toggle('active', tab === 'orders');
+    favoritesPanel?.classList.toggle('active', tab === 'favorites');
+}
+
+function formatCustomerDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return String(value);
+    return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+
+function renderCustomerOrdersList(orders = []) {
+    const list = document.getElementById('customer-orders-list');
+    if (!list) return;
+
+    if (!orders.length) {
+        list.innerHTML = '<div class="customer-dashboard-empty">Todavia no tienes pedidos registrados.</div>';
+        return;
+    }
+
+    list.innerHTML = orders.map(order => {
+        const products = Array.isArray(order.productos) ? order.productos : [];
+        const productText = products.length
+            ? products.slice(0, 3).map(item => `${escapeHtml(item.nombre || 'Producto')} x${Number(item.cantidad || 1)}`).join(', ')
+            : 'Productos del pedido';
+        return `
+            <article class="customer-order-card">
+                <div>
+                    <strong>${escapeHtml(order.id || 'Pedido')}</strong>
+                    <span>${escapeHtml(formatCustomerDate(order.fecha))}</span>
+                </div>
+                <p>${productText}${products.length > 3 ? '...' : ''}</p>
+                <footer>
+                    <span>${escapeHtml(order.estado || 'Pendiente')}</span>
+                    <b>${formatMoney(Number(order.total || 0))}</b>
+                </footer>
+            </article>
+        `;
+    }).join('');
+}
+
+function renderCustomerFavoritesList(favorites = []) {
+    const list = document.getElementById('customer-favorites-list');
+    if (!list) return;
+
+    if (!favorites.length) {
+        list.innerHTML = '<div class="customer-dashboard-empty">Aun no has guardado favoritos.</div>';
+        return;
+    }
+
+    list.innerHTML = favorites.map(item => {
+        const productIndex = findProductIndexForFavorite(item);
+        const href = productIndex >= 0 ? `producto.html?id=${productIndex}` : 'index.html#coleccion';
+        return `
+            <article class="customer-favorite-card">
+                <a href="${href}">
+                    ${item.imagen ? `<img src="${escapeHtml(item.imagen)}" alt="">` : '<span class="customer-favorite-empty">?</span>'}
+                    <div>
+                        <strong>${escapeHtml(item.nombre || 'Producto BLYXU')}</strong>
+                        <span>${item.precio ? formatMoney(Number(item.precio)) : 'Ver producto'}</span>
+                    </div>
+                </a>
+                <button type="button" onclick="removeCustomerFavorite('${escapeHtml(item.idFavorito || '')}')">Quitar</button>
+            </article>
+        `;
+    }).join('');
+}
+
+function findProductIndexForFavorite(favorite) {
+    return allProducts.findIndex(product => {
+        const identity = getProductIdentity(product);
+        return (favorite.idVariacion && String(identity.idVariacion) === String(favorite.idVariacion)) ||
+            (favorite.idProducto && String(identity.idProducto) === String(favorite.idProducto)) ||
+            (favorite.nombre && normalizeSearchText(identity.nombre) === normalizeSearchText(favorite.nombre));
+    });
+}
+
+async function loadCustomerDashboard() {
+    const session = getCustomerSession();
+    if (!session?.token) return;
+
+    renderCustomerOrdersList([]);
+    renderCustomerFavoritesList([]);
+
+    const ordersList = document.getElementById('customer-orders-list');
+    const favoritesList = document.getElementById('customer-favorites-list');
+    if (ordersList) ordersList.innerHTML = '<div class="customer-dashboard-empty">Cargando pedidos...</div>';
+    if (favoritesList) favoritesList.innerHTML = '<div class="customer-dashboard-empty">Cargando favoritos...</div>';
+
+    try {
+        const [ordersData, favoritesData] = await Promise.all([
+            customerAuthRequest('pedidoscliente', { token: session.token }),
+            customerAuthRequest('favoritoscliente', { token: session.token })
+        ]);
+        renderCustomerOrdersList(ordersData.orders || []);
+        renderCustomerFavoritesList(favoritesData.favorites || []);
+    } catch (error) {
+        if (ordersList) ordersList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message)}</div>`;
+        if (favoritesList) favoritesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+async function saveCustomerFavorite(productIndex, sourceButton = null) {
+    const session = getCustomerSession();
+    if (!session?.token) {
+        openCustomerAuthModal('login');
+        setCustomerAuthMessage('Inicia sesion para guardar productos favoritos.', 'error');
+        return;
+    }
+
+    const product = allProducts[Number(productIndex)];
+    if (!product) return;
+
+    const btn = sourceButton || null;
+    const previousText = btn ? btn.textContent : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('is-saving');
+    }
+
+    try {
+        await customerAuthRequest('guardarfavorito', {
+            token: session.token,
+            producto: getProductIdentity(product, Number(productIndex))
+        });
+        if (btn) {
+            btn.classList.add('is-saved');
+            btn.setAttribute('aria-label', 'Guardado en favoritos');
+            btn.title = 'Guardado en favoritos';
+        }
+        setCustomerAuthMessage('');
+    } catch (error) {
+        openCustomerAuthModal('profile');
+        setCustomerAuthMessage(error.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('is-saving');
+            if (previousText && btn.textContent !== previousText) btn.textContent = previousText;
+        }
+    }
+}
+
+async function removeCustomerFavorite(idFavorito) {
+    const session = getCustomerSession();
+    if (!session?.token) return;
+    try {
+        await customerAuthRequest('quitarfavorito', {
+            token: session.token,
+            idFavorito
+        });
+        loadCustomerDashboard();
+    } catch (error) {
+        setCustomerAuthMessage(error.message, 'error');
+    }
+}
+
+window.saveCustomerFavorite = saveCustomerFavorite;
+window.removeCustomerFavorite = removeCustomerFavorite;
+
 function openCustomerAuthModal(view) {
     const modal = ensureCustomerAuthModal();
-    const hasSession = Boolean(getCustomerSession());
+    const session = getCustomerSession();
+    const hasSession = Boolean(session);
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('customer-auth-open');
     setCustomerAuthView(view || (hasSession ? 'profile' : 'login'));
     renderCustomerProfile();
+    if (hasSession) {
+        customerAuthRequest('perfilcliente', { token: session.token })
+            .then(data => {
+                setCustomerSession(session.token, data.cliente);
+                renderCustomerProfile();
+            })
+            .catch(() => clearCustomerSession())
+            .finally(loadCustomerDashboard);
+    }
 }
 
 function closeCustomerAuthModal() {
@@ -3808,6 +4210,7 @@ async function handleCustomerLoginSubmit(event) {
         setCustomerAuthMessage('Sesión iniciada correctamente.', 'success');
         setCustomerAuthView('profile');
         renderCustomerProfile();
+        loadCustomerDashboard();
     } catch (error) {
         setCustomerAuthMessage(error.message, 'error');
     } finally {
@@ -3841,6 +4244,7 @@ async function handleCustomerRegisterSubmit(event) {
         setCustomerAuthMessage('Cuenta creada correctamente.', 'success');
         setCustomerAuthView('profile');
         renderCustomerProfile();
+        loadCustomerDashboard();
     } catch (error) {
         setCustomerAuthMessage(error.message, 'error');
     } finally {
@@ -3896,7 +4300,13 @@ function initCustomerAuth() {
     const session = getCustomerSession();
     if (session?.token) {
         customerAuthRequest('perfilcliente', { token: session.token })
-            .then(data => setCustomerSession(session.token, data.cliente))
+            .then(data => {
+                setCustomerSession(session.token, data.cliente);
+                if (document.getElementById('customer-auth-modal')?.classList.contains('open')) {
+                    renderCustomerProfile();
+                    loadCustomerDashboard();
+                }
+            })
             .catch(() => clearCustomerSession());
     }
 }
@@ -3905,7 +4315,9 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
     const checkoutItems = Array.isArray(options.items) && options.items.length ? options.items : cart;
     if (!checkoutItems.length) return;
     const shouldClearCart = options.clearCart !== false;
-    const total = checkoutItems.reduce((s, c) => s + c.price * c.qty, 0);
+    const pricingSummary = getCartPricingSummary(checkoutItems);
+    const total = pricingSummary.total;
+    const customerSession = getCustomerSession();
     const formContainer = document.getElementById('cart-wholesale-form');
     showMercadoPagoLoading();
     
@@ -3924,6 +4336,7 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
         resource: 'pedidos',
         customerType: 'Detal',
         mode: 'retail',
+        token: customerSession?.token || '',
         cliente: {
             nombre: cliente.nombre,
             telefono: cliente.telefono,
@@ -4045,14 +4458,19 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
+    const pricingSummary = getCartPricingSummary(cart);
+    const promotion = pricingSummary.promotion;
     const productos = cart.map(item => ({
         idVariacion: item.idVariacion || item.sku || item.name,
         id: item.idVariacion || item.sku || item.name,
         nombre: item.name,
         opcion: item.variantLabel || '',
         cantidad: item.qty,
-        precio: item.price,
-        subtotal: item.price * item.qty,
+        precioOriginal: item.price,
+        precio: promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price,
+        subtotal: (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price) * item.qty,
+        descuentoCliente: promotion.percent || '',
+        promoCliente: promotion.label || '',
         sku: item.sku || '',
         modo: item.mode || activeCatalogMode
     }));
@@ -4070,10 +4488,10 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         'Ciudad': cliente.ciudad,
         'Productos JSON': JSON.stringify(productos),
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
-        'Subtotal': total,
+        'Subtotal': pricingSummary.total,
         'Estado Pedido': 'Pendiente',
         'Metodo Contacto': `Sistema ${orderLabel}`,
-        'Nota Cliente': cliente.nota || ''
+        'Nota Cliente': [cliente.nota || '', promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''].filter(Boolean).join(' | ')
     };
 
     try {
@@ -4147,7 +4565,7 @@ function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', c
 async function checkout(skipPrompt = false) {
     if (!cart.length) return;
     await syncRetailPriceVisibility();
-    const total = cart.reduce((s, c) => s + c.price * c.qty, 0);
+    const total = getCartPricingSummary(cart).total;
     const isRegisteredOrder = shouldRegisterCartOrder();
     const customerType = getCartCustomerType();
     const orderLabel = getCartOrderLabel();

@@ -44,6 +44,7 @@ const SHEETS = {
       'Nombre Cliente',
       'Tipo Cliente',
       'Teléfono',
+      'Email',
       'Dirección',
       'Ciudad',
       'Productos JSON',
@@ -74,9 +75,30 @@ const SHEETS = {
       'Fecha Registro',
       'Password Hash',
       'Password Salt',
+      'Google ID',
       'Session Token',
       'Session Expira',
+      'Descuento Cliente',
+      'Promo Cliente',
+      'Promo Expira',
       'Fecha Actualización'
+    ]
+  },
+
+  Favoritos: {
+    primary: 'ID Favorito',
+    headers: [
+      'ID Favorito',
+      'Fecha',
+      'Telefono',
+      'Email',
+      'ID Producto',
+      'ID Variacion',
+      'Nombre Producto',
+      'Imagen',
+      'Precio',
+      'Estado',
+      'Fecha Actualizacion'
     ]
   },
 
@@ -208,7 +230,17 @@ function handleRequest_(e, method) {
     if (
       action === 'registrarcliente' ||
       action === 'customerregister' ||
-      action === 'registercustomer'
+      action === 'registercustomer' ||
+      action === 'crearcliente' ||
+      action === 'crearcuenta' ||
+      action === 'registrocliente' ||
+      action === 'registrarse' ||
+      action === 'signup' ||
+      action === 'signupcliente' ||
+      action === 'register' ||
+      action === 'registro' ||
+      action === 'createcustomer' ||
+      action === 'newcustomer'
     ) {
       return handleCustomerRegister_(body);
     }
@@ -216,9 +248,23 @@ function handleRequest_(e, method) {
     if (
       action === 'logincliente' ||
       action === 'iniciarsesion' ||
-      action === 'customerlogin'
+      action === 'customerlogin' ||
+      action === 'login' ||
+      action === 'signin' ||
+      action === 'entrarcliente' ||
+      action === 'ingresarcliente'
     ) {
       return handleCustomerLogin_(body);
+    }
+
+    if (
+      action === 'googlelogincliente' ||
+      action === 'customergooglelogin' ||
+      action === 'logincongoogle' ||
+      action === 'googlelogin' ||
+      action === 'signinwithgoogle'
+    ) {
+      return handleCustomerGoogleLogin_(body);
     }
 
     if (
@@ -233,6 +279,44 @@ function handleRequest_(e, method) {
       action === 'customerlogout'
     ) {
       return handleCustomerLogout_(body, params);
+    }
+
+    if (
+      action === 'pedidoscliente' ||
+      action === 'customerorders' ||
+      action === 'mis_pedidos'
+    ) {
+      return handleCustomerOrders_(body, params);
+    }
+
+    if (
+      action === 'favoritoscliente' ||
+      action === 'customerfavorites' ||
+      action === 'mis_favoritos'
+    ) {
+      return handleCustomerFavorites_(body, params);
+    }
+
+    if (
+      action === 'guardarfavorito' ||
+      action === 'addfavorite'
+    ) {
+      return handleCustomerFavoriteSave_(body, params);
+    }
+
+    if (
+      action === 'quitarfavorito' ||
+      action === 'removefavorite'
+    ) {
+      return handleCustomerFavoriteRemove_(body, params);
+    }
+
+    if (
+      action === 'promocliente' ||
+      action === 'customerpromo' ||
+      action === 'guardar_promocion_cliente'
+    ) {
+      return handleCustomerPromotionSave_(body);
     }
 
     // ==========================================
@@ -311,6 +395,28 @@ function handleRequest_(e, method) {
         action === 'addproduct' ||
         action === ''
       ) {
+        if (sheetName === 'Clientes') {
+          const hasRegisterFields = data && (
+            data.cliente ||
+            data.customer ||
+            data.password ||
+            data.contrasena ||
+            data['Contraseña']
+          ) && (
+            data.nombre ||
+            data.Nombre ||
+            data.telefono ||
+            data.Telefono ||
+            data['Teléfono'] ||
+            data.email ||
+            data.Email
+          );
+
+          if (hasRegisterFields) {
+            return handleCustomerRegister_(body);
+          }
+        }
+
         if (sheetName === 'Pedidos') {
           const pedido = createOrder_(data);
           return json_({ ok: true, status: 'success', data: pedido });
@@ -359,6 +465,20 @@ function handleRequest_(e, method) {
           deleted: deleted,
           message: deleted > 0 ? 'Producto eliminado.' : 'No se encontro el producto.'
         });
+      }
+
+      if (sheetName === 'Clientes') {
+        const hasPassword = data.password || data.contrasena || data['Contraseña'];
+        const hasRegisterIdentity = data.cliente || data.customer || data.nombre || data.Nombre || data.email || data.Email || data.telefono || data.Telefono || data['Teléfono'];
+        const hasLoginIdentity = data.usuario || data.identifier || data.email || data.telefono;
+
+        if (hasPassword && hasRegisterIdentity && (data.nombre || data.Nombre || data.cliente || data.customer)) {
+          return handleCustomerRegister_(body);
+        }
+
+        if (hasPassword && hasLoginIdentity) {
+          return handleCustomerLogin_(body);
+        }
       }
 
       return json_({ ok: false, status: 'error', error: 'Accion no reconocida.' });
@@ -439,18 +559,26 @@ function handleMercadoPagoPreference_(body) {
   const clientAddress = String(cliente.direccion || body.direccion || body['Dirección'] || '').trim();
   const clientCity = String(cliente.ciudad || body.ciudad || body['Ciudad'] || '').trim();
   const clientNote = String(cliente.nota || body.nota || body['Nota Cliente'] || '').trim();
+  const sessionToken = String(body.token || body.customerToken || cliente.token || '').trim();
+  const registeredCustomer = sessionToken ? findCustomerBySessionToken_(sessionToken) : null;
+  const customerPromotion = getActiveCustomerPromotion_(registeredCustomer ? registeredCustomer.data : null);
+  const pricedCart = applyCustomerPromotionToItems_(items, customerPromotion);
+  const orderItems = pricedCart.items;
 
   // 3) Pre-registrar pedido en la hoja 'Pedidos'
   const now = new Date();
   const orderId = body['ID Pedido'] || body.idPedido || makeId_('DET');
 
-  const totalQty = items.reduce((sum, item) => sum + toNumber_(item.cantidad || item.qty || item.quantity || 1), 0);
-  const calculatedTotal = items.reduce((sum, item) => {
+  const totalQty = orderItems.reduce((sum, item) => sum + toNumber_(item.cantidad || item.qty || item.quantity || 1), 0);
+  const calculatedTotal = orderItems.reduce((sum, item) => {
     const qty = toNumber_(item.cantidad || item.qty || item.quantity || 1);
     const price = toNumber_(item.precio || item.price || 0);
     return sum + (qty * price);
   }, 0);
-  const total = toNumber_(body.total || body.subtotal) || calculatedTotal;
+  const total = calculatedTotal;
+  const noteWithPromo = customerPromotion.percent > 0
+    ? [clientNote, 'Promo cliente registrado: ' + customerPromotion.label + ' (-' + customerPromotion.percent + '%)'].filter(Boolean).join(' | ')
+    : clientNote;
 
   const orderData = {
     'ID Pedido': orderId,
@@ -458,14 +586,15 @@ function handleMercadoPagoPreference_(body) {
     'Nombre Cliente': clientName,
     'Tipo Cliente': 'Detal',
     'Teléfono': clientPhone,
+    'Email': clientEmail,
     'Dirección': clientAddress,
     'Ciudad': clientCity,
-    'Productos JSON': JSON.stringify(items),
+    'Productos JSON': JSON.stringify(orderItems),
     'Cantidad Total': totalQty,
     'Subtotal': total,
     'Estado Pedido': 'Pendiente de Pago',
     'Método Contacto': 'Mercado Pago Checkout Pro',
-    'Nota Cliente': clientNote,
+    'Nota Cliente': noteWithPromo,
     'Fecha Actualización': now
   };
 
@@ -477,7 +606,7 @@ function handleMercadoPagoPreference_(body) {
   }
 
   // 4) Armar Items para la API de Preferencias de Mercado Pago
-  const mpItems = items.map((item, idx) => {
+  const mpItems = orderItems.map((item, idx) => {
     const qty = Math.max(1, parseInt(item.cantidad || item.qty || item.quantity || 1, 10));
     const price = toNumber_(item.precio || item.price || 0);
     const title = String(item.nombre || item.name || item.title || ('Producto ' + (idx + 1))).trim().substring(0, 250);
@@ -589,6 +718,7 @@ function handleMercadoPagoPreference_(body) {
       status: 'success',
       idPedido: orderId,
       preferenceId: resultJson.id,
+      promotion: customerPromotion.percent > 0 ? customerPromotion : null,
       init_point: resultJson.init_point,
       sandbox_init_point: resultJson.sandbox_init_point || resultJson.init_point
     });
@@ -817,6 +947,12 @@ function upsertConfig_(key, val) {
   }
 }
 
+function getConfigValue_(key, fallback) {
+  const rows = listRows_('Configuracion', {});
+  const found = rows.find(row => normalizeKey_(row.Clave) === normalizeKey_(key));
+  return found ? String(found.Valor || '') : (fallback || '');
+}
+
 function createOrder_(data) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -943,6 +1079,13 @@ function appendRow_(sheetName, inputData) {
     rowObject['Estado Cliente'] = rowObject['Estado Cliente'] || 'Activo';
     rowObject['Total Pedidos'] = rowObject['Total Pedidos'] || 0;
     rowObject['Total Gastado'] = rowObject['Total Gastado'] || 0;
+  }
+
+  if (sheetName === 'Favoritos') {
+    rowObject['ID Favorito'] = rowObject['ID Favorito'] || makeId_('FAV');
+    rowObject['Fecha'] = rowObject['Fecha'] || now;
+    rowObject['Estado'] = rowObject['Estado'] || 'Activo';
+    rowObject['Fecha Actualizacion'] = now;
   }
 
   if (sheetName === 'Facturas') {
@@ -1215,6 +1358,99 @@ function handleCustomerLogin_(body) {
   });
 }
 
+function handleCustomerGoogleLogin_(body) {
+  ensureSheets_();
+
+  const credential = String(body.credential || body.idToken || body.tokenGoogle || '').trim();
+  if (!credential) {
+    return json_({ ok: false, status: 'error', error: 'No recibimos la credencial de Google.' });
+  }
+
+  const googleProfile = verifyGoogleIdToken_(credential);
+  if (!googleProfile || !googleProfile.email) {
+    return json_({ ok: false, status: 'error', error: 'No se pudo validar tu cuenta de Google.' });
+  }
+
+  const email = normalizeEmail_(googleProfile.email);
+  const found = findCustomerByIdentifier_(email);
+  const token = makeSessionToken_();
+  const now = new Date();
+  const sessionExpires = new Date(now.getTime() + 1000 * 60 * 60 * 24 * 30);
+  let saved;
+
+  if (found) {
+    const phone = found.data['Teléfono'] || found.data['Telefono'];
+    saved = updateRow_('Clientes', phone, {
+      'Nombre': googleProfile.name || found.data.Nombre || email,
+      'Email': email,
+      'Google ID': googleProfile.sub || '',
+      'Session Token': token,
+      'Session Expira': sessionExpires,
+      'Estado Cliente': 'Activo'
+    });
+  } else {
+    const phoneFromEmail = 'GOOGLE-' + String(googleProfile.sub || makeId_('G')).slice(0, 18);
+    saved = appendRow_('Clientes', {
+      'Nombre': googleProfile.name || email,
+      'Teléfono': phoneFromEmail,
+      'Email': email,
+      'Google ID': googleProfile.sub || '',
+      'Estado Cliente': 'Activo',
+      'Session Token': token,
+      'Session Expira': sessionExpires,
+      'Total Pedidos': 0,
+      'Total Gastado': 0,
+      'Fecha Registro': now
+    });
+  }
+
+  return json_({
+    ok: true,
+    status: 'success',
+    token: token,
+    cliente: publicCustomer_(saved)
+  });
+}
+
+function verifyGoogleIdToken_(credential) {
+  const clientId = getConfigValue_('Google_Client_ID');
+  if (!clientId) {
+    throw new Error('Google Login no esta configurado. Agrega el Google Client ID en el panel administrativo.');
+  }
+
+  const response = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential), {
+    method: 'get',
+    muteHttpExceptions: true
+  });
+
+  const statusCode = response.getResponseCode();
+  const responseText = response.getContentText();
+  let payload = {};
+  try {
+    payload = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error('Google no respondio una validacion valida.');
+  }
+
+  if (statusCode < 200 || statusCode >= 300) {
+    throw new Error(payload.error_description || payload.error || 'No se pudo validar la cuenta de Google.');
+  }
+
+  if (String(payload.aud || '') !== String(clientId)) {
+    throw new Error('El Google Client ID no coincide con esta pagina.');
+  }
+
+  if (payload.email_verified !== true && String(payload.email_verified) !== 'true') {
+    throw new Error('Tu correo de Google no esta verificado.');
+  }
+
+  return {
+    sub: payload.sub || '',
+    email: payload.email || '',
+    name: payload.name || payload.given_name || ''
+  };
+}
+
 function handleCustomerProfile_(body, params) {
   ensureSheets_();
   const token = String((body && body.token) || (params && params.token) || '').trim();
@@ -1241,6 +1477,223 @@ function handleCustomerLogout_(body, params) {
     });
   }
   return json_({ ok: true, status: 'success' });
+}
+
+function handleCustomerOrders_(body, params) {
+  ensureSheets_();
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+
+  const customerPhone = cleanPhone_(found.data['Teléfono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const rows = listRows_('Pedidos', {});
+  const orders = rows.filter(row => {
+    const phone = cleanPhone_(row['Teléfono'] || row.Telefono || row.telefono);
+    const email = normalizeEmail_(row.Email || row.email);
+    return (customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail);
+  }).sort((a, b) => new Date(b.Fecha || 0) - new Date(a.Fecha || 0));
+
+  return json_({
+    ok: true,
+    status: 'success',
+    cliente: publicCustomer_(found.data),
+    orders: orders.slice(0, 60).map(publicCustomerOrder_)
+  });
+}
+
+function handleCustomerFavorites_(body, params) {
+  ensureSheets_();
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+
+  const customerPhone = cleanPhone_(found.data['Teléfono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const rows = listRows_('Favoritos', {});
+  const favorites = rows.filter(row => {
+    const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
+    const phone = cleanPhone_(row.Telefono || row['Teléfono']);
+    const email = normalizeEmail_(row.Email);
+    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
+  }).sort((a, b) => new Date(b.Fecha || 0) - new Date(a.Fecha || 0));
+
+  return json_({
+    ok: true,
+    status: 'success',
+    favorites: favorites.map(publicCustomerFavorite_)
+  });
+}
+
+function handleCustomerFavoriteSave_(body, params) {
+  ensureSheets_();
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Debes iniciar sesion para guardar favoritos.' });
+  }
+
+  const product = body.producto || body.product || body.item || body;
+  const idProducto = String(product.idProducto || product['ID Producto'] || product.referencia || product.SKU || '').trim();
+  const idVariacion = String(product.idVariacion || product['ID Variación'] || product['ID Variacion'] || product.sku || product.id || '').trim();
+  const nombre = String(product.nombre || product.name || product.Nombre || product['Nombre del Producto'] || 'Producto BLYXU').trim();
+  const imagen = String(product.imagen || product.img || product.Imagen || product['Imagen Principal'] || '').trim();
+  const precio = toNumber_(product.precio || product.price || product.Precio || 0);
+
+  if (!idProducto && !idVariacion && !nombre) {
+    return json_({ ok: false, status: 'error', error: 'No se pudo identificar el producto.' });
+  }
+
+  const customerPhone = cleanPhone_(found.data['Teléfono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const sheet = getSheet_('Favoritos');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow >= 2) {
+    const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const row = rowToObject_(headers, values[i]);
+      const sameCustomer = (customerPhone && cleanPhone_(row.Telefono || row['Teléfono']) === customerPhone) ||
+        (customerEmail && normalizeEmail_(row.Email) === customerEmail);
+      const sameProduct = idVariacion
+        ? String(row['ID Variacion']) === idVariacion
+        : (idProducto && String(row['ID Producto']) === idProducto);
+      if (sameCustomer && sameProduct) {
+        const saved = updateRow_('Favoritos', row['ID Favorito'], {
+          Estado: 'Activo',
+          'Fecha Actualizacion': new Date()
+        });
+        return json_({ ok: true, status: 'success', favorite: publicCustomerFavorite_(saved), message: 'Producto guardado en favoritos.' });
+      }
+    }
+  }
+
+  const saved = appendRow_('Favoritos', {
+    'ID Favorito': makeId_('FAV'),
+    Fecha: new Date(),
+    Telefono: customerPhone,
+    Email: customerEmail,
+    'ID Producto': idProducto,
+    'ID Variacion': idVariacion,
+    'Nombre Producto': nombre,
+    Imagen: imagen,
+    Precio: precio,
+    Estado: 'Activo',
+    'Fecha Actualizacion': new Date()
+  });
+
+  return json_({ ok: true, status: 'success', favorite: publicCustomerFavorite_(saved), message: 'Producto guardado en favoritos.' });
+}
+
+function handleCustomerFavoriteRemove_(body, params) {
+  ensureSheets_();
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+
+  const idFavorito = String(body.idFavorito || body.favoriteId || body.id || '').trim();
+  const idProducto = String(body.idProducto || body.productId || '').trim();
+  const idVariacion = String(body.idVariacion || body.variationId || '').trim();
+  const customerPhone = cleanPhone_(found.data['Teléfono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const sheet = getSheet_('Favoritos');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return json_({ ok: true, status: 'success', removed: false });
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const row = rowToObject_(headers, values[i]);
+    const sameCustomer = (customerPhone && cleanPhone_(row.Telefono || row['Teléfono']) === customerPhone) ||
+      (customerEmail && normalizeEmail_(row.Email) === customerEmail);
+    const sameFavorite = idFavorito && String(row['ID Favorito']) === idFavorito;
+    const sameProduct = idVariacion
+      ? String(row['ID Variacion']) === idVariacion
+      : (idProducto && String(row['ID Producto']) === idProducto);
+
+    if (sameCustomer && (sameFavorite || sameProduct)) {
+      const saved = updateRow_('Favoritos', row['ID Favorito'], {
+        Estado: 'Inactivo',
+        'Fecha Actualizacion': new Date()
+      });
+      return json_({ ok: true, status: 'success', removed: true, favorite: publicCustomerFavorite_(saved) });
+    }
+  }
+
+  return json_({ ok: true, status: 'success', removed: false });
+}
+
+function handleCustomerPromotionSave_(body) {
+  ensureSheets_();
+  const identifier = String(body.identifier || body.usuario || body.email || body.telefono || '').trim();
+  if (!identifier) {
+    return json_({ ok: false, status: 'error', error: 'Ingresa telefono o correo del cliente.' });
+  }
+
+  const found = findCustomerByIdentifier_(identifier);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'No encontramos ese cliente registrado.' });
+  }
+
+  const discount = Math.max(0, Math.min(90, toNumber_(body.discount || body.descuento || body['Descuento Cliente'] || 0)));
+  const title = String(body.title || body.promo || body['Promo Cliente'] || '').trim();
+  const expires = String(body.expires || body.expira || body['Promo Expira'] || '').trim();
+  const phone = found.data['Teléfono'] || found.data['Telefono'];
+  const saved = updateRow_('Clientes', phone, {
+    'Descuento Cliente': discount,
+    'Promo Cliente': title,
+    'Promo Expira': expires
+  });
+
+  return json_({
+    ok: true,
+    status: 'success',
+    cliente: publicCustomer_(saved),
+    message: discount > 0 ? 'Promocion asignada al cliente.' : 'Promocion del cliente desactivada.'
+  });
+}
+
+function getAuthenticatedCustomer_(body, params) {
+  const token = String((body && body.token) || (params && params.token) || '').trim();
+  return findCustomerBySessionToken_(token);
+}
+
+function publicCustomerOrder_(order) {
+  const products = parseMaybeJson_(order['Productos JSON']);
+  return {
+    id: order['ID Pedido'] || '',
+    fecha: order.Fecha || '',
+    estado: order['Estado Pedido'] || '',
+    metodo: order['Método Contacto'] || order['Metodo Contacto'] || '',
+    total: toNumber_(order.Subtotal),
+    cantidadTotal: toNumber_(order['Cantidad Total']),
+    productos: Array.isArray(products) ? products.slice(0, 12).map(function(item) {
+      return {
+        nombre: item.nombre || item.name || item.Producto || 'Producto',
+        opcion: item.opcion || item.variantLabel || item.Estilo || '',
+        cantidad: toNumber_(item.cantidad || item.qty || item.quantity || 1),
+        precio: toNumber_(item.precio || item.price || 0),
+        imagen: item.img || item.imagen || ''
+      };
+    }) : []
+  };
+}
+
+function publicCustomerFavorite_(favorite) {
+  return {
+    idFavorito: favorite['ID Favorito'] || '',
+    fecha: favorite.Fecha || '',
+    idProducto: favorite['ID Producto'] || '',
+    idVariacion: favorite['ID Variacion'] || '',
+    nombre: favorite['Nombre Producto'] || '',
+    imagen: favorite.Imagen || '',
+    precio: toNumber_(favorite.Precio),
+    estado: favorite.Estado || 'Activo'
+  };
 }
 
 function findCustomerByIdentifier_(identifier) {
@@ -1289,6 +1742,7 @@ function findCustomerBySessionToken_(token, allowExpired) {
 }
 
 function publicCustomer_(customer) {
+  const promotion = getActiveCustomerPromotion_(customer);
   return {
     nombre: customer['Nombre'] || '',
     telefono: customer['Teléfono'] || customer['Telefono'] || '',
@@ -1297,7 +1751,66 @@ function publicCustomer_(customer) {
     ciudad: customer['Ciudad'] || '',
     totalPedidos: customer['Total Pedidos'] || 0,
     totalGastado: customer['Total Gastado'] || 0,
-    ultimoPedido: customer['Último Pedido'] || customer['Ãšltimo Pedido'] || ''
+    ultimoPedido: customer['Último Pedido'] || customer['Ãšltimo Pedido'] || '',
+    descuentoCliente: promotion.percent,
+    promoCliente: promotion.label,
+    promoExpira: promotion.expires || ''
+  };
+}
+
+function getActiveCustomerPromotion_(customer) {
+  if (!customer) {
+    return { percent: 0, label: '', expires: '' };
+  }
+
+  const percent = Math.max(0, Math.min(90, toNumber_(customer['Descuento Cliente'] || customer.descuentoCliente || 0)));
+  const label = String(customer['Promo Cliente'] || customer.promoCliente || 'Promo cliente registrado').trim();
+  const expires = String(customer['Promo Expira'] || customer.promoExpira || '').trim();
+
+  if (!percent) {
+    return { percent: 0, label: '', expires: '' };
+  }
+
+  if (expires) {
+    const expirationDate = new Date(expires);
+    if (!Number.isNaN(expirationDate.getTime()) && expirationDate.getTime() < Date.now()) {
+      return { percent: 0, label: '', expires: expires };
+    }
+  }
+
+  return { percent: percent, label: label || 'Promo cliente registrado', expires: expires };
+}
+
+function applyCustomerPromotionToItems_(items, promotion) {
+  const percent = Math.max(0, Math.min(90, toNumber_(promotion && promotion.percent)));
+  const discountFactor = percent > 0 ? (1 - (percent / 100)) : 1;
+  let originalTotal = 0;
+  let payableTotal = 0;
+
+  const pricedItems = (items || []).map(function(item) {
+    const qty = Math.max(1, toNumber_(item.cantidad || item.qty || item.quantity || 1));
+    const originalPrice = toNumber_(item.precio || item.price || 0);
+    const finalPrice = Math.max(0, Math.round(originalPrice * discountFactor));
+    originalTotal += originalPrice * qty;
+    payableTotal += finalPrice * qty;
+
+    const next = Object.assign({}, item);
+    next.precioOriginal = originalPrice;
+    next.precio = finalPrice;
+    next.price = finalPrice;
+    next.subtotal = finalPrice * qty;
+    if (percent > 0) {
+      next.descuentoCliente = percent;
+      next.promoCliente = promotion.label || 'Promo cliente registrado';
+    }
+    return next;
+  });
+
+  return {
+    items: pricedItems,
+    originalTotal: originalTotal,
+    discountAmount: Math.max(0, originalTotal - payableTotal),
+    payableTotal: payableTotal
   };
 }
 
@@ -1346,6 +1859,7 @@ function upsertClientFromOrder_(pedido) {
     appendRow_('Clientes', {
       Nombre: pedido['Nombre Cliente'],
       Teléfono: telefono,
+      Email: pedido.Email || pedido.email || '',
       Dirección: pedido['Dirección'],
       Ciudad: pedido['Ciudad'],
       'Total Pedidos': 1,
@@ -1360,6 +1874,7 @@ function upsertClientFromOrder_(pedido) {
   const current = rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
 
   current['Nombre'] = pedido['Nombre Cliente'] || current['Nombre'];
+  current['Email'] = pedido.Email || pedido.email || current['Email'];
   current['Dirección'] = pedido['Dirección'] || current['Dirección'];
   current['Ciudad'] = pedido['Ciudad'] || current['Ciudad'];
   current['Total Pedidos'] = toNumber_(current['Total Pedidos']) + 1;
@@ -1580,6 +2095,7 @@ function findHeader_(headers, key, sheetName) {
       nombre: 'Nombre Cliente',
       cliente: 'Nombre Cliente',
       telefono: 'Teléfono',
+      email: 'Email',
       direccion: 'Dirección',
       productos: 'Productos JSON',
       carrito: 'Productos JSON',
@@ -1602,7 +2118,34 @@ function findHeader_(headers, key, sheetName) {
       telefono: 'Teléfono',
       direccion: 'Dirección',
       email: 'Email',
-      nombre: 'Nombre'
+      nombre: 'Nombre',
+      descuento: 'Descuento Cliente',
+      descuentocliente: 'Descuento Cliente',
+      promo: 'Promo Cliente',
+      promocliente: 'Promo Cliente',
+      expira: 'Promo Expira',
+      promoexpira: 'Promo Expira'
+    },
+    Favoritos: {
+      id: 'ID Favorito',
+      idfavorito: 'ID Favorito',
+      favoriteid: 'ID Favorito',
+      fecha: 'Fecha',
+      telefono: 'Telefono',
+      email: 'Email',
+      idproducto: 'ID Producto',
+      productid: 'ID Producto',
+      idvariacion: 'ID Variacion',
+      variationid: 'ID Variacion',
+      sku: 'ID Variacion',
+      nombre: 'Nombre Producto',
+      producto: 'Nombre Producto',
+      nombreproducto: 'Nombre Producto',
+      imagen: 'Imagen',
+      img: 'Imagen',
+      precio: 'Precio',
+      price: 'Precio',
+      estado: 'Estado'
     },
     Facturas: {
       productos: 'Productos JSON',
@@ -1767,6 +2310,8 @@ function sheetFromResource_(resource) {
     pedidos: 'Pedidos',
     cliente: 'Clientes',
     clientes: 'Clientes',
+    favorito: 'Favoritos',
+    favoritos: 'Favoritos',
     factura: 'Facturas',
     facturas: 'Facturas',
     configuracion: 'Configuracion',
@@ -1784,6 +2329,7 @@ function getStatusHeader_(sheetName) {
   if (sheetName === 'Productos') return 'Estado';
   if (sheetName === 'Pedidos') return 'Estado Pedido';
   if (sheetName === 'Clientes') return 'Estado Cliente';
+  if (sheetName === 'Favoritos') return 'Estado';
   if (sheetName === 'Facturas') return 'Estado Factura';
   if (sheetName === 'PedidosChina') return 'ID Pedido';
   throw new Error('Hoja no valida.');

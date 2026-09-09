@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=cart-section-20260906">
+    <link rel="stylesheet" href="blyxu-style.css?v=customer-panel-20260909">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <style>
         .product-info-price {
@@ -168,6 +168,7 @@
 
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
+                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail" type="button">Guardar favorito</button>
                 <button class="btn-consult-direct" id="btn-consult-product-detail" type="button" style="display:none;">Consultar este producto por WhatsApp</button>
                 <p class="cart-consult-note" id="detail-cart-note" style="display:none;">Añadir al carrito sirve para hacer una consulta general de varios productos.</p>
             </div>
@@ -208,7 +209,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=cart-section-20260906"></script>
+    <script src="blyxu-app.js?v=customer-panel-20260909"></script>
     <script>
         // Lógica específica para la página de producto
         document.addEventListener('DOMContentLoaded', async () => {
@@ -529,6 +530,7 @@
             const thumbsContainer = document.getElementById('detail-thumbnails');
             const variationContainer = document.getElementById('product-variations');
             const cartBtn = document.getElementById('btn-add-to-cart-detail');
+            const favoriteBtn = document.getElementById('btn-save-favorite-detail');
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
 
@@ -610,7 +612,7 @@
 
                 return rawParts
                     .map(value => String(value || '').trim())
-                    .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
+                    .filter(value => !isEmptyDisplayValue(value) && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
                     .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
             }
 
@@ -621,7 +623,7 @@
                         ? (product.Tamano || product.tamano || product.Talla)
                         : (product.Color || product.color);
                 const raw = String(value || '').trim();
-                return raw && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
+                return !isEmptyDisplayValue(raw) && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
             }
 
             function getGroupVariantDimension(siblings) {
@@ -882,6 +884,9 @@
                     if (stock <= 0) return;
                     addToCart(productId, null, detailCatalogMode);
                 };
+                if (favoriteBtn) {
+                    favoriteBtn.onclick = () => saveCustomerFavorite(productId, favoriteBtn);
+                }
                 cartBtn.closest('.product-info-actions')?.classList.remove('has-online-payment');
 
                 cartBtn.closest('.product-info-actions')?.classList.toggle('has-consult-actions', !detailShowsPrices && stock > 0);
