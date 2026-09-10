@@ -394,7 +394,7 @@
             border-color:rgba(244,196,65,0.14)!important;
             background:linear-gradient(135deg,rgba(244,196,65,0.08),rgba(168,85,247,0.06))!important;
         }
-        .settings-tabs {
+        #view-settings .settings-tabs {
             position:relative;
             z-index:1;
             display:flex;
@@ -407,7 +407,7 @@
             background:rgba(0,0,0,0.14);
             box-shadow:inset 0 1px 0 rgba(255,255,255,0.025);
         }
-        .settings-tab-btn {
+        #view-settings .settings-tab-btn {
             width:auto;
             min-height:42px;
             display:inline-flex;
@@ -424,15 +424,15 @@
             cursor:pointer;
             transition:transform .22s ease, background .22s ease, border-color .22s ease, color .22s ease, box-shadow .22s ease;
         }
-        .settings-tab-btn:hover,
-        .settings-tab-btn.active {
+        #view-settings .settings-tab-btn:hover,
+        #view-settings .settings-tab-btn.active {
             transform:translateY(-1px);
             color:#fff;
             border-color:rgba(244,196,65,0.26);
             background:linear-gradient(135deg,rgba(168,85,247,0.18),rgba(244,196,65,0.08));
             box-shadow:0 12px 26px rgba(0,0,0,0.22);
         }
-        .settings-tab-content {
+        #view-settings .settings-tab-content {
             position:relative;
             z-index:1;
         }
@@ -443,14 +443,14 @@
         .settings-tab-panel.active {
             display:block;
         }
-        .settings-tab-panel > h3 {
+        #view-settings .settings-tab-panel > h3 {
             margin:0 0 18px!important;
             font-size:18px!important;
             font-weight:800!important;
             color:#fff!important;
         }
-        .settings-tab-panel form,
-        .settings-tab-panel .settings-retail-card {
+        #view-settings .settings-tab-panel form,
+        #view-settings .settings-tab-panel .settings-retail-card {
             margin:0!important;
             padding:22px!important;
             border:1px solid rgba(255,255,255,0.055)!important;
@@ -532,6 +532,822 @@
             .admin-panel { padding:14px; }
             .login-box,
             .wholesale-panel { width:calc(100vw - 28px); padding:28px 22px!important; }
+        }
+
+        /* ADMIN REORDER + VISUAL SYSTEM */
+        body,
+        html {
+            background:#080712;
+        }
+        .dashboard-layout {
+            grid-template-columns:250px minmax(0,1fr);
+            background:
+                linear-gradient(90deg,rgba(168,85,247,0.08),transparent 26%),
+                linear-gradient(180deg,#0a0715 0%,#100b20 52%,#080712 100%);
+        }
+        .sub-sidebar {
+            padding:20px 14px;
+            background:rgba(8,6,18,0.94);
+            border-right:1px solid rgba(255,255,255,0.07);
+            box-shadow:18px 0 45px rgba(0,0,0,0.22);
+        }
+        .sidebar-logo {
+            padding:12px 14px 22px;
+            margin-bottom:16px;
+            border-bottom:1px solid rgba(255,255,255,0.07);
+        }
+        .sidebar-logo img {
+            max-width:132px!important;
+            filter:drop-shadow(0 10px 24px rgba(168,85,247,0.26));
+        }
+        .sidebar-section h4 {
+            margin:18px 0 8px 14px;
+            color:rgba(244,196,65,0.48);
+            font-size:9px;
+            font-weight:900;
+            letter-spacing:2.2px;
+        }
+        .sidebar-btn {
+            min-height:44px;
+            padding:11px 14px;
+            border:1px solid transparent;
+            border-radius:12px;
+            color:rgba(235,228,255,0.64);
+            font-size:13px;
+        }
+        .sidebar-btn span {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            flex:0 0 26px;
+        }
+        .sidebar-btn:hover {
+            background:rgba(255,255,255,0.055);
+            border-color:rgba(255,255,255,0.07);
+        }
+        .sidebar-btn.active {
+            background:linear-gradient(135deg,rgba(168,85,247,0.19),rgba(34,211,238,0.07));
+            border-color:rgba(216,180,254,0.18);
+            color:#fff;
+            box-shadow:0 12px 30px rgba(0,0,0,0.22);
+        }
+        .sidebar-btn.active::before {
+            width:3px;
+            height:22px;
+            background:linear-gradient(180deg,#f4c441,#a855f7);
+        }
+        .dashboard-main {
+            background:linear-gradient(180deg,rgba(255,255,255,0.018),transparent 280px);
+        }
+        .dashboard-header {
+            padding:26px 38px 16px;
+            border-bottom:1px solid rgba(255,255,255,0.045);
+        }
+        .dashboard-header h1 {
+            font-size:24px;
+            font-weight:900;
+            letter-spacing:-0.2px;
+        }
+        .dashboard-badge {
+            min-height:30px;
+            display:inline-flex;
+            align-items:center;
+            border-color:rgba(244,196,65,0.16);
+            background:rgba(244,196,65,0.07);
+            color:#f8df80;
+            font-size:9px;
+            font-weight:900;
+        }
+        .dashboard-content-area {
+            padding:24px 38px 34px;
+        }
+        .admin-panel {
+            border-radius:18px;
+            border-color:rgba(255,255,255,0.075);
+            background:rgba(18,13,31,0.82);
+            box-shadow:0 26px 70px rgba(0,0,0,0.38),inset 0 1px 0 rgba(255,255,255,0.035);
+        }
+        .admin-kicker {
+            display:block;
+            margin-bottom:5px;
+            color:rgba(244,196,65,0.78);
+            font-size:9px;
+            font-weight:900;
+            letter-spacing:1.6px;
+            text-transform:uppercase;
+        }
+        #view-products .grid-split.product-admin-grid {
+            grid-template-columns:minmax(520px,700px) minmax(330px,1fr);
+            gap:30px;
+        }
+        .product-form-panel {
+            padding:0!important;
+            overflow:visible!important;
+        }
+        .product-form-panel .admin-title-row {
+            margin:0;
+            padding:26px 30px 18px;
+            border-bottom:1px solid rgba(255,255,255,0.075);
+        }
+        .product-form-panel .admin-title-row h2 {
+            font-size:24px;
+            font-weight:900;
+        }
+        .product-form-panel form,
+        .product-stepper {
+            position:relative;
+            z-index:1;
+        }
+        .product-stepper {
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:10px;
+            padding:18px 30px 6px;
+        }
+        .product-stepper span {
+            min-height:42px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:9px 10px;
+            border:1px solid rgba(255,255,255,0.07);
+            border-radius:12px;
+            background:rgba(0,0,0,0.16);
+            color:rgba(255,255,255,0.62);
+            font-size:11px;
+            font-weight:800;
+        }
+        .product-stepper strong {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:22px;
+            height:22px;
+            border-radius:50%;
+            background:rgba(244,196,65,0.16);
+            color:#f4c441;
+            font-size:10px;
+        }
+        #product-form {
+            padding:18px 30px 30px;
+        }
+        .product-config-card {
+            position:relative;
+            margin-bottom:18px;
+            padding:20px;
+            border:1px solid rgba(255,255,255,0.075);
+            border-radius:16px;
+            background:rgba(5,3,12,0.28);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        .product-config-card.identity-card {
+            border-color:rgba(168,85,247,0.18);
+        }
+        .product-config-card.commerce-card {
+            border-color:rgba(244,196,65,0.18);
+            background:linear-gradient(135deg,rgba(244,196,65,0.055),rgba(5,3,12,0.3));
+        }
+        .product-config-card.variant-card {
+            border-color:rgba(34,211,238,0.18);
+            background:linear-gradient(135deg,rgba(34,211,238,0.04),rgba(5,3,12,0.3));
+        }
+        .config-card-heading {
+            display:flex;
+            align-items:flex-start;
+            gap:12px;
+            margin-bottom:18px;
+        }
+        .config-card-index {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:38px;
+            height:32px;
+            border-radius:10px;
+            background:rgba(255,255,255,0.07);
+            color:#f4c441;
+            font-size:11px;
+            font-weight:900;
+            letter-spacing:0.8px;
+        }
+        .config-card-heading h3 {
+            margin:0;
+            color:#fff;
+            font-size:15px;
+            font-weight:900;
+            letter-spacing:0;
+            text-transform:none;
+        }
+        .config-card-heading p {
+            margin:4px 0 0;
+            color:rgba(255,255,255,0.42);
+            font-size:11.5px;
+            line-height:1.35;
+        }
+        #view-products .admin-form-grid,
+        #view-settings .admin-form-grid {
+            gap:14px 14px;
+        }
+        #view-products .form-group {
+            margin-bottom:0;
+        }
+        #view-products .form-group label,
+        #view-settings .form-group label {
+            color:rgba(235,228,255,0.64);
+            font-size:9.5px;
+            font-weight:900;
+            letter-spacing:0.8px;
+        }
+        #view-products .form-control,
+        #view-settings .form-control {
+            min-height:46px;
+            border-radius:11px!important;
+            border-color:rgba(255,255,255,0.08)!important;
+            background:rgba(4,2,10,0.48)!important;
+            color:#fff;
+        }
+        #view-products .form-control::placeholder,
+        #view-settings .form-control::placeholder {
+            color:rgba(255,255,255,0.22);
+        }
+        .important-code-field {
+            color:#d8b4fe!important;
+            font-weight:800!important;
+            letter-spacing:0.1px;
+        }
+        .highlight-select {
+            border-color:rgba(244,196,65,0.32)!important;
+            background-color:rgba(244,196,65,0.075)!important;
+            color:#ffe48a!important;
+            font-weight:900!important;
+        }
+        .price-field .form-control {
+            font-size:15px!important;
+            font-weight:800!important;
+        }
+        .media-field-heading {
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-end;
+            gap:14px;
+            margin-bottom:8px;
+        }
+        .media-field-heading label {
+            margin:0!important;
+        }
+        .media-field-heading span {
+            color:rgba(255,255,255,0.36);
+            font-size:11px;
+        }
+        .product-image-zone {
+            min-height:176px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            position:relative;
+            overflow:hidden;
+            padding:18px;
+            border:1.5px dashed rgba(244,196,65,0.28)!important;
+            border-radius:14px!important;
+            background:rgba(0,0,0,0.22)!important;
+        }
+        .product-image-placeholder {
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            text-align:center;
+            pointer-events:none;
+        }
+        .product-image-placeholder .upload-icon {
+            width:44px;
+            height:44px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border:1px solid rgba(244,196,65,0.24);
+            border-radius:14px;
+            background:rgba(244,196,65,0.09);
+            font-size:20px;
+        }
+        .product-image-placeholder strong {
+            color:#f4c441;
+            font-size:13px;
+        }
+        .product-image-placeholder span {
+            color:rgba(255,255,255,0.44);
+            font-size:11px;
+        }
+        .product-image-preview-wrapper {
+            width:100%;
+            height:100%;
+            min-height:140px;
+            align-items:center;
+            justify-content:center;
+            position:relative;
+        }
+        .product-image-preview-wrapper img {
+            max-height:148px;
+            max-width:100%;
+            object-fit:contain;
+            border-radius:10px;
+        }
+        .product-image-actions {
+            position:absolute;
+            right:8px;
+            bottom:8px;
+            display:flex;
+            gap:8px;
+        }
+        .product-image-actions .admin-btn {
+            width:auto;
+            min-height:32px;
+            padding:6px 11px;
+            border-radius:9px;
+            font-size:10px;
+            font-weight:900;
+        }
+        .product-image-actions #prod-image-change-btn {
+            background:#f4c441!important;
+            color:#0b0614!important;
+            box-shadow:0 10px 20px rgba(244,196,65,0.18)!important;
+        }
+        .image-url-row {
+            margin-top:10px;
+        }
+        .image-url-row .form-control {
+            min-height:38px!important;
+            font-size:11.5px!important;
+        }
+        .angle-gallery-manager {
+            margin-top:18px;
+            padding:16px;
+            border:1px solid rgba(255,255,255,0.075);
+            border-radius:14px;
+            background:rgba(255,255,255,0.028);
+        }
+        .gallery-drop-zone {
+            min-height:82px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:5px;
+            padding:14px;
+            border:1.5px dashed rgba(34,211,238,0.28)!important;
+            border-radius:12px!important;
+            background:rgba(34,211,238,0.045)!important;
+            text-align:center;
+        }
+        .gallery-drop-zone strong {
+            color:#a5f3fc;
+            font-size:12px;
+            font-weight:900;
+        }
+        .gallery-drop-zone span {
+            color:rgba(255,255,255,0.42);
+            font-size:11px;
+        }
+        .angle-gallery-list {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+            gap:10px;
+            margin-top:12px;
+        }
+        .angle-gallery-item {
+            position:relative;
+            min-height:114px;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:12px;
+            background:rgba(0,0,0,0.22);
+        }
+        .angle-gallery-item img {
+            width:100%;
+            height:82px;
+            display:block;
+            object-fit:cover;
+            background:#07030f;
+        }
+        .angle-gallery-item span {
+            display:block;
+            padding:7px 8px;
+            color:rgba(255,255,255,0.62);
+            font-size:10px;
+            font-weight:800;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        .angle-gallery-remove {
+            position:absolute;
+            top:6px;
+            right:6px;
+            width:24px;
+            height:24px;
+            border:1px solid rgba(255,255,255,0.18);
+            border-radius:8px;
+            background:rgba(0,0,0,0.68);
+            color:#fff;
+            font-size:13px;
+            font-weight:900;
+            cursor:pointer;
+        }
+        .angle-gallery-empty {
+            grid-column:1/-1;
+            padding:10px;
+            color:rgba(255,255,255,0.34);
+            font-size:11px;
+            text-align:center;
+            border:1px dashed rgba(255,255,255,0.08);
+            border-radius:10px;
+        }
+        .gallery-url-helper {
+            margin-top:12px;
+        }
+        .gallery-url-helper > label {
+            display:block;
+            margin-bottom:6px;
+            color:rgba(235,228,255,0.56);
+            font-size:9.5px;
+            font-weight:900;
+            letter-spacing:0.8px;
+            text-transform:uppercase;
+        }
+        .gallery-url-helper > div {
+            display:grid;
+            grid-template-columns:1fr auto;
+            gap:10px;
+        }
+        .gallery-url-helper .admin-btn {
+            width:auto;
+            min-height:38px;
+            padding:8px 13px;
+            font-size:11px;
+        }
+        .variants-stack {
+            display:flex;
+            flex-direction:column;
+            gap:18px;
+            margin-top:20px;
+        }
+        .product-form-actions {
+            display:grid;
+            grid-template-columns:minmax(220px,.8fr) minmax(220px,1fr);
+            gap:14px;
+            align-items:center;
+            padding-top:22px;
+            border-top:1px solid rgba(255,255,255,0.075);
+        }
+        .product-form-actions > div {
+            display:grid;
+            grid-template-columns:1fr 1.2fr;
+            gap:10px;
+        }
+        .product-form-actions .admin-btn {
+            min-height:46px;
+            font-weight:900;
+        }
+        #btn-add-variant {
+            background:linear-gradient(135deg,#22d3ee,#7c3aed)!important;
+        }
+        #btn-save {
+            background:linear-gradient(135deg,#f4c441,#a855f7)!important;
+            color:#110718!important;
+        }
+        .product-preview-panel {
+            position:sticky!important;
+            top:24px!important;
+            padding:0!important;
+            overflow:hidden!important;
+            background:rgba(11,7,22,0.72)!important;
+            box-shadow:0 24px 70px rgba(0,0,0,0.34)!important;
+        }
+        .preview-heading {
+            padding:24px 26px 14px;
+            border-bottom:1px solid rgba(255,255,255,0.07);
+        }
+        .preview-heading h2 {
+            margin:0;
+            color:#fff;
+            font-size:19px;
+            font-weight:900;
+        }
+        .preview-heading p {
+            margin:5px 0 0;
+            color:rgba(255,255,255,0.44);
+            font-size:12px;
+        }
+        #view-products .preview-container {
+            min-height:520px;
+            padding:34px 24px 38px;
+            background:
+                linear-gradient(180deg,rgba(255,255,255,0.025),transparent),
+                repeating-linear-gradient(90deg,rgba(255,255,255,0.025) 0 1px,transparent 1px 120px);
+        }
+        #view-products .preview-card {
+            width:min(330px,100%);
+            max-width:330px;
+            border-radius:18px;
+            border:1px solid rgba(244,196,65,0.22);
+            background:#0b0714;
+        }
+        #view-products .preview-img-wrapper {
+            background:linear-gradient(135deg,#11061f,#05020a)!important;
+        }
+        #view-products .preview-body {
+            padding:20px;
+        }
+        #preview-cat-el {
+            color:#f472b6!important;
+        }
+        .preview-title {
+            font-size:17px;
+            letter-spacing:0;
+        }
+        .preview-price {
+            color:#d8b4fe;
+            font-size:22px;
+        }
+        .preview-btn {
+            min-height:42px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .preview-angle-gallery {
+            width:min(330px,100%);
+            display:grid;
+            grid-template-columns:repeat(4,minmax(0,1fr));
+            gap:8px;
+            margin-top:14px;
+        }
+        .preview-angle-thumb {
+            min-height:82px;
+            padding:0;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:11px;
+            background:rgba(0,0,0,0.26);
+            color:rgba(255,255,255,0.56);
+            cursor:pointer;
+        }
+        .preview-angle-thumb.active {
+            border-color:rgba(244,196,65,0.55);
+            box-shadow:0 0 0 2px rgba(244,196,65,0.09);
+        }
+        .preview-angle-thumb img {
+            width:100%;
+            height:54px;
+            display:block;
+            object-fit:cover;
+            background:#05020a;
+        }
+        .preview-angle-thumb span {
+            display:block;
+            padding:5px 4px;
+            font-size:9px;
+            font-weight:800;
+            text-align:center;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        #view-settings > .admin-panel {
+            width:100%;
+            max-width:1180px!important;
+            padding:0!important;
+            overflow:hidden;
+        }
+        #view-settings > .admin-panel::before {
+            opacity:.55;
+        }
+        #view-settings > .admin-panel .settings-retail-card,
+        #view-settings .settings-tab-panel form {
+            border-radius:16px!important;
+            border:1px solid rgba(255,255,255,0.075)!important;
+            background:rgba(5,3,12,0.28)!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        #view-settings .settings-tabs {
+            position:relative;
+            z-index:2;
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(118px,1fr));
+            gap:8px;
+            margin:0;
+            padding:20px 30px 18px;
+            border:0;
+            border-bottom:1px solid rgba(255,255,255,0.07);
+            border-radius:0;
+            background:rgba(0,0,0,0.12);
+        }
+        #view-settings .settings-tab-btn {
+            min-height:42px;
+            justify-content:center;
+            padding:9px 10px;
+            border-radius:11px;
+            color:rgba(255,255,255,0.58);
+            font-size:11px;
+            font-weight:900;
+        }
+        #view-settings .settings-tab-btn:hover,
+        #view-settings .settings-tab-btn.active {
+            background:linear-gradient(135deg,rgba(244,196,65,0.18),rgba(34,211,238,0.08));
+            border-color:rgba(244,196,65,0.22);
+            box-shadow:0 12px 28px rgba(0,0,0,0.22);
+        }
+        #view-settings .settings-tab-content {
+            padding:18px 30px 30px;
+        }
+        #view-settings .settings-tab-panel > h3 {
+            display:flex;
+            align-items:center;
+            min-height:34px;
+            margin:0 0 14px!important;
+            font-size:19px!important;
+        }
+        #view-settings .settings-tab-panel.active {
+            display:grid;
+            gap:18px;
+        }
+        #view-settings .settings-config-block {
+            display:grid;
+            gap:12px;
+        }
+        #view-settings .settings-config-block > h3 {
+            margin:0!important;
+            color:#fff!important;
+            font-size:18px!important;
+            font-weight:900!important;
+            letter-spacing:0;
+        }
+        .settings-form-stack {
+            display:grid;
+            gap:16px;
+        }
+        .settings-subgroup {
+            padding:16px;
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:14px;
+            background:rgba(255,255,255,0.026);
+        }
+        .settings-subgroup h4 {
+            margin:0 0 12px;
+            color:#f8df80;
+            font-size:12px;
+            font-weight:900;
+            letter-spacing:1px;
+            text-transform:uppercase;
+        }
+        .settings-toggle-row {
+            min-height:54px;
+            display:flex;
+            align-items:center;
+            gap:12px;
+            padding:14px 16px;
+            border:1px solid rgba(244,196,65,0.18);
+            border-radius:14px;
+            background:linear-gradient(135deg,rgba(244,196,65,0.08),rgba(168,85,247,0.05));
+            color:#fff;
+            font-size:13px;
+            font-weight:900;
+            cursor:pointer;
+        }
+        .settings-toggle-row input[type="checkbox"] {
+            width:22px;
+            height:22px;
+            flex:0 0 22px;
+            accent-color:var(--primary);
+        }
+        #view-settings .settings-tab-panel form,
+        #view-settings .settings-tab-panel .settings-retail-card {
+            padding:22px!important;
+            margin:0!important;
+            border-bottom:1px solid rgba(255,255,255,0.075)!important;
+        }
+        #btn-save-contact-config,
+        #btn-save-whatsapp-config,
+        #btn-save-home-ad-config,
+        #btn-save-promo-config,
+        #btn-save-customer-promo,
+        #btn-save-qr-config,
+        #btn-save-invoice-config,
+        #btn-save-carousel {
+            width:auto;
+            min-width:210px;
+            min-height:44px;
+            margin-top:10px;
+            font-weight:900;
+        }
+        #btn-save-invoice-config,
+        #btn-save-qr-config {
+            background:linear-gradient(135deg,#22d3ee,#7c3aed)!important;
+            color:#fff!important;
+        }
+        #btn-add-payment-method {
+            border-color:rgba(244,196,65,0.32)!important;
+            color:#f4c441!important;
+        }
+        #carousel-preview {
+            height:220px!important;
+            border-radius:16px!important;
+            border-color:rgba(244,196,65,0.24)!important;
+            background:rgba(0,0,0,0.22)!important;
+        }
+        #view-inventory .admin-panel.gradient-bg,
+        #view-china-orders .admin-panel.gradient-bg,
+        #view-orders .admin-panel.gradient-bg {
+            border-color:rgba(255,255,255,0.075)!important;
+            background:linear-gradient(180deg,rgba(18,13,31,0.88),rgba(8,6,18,0.96))!important;
+        }
+        @media(max-width:1280px) {
+            #view-products .grid-split.product-admin-grid {
+                grid-template-columns:minmax(480px,1.15fr) minmax(300px,.85fr);
+            }
+            #view-settings .settings-tabs {
+                grid-template-columns:repeat(5,minmax(110px,1fr));
+            }
+        }
+        @media(max-width:1100px) {
+            .dashboard-layout {
+                grid-template-columns:1fr;
+                grid-template-rows:auto minmax(0,1fr);
+            }
+            .sub-sidebar {
+                padding:10px 14px;
+            }
+            #view-products .grid-split.product-admin-grid {
+                grid-template-columns:1fr;
+            }
+            .product-preview-panel {
+                position:relative!important;
+                top:auto!important;
+            }
+            #view-products .preview-container {
+                min-height:auto;
+            }
+        }
+        @media(max-width:768px) {
+            .dashboard-header {
+                padding:18px 18px 12px;
+            }
+            .dashboard-content-area {
+                padding:16px 14px 24px;
+            }
+            .product-form-panel .admin-title-row,
+            .product-stepper,
+            #product-form,
+            #view-settings .settings-tabs,
+            #view-settings .settings-tab-content {
+                padding-left:16px;
+                padding-right:16px;
+            }
+            .product-stepper {
+                grid-template-columns:repeat(2,minmax(0,1fr));
+            }
+            .product-form-actions,
+            .product-form-actions > div {
+                grid-template-columns:1fr;
+            }
+            .gallery-url-helper > div {
+                grid-template-columns:1fr;
+            }
+            .gallery-url-helper .admin-btn {
+                width:100%;
+            }
+            .preview-angle-gallery {
+                grid-template-columns:repeat(2,minmax(0,1fr));
+            }
+            #view-settings .settings-tabs {
+                grid-template-columns:repeat(2,minmax(0,1fr));
+            }
+            #btn-save-contact-config,
+            #btn-save-whatsapp-config,
+            #btn-save-home-ad-config,
+            #btn-save-promo-config,
+            #btn-save-customer-promo,
+            #btn-save-qr-config,
+            #btn-save-invoice-config,
+            #btn-save-carousel {
+                width:100%;
+                min-width:0;
+            }
+        }
+        @media(max-width:480px) {
+            .product-stepper,
+            #view-settings .settings-tabs {
+                grid-template-columns:1fr;
+            }
+            .product-config-card {
+                padding:16px;
+            }
+            .media-field-heading {
+                align-items:flex-start;
+                flex-direction:column;
+                gap:4px;
+            }
         }
     </style>
 </head>
@@ -616,21 +1432,36 @@
                 
                 <!-- VISTA 1: AÑADIR PRODUCTO -->
                 <div id="view-products" class="dashboard-section active">
-                    <div class="grid-split">
+                    <div class="grid-split product-admin-grid">
                         <!-- Formulario -->
-                        <div class="admin-panel gradient-bg">
+                        <div class="admin-panel gradient-bg product-form-panel">
                             <div class="admin-title-row">
-                                <h2>Nuevo Producto</h2>
+                                <div>
+                                    <span class="admin-kicker">Alta de inventario</span>
+                                    <h2 id="product-form-title">Nuevo Producto</h2>
+                                </div>
                                 <span class="admin-mode-pill" id="product-form-mode">Creando</span>
+                            </div>
+                            <div class="product-stepper" aria-label="Orden de configuracion del producto">
+                                <span><strong>1</strong> Identidad</span>
+                                <span><strong>2</strong> Venta</span>
+                                <span><strong>3</strong> Variante</span>
+                                <span><strong>4</strong> Imagen</span>
                             </div>
                             <form id="product-form">
                                 <!-- BLOQUE 1: PRODUCTO MADRE -->
-                                <div style="border:1px solid rgba(155,44,250,0.2); border-radius:16px; padding:20px; background:rgba(155,44,250,0.05); margin-bottom:24px;">
-                                    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#9B2CFA; font-weight:800; margin-top:0; margin-bottom:16px;">📦 1. Datos del Producto General (Madre)</h3>
+                                <div class="product-config-card identity-card">
+                                    <div class="config-card-heading">
+                                        <span class="config-card-index">01</span>
+                                        <div>
+                                            <h3>Datos del producto</h3>
+                                            <p>Información principal que agrupa todas las variantes.</p>
+                                        </div>
+                                    </div>
                                     <div class="admin-form-grid">
                                         <div class="form-group">
-                                            <label title="Identificador Base (Madre)" style="color:#9B2CFA; font-weight:800;">⭐ ID Producto Madre</label>
-                                            <input type="text" class="form-control" id="prod-id-producto" name="ID Producto" placeholder="Automatico" readonly style="border-color:rgba(155,44,250,0.3);">
+                                            <label title="Identificador Base (Madre)">ID Producto Madre</label>
+                                            <input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automatico" readonly>
                                             <input type="hidden" id="prod-id-producto-hidden" name="idProducto">
                                         </div>
                                         <div class="form-group">
@@ -650,6 +1481,18 @@
                                                 <option value="BANNER"></option>
                                             </datalist>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="product-config-card commerce-card">
+                                    <div class="config-card-heading">
+                                        <span class="config-card-index">02</span>
+                                        <div>
+                                            <h3>Venta y precios</h3>
+                                            <p>Define precios, catálogo y reglas comerciales.</p>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-grid">
                                         <div class="form-group">
                                             <label>Catálogo</label>
                                             <select class="form-control" id="prod-catalogo" name="Catalogo">
@@ -658,19 +1501,17 @@
                                                 <option value="Mayorista">Solo Mayorista</option>
                                             </select>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group price-field">
                                             <label>Precio Minorista</label>
                                             <input type="text" class="form-control" id="prod-precio" name="Precio" required>
                                         </div>
-                                        <div class="form-group">
+                                        <div class="form-group price-field">
                                             <label>Precio Mayorista</label>
                                             <input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000">
                                         </div>
                                         <div class="form-group">
-                                            <label style="color:#ffd969; font-weight:800; display:flex; align-items:center; gap:6px;">
-                                                <span>🔥</span> Promoción / Descuento
-                                            </label>
-                                            <select class="form-control" id="prod-promocion" name="Promocion" style="border:1.5px solid rgba(255,217,105,0.45); background:rgba(255,217,105,0.08); color:#ffd969; font-weight:800; border-radius:10px;">
+                                            <label>Promoción / Descuento</label>
+                                            <select class="form-control highlight-select" id="prod-promocion" name="Promocion">
                                                 <option value="FALSO" style="color:#fff; background:#180d2b;">❌ No aplica promoción</option>
                                                 <option value="Ambos" style="color:#ffd969; background:#180d2b;">⚡ Aplica a Ambos (Detal y Mayorista)</option>
                                                 <option value="Minorista" style="color:#ffd969; background:#180d2b;">🛍️ Solo Minorista (Detal)</option>
@@ -685,12 +1526,18 @@
                                 </div>
 
                                 <!-- BLOQUE 2: VARIANTE INICIAL -->
-                                <div style="border:1px solid rgba(255,165,0,0.2); border-radius:16px; padding:20px; background:rgba(255,165,0,0.05); margin-bottom:24px;">
-                                    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#FFA500; font-weight:800; margin-top:0; margin-bottom:16px;">2. Variante inicial / Hijo principal</h3>
+                                <div class="product-config-card variant-card">
+                                    <div class="config-card-heading">
+                                        <span class="config-card-index">03</span>
+                                        <div>
+                                            <h3>Variante inicial</h3>
+                                            <p>Datos del primer hijo que aparecerá en inventario.</p>
+                                        </div>
+                                    </div>
                                     <div class="admin-form-grid">
                                         <div class="form-group">
-                                            <label title="Identificador hijo de la jerarquia" style="color:#FFA500; font-weight:800;">ID Variante / Hijo</label>
-                                            <input type="text" class="form-control" id="prod-id" name="id" placeholder="Ej: PROD-001-V01" style="border-color:rgba(255,165,0,0.3);">
+                                            <label title="Identificador hijo de la jerarquia">ID Variante / Hijo</label>
+                                            <input type="text" class="form-control important-code-field" id="prod-id" name="id" placeholder="Ej: PROD-001-V01">
                                         </div>
                                         <div class="form-group">
                                             <label>Stock</label>
@@ -718,26 +1565,53 @@
                                             </select>
                                         </div>
                                         <div class="form-group admin-form-wide">
-                                            <label>Imagen Principal</label>
+                                            <label>SKU / Referencia interna</label>
+                                            <input type="text" class="form-control important-code-field" id="prod-sku" name="SKU" placeholder="Opcional">
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <div class="media-field-heading">
+                                                <label>Imagen Principal</label>
+                                                <span>Puedes subir archivo o pegar URL directa.</span>
+                                            </div>
                                             <input type="file" id="prod-image-file" accept="image/*" style="display:none;">
-                                            <div class="drop-zone" id="prod-image-drop-zone" style="height:150px; background:rgba(0,0,0,0.25); border:2px dashed rgba(255,165,0,0.35); border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer; padding:12px; transition:all 0.25s ease;">
-                                                <div id="prod-image-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; pointer-events:none;">
-                                                    <div style="width:44px; height:44px; border-radius:50%; background:rgba(255,165,0,0.12); display:flex; align-items:center; justify-content:center; font-size:20px; color:#FFA500; border:1px solid rgba(255,165,0,0.3);">
+                                            <div class="drop-zone product-image-zone" id="prod-image-drop-zone">
+                                                <div id="prod-image-placeholder" class="product-image-placeholder">
+                                                    <div class="upload-icon">
                                                         📷
                                                     </div>
-                                                    <span style="font-size:13px; font-weight:700; color:#FFA500;">Añadir o arrastrar imagen</span>
-                                                    <span style="font-size:11px; color:rgba(255,255,255,0.45);">Haz clic para seleccionar archivo o arrastra una imagen aquí</span>
+                                                    <strong>Añadir o arrastrar imagen</strong>
+                                                    <span>Haz clic para seleccionar archivo o arrastra una imagen aquí</span>
                                                 </div>
-                                                <div id="prod-image-preview-wrapper" style="display:none; width:100%; height:100%; align-items:center; justify-content:center; position:relative;">
-                                                    <img id="prod-image-preview-thumb" src="" alt="Vista previa" style="max-height:126px; max-width:100%; object-fit:contain; border-radius:8px;">
-                                                    <div style="position:absolute; bottom:6px; right:6px; display:flex; gap:6px;">
-                                                        <button type="button" id="prod-image-change-btn" class="admin-btn" style="width:auto; padding:4px 10px; font-size:11px; background:rgba(255,165,0,0.85); color:#000; font-weight:700; border-radius:8px;">Cambiar</button>
-                                                        <button type="button" id="prod-image-remove-btn" class="admin-btn secondary" style="width:auto; padding:4px 8px; font-size:11px; background:rgba(0,0,0,0.65); border:1px solid rgba(255,255,255,0.2); border-radius:8px;" title="Quitar imagen">✕</button>
+                                                <div id="prod-image-preview-wrapper" class="product-image-preview-wrapper" style="display:none;">
+                                                    <img id="prod-image-preview-thumb" src="" alt="Vista previa">
+                                                    <div class="product-image-actions">
+                                                        <button type="button" id="prod-image-change-btn" class="admin-btn">Cambiar</button>
+                                                        <button type="button" id="prod-image-remove-btn" class="admin-btn secondary" title="Quitar imagen">✕</button>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div style="margin-top:8px;">
-                                                <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="O pega aquí la URL directa de la imagen (https://...)" style="font-size:11.5px; padding:8px 12px; height:auto; min-height:36px;">
+                                            <div class="image-url-row">
+                                                <input type="text" class="form-control" id="prod-imagen" name="Imagen" placeholder="O pega aqui la URL directa de la imagen (https://...)">
+                                            </div>
+                                            <div class="angle-gallery-manager">
+                                                <div class="media-field-heading">
+                                                    <label>Fotos adicionales / Ángulos</label>
+                                                    <span>Ideal para detalle, lateral, puesto o cierre.</span>
+                                                </div>
+                                                <input type="file" id="prod-gallery-files" accept="image/*" multiple style="display:none;">
+                                                <input type="hidden" id="prod-galeria" name="Galeria JSON">
+                                                <div class="drop-zone gallery-drop-zone" id="prod-gallery-drop-zone">
+                                                    <strong>Agregar fotos de ángulos</strong>
+                                                    <span>Arrastra varias imágenes o haz clic para seleccionarlas.</span>
+                                                </div>
+                                                <div class="angle-gallery-list" id="prod-gallery-list"></div>
+                                                <div class="gallery-url-helper">
+                                                    <label for="prod-gallery-url-input">Agregar por URL</label>
+                                                    <div>
+                                                        <input type="url" class="form-control" id="prod-gallery-url-input" placeholder="https://...">
+                                                        <button type="button" class="admin-btn secondary" id="btn-add-gallery-url">Agregar URL</button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -783,23 +1657,26 @@
                                 </div>
                                 
                                 <!-- CONTENEDOR DE VARIANTES DINÁMICAS -->
-                                <div id="variants-container" style="margin-top:30px; display: flex; flex-direction: column; gap: 20px;"></div>
+                                <div id="variants-container" class="variants-stack"></div>
 
 
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:30px; gap:16px;">
-                                    <div style="display:flex; gap:12px; align-items:center; flex:1;">
+                                <div class="product-form-actions">
+                                    <div>
                                         <button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button>
-                                        <button type="button" class="admin-btn" id="btn-add-variant" style="background:#6C5CE7; box-shadow:0 10px 20px rgba(108,92,231,0.2);">Añadir variantes</button>
+                                        <button type="button" class="admin-btn" id="btn-add-variant">Añadir variantes</button>
                                     </div>
-                                    <button type="submit" class="admin-btn" id="btn-save" style="flex:1;">Guardar producto y variantes</button>
+                                    <button type="submit" class="admin-btn" id="btn-save">Guardar producto y variantes</button>
                                 </div>
                             </form>
                         </div>
                         
                         <!-- Vista Previa -->
-                        <div class="admin-panel" style="position: sticky; top: 0; background: transparent; box-shadow: none; padding:0;">
-                            <h2 style="font-size:16px; font-weight:800; margin-bottom:4px; margin-top:0; color:#fff;">Vista Previa</h2>
-                            <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:30px;">Así se verá en la tienda.</p>
+                        <div class="admin-panel product-preview-panel">
+                            <div class="preview-heading">
+                                <span class="admin-kicker">Tienda</span>
+                                <h2>Vista Previa</h2>
+                                <p>Así se verá en la tienda.</p>
+                            </div>
 
                             
                             <div class="preview-container">
@@ -3111,70 +3988,88 @@
 
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Banner Publicitario del Home</h3>
                         <form id="home-ad-config-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                            <div class="form-group" style="margin-bottom: 16px;">
-                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                                    <input type="checkbox" id="home-ad-config-enabled" style="width:20px; height:20px; accent-color:var(--primary);" checked>
-                                    <span style="font-weight:700;">Mostrar banner publicitario en el inicio</span>
+                            <div class="settings-form-stack">
+                                <label class="settings-toggle-row">
+                                    <input type="checkbox" id="home-ad-config-enabled" checked>
+                                    <span>Mostrar banner publicitario en el inicio</span>
                                 </label>
+                                <div class="settings-subgroup">
+                                    <h4>Contenido</h4>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label>Texto pequeño</label>
+                                            <input type="text" class="form-control" id="home-ad-config-kicker" placeholder="Ej: Nueva colección">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Título principal</label>
+                                            <input type="text" class="form-control" id="home-ad-config-title" placeholder="Ej: Hasta 20% Off">
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>Mensaje</label>
+                                            <input type="text" class="form-control" id="home-ad-config-message" placeholder="Ej: Promoción especial por tiempo limitado.">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Cambio de categorías (segundos)</label>
+                                            <input type="number" class="form-control" id="home-category-config-seconds" min="1.6" step="0.1" placeholder="3.2">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-subgroup">
+                                    <h4>Imagen</h4>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group admin-form-wide">
+                                            <label>Subir imagen del banner</label>
+                                            <input type="file" class="form-control" id="home-ad-config-file" accept="image/*">
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>URL de imagen</label>
+                                            <input type="text" class="form-control" id="home-ad-config-image" placeholder="https://...">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="settings-subgroup">
+                                    <h4>Botón</h4>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label>Texto del botón</label>
+                                            <input type="text" class="form-control" id="home-ad-config-cta" placeholder="Ver productos">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Enlace del botón</label>
+                                            <input type="text" class="form-control" id="home-ad-config-link" placeholder="#coleccion">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="admin-btn" id="btn-save-home-ad-config">Guardar Banner del Home</button>
                             </div>
-                            <div class="admin-form-grid">
-                                <div class="form-group">
-                                    <label>Texto pequeno</label>
-                                    <input type="text" class="form-control" id="home-ad-config-kicker" placeholder="Ej: Nueva coleccion">
-                                </div>
-                                <div class="form-group">
-                                    <label>Titulo principal</label>
-                                    <input type="text" class="form-control" id="home-ad-config-title" placeholder="Ej: Hasta 20% Off">
-                                </div>
-                                <div class="form-group admin-form-wide">
-                                    <label>Mensaje</label>
-                                    <input type="text" class="form-control" id="home-ad-config-message" placeholder="Ej: Promocion especial por tiempo limitado.">
-                                </div>
-                                <div class="form-group">
-                                    <label>Cambio de categorias (segundos)</label>
-                                    <input type="number" class="form-control" id="home-category-config-seconds" min="1.6" step="0.1" placeholder="3.2">
-                                </div>
-                                <div class="form-group admin-form-wide">
-                                    <label>URL de imagen</label>
-                                    <input type="text" class="form-control" id="home-ad-config-image" placeholder="https://...">
-                                </div>
-                                <div class="form-group admin-form-wide">
-                                    <label>Subir imagen del banner</label>
-                                    <input type="file" class="form-control" id="home-ad-config-file" accept="image/*">
-                                </div>
-                                <div class="form-group">
-                                    <label>Texto del boton</label>
-                                    <input type="text" class="form-control" id="home-ad-config-cta" placeholder="Ver productos">
-                                </div>
-                                <div class="form-group">
-                                    <label>Enlace del boton</label>
-                                    <input type="text" class="form-control" id="home-ad-config-link" placeholder="#coleccion">
-                                </div>
-                            </div>
-                            <button type="submit" class="admin-btn" id="btn-save-home-ad-config">Guardar Banner del Home</button>
                         </form>
 
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Promociones para Clientes Registrados</h3>
                         <form id="customer-promo-form" style="margin-bottom:36px; padding-bottom:32px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                            <div class="admin-form-grid">
-                                <div class="form-group admin-form-wide">
-                                    <label>Cliente (telefono o correo)</label>
-                                    <input type="text" class="form-control" id="customer-promo-identifier" placeholder="Ej: 3112345678 o cliente@correo.com" required>
+                            <div class="settings-form-stack">
+                                <label class="settings-toggle-row">
+                                    <input type="checkbox" id="customer-promo-enabled">
+                                    <span>Activar promoción para todos los clientes registrados</span>
+                                </label>
+                                <div class="settings-subgroup">
+                                    <h4>Regla general</h4>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group">
+                                            <label>Descuento (%)</label>
+                                            <input type="number" class="form-control" id="customer-promo-discount" min="0" max="90" step="1" placeholder="10">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Vence</label>
+                                            <input type="date" class="form-control" id="customer-promo-expire">
+                                        </div>
+                                        <div class="form-group admin-form-wide">
+                                            <label>Nombre de la promoción</label>
+                                            <input type="text" class="form-control" id="customer-promo-title" placeholder="Ej: Cliente registrado, Cliente VIP, Compra frecuente">
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Descuento (%)</label>
-                                    <input type="number" class="form-control" id="customer-promo-discount" min="0" max="90" step="1" placeholder="10">
-                                </div>
-                                <div class="form-group">
-                                    <label>Vence</label>
-                                    <input type="date" class="form-control" id="customer-promo-expire">
-                                </div>
-                                <div class="form-group admin-form-wide">
-                                    <label>Nombre de la promocion</label>
-                                    <input type="text" class="form-control" id="customer-promo-title" placeholder="Ej: Cliente VIP, Cumpleanos, Compra frecuente">
-                                </div>
+                                <button type="submit" class="admin-btn" id="btn-save-customer-promo">Guardar promoción general</button>
                             </div>
-                            <button type="submit" class="admin-btn" id="btn-save-customer-promo">Guardar promocion del cliente</button>
                         </form>
 
                         <h3 style="font-size:18px; font-weight:800; margin:0 0 20px; color:#fff;">Gestión de Métodos de Pago y QRs</h3>

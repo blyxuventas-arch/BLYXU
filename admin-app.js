@@ -85,7 +85,8 @@ function updateLivePreview() {
     const categoria = document.getElementById('prod-categoria')?.value || 'CATEGORÍA';
     const precio = document.getElementById('prod-precio')?.value || '0';
     const precioMayorista = document.getElementById('prod-precio-mayorista')?.value || '';
-    const imagenUrl = document.getElementById('prod-imagen')?.value || 'Logo2.png';
+    const galleryUrls = getAdminGalleryUrls();
+    const imagenUrl = document.getElementById('prod-imagen')?.value || galleryUrls[0] || 'Logo2.png';
     const estado = document.getElementById('prod-estado')?.value || 'Activo';
     var idVar = document.getElementById('prod-id')?.value || '';
     var idProd = document.getElementById('prod-id-producto')?.value || '';
@@ -190,6 +191,8 @@ function updateLivePreview() {
             badgeEl.style.display = 'none';
         }
     }
+
+    renderProductPreviewGallery(imagenUrl);
 }
 
 function loadImageWithRetry(src, attempts = 2, delayMs = 500) {
@@ -270,6 +273,52 @@ function normalizeImageUrl(value) {
     return firstUrl;
 }
 
+function parseAdminGalleryValue(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.map(normalizeImageUrl).filter(Boolean);
+    if (typeof value === 'object') return [normalizeImageUrl(value)].filter(Boolean);
+
+    const text = String(value || '').trim();
+    if (!text) return [];
+
+    try {
+        const parsed = JSON.parse(text);
+        return parseAdminGalleryValue(parsed);
+    } catch (error) {
+        return text
+            .split(/[\r\n]+|,\s*(?=https?:\/\/|\/\/|data:image\/)/i)
+            .map(normalizeImageUrl)
+            .filter(Boolean);
+    }
+}
+
+function stringifyAdminGallery(urls) {
+    const cleaned = [];
+    const seen = new Set();
+    parseAdminGalleryValue(urls).forEach(url => {
+        const normalized = normalizeImageUrl(url);
+        if (!normalized || seen.has(normalized)) return;
+        seen.add(normalized);
+        cleaned.push(normalized);
+    });
+    return cleaned.length ? JSON.stringify(cleaned) : '';
+}
+
+function getAdminGalleryUrls() {
+    return parseAdminGalleryValue(document.getElementById('prod-galeria')?.value || '');
+}
+
+function setAdminGalleryUrls(urls) {
+    const input = document.getElementById('prod-galeria');
+    if (input) input.value = stringifyAdminGallery(urls);
+    renderProductGalleryManager();
+}
+
+function appendAdminGalleryUrls(urls) {
+    const next = [...getAdminGalleryUrls(), ...parseAdminGalleryValue(urls)];
+    setAdminGalleryUrls(next);
+}
+
 function cleanProductStyleValue(value) {
     const raw = String(value || '').trim();
     const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -296,7 +345,7 @@ function normalizeGoogleProduct(product) {
         Imagen: normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen'], '')),
         Color: getProductField(product, ['Color'], ''),
         Stock_Inicial: getProductField(product, ['Stock Inicial', 'Stock_Inicial'], 0),
-        Galeria: getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], ''),
+        Galeria: parseAdminGalleryValue(getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], '')),
         Descripcion: getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion'], ''),
         Tamano: getProductField(product, ['Tamano', 'Tamaño', 'Talla'], ''),
         Estilo: styleValue,
@@ -814,10 +863,11 @@ function buildProductPayload() {
         'Tamaño': getInputValue('prod-tamano'),
         Color: getInputValue('prod-color'),
         Estilo: getProductStyleValue(),
-        Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
+        Promocion: normalizePromotionValue(document.getElementById('prod-promocion')?.value || 'FALSO'),
         'Imagen Principal': imagen,
         Imagen: imagen,
-        'Galería JSON': getInputValue('prod-galeria'),
+        'Galeria JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
+        'Galería JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
         SKU: getInputValue('prod-sku'),
         Estado: getInputValue('prod-estado') || 'Activo',
         'Fecha de Creación': getInputValue('prod-fecha-creacion') || new Date().toISOString()
@@ -947,9 +997,9 @@ function buildVariantPayloadFromCard(card) {
         SKU: card.querySelector('.var-sku')?.value?.trim() || '',
         Imagen: imagen,
         'Imagen Principal': imagen,
-        'Galeria JSON': getInputValue('prod-galeria'),
-        'GalerÃ­a JSON': getInputValue('prod-galeria'),
-        Promocion: document.getElementById('prod-promocion')?.checked ? 'VERDADERO' : 'FALSO',
+        'Galeria JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
+        'GalerÃ­a JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
+        Promocion: normalizePromotionValue(document.getElementById('prod-promocion')?.value || 'FALSO'),
         Estado: getInputValue('prod-estado') || 'Activo',
         'Fecha de CreaciÃ³n': getInputValue('prod-fecha-creacion') || new Date().toISOString()
     };
@@ -995,6 +1045,61 @@ function updateProductImagePreviewBox(url) {
     }
 }
 
+function renderProductPreviewGallery(activeUrl = '') {
+    const container = document.querySelector('#view-products .preview-container');
+    if (!container) return;
+
+    let gallery = document.getElementById('preview-angle-gallery');
+    const urls = [
+        document.getElementById('prod-imagen')?.value || '',
+        ...getAdminGalleryUrls()
+    ]
+        .map(normalizeImageUrl)
+        .filter(Boolean)
+        .filter((url, index, list) => list.indexOf(url) === index);
+
+    if (urls.length <= 1) {
+        if (gallery) gallery.remove();
+        return;
+    }
+
+    if (!gallery) {
+        gallery = document.createElement('div');
+        gallery.id = 'preview-angle-gallery';
+        gallery.className = 'preview-angle-gallery';
+        container.appendChild(gallery);
+    }
+
+    const active = normalizeImageUrl(activeUrl || urls[0]);
+    gallery.innerHTML = urls.map((url, index) => `
+        <button type="button" class="preview-angle-thumb ${url === active ? 'active' : ''}" data-preview-url="${escapeHtml(url)}" aria-label="Vista ${index + 1}">
+            <img src="${escapeHtml(url)}" alt="">
+            <span>${index === 0 ? 'Principal' : 'Vista ' + (index + 1)}</span>
+        </button>
+    `).join('');
+}
+
+function renderProductGalleryManager() {
+    const list = document.getElementById('prod-gallery-list');
+    if (!list) return;
+
+    const urls = getAdminGalleryUrls();
+    if (!urls.length) {
+        list.innerHTML = '<div class="angle-gallery-empty">Aun no hay fotos adicionales.</div>';
+        renderProductPreviewGallery();
+        return;
+    }
+
+    list.innerHTML = urls.map((url, index) => `
+        <div class="angle-gallery-item" data-gallery-index="${index}">
+            <img src="${escapeHtml(url)}" alt="Vista ${index + 1}" onerror="this.style.opacity='0.35'">
+            <button type="button" class="angle-gallery-remove" data-gallery-remove="${index}" aria-label="Quitar foto">×</button>
+            <span>Vista ${index + 2}</span>
+        </div>
+    `).join('');
+    renderProductPreviewGallery();
+}
+
 function resetProductForm() {
     const form = el('product-form');
     if (form) form.reset();
@@ -1007,7 +1112,10 @@ function resetProductForm() {
     setInputValue('prod-stock-inicial', '12');
     setInputValue('prod-stock', '12');
     setInputValue('prod-imagen', '');
+    setInputValue('prod-galeria', '');
+    setInputValue('prod-sku', '');
     updateProductImagePreviewBox('');
+    renderProductGalleryManager();
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
     setInputValue('prod-estilo', '');
@@ -1269,13 +1377,51 @@ function initSettingsTabs() {
     if (!panel || panel.querySelector('.settings-tabs')) return;
 
     const definitions = [
-        { id: 'retail', label: 'Precios', title: 'Precios Minoristas', source: document.getElementById('toggle-retail-prices')?.closest('div') },
-        { id: 'contact', label: 'Contacto', title: 'Informacion de Contacto', formId: 'contact-config-form' },
-        { id: 'whatsapp', label: 'WhatsApp', title: 'WhatsApp Comercial', formId: 'whatsapp-config-form' },
-        { id: 'invoice', label: 'Factura', title: 'Configuracion de Factura y Remision', formId: 'invoice-config-form' },
-        { id: 'promo', label: 'Promo', title: 'Banner Promocional Flotante', formId: 'promo-config-form' },
-        { id: 'payments', label: 'Pagos', title: 'Gestion de Metodos de Pago y QRs', formId: 'qr-config-form' },
-        { id: 'carousel', label: 'Carrusel', title: 'Carrusel de Inicio', formId: 'carousel-image-form' }
+        {
+            id: 'contact',
+            label: 'Contacto',
+            items: [
+                { title: 'Informacion de Contacto', formId: 'contact-config-form' },
+                { title: 'WhatsApp Comercial', formId: 'whatsapp-config-form' }
+            ]
+        },
+        {
+            id: 'storefront',
+            label: 'Portada',
+            items: [
+                { title: 'Banner Publicitario del Home', formId: 'home-ad-config-form' },
+                { title: 'Carrusel de Inicio', formId: 'carousel-image-form' }
+            ]
+        },
+        {
+            id: 'promos',
+            label: 'Promos',
+            items: [
+                { title: 'Banner Promocional Flotante', formId: 'promo-config-form' },
+                { title: 'Promociones para Clientes Registrados', formId: 'customer-promo-form' }
+            ]
+        },
+        {
+            id: 'payments',
+            label: 'Pagos',
+            items: [
+                { title: 'Gestion de Metodos de Pago y QRs', formId: 'qr-config-form' }
+            ]
+        },
+        {
+            id: 'invoice',
+            label: 'Factura',
+            items: [
+                { title: 'Configuracion de Factura y Remision', formId: 'invoice-config-form' }
+            ]
+        },
+        {
+            id: 'retail',
+            label: 'Precios',
+            items: [
+                { title: 'Precios Minoristas', source: document.getElementById('toggle-retail-prices')?.closest('div') }
+            ]
+        }
     ];
 
     const tabs = document.createElement('div');
@@ -1292,8 +1438,13 @@ function initSettingsTabs() {
     const sections = [];
 
     definitions.forEach(def => {
-        const source = def.source || document.getElementById(def.formId);
-        if (!source) return;
+        const items = (def.items || [def])
+            .map(item => ({
+                ...item,
+                source: item.source || document.getElementById(item.formId)
+            }))
+            .filter(item => item.source);
+        if (!items.length) return;
 
         const section = document.createElement('section');
         section.className = 'settings-tab-panel';
@@ -1301,16 +1452,25 @@ function initSettingsTabs() {
         section.dataset.settingsTab = def.id;
         section.setAttribute('role', 'tabpanel');
 
-        if (def.id === 'retail') {
-            source.classList.add('settings-retail-card');
-        } else {
+        items.forEach(item => {
+            const source = item.source;
+
+            if (source.id === 'toggle-retail-prices' || source.querySelector?.('#toggle-retail-prices')) {
+                source.classList.add('settings-retail-card');
+                section.appendChild(source);
+                return;
+            }
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'settings-config-block';
             const heading = source.previousElementSibling?.tagName === 'H3'
                 ? source.previousElementSibling
                 : null;
-            section.appendChild(heading || Object.assign(document.createElement('h3'), { textContent: def.title }));
-        }
 
-        section.appendChild(source);
+            wrapper.appendChild(heading || Object.assign(document.createElement('h3'), { textContent: item.title || def.label }));
+            wrapper.appendChild(source);
+            section.appendChild(wrapper);
+        });
         content.appendChild(section);
 
         const button = document.createElement('button');
@@ -1328,7 +1488,15 @@ function initSettingsTabs() {
     if (!sections.length) return;
 
     function activateSettingsTab(tabId) {
-        const nextTab = sections.some(item => item.id === tabId) ? tabId : sections[0].id;
+        const legacyMap = {
+            home: 'storefront',
+            carousel: 'storefront',
+            promo: 'promos',
+            customers: 'promos',
+            whatsapp: 'contact'
+        };
+        const requestedTab = legacyMap[tabId] || tabId;
+        const nextTab = sections.some(item => item.id === requestedTab) ? requestedTab : sections[0].id;
         sections.forEach(item => {
             const active = item.id === nextTab;
             item.button.classList.toggle('active', active);
@@ -1375,6 +1543,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initInventoryPdfExport();
     initCarouselImageAdmin();
     initProductImageUpload();
+    initProductGalleryUpload();
     resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
@@ -1423,7 +1592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Configurar listeners para la Vista Previa
-    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-estado', 'prod-promocion'];
+    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-galeria', 'prod-estado', 'prod-promocion'];
     inputsToWatch.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -2113,6 +2282,13 @@ const HOME_AD_CONFIG_FIELDS = [
     ['Home_Ad_Link', 'home-ad-config-link']
 ];
 
+const CUSTOMER_PROMO_CONFIG_FIELDS = [
+    ['Promo_Clientes_Enabled', 'customer-promo-enabled'],
+    ['Promo_Clientes_Discount', 'customer-promo-discount'],
+    ['Promo_Clientes_Title', 'customer-promo-title'],
+    ['Promo_Clientes_Expire', 'customer-promo-expire']
+];
+
 function fillHomeAdConfigForm(config) {
     if (!config) return;
     window.storeConfig = window.storeConfig || {};
@@ -2194,17 +2370,32 @@ function initCustomerPromoAdmin() {
     const form = document.getElementById('customer-promo-form');
     if (!form) return;
 
+    function fillCustomerPromoForm(config) {
+        CUSTOMER_PROMO_CONFIG_FIELDS.forEach(([key, id]) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const value = config?.[key] || '';
+            if (input.type === 'checkbox') {
+                input.checked = String(value).trim() === 'true';
+            } else {
+                input.value = value;
+            }
+        });
+    }
+
+    loadSiteConfigForAdmin().then(fillCustomerPromoForm);
+
     form.addEventListener('submit', async event => {
         event.preventDefault();
         const btn = document.getElementById('btn-save-customer-promo');
         const originalText = btn ? btn.textContent : '';
-        const identifier = document.getElementById('customer-promo-identifier')?.value.trim() || '';
+        const enabled = document.getElementById('customer-promo-enabled')?.checked ? 'true' : 'false';
         const discount = document.getElementById('customer-promo-discount')?.value.trim() || '0';
         const title = document.getElementById('customer-promo-title')?.value.trim() || '';
         const expires = document.getElementById('customer-promo-expire')?.value.trim() || '';
 
-        if (!identifier) {
-            showToast('Ingresa el telefono o correo del cliente', 'warning');
+        if (enabled === 'true' && Number(discount) <= 0) {
+            showToast('Ingresa un descuento mayor a 0 para activar la promoción', 'warning');
             return;
         }
 
@@ -2214,31 +2405,23 @@ function initCustomerPromoAdmin() {
         }
 
         try {
-            const response = await fetch(GOOGLE_SHEET_API, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'promocliente',
-                    resource: 'clientes',
-                    identifier,
-                    discount,
-                    title,
-                    expires
-                })
-            });
-            const result = await response.json();
-            if (!result || result.ok === false) {
-                throw new Error(result?.error || 'No se pudo guardar la promocion.');
-            }
+            const savedConfig = {
+                Promo_Clientes_Enabled: enabled,
+                Promo_Clientes_Discount: discount,
+                Promo_Clientes_Title: title,
+                Promo_Clientes_Expire: expires
+            };
 
-            showToast(result.message || 'Promocion del cliente guardada', 'success');
-            form.reset();
+            await Promise.all(Object.entries(savedConfig).map(([key, value]) => saveSiteConfig(key, value)));
+            window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
+            showToast(enabled === 'true' ? 'Promoción general para registrados guardada' : 'Promoción general desactivada', 'success');
         } catch (error) {
-            console.error('Error guardando promocion de cliente:', error);
-            showToast('Error al guardar promocion: ' + error.message, 'error');
+            console.error('Error guardando promocion general de clientes:', error);
+            showToast('Error al guardar promoción: ' + error.message, 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = originalText || 'Guardar promocion del cliente';
+                btn.textContent = originalText || 'Guardar promoción general';
             }
         }
     });
@@ -2738,6 +2921,7 @@ function initProductImageUpload() {
     if (imageInput) {
         imageInput.addEventListener('input', (e) => {
             updateProductImagePreviewBox(e.target.value);
+            renderProductPreviewGallery(e.target.value);
         });
     }
 
@@ -2770,6 +2954,116 @@ function initProductImageUpload() {
             delete saveBtn.dataset.readyText;
         }
     });
+}
+
+function initProductGalleryUpload() {
+    const dropZone = document.getElementById('prod-gallery-drop-zone');
+    const fileInput = document.getElementById('prod-gallery-files');
+    const list = document.getElementById('prod-gallery-list');
+    const urlInput = document.getElementById('prod-gallery-url-input');
+    const addUrlBtn = document.getElementById('btn-add-gallery-url');
+    const galleryInput = document.getElementById('prod-galeria');
+
+    if (!dropZone || !fileInput) return;
+
+    async function uploadGalleryFiles(files) {
+        const selected = Array.from(files || []).filter(file => file.type && file.type.startsWith('image/'));
+        if (!selected.length) {
+            showToast('Selecciona imagenes validas para la galeria', 'warning');
+            return;
+        }
+
+        const saveBtn = document.getElementById('btn-save');
+        const previousText = saveBtn?.textContent || 'Guardar producto';
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = `Subiendo ${selected.length} foto(s)...`;
+        }
+
+        try {
+            const uploadedUrls = [];
+            for (const file of selected) {
+                uploadedUrls.push(await uploadCarouselImage(file));
+            }
+            appendAdminGalleryUrls(uploadedUrls);
+            showToast(`${uploadedUrls.length} foto(s) agregadas a la galeria`, 'success');
+        } catch (error) {
+            console.error('Error subiendo galeria de producto:', error);
+            showToast('No se pudieron subir todas las fotos: ' + (error.message || error), 'error');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = previousText;
+            }
+            fileInput.value = '';
+        }
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => uploadGalleryFiles(fileInput.files));
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            dropZone.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            dropZone.classList.remove('drag-over');
+        });
+    });
+
+    dropZone.addEventListener('drop', event => {
+        uploadGalleryFiles(event.dataTransfer?.files);
+    });
+
+    list?.addEventListener('click', event => {
+        const removeBtn = event.target.closest('[data-gallery-remove]');
+        if (!removeBtn) return;
+        const removeIndex = Number(removeBtn.dataset.galleryRemove);
+        const next = getAdminGalleryUrls().filter((_, index) => index !== removeIndex);
+        setAdminGalleryUrls(next);
+    });
+
+    addUrlBtn?.addEventListener('click', () => {
+        const url = normalizeImageUrl(urlInput?.value || '');
+        if (!url) {
+            showToast('Pega una URL valida para agregarla', 'warning');
+            return;
+        }
+        appendAdminGalleryUrls([url]);
+        if (urlInput) urlInput.value = '';
+        showToast('URL agregada a la galeria', 'success');
+    });
+
+    urlInput?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addUrlBtn?.click();
+        }
+    });
+
+    galleryInput?.addEventListener('input', renderProductGalleryManager);
+
+    document.querySelector('#view-products .preview-container')?.addEventListener('click', event => {
+        const thumb = event.target.closest('.preview-angle-thumb');
+        if (!thumb) return;
+        const src = thumb.dataset.previewUrl || '';
+        const imgEl = document.getElementById('preview-img-el');
+        if (imgEl && src) {
+            imgEl.src = src;
+            imgEl.style.opacity = '1';
+        }
+        document.querySelectorAll('.preview-angle-thumb').forEach(item => item.classList.remove('active'));
+        thumb.classList.add('active');
+    });
+
+    renderProductGalleryManager();
 }
 
 function initCarouselImageAdmin() {
@@ -3888,7 +4182,8 @@ function editarProducto(index) {
     var promoSelect = document.getElementById('prod-promocion');
     if (promoSelect) promoSelect.value = promoScope;
 
-    setInputValue('prod-galeria', p.Galeria || p['Galeria JSON'] || '');
+    setInputValue('prod-galeria', stringifyAdminGallery(p.Galeria || p['Galeria JSON'] || p['Galería JSON'] || ''));
+    renderProductGalleryManager();
     setInputValue('prod-sku', p.SKU || '');
     setInputValue('prod-estado', p.Estado || 'Activo');
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');

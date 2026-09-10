@@ -8,7 +8,7 @@
     <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="stylesheet" href="blyxu-style.css?v=customer-panel-20260909">
+    <link rel="stylesheet" href="blyxu-style.css?v=customer-orders-20260910">
     <style>
         .orders-page {
             position: relative;
@@ -308,32 +308,100 @@
             word-break: break-word;
         }
 
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            overflow: hidden;
-            border-radius: 12px;
+        .items-summary {
+            display: grid;
+            gap: 10px;
         }
 
-        .items-table th,
-        .items-table td {
-            padding: 11px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            text-align: left;
-            font-size: 12px;
-        }
-
-        .items-table th {
-            color: rgba(255, 255, 255, 0.4);
+        .items-summary-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.45);
             font-size: 10px;
+            font-weight: 900;
             letter-spacing: 1px;
             text-transform: uppercase;
-            font-weight: 900;
+        }
+
+        .items-compact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .item-compact-card {
+            display: grid;
+            grid-template-columns: 58px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            min-width: 0;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 12px;
             background: rgba(0, 0, 0, 0.18);
         }
 
-        .items-table td {
-            color: rgba(255, 255, 255, 0.74);
+        .item-compact-thumb {
+            width: 58px;
+            height: 58px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .item-compact-empty {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.45);
+            font-weight: 900;
+        }
+
+        .item-compact-info {
+            min-width: 0;
+            display: grid;
+            gap: 4px;
+        }
+
+        .item-compact-info strong {
+            color: #fff;
+            font-size: 12px;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-compact-info span {
+            color: rgba(255, 255, 255, 0.52);
+            font-size: 11px;
+        }
+
+        .item-compact-total {
+            display: grid;
+            gap: 4px;
+            text-align: right;
+            color: var(--nav-gold);
+            font-size: 12px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .item-compact-total small {
+            color: rgba(255, 255, 255, 0.46);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .items-more-note {
+            padding: 10px;
+            border: 1px dashed rgba(246, 200, 76, 0.22);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.62);
+            font-size: 12px;
+            text-align: center;
         }
 
         .invoice-card .order-card-head {
@@ -417,10 +485,24 @@
                 grid-template-columns: 1fr;
             }
 
-            .items-table {
-                display: block;
-                overflow-x: auto;
-                white-space: nowrap;
+            .items-compact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .item-compact-card {
+                grid-template-columns: 52px 1fr;
+            }
+
+            .item-compact-thumb {
+                width: 52px;
+                height: 52px;
+            }
+
+            .item-compact-total {
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: space-between;
+                text-align: left;
             }
         }
 
@@ -1052,7 +1134,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-app.js?v=customer-panel-20260909"></script>
+    <script src="blyxu-app.js?v=customer-orders-20260910"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
@@ -1311,38 +1393,63 @@
                     .reverse();
             }
 
+            function getItemImage(item) {
+                const directImage = getField(item, ['img', 'imagen', 'Imagen', 'image', 'foto', 'Foto', 'thumb'], '');
+                if (directImage) return directImage;
+
+                const productsSource = typeof allProducts !== 'undefined' && Array.isArray(allProducts) ? allProducts : [];
+                const itemSku = String(getField(item, ['sku', 'SKU', 'id', 'idVariacion', 'ID Variacion'], '')).trim();
+                const itemName = onlyLetters(getField(item, ['nombre', 'Nombre', 'Producto'], ''));
+                const match = productsSource.find(product => {
+                    const productSku = String(getField(product, ['idVariacion', 'ID Variacion', 'ID Variaci\u00f3n', 'SKU'], '')).trim();
+                    const productName = onlyLetters(getField(product, ['Nombre', 'nombre', 'Nombre del Producto', 'Producto'], ''));
+                    return (itemSku && productSku && itemSku === productSku) ||
+                        (itemName && productName && itemName === productName);
+                });
+
+                return match ? getField(match, ['Imagen', 'imagen', 'Imagen Principal', 'Foto'], '') : '';
+            }
+
             function renderItemsTable(items) {
                 if (!items.length) {
                     return '<div class="orders-empty">Este registro no tiene productos detallados.</div>';
                 }
 
+                const visibleItems = items.slice(0, 4);
+                const totalQty = items.reduce((sum, item) => {
+                    return sum + (Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1);
+                }, 0);
+
                 return `
-                    <table class="items-table">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Ref.</th>
-                                <th>Cant.</th>
-                                <th>Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(item => {
+                    <div class="items-summary">
+                        <div class="items-summary-head">
+                            <span>Productos del pedido</span>
+                            <strong>${totalQty} ${totalQty === 1 ? 'unidad' : 'unidades'}</strong>
+                        </div>
+                        <div class="items-compact-grid">
+                            ${visibleItems.map(item => {
                                 const name = getField(item, ['nombre', 'Nombre', 'Producto'], 'Producto');
                                 const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion'], '-');
                                 const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
                                 const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                                const image = getItemImage(item);
                                 return `
-                                    <tr>
-                                        <td>${escapeHtml(name)}</td>
-                                        <td>${escapeHtml(sku || '-')}</td>
-                                        <td>${qty}</td>
-                                        <td>${formatMoney(price * qty)}</td>
-                                    </tr>
+                                    <article class="item-compact-card">
+                                        ${image ? `<img class="item-compact-thumb" src="${escapeHtml(image)}" alt="${escapeHtml(name)}">` : '<span class="item-compact-thumb item-compact-empty">?</span>'}
+                                        <div class="item-compact-info">
+                                            <strong>${escapeHtml(name)}</strong>
+                                            <span>${escapeHtml(sku || '-')}</span>
+                                        </div>
+                                        <div class="item-compact-total">
+                                            <small>x${qty}</small>
+                                            ${formatMoney(price * qty)}
+                                        </div>
+                                    </article>
                                 `;
                             }).join('')}
-                        </tbody>
-                    </table>
+                        </div>
+                        ${items.length > visibleItems.length ? `<div class="items-more-note">+${items.length - visibleItems.length} productos mas en este pedido.</div>` : ''}
+                    </div>
                 `;
             }
 
@@ -2071,6 +2178,12 @@
             });
 
             verifyMercadoPagoReturn();
+
+            const initialLookup = new URLSearchParams(window.location.search).get('buscar');
+            if (initialLookup) {
+                input.value = initialLookup;
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }
         });
     </script>
 </body>

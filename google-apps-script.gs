@@ -284,15 +284,23 @@ function handleRequest_(e, method) {
     if (
       action === 'pedidoscliente' ||
       action === 'customerorders' ||
-      action === 'mis_pedidos'
+      action === 'mispedidos'
     ) {
       return handleCustomerOrders_(body, params);
     }
 
     if (
+      action === 'facturascliente' ||
+      action === 'customerinvoices' ||
+      action === 'misfacturas'
+    ) {
+      return handleCustomerInvoices_(body, params);
+    }
+
+    if (
       action === 'favoritoscliente' ||
       action === 'customerfavorites' ||
-      action === 'mis_favoritos'
+      action === 'misfavoritos'
     ) {
       return handleCustomerFavorites_(body, params);
     }
@@ -1488,11 +1496,13 @@ function handleCustomerOrders_(body, params) {
 
   const customerPhone = cleanPhone_(found.data['Teléfono'] || found.data['Telefono']);
   const customerEmail = normalizeEmail_(found.data.Email);
+  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
   const rows = listRows_('Pedidos', {});
   const orders = rows.filter(row => {
     const phone = cleanPhone_(row['Teléfono'] || row.Telefono || row.telefono);
     const email = normalizeEmail_(row.Email || row.email);
-    return (customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail);
+    const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
+    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
   }).sort((a, b) => new Date(b.Fecha || 0) - new Date(a.Fecha || 0));
 
   return json_({
@@ -1500,6 +1510,48 @@ function handleCustomerOrders_(body, params) {
     status: 'success',
     cliente: publicCustomer_(found.data),
     orders: orders.slice(0, 60).map(publicCustomerOrder_)
+  });
+}
+
+function handleCustomerInvoices_(body, params) {
+  ensureSheets_();
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+
+  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
+  const customerOrders = listRows_('Pedidos', {}).filter(function(row) {
+    const phone = cleanPhone_(row['TelÃ©fono'] || row.Telefono || row.telefono);
+    const email = normalizeEmail_(row.Email || row.email);
+    const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
+    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
+  });
+  const orderIds = {};
+  customerOrders.forEach(function(order) {
+    const id = String(order['ID Pedido'] || '').trim();
+    if (id) orderIds[id] = true;
+  });
+
+  const invoices = listRows_('Facturas', {}).filter(function(row) {
+    const invoiceCustomerPhone = cleanPhone_(row['ID Cliente'] || row.Telefono || row['TelÃ©fono'] || row.Celular);
+    const invoiceEmail = normalizeEmail_(row.Email || row.email);
+    const orderId = String(row['ID Pedido'] || '').trim();
+    const safeInvoiceCustomerPhone = invoiceCustomerPhone || cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
+    return (safeCustomerPhone && safeInvoiceCustomerPhone === safeCustomerPhone) ||
+      (customerEmail && invoiceEmail === customerEmail) ||
+      (orderId && orderIds[orderId]);
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+
+  return json_({
+    ok: true,
+    status: 'success',
+    cliente: publicCustomer_(found.data),
+    invoices: invoices.slice(0, 60).map(publicCustomerInvoice_)
   });
 }
 
@@ -1662,6 +1714,22 @@ function getAuthenticatedCustomer_(body, params) {
   return findCustomerBySessionToken_(token);
 }
 
+function getCustomerPhoneValue_(row) {
+  if (!row) return '';
+  const direct = row.Telefono || row.telefono || row.Celular || row.celular || row.Phone || row.phone;
+  if (direct) return direct;
+
+  const phoneKey = Object.keys(row).find(function(key) {
+    const lower = String(key || '').toLowerCase();
+    const normalized = normalizeKey_(key);
+    return normalized.indexOf('telefono') >= 0 ||
+      normalized.indexOf('celular') >= 0 ||
+      lower.indexOf('fono') >= 0;
+  });
+
+  return phoneKey ? row[phoneKey] : '';
+}
+
 function publicCustomerOrder_(order) {
   const products = parseMaybeJson_(order['Productos JSON']);
   return {
@@ -1673,6 +1741,39 @@ function publicCustomerOrder_(order) {
     cantidadTotal: toNumber_(order['Cantidad Total']),
     productos: Array.isArray(products) ? products.slice(0, 12).map(function(item) {
       return {
+        id: item.id || item.idVariacion || item['ID Variacion'] || item['ID VariaciÃ³n'] || item.sku || item.SKU || '',
+        idVariacion: item.idVariacion || item['ID Variacion'] || item['ID VariaciÃ³n'] || item.id || item.sku || item.SKU || '',
+        sku: item.sku || item.SKU || item.idVariacion || item.id || '',
+        nombre: item.nombre || item.name || item.Producto || 'Producto',
+        opcion: item.opcion || item.variantLabel || item.Estilo || '',
+        cantidad: toNumber_(item.cantidad || item.qty || item.quantity || 1),
+        precio: toNumber_(item.precio || item.price || 0),
+        imagen: item.img || item.imagen || ''
+      };
+    }) : []
+  };
+}
+
+function publicCustomerInvoice_(invoice) {
+  const products = parseMaybeJson_(invoice['Productos JSON']);
+  return {
+    id: invoice['ID Factura'] || '',
+    pedidoId: invoice['ID Pedido'] || '',
+    fecha: invoice.Fecha || '',
+    estado: invoice['Estado Factura'] || '',
+    tipoCliente: invoice['Tipo Cliente'] || '',
+    total: toNumber_(invoice.Subtotal),
+    valorAbonado: toNumber_(invoice['Valor Abonado']),
+    saldoPendiente: toNumber_(invoice['Saldo Pendiente']),
+    ultimoAbono: toNumber_(invoice['Ultimo Abono']),
+    metodoPago: invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || '',
+    metodoEntrega: invoice['MÃ©todo Entrega'] || invoice['Metodo Entrega'] || '',
+    observaciones: invoice.Observaciones || '',
+    productos: Array.isArray(products) ? products.slice(0, 12).map(function(item) {
+      return {
+        id: item.id || item.idVariacion || item['ID Variacion'] || item['ID VariaciÃ³n'] || item.sku || item.SKU || '',
+        idVariacion: item.idVariacion || item['ID Variacion'] || item['ID VariaciÃ³n'] || item.id || item.sku || item.SKU || '',
+        sku: item.sku || item.SKU || item.idVariacion || item.id || '',
         nombre: item.nombre || item.name || item.Producto || 'Producto',
         opcion: item.opcion || item.variantLabel || item.Estilo || '',
         cantidad: toNumber_(item.cantidad || item.qty || item.quantity || 1),
@@ -1763,9 +1864,38 @@ function getActiveCustomerPromotion_(customer) {
     return { percent: 0, label: '', expires: '' };
   }
 
+  const globalPromotion = getGlobalRegisteredCustomerPromotion_();
+  if (globalPromotion.percent > 0) {
+    return globalPromotion;
+  }
+
   const percent = Math.max(0, Math.min(90, toNumber_(customer['Descuento Cliente'] || customer.descuentoCliente || 0)));
   const label = String(customer['Promo Cliente'] || customer.promoCliente || 'Promo cliente registrado').trim();
   const expires = String(customer['Promo Expira'] || customer.promoExpira || '').trim();
+
+  if (!percent) {
+    return { percent: 0, label: '', expires: '' };
+  }
+
+  if (expires) {
+    const expirationDate = new Date(expires);
+    if (!Number.isNaN(expirationDate.getTime()) && expirationDate.getTime() < Date.now()) {
+      return { percent: 0, label: '', expires: expires };
+    }
+  }
+
+  return { percent: percent, label: label || 'Promo cliente registrado', expires: expires };
+}
+
+function getGlobalRegisteredCustomerPromotion_() {
+  const enabled = String(getConfigValue_('Promo_Clientes_Enabled', 'false')).trim() === 'true';
+  if (!enabled) {
+    return { percent: 0, label: '', expires: '' };
+  }
+
+  const percent = Math.max(0, Math.min(90, toNumber_(getConfigValue_('Promo_Clientes_Discount', 0))));
+  const label = String(getConfigValue_('Promo_Clientes_Title', 'Promo cliente registrado')).trim();
+  const expires = String(getConfigValue_('Promo_Clientes_Expire', '')).trim();
 
   if (!percent) {
     return { percent: 0, label: '', expires: '' };
@@ -1960,9 +2090,15 @@ function ensureSheets_() {
 }
 
 function getSpreadsheet_() {
-  return SPREADSHEET_ID
-    ? SpreadsheetApp.openById(SPREADSHEET_ID)
-    : SpreadsheetApp.getActiveSpreadsheet();
+  const configuredId = SPREADSHEET_ID || PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || '';
+  if (configuredId) {
+    return SpreadsheetApp.openById(configuredId);
+  }
+
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+
+  throw new Error('Falta configurar SPREADSHEET_ID. Pega el ID del Google Sheet en la constante SPREADSHEET_ID o ejecuta configurarBlyxuSpreadsheet("ID_DE_TU_SHEET").');
 }
 
 function getSheet_(sheetName) {
@@ -2362,4 +2498,60 @@ function json_(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/***************
+ * PRUEBAS RAPIDAS
+ ***************/
+function configurarBlyxuSpreadsheet(spreadsheetId) {
+  const id = String(spreadsheetId || '').trim();
+  if (!id) throw new Error('Pega el ID del Google Sheet.');
+  PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id);
+  ensureSheets_();
+  return 'Spreadsheet configurado y hojas verificadas.';
+}
+
+function verificarSistemaClientes() {
+  ensureSheets_();
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const required = [
+    'Nombre',
+    'Telefono',
+    'Email',
+    'Password Hash',
+    'Password Salt',
+    'Session Token',
+    'Session Expira'
+  ];
+  const missing = required.filter(function(header) {
+    return !headers.some(function(currentHeader) {
+      return normalizeKey_(currentHeader) === normalizeKey_(header);
+    });
+  });
+
+  return {
+    ok: missing.length === 0,
+    hoja: 'Clientes',
+    faltantes: missing,
+    mensaje: missing.length
+      ? 'Faltan columnas para el registro de clientes.'
+      : 'Clientes listo para registro, login, pedidos, facturas y favoritos.'
+  };
+}
+
+function probarRegistroCliente() {
+  const now = Date.now();
+  const response = handleCustomerRegister_({
+    cliente: {
+      nombre: 'Cliente Prueba BLYXU',
+      telefono: '300000' + String(now).slice(-4),
+      email: 'cliente.prueba.' + now + '@blyxu.test',
+      direccion: 'Prueba',
+      ciudad: 'Bogota',
+      password: '123456'
+    }
+  });
+
+  return response.getContent();
 }

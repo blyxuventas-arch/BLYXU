@@ -821,6 +821,17 @@ function getProductGroupKey(product) {
     return String(product?.idProducto || product?.['ID Producto'] || product?.idVariacion || product?.SKU || product?.Nombre || '').trim();
 }
 
+function getProductGeneralReferenceKey(product) {
+    const parentId = String(product?.idProducto || product?.['ID Producto'] || product?.Referencia || product?.referencia || '').trim();
+    if (parentId) return `parent:${parentId}`;
+
+    const normalizedName = normalizeSearchText(product?.Nombre || product?.nombre || product?.['Nombre del Producto'] || product?.Producto || '');
+    const normalizedCategory = normalizeSearchText(product?.Categoria || product?.categoria || '');
+    if (normalizedName || normalizedCategory) return `name:${normalizedCategory}:${normalizedName}`;
+
+    return getCatalogRepresentativeKey(product);
+}
+
 function isGeneralProductReference(product) {
     const idProducto = String(product?.idProducto || product?.['ID Producto'] || '').trim();
     const idVariacion = String(product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '').trim();
@@ -1034,7 +1045,7 @@ function getProductImageSet(product) {
         .map(normalizeImageUrl)
         .filter(Boolean);
 
-    return [...new Set(images)].slice(0, 4);
+    return [...new Set(images)].slice(0, 8);
 }
 function renderInventorySpotlightLoading() {
     const track = document.getElementById('hero-track');
@@ -1261,13 +1272,15 @@ function renderHomeCategories() {
     allProducts.forEach(product => {
         const category = getProductCategory(product);
         if (!category || normalizeSearchText(category) === 'banner') return;
+        if (!isActiveProduct(product)) return;
         const key = normalizeSearchText(category);
-        const current = counts.get(key) || { label: category, count: 0 };
-        current.count += Math.max(1, getProductStock(product));
+        const current = counts.get(key) || { label: category, references: new Set() };
+        current.references.add(getProductGeneralReferenceKey(product));
         counts.set(key, current);
     });
 
     const categories = Array.from(counts.values())
+        .map(category => ({ label: category.label, count: category.references.size }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'es'))
         .slice(0, 8);
 
@@ -3762,8 +3775,31 @@ function getCurrentCustomer() {
 
 function getCurrentCustomerPromotion() {
     const customer = getCurrentCustomer();
+    if (!customer) {
+        return { percent: 0, label: '', expires: '' };
+    }
+
+    const globalEnabled = String(getSiteConfigValue('Promo_Clientes_Enabled', 'false')).trim() === 'true';
+    const globalPercent = Number(getSiteConfigValue('Promo_Clientes_Discount', '0'));
+    const globalExpires = getSiteConfigValue('Promo_Clientes_Expire', '');
+
+    if (globalEnabled && Number.isFinite(globalPercent) && globalPercent > 0) {
+        if (globalExpires) {
+            const expiresAt = new Date(globalExpires).getTime();
+            if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+                return { percent: 0, label: '', expires: globalExpires };
+            }
+        }
+
+        return {
+            percent: Math.min(90, Math.max(0, globalPercent)),
+            label: getSiteConfigValue('Promo_Clientes_Title', 'Promo cliente registrado'),
+            expires: globalExpires
+        };
+    }
+
     const percent = Number(customer?.descuentoCliente || 0);
-    if (!customer || !Number.isFinite(percent) || percent <= 0) {
+    if (!Number.isFinite(percent) || percent <= 0) {
         return { percent: 0, label: '', expires: '' };
     }
 
@@ -3849,6 +3885,25 @@ function customerAuthRequest(action, payload) {
     });
 }
 
+async function registerCustomerAccount(cliente) {
+    const registerActions = ['registrarcliente', 'registrocliente', 'customerregister'];
+    let lastError = null;
+
+    for (const action of registerActions) {
+        try {
+            return await customerAuthRequest(action, { cliente });
+        } catch (error) {
+            lastError = error;
+            const message = normalizeSearchText(error.message);
+            if (!message.includes('accion no reconocida') && !message.includes('action not recognized')) {
+                throw error;
+            }
+        }
+    }
+
+    throw new Error(lastError?.message || 'No se pudo crear la cuenta.');
+}
+
 function ensureCustomerAuthModal() {
     let modal = document.getElementById('customer-auth-modal');
     if (modal) return modal;
@@ -3924,11 +3979,17 @@ function ensureCustomerAuthModal() {
                 <div class="customer-profile-card" id="customer-profile-card"></div>
                 <div class="customer-dashboard-tabs" role="tablist" aria-label="Panel de cliente">
                     <button type="button" class="active" data-customer-dashboard-tab="orders">Mis pedidos</button>
+                    <button type="button" data-customer-dashboard-tab="invoices">Facturas</button>
                     <button type="button" data-customer-dashboard-tab="favorites">Favoritos</button>
                 </div>
                 <div class="customer-dashboard-panel active" id="customer-dashboard-orders">
                     <div class="customer-dashboard-list" id="customer-orders-list">
                         <div class="customer-dashboard-empty">Cargando pedidos...</div>
+                    </div>
+                </div>
+                <div class="customer-dashboard-panel" id="customer-dashboard-invoices">
+                    <div class="customer-dashboard-list" id="customer-invoices-list">
+                        <div class="customer-dashboard-empty">Cargando facturas...</div>
                     </div>
                 </div>
                 <div class="customer-dashboard-panel" id="customer-dashboard-favorites">
@@ -3972,6 +4033,7 @@ function setCustomerAuthMessage(message, type = '') {
 
 function setCustomerAuthView(view) {
     const modal = ensureCustomerAuthModal();
+    modal.classList.toggle('is-profile-view', view === 'profile');
     modal.querySelectorAll('[data-auth-view]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.authView === view);
     });
@@ -3996,14 +4058,32 @@ function renderCustomerProfile() {
     `;
 }
 
+function getCustomerOrderItemImage(item) {
+    const directImage = normalizeImageUrl(item?.imagen || item?.img || item?.Imagen || item?.image || item?.foto || '');
+    if (directImage) return directImage;
+
+    const itemSku = String(item?.sku || item?.SKU || item?.idVariacion || item?.id || '').trim();
+    const itemName = normalizeSearchText(item?.nombre || item?.Nombre || item?.Producto || '');
+    const match = (allProducts || []).find(product => {
+        const identity = getProductIdentity(product);
+        const productSku = String(identity.idVariacion || product?.SKU || '').trim();
+        return (itemSku && productSku && productSku === itemSku) ||
+            (itemName && normalizeSearchText(identity.nombre) === itemName);
+    });
+
+    return match ? normalizeImageUrl(match.Imagen || match.imagen || match.Foto || (match.Galeria && match.Galeria[0]) || '') : '';
+}
+
 function setCustomerDashboardTab(tab = 'orders') {
     const modal = ensureCustomerAuthModal();
     modal.querySelectorAll('[data-customer-dashboard-tab]').forEach(button => {
         button.classList.toggle('active', button.dataset.customerDashboardTab === tab);
     });
     const ordersPanel = document.getElementById('customer-dashboard-orders');
+    const invoicesPanel = document.getElementById('customer-dashboard-invoices');
     const favoritesPanel = document.getElementById('customer-dashboard-favorites');
     ordersPanel?.classList.toggle('active', tab === 'orders');
+    invoicesPanel?.classList.toggle('active', tab === 'invoices');
     favoritesPanel?.classList.toggle('active', tab === 'favorites');
 }
 
@@ -4028,17 +4108,74 @@ function renderCustomerOrdersList(orders = []) {
         const productText = products.length
             ? products.slice(0, 3).map(item => `${escapeHtml(item.nombre || 'Producto')} x${Number(item.cantidad || 1)}`).join(', ')
             : 'Productos del pedido';
+        const previews = products.slice(0, 4);
         return `
             <article class="customer-order-card">
                 <div>
                     <strong>${escapeHtml(order.id || 'Pedido')}</strong>
                     <span>${escapeHtml(formatCustomerDate(order.fecha))}</span>
                 </div>
+                ${previews.length ? `<div class="customer-order-products">
+                    ${previews.map(item => `
+                        <span class="customer-order-product-thumb" title="${escapeHtml(item.nombre || 'Producto')}">
+                            ${getCustomerOrderItemImage(item) ? `<img src="${escapeHtml(getCustomerOrderItemImage(item))}" alt="${escapeHtml(item.nombre || 'Producto')}">` : '<em>?</em>'}
+                            <b>${Number(item.cantidad || 1)}</b>
+                        </span>
+                    `).join('')}
+                    ${products.length > previews.length ? `<span class="customer-order-more">+${products.length - previews.length}</span>` : ''}
+                </div>` : ''}
                 <p>${productText}${products.length > 3 ? '...' : ''}</p>
                 <footer>
                     <span>${escapeHtml(order.estado || 'Pendiente')}</span>
                     <b>${formatMoney(Number(order.total || 0))}</b>
                 </footer>
+            </article>
+        `;
+    }).join('');
+}
+
+function renderCustomerInvoicesList(invoices = []) {
+    const list = document.getElementById('customer-invoices-list');
+    if (!list) return;
+
+    if (!invoices.length) {
+        list.innerHTML = '<div class="customer-dashboard-empty">Todavia no tienes facturas registradas.</div>';
+        return;
+    }
+
+    list.innerHTML = invoices.map(invoice => {
+        const products = Array.isArray(invoice.productos) ? invoice.productos : [];
+        const productText = products.length
+            ? products.slice(0, 3).map(item => `${escapeHtml(item.nombre || 'Producto')} x${Number(item.cantidad || 1)}`).join(', ')
+            : 'Detalle de factura';
+        const balance = Number(invoice.saldoPendiente || 0);
+        const invoiceLookup = encodeURIComponent(invoice.id || invoice.pedidoId || '');
+        const previews = products.slice(0, 4);
+        return `
+            <article class="customer-order-card customer-invoice-card">
+                <div>
+                    <strong>${escapeHtml(invoice.id || 'Factura')}</strong>
+                    <span>${escapeHtml(formatCustomerDate(invoice.fecha))}</span>
+                </div>
+                ${previews.length ? `<div class="customer-order-products">
+                    ${previews.map(item => `
+                        <span class="customer-order-product-thumb" title="${escapeHtml(item.nombre || 'Producto')}">
+                            ${getCustomerOrderItemImage(item) ? `<img src="${escapeHtml(getCustomerOrderItemImage(item))}" alt="${escapeHtml(item.nombre || 'Producto')}">` : '<em>?</em>'}
+                            <b>${Number(item.cantidad || 1)}</b>
+                        </span>
+                    `).join('')}
+                    ${products.length > previews.length ? `<span class="customer-order-more">+${products.length - previews.length}</span>` : ''}
+                </div>` : ''}
+                <p>${productText}${products.length > 3 ? '...' : ''}</p>
+                <footer>
+                    <span>${escapeHtml(invoice.estado || (balance > 0 ? 'Pendiente' : 'Pagada'))}</span>
+                    <b>${formatMoney(Number(invoice.total || 0))}</b>
+                </footer>
+                <div class="customer-invoice-balance">
+                    <span>Abonado: ${formatMoney(Number(invoice.valorAbonado || 0))}</span>
+                    <strong>Saldo: ${formatMoney(balance)}</strong>
+                </div>
+                <a class="customer-dashboard-link" href="facturas-pedidos.html${invoiceLookup ? `?buscar=${invoiceLookup}` : ''}">Ver / guardar PDF</a>
             </article>
         `;
     }).join('');
@@ -4085,23 +4222,41 @@ async function loadCustomerDashboard() {
     if (!session?.token) return;
 
     renderCustomerOrdersList([]);
+    renderCustomerInvoicesList([]);
     renderCustomerFavoritesList([]);
 
     const ordersList = document.getElementById('customer-orders-list');
+    const invoicesList = document.getElementById('customer-invoices-list');
     const favoritesList = document.getElementById('customer-favorites-list');
     if (ordersList) ordersList.innerHTML = '<div class="customer-dashboard-empty">Cargando pedidos...</div>';
+    if (invoicesList) invoicesList.innerHTML = '<div class="customer-dashboard-empty">Cargando facturas...</div>';
     if (favoritesList) favoritesList.innerHTML = '<div class="customer-dashboard-empty">Cargando favoritos...</div>';
 
-    try {
-        const [ordersData, favoritesData] = await Promise.all([
-            customerAuthRequest('pedidoscliente', { token: session.token }),
-            customerAuthRequest('favoritoscliente', { token: session.token })
-        ]);
-        renderCustomerOrdersList(ordersData.orders || []);
-        renderCustomerFavoritesList(favoritesData.favorites || []);
-    } catch (error) {
-        if (ordersList) ordersList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message)}</div>`;
-        if (favoritesList) favoritesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message)}</div>`;
+    const [ordersResult, invoicesResult, favoritesResult] = await Promise.allSettled([
+        customerAuthRequest('pedidoscliente', { token: session.token }),
+        customerAuthRequest('facturascliente', { token: session.token }),
+        customerAuthRequest('favoritoscliente', { token: session.token })
+    ]);
+
+    if (ordersResult.status === 'fulfilled') {
+        renderCustomerOrdersList(ordersResult.value.orders || []);
+    } else if (ordersList) {
+        ordersList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(ordersResult.reason?.message || 'No se pudieron cargar tus pedidos.')}</div>`;
+    }
+
+    if (invoicesResult.status === 'fulfilled') {
+        renderCustomerInvoicesList(invoicesResult.value.invoices || []);
+    } else if (invoicesList) {
+        const message = normalizeSearchText(invoicesResult.reason?.message).includes('accion no reconocida')
+            ? 'Actualiza el Apps Script para activar tus facturas en Mi cuenta.'
+            : (invoicesResult.reason?.message || 'No se pudieron cargar tus facturas.');
+        invoicesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(message)}</div>`;
+    }
+
+    if (favoritesResult.status === 'fulfilled') {
+        renderCustomerFavoritesList(favoritesResult.value.favorites || []);
+    } else if (favoritesList) {
+        favoritesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(favoritesResult.reason?.message || 'No se pudieron cargar tus favoritos.')}</div>`;
     }
 }
 
@@ -4230,15 +4385,13 @@ async function handleCustomerRegisterSubmit(event) {
     setCustomerAuthMessage('');
 
     try {
-        const data = await customerAuthRequest('registrarcliente', {
-            cliente: {
-                nombre: fields.nombre.value.trim(),
-                telefono: fields.telefono.value.trim(),
-                email: fields.email.value.trim(),
-                direccion: fields.direccion.value.trim(),
-                ciudad: fields.ciudad.value.trim(),
-                password: fields.password.value
-            }
+        const data = await registerCustomerAccount({
+            nombre: fields.nombre.value.trim(),
+            telefono: fields.telefono.value.trim(),
+            email: fields.email.value.trim(),
+            direccion: fields.direccion.value.trim(),
+            ciudad: fields.ciudad.value.trim(),
+            password: fields.password.value
         });
         setCustomerSession(data.token, data.cliente);
         setCustomerAuthMessage('Cuenta creada correctamente.', 'success');
@@ -4246,7 +4399,10 @@ async function handleCustomerRegisterSubmit(event) {
         renderCustomerProfile();
         loadCustomerDashboard();
     } catch (error) {
-        setCustomerAuthMessage(error.message, 'error');
+        const message = normalizeSearchText(error.message).includes('accion no reconocida')
+            ? 'El registro de clientes necesita actualizar el Apps Script publicado. Ya deje el codigo corregido para reconocer esta accion.'
+            : error.message;
+        setCustomerAuthMessage(message, 'error');
     } finally {
         submit.disabled = false;
         submit.textContent = originalText;
@@ -4472,6 +4628,8 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         descuentoCliente: promotion.percent || '',
         promoCliente: promotion.label || '',
         sku: item.sku || '',
+        img: item.img || '',
+        imagen: item.img || '',
         modo: item.mode || activeCatalogMode
     }));
 
