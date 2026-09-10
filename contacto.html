@@ -13,7 +13,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/contacto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=customer-orders-20260910">
+    <link rel="stylesheet" href="blyxu-style.css?v=motion-lite-20260910">
 </head>
 
 <body data-page="contact">
@@ -28,7 +28,7 @@
         <ul class="nav-links" id="nav-links">
             <li><a href="index.html#inicio">Inicio</a></li>
             <li><a href="index.html#coleccion">Catalogo</a></li>
-            <li><a href="#mayorista">Mayorista</a></li>
+            <li><a href="mayorista.html">Mayorista</a></li>
             <li><a href="contacto.html" class="active">Contacto</a></li>
             <li><a href="pagos.html">Pagos</a></li>
             <li><a href="facturas-pedidos.html">Facturas y Pedidos</a></li>
@@ -128,7 +128,7 @@
             <ul>
                 <li><a href="index.html#inicio">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catalogo</a></li>
-                <li><a href="#mayorista">Mayorista</a></li>
+                <li><a href="mayorista.html">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="pagos.html">Pagos</a></li>
             </ul>
@@ -145,7 +145,7 @@
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
                 <a href="index.html#inicio" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
                 <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria collares pulseras aretes anillos">Catalogo</a>
-                <a href="#mayorista" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
+                <a href="mayorista.html" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="pagos.html" data-footer-search-item data-keywords="pagos qr transferencia pagar">Pagos</a>
                 <a href="facturas-pedidos.html" data-footer-search-item data-keywords="facturas pedidos ordenes comprobantes">Facturas y pedidos</a>
                 <a href="#contact-horario" data-footer-search-item data-keywords="horario apertura cierre lunes sabado">Horario</a>
@@ -175,52 +175,7 @@
         </div>
     </footer>
 
-    <div class="cart-overlay" id="cart-overlay"></div>
-    <div class="cart-sidebar" id="cart-sidebar">
-        <div class="cart-header">
-            <h3>Tu Carrito</h3>
-            <button class="cart-close" id="cart-close">Cerrar</button>
-        </div>
-        <div class="cart-items" id="cart-items">
-            <div class="cart-empty">Tu carrito esta vacio</div>
-        </div>
-        <div class="cart-footer">
-            <div class="cart-total">
-                <span>Total</span>
-                <span id="cart-total">$0</span>
-            </div>
-            <textarea id="cart-note" class="cart-note-input" placeholder="Pregunta o nota para enviar por WhatsApp (opcional)"></textarea>
-            <button class="btn-checkout" id="btn-checkout">Finalizar Pedido por WhatsApp</button>
-        </div>
-    </div>
-
-    <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
-        <canvas id="wholesale-particles" class="wholesale-particles-canvas"></canvas>
-        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
-            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">Cerrar</button>
-            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
-            <div class="wholesale-kicker">Vault Access</div>
-            <h2 id="wholesale-title">Ingresa tu clave</h2>
-            <form class="wholesale-form" id="wholesale-form">
-                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave de acceso" autocomplete="off" required>
-                <button type="submit">Autenticar</button>
-            </form>
-            <button type="button" class="wholesale-back-home" id="wholesale-back-btn">← Volver al inicio</button>
-            <div class="wholesale-error" id="wholesale-error">Clave incorrecta</div>
-        </div>
-    </div>
-
-    <div class="brand-loader" id="brand-loader" aria-hidden="true">
-        <div class="brand-loader-card">
-            <img src="Logo2.png" alt="BLYXU" onerror="this.style.display='none'">
-            <span>BLYXU</span>
-            <div class="brand-loader-bar">
-                <div class="brand-loader-progress"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="blyxu-app.js?v=customer-orders-20260910"></script>
+    <script src="blyxu-lite.js?v=lite-cursor-motion-lite-20260910"></script>
 </body>
 
 </html>

@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=customer-orders-20260910">
+    <link rel="stylesheet" href="blyxu-style.css?v=motion-lite-20260910">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
     <style>
         .product-info-price {
@@ -165,6 +165,7 @@
                     <span class="spec-value" id="detail-style"></span>
                 </div>
             </div>
+            <div id="detail-measurements" class="detail-measurements" style="display:none;"></div>
 
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
@@ -209,305 +210,8 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=customer-orders-20260910"></script>
-    <script>
-        // Lógica específica para la página de producto
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Renderizador anterior desactivado. La ficha actual se controla en el bloque siguiente.
-            return;
-            const urlParams = new URLSearchParams(window.location.search);
-            const productId = Number.parseInt(urlParams.get('id'), 10);
-            const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
-            let detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
-            const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
-            activeCatalogMode = detailCatalogMode;
-            setCartMode(detailCatalogMode);
-            updateCartUI();
-
-            if (detailCatalogMode === 'wholesale') {
-                const catalogLink = document.querySelector('.nav-links a[href="index.html#coleccion"]');
-                if (catalogLink) {
-                    catalogLink.href = 'mayorista.html';
-                    catalogLink.textContent = 'Mayorista';
-                }
-            }
-
-            function isCatalogOnlyValue(value) {
-                const clean = normalizeSearchText(value);
-                return ['ambos', 'minorista', 'mayorista', 'minoristaymayorista', 'retail', 'wholesale'].includes(clean);
-            }
-
-            function isReferenceValue(value, product) {
-                const raw = String(value || '').trim();
-                const clean = normalizeSearchText(raw);
-                if (!raw) return false;
-                if (/^prod-.+-v\d+$/i.test(raw) || /^var-/i.test(raw)) return true;
-                return [product?.idVariacion, product?.['ID Variación'], product?.['ID Variacion'], product?.idProducto, product?.['ID Producto'], product?.ID, product?.SKU]
-                    .some(ref => ref && clean === normalizeSearchText(ref));
-            }
-
-            function getVisibleVariantParts(product) {
-                const rawParts = [
-                    product.Estilo || product.estilo,
-                    product.Tamano || product.tamano,
-                    product.Color || product.color
-                ];
-
-                return rawParts
-                    .map(value => String(value || '').trim())
-                    .filter(value => !isEmptyDisplayValue(value) && !isCatalogOnlyValue(value) && !isReferenceValue(value, product))
-                    .filter((value, index, list) => list.findIndex(item => normalizeSearchText(item) === normalizeSearchText(value)) === index);
-            }
-
-            function getVariantFieldValue(product, field) {
-                const value = field === 'style'
-                    ? (product.Estilo || product.estilo)
-                    : field === 'size'
-                        ? (product.Tamano || product.tamano || product.Talla)
-                        : (product.Color || product.color);
-                const raw = String(value || '').trim();
-                return !isEmptyDisplayValue(raw) && !isCatalogOnlyValue(raw) && !isReferenceValue(raw, product) ? raw : '';
-            }
-
-            function getGroupVariantDimension(siblings) {
-                const fields = ['style', 'size', 'color'];
-                let winner = { field: 'style', count: 0 };
-                fields.forEach(field => {
-                    const values = new Set(siblings.map(item => normalizeSearchText(getVariantFieldValue(item, field))).filter(Boolean));
-                    if (values.size > winner.count) winner = { field, count: values.size };
-                });
-                return winner.count > 1 ? winner.field : 'style';
-            }
-
-            function getAvailabilityText(stock) {
-                return stock > 0 ? 'Disponible' : 'Agotado por ahora';
-            }
-
-            if (detailCatalogMode === 'wholesale') {
-                const catalogLink = document.querySelector('.nav-links a[href="index.html#coleccion"]');
-                if (catalogLink) {
-                    catalogLink.href = 'mayorista.html';
-                    catalogLink.textContent = 'Mayorista';
-                }
-            }
-
-            // Esperar a que los productos carguen en blyxu-app.js
-            // Como loadProducts es asíncrona, necesitamos asegurarnos de que terminó
-            if (allProducts.length === 0) {
-                await loadProducts({ renderCatalog: false });
-            }
-            detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
-            updateCartUI();
-
-            const product = allProducts[productId];
-            if (!Number.isInteger(productId) || !product) {
-                document.getElementById('product-detail').innerHTML = `
-                    <div class="product-not-found">
-                        <h2>Producto no encontrado</h2>
-                        <a href="${catalogBackUrl}" class="main-banner-btn">Volver al catálogo</a>
-                    </div>
-                `;
-                return;
-            }
-
-            // Rellenar datos
-            const name = product.Nombre || product.nombre || product.Producto || 'Producto';
-            const price = getProductPrice(product, detailCatalogMode);
-            const oldPrice = getProductDisplayOldPrice(product, detailCatalogMode, price);
-            const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
-            const cat = product.Categoria || product.categoria || '';
-            const desc = product.Descripcion || product.descripcion || 'Sin descripción disponible.';
-            const stock = getProductStock(product);
-            const colors = product.Color || product.color || 'Único';
-            const displayColors = getVariantFieldValue(product, 'color');
-            const sku = product.SKU || '';
-            const size = product.Tamano || product.tamano || '';
-            const rawStyle = product.Estilo || product.estilo || '';
-            const style = (isCatalogOnlyValue(rawStyle) || isReferenceValue(rawStyle, product)) ? '' : rawStyle;
-
-            document.getElementById('detail-name').textContent = name;
-            const stockAlert = document.getElementById('detail-stock-alert');
-            if (stockAlert) {
-                stockAlert.className = 'product-stock-alert';
-                if (stock <= 0) {
-                    stockAlert.textContent = 'Agotado por ahora';
-                    stockAlert.classList.add('is-out');
-                    stockAlert.style.display = 'inline-flex';
-                } else if (stock <= LOW_STOCK_THRESHOLD) {
-                    stockAlert.textContent = 'Bajo stock';
-                    stockAlert.classList.add('is-low');
-                    stockAlert.style.display = 'inline-flex';
-                } else {
-                    stockAlert.style.display = 'none';
-                }
-            }
-            document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista · ${cat}` : cat;
-            document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
-            document.getElementById('detail-desc').textContent = desc;
-            document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
-            document.getElementById('detail-colors').textContent = displayColors || colors;
-            const colorRow = document.getElementById('spec-color-row');
-            if (colorRow) colorRow.style.display = displayColors ? 'flex' : 'none';
-
-            if (sku) {
-                document.getElementById('detail-sku').textContent = sku;
-                document.getElementById('spec-sku-row').style.display = 'flex';
-            }
-            if (size) {
-                document.getElementById('detail-size').textContent = size;
-                document.getElementById('spec-size-row').style.display = 'flex';
-            }
-            if (style) {
-                document.getElementById('detail-style').textContent = style;
-                document.getElementById('spec-style-row').style.display = 'flex';
-            }
-
-            // Variaciones (Mismo idProducto)
-            const parentId = product.idProducto;
-            const siblings = parentId ? allProducts.filter(p => p.idProducto === parentId && String(p.Categoria || p.categoria || '').toLowerCase() !== 'banner') : [];
-            
-            if (siblings.length > 1) {
-                const varContainer = document.getElementById('product-variations');
-                const variantDimension = getGroupVariantDimension(siblings);
-                let html = '<h3>Variantes disponibles</h3><div class="detail-variant-list">';
-                
-                siblings.forEach((sib, index) => {
-                    const sibIndex = allProducts.indexOf(sib);
-                    const isActive = sibIndex === productId;
-                    
-                    let label = getVariantFieldValue(sib, variantDimension);
-                    if (!label) label = getVisibleVariantParts(sib).join(' - ');
-                    if (!label) {
-                        label = `Opcion ${index + 1}`;
-                    }
-
-                    html += `<button class="detail-variant-chip ${isActive ? 'active' : ''}" onclick="window.location.href='producto.html?id=${sibIndex}${detailCatalogMode==='wholesale'?'&catalogo=mayorista':''}'">
-                                ${escapeHtml(label)}
-                             </button>`;
-                });
-                html += '</div>';
-                
-                varContainer.innerHTML = html;
-                varContainer.style.display = 'block';
-            }
-
-            const detailImg = document.getElementById('detail-img');
-            detailImg.alt = name;
-            detailImg.onerror = () => {
-                detailImg.onerror = null;
-                detailImg.src = 'Logo2.png';
-                document.getElementById('detail-img-container').classList.add('is-fallback');
-            };
-            detailImg.src = img || 'Logo2.png';
-            const zoomOverlay = document.getElementById('product-zoom-overlay');
-            const zoomImg = document.getElementById('product-zoom-img');
-            const closeZoom = () => {
-                zoomOverlay.classList.remove('open', 'zoomed');
-                zoomOverlay.setAttribute('aria-hidden', 'true');
-            };
-            document.getElementById('detail-img-container').addEventListener('click', () => {
-                zoomImg.src = detailImg.src;
-                zoomImg.alt = name;
-                zoomOverlay.classList.add('open');
-                zoomOverlay.setAttribute('aria-hidden', 'false');
-            });
-            zoomImg.addEventListener('click', (e) => {
-                e.stopPropagation();
-                zoomOverlay.classList.toggle('zoomed');
-            });
-            zoomOverlay.addEventListener('click', closeZoom);
-            document.getElementById('product-zoom-close').addEventListener('click', closeZoom);
-
-            // Generar galería de miniaturas si el producto tiene más imágenes
-            const allImages = getProductImageSet(product);
-            const thumbsContainer = document.getElementById('detail-thumbnails');
-            if (allImages.length > 1) {
-                thumbsContainer.innerHTML = allImages.map(imgUrl => `
-                    <img src="${escapeHtml(imgUrl)}" 
-                         class="gallery-thumb" 
-                         onclick="
-                             const mainImg = document.getElementById('detail-img');
-                             if(mainImg.src === '${escapeHtml(imgUrl)}') return;
-                             mainImg.style.opacity = 0;
-                             setTimeout(() => {
-                                 mainImg.src='${escapeHtml(imgUrl)}';
-                                 mainImg.onload = () => mainImg.style.opacity = 1;
-                             }, 150);
-                             document.querySelectorAll('.gallery-thumb').forEach(t=>t.classList.remove('active')); 
-                             this.classList.add('active');
-                         "
-                         onerror="this.style.display='none'">
-                `).join('');
-                const firstThumb = thumbsContainer.querySelector('.gallery-thumb');
-                if (firstThumb) firstThumb.classList.add('active');
-                thumbsContainer.style.display = 'flex';
-            } else {
-                if (thumbsContainer) thumbsContainer.style.display = 'none';
-            }
-
-            const promoBadgeEl = document.getElementById('detail-promo-badge');
-            const oldEl = document.getElementById('detail-old-price');
-            if (detailShowsPrices && oldPrice > price) {
-                if (oldEl) {
-                    oldEl.textContent = formatMoney(oldPrice);
-                    oldEl.style.display = 'inline';
-                }
-                document.getElementById('detail-price').classList.add('discount-active');
-                if (promoBadgeEl) {
-                    const discountPercent = Math.round(((oldPrice - price) / oldPrice) * 100);
-                    promoBadgeEl.innerHTML = `<span class="promo-circle-num">-${discountPercent}%</span><span class="promo-circle-text">DCTO</span>`;
-                    promoBadgeEl.style.display = 'inline-flex';
-                }
-            } else {
-                document.getElementById('detail-price').classList.remove('discount-active');
-                if (oldEl) oldEl.style.display = 'none';
-                if (promoBadgeEl) promoBadgeEl.style.display = 'none';
-            }
-
-            const detailCartBtn = document.getElementById('btn-add-to-cart-detail');
-            const detailPayBtn = document.getElementById('btn-pay-now-detail');
-            const detailConsultBtn = document.getElementById('btn-consult-product-detail');
-            const detailCartNote = document.getElementById('detail-cart-note');
-            detailCartBtn.disabled = stock <= 0;
-            detailCartBtn.textContent = stock > 0
-                ? (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general')
-                : 'Agotado por ahora';
-            detailCartBtn.onclick = () => {
-                if (stock <= 0) return;
-                addToCart(productId, null, detailCatalogMode);
-            };
-            if (detailPayBtn) {
-                const canPayOnline = detailCatalogMode === 'retail' && detailShowsPrices && stock > 0;
-                detailPayBtn.style.display = canPayOnline ? 'inline-flex' : 'none';
-                detailPayBtn.disabled = !canPayOnline;
-                detailPayBtn.onclick = canPayOnline ? () => buyNowWithMercadoPago(productId, detailPayBtn, detailCatalogMode) : null;
-            }
-            if (!detailShowsPrices && stock > 0) {
-                detailCartBtn.closest('.product-info-actions')?.classList.add('has-consult-actions');
-                if (detailConsultBtn) {
-                    detailConsultBtn.style.display = 'inline-flex';
-                    detailConsultBtn.onclick = () => consultProductByWhatsApp(product);
-                }
-                if (detailCartNote) detailCartNote.style.display = 'block';
-            }
-
-            // Renderizar recomendados (otros productos de la misma categoría o aleatorios)
-            const normalizedCat = cat.toLowerCase();
-            const recommendationSource = getCurrentCatalogProducts();
-            const sameCategory = recommendationSource.filter(p =>
-                allProducts.indexOf(p) !== productId && (p.Categoria || p.categoria || '').toLowerCase() === normalizedCat
-            );
-            const otherProducts = recommendationSource.filter(p =>
-                allProducts.indexOf(p) !== productId && (p.Categoria || p.categoria || '').toLowerCase() !== normalizedCat
-            );
-            const recommended = [...sameCategory, ...otherProducts].slice(0, 4);
-            
-            renderProducts(recommended, { featuredFirst: false, mode: detailCatalogMode });
-            
-            // Actualizar título de la página
-            document.title = `${name} — BLYXU`;
-        });
-    </script>
+    <script src="blyxu-app.js?v=app-cursor-motion-lite-20260910"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -853,7 +557,14 @@
                 }
 
                 setSpec('spec-sku-row', 'detail-sku', product.SKU || '');
-                setSpec('spec-size-row', 'detail-size', product.Tamano || product.tamano || '');
+                const measurementData = typeof getProductMeasurementData === 'function' ? getProductMeasurementData(product) : { kind: '' };
+                const measurementsMarkup = typeof getProductMeasurementMarkup === 'function' ? getProductMeasurementMarkup(product) : '';
+                const measurementBox = document.getElementById('detail-measurements');
+                if (measurementBox) {
+                    measurementBox.innerHTML = measurementsMarkup;
+                    measurementBox.style.display = measurementsMarkup ? 'block' : 'none';
+                }
+                setSpec('spec-size-row', 'detail-size', measurementData.kind === 'medidas' || measurementData.kind === 'textil' ? '' : (product.Tamano || product.tamano || ''));
                 setSpec('spec-style-row', 'detail-style', product.Estilo || product.estilo || '');
 
                 const oldEl = document.getElementById('detail-old-price');

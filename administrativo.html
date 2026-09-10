@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BLYXU Admin — Dashboard Neumórfico</title>
-    <link rel="stylesheet" href="blyxu-style.css?v=catalog-load-more-fix-20260606">
+    <link rel="stylesheet" href="blyxu-style.css?v=motion-lite-20260910">
     <style>
         :root {
             --primary: #a855f7;
@@ -88,6 +88,11 @@
         textarea.form-control { min-height:64px; resize:vertical; line-height:1.4; }
         .admin-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 10px; }
         .admin-form-wide { grid-column:1/-1; }
+        .measurement-panel { display:none; grid-column:1/-1; border:1px solid rgba(168,85,247,0.12); border-radius:12px; padding:14px; background:rgba(255,255,255,0.025); }
+        .measurement-panel.is-visible { display:block; }
+        .measurement-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:12px; }
+        .textile-size-row { display:grid; grid-template-columns:minmax(120px,180px) 1fr; gap:12px; align-items:end; }
+        @media(max-width:640px) { .textile-size-row { grid-template-columns:1fr; } }
         select.form-control { cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23706a8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:30px; }
         select.form-control option { background:#1e1a30; color:#fff; }
 
@@ -1554,6 +1559,63 @@
                                         <div class="form-group">
                                             <label>Tama&ntilde;o / Medida</label>
                                             <input type="text" class="form-control" id="prod-tamano" name="Tamaño">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Tipo de tama&ntilde;o</label>
+                                            <select class="form-control" id="prod-size-kind" name="Tipo Medida">
+                                                <option value="">Normal</option>
+                                                <option value="textil">Textil</option>
+                                                <option value="medidas">Medidas</option>
+                                            </select>
+                                        </div>
+                                        <div class="measurement-panel" id="prod-textile-size-fields">
+                                            <div class="textile-size-row">
+                                                <div class="form-group">
+                                                    <label>Talla textil</label>
+                                                    <select class="form-control" id="prod-textile-size" name="Talla Textil">
+                                                        <option value="">Seleccionar</option>
+                                                        <option value="XS">XS</option>
+                                                        <option value="S">S</option>
+                                                        <option value="M">M</option>
+                                                        <option value="L">L</option>
+                                                        <option value="XL">XL</option>
+                                                        <option value="2XL">2XL</option>
+                                                        <option value="3XL">3XL</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Otra talla</label>
+                                                    <input type="text" class="form-control" id="prod-textile-custom" placeholder="Ej: 4XL, talla unica">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="measurement-panel" id="prod-physical-size-fields">
+                                            <div class="measurement-grid">
+                                                <div class="form-group">
+                                                    <label>Unidad</label>
+                                                    <select class="form-control" id="prod-measure-unit" name="Unidad Medida">
+                                                        <option value="cm">cm</option>
+                                                        <option value="m">m</option>
+                                                        <option value="m3">m3</option>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Ancho</label>
+                                                    <input type="number" class="form-control" id="prod-measure-width" name="Ancho" min="0" step="0.01">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Largo</label>
+                                                    <input type="number" class="form-control" id="prod-measure-length" name="Largo" min="0" step="0.01">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Fondo</label>
+                                                    <input type="number" class="form-control" id="prod-measure-depth" name="Fondo" min="0" step="0.01">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Radio</label>
+                                                    <input type="number" class="form-control" id="prod-measure-radius" name="Radio" min="0" step="0.01">
+                                                </div>
+                                            </div>
                                         </div>
                                         <div class="form-group">
                                             <label>Estado</label>
@@ -4162,6 +4224,6 @@
     
 
 
-    <script src="admin-app.js?v=invoice-payments-20260815"></script>
+    <script src="admin-app.js?v=measurements-detail-20260910"></script>
 </body>
 </html>

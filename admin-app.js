@@ -325,6 +325,114 @@ function cleanProductStyleValue(value) {
     return ['ambos', 'minorista', 'mayorista', 'minorista y mayorista'].includes(clean) ? '' : raw;
 }
 
+function cleanMeasurementValue(value) {
+    return String(value || '').trim().replace(',', '.');
+}
+
+function formatProductPhysicalSizeLabel(data) {
+    const unit = data.unit || 'cm';
+    const radius = cleanMeasurementValue(data.radius);
+    if (radius) return `Radio ${radius} ${unit}`;
+
+    const parts = [
+        ['Ancho', cleanMeasurementValue(data.width)],
+        ['Largo', cleanMeasurementValue(data.length)],
+        ['Fondo', cleanMeasurementValue(data.depth)]
+    ].filter(([, value]) => value);
+
+    return parts.map(([label, value]) => `${label} ${value} ${unit}`).join(' x ');
+}
+
+function parseProductMeasurementText(value) {
+    const text = String(value || '').trim();
+    const parsed = {
+        unit: '',
+        width: '',
+        length: '',
+        depth: '',
+        radius: ''
+    };
+    const unitMatch = text.match(/\b(cm|m3|m)\b/i);
+    if (unitMatch) parsed.unit = unitMatch[1].toLowerCase();
+    Array.from(text.matchAll(/(ancho|largo|fondo|radio)\s*[:\-]?\s*([\d.,]+)/gi)).forEach(match => {
+        const label = normalizeSearchText(match[1]);
+        const measure = match[2];
+        if (label === 'ancho') parsed.width = measure;
+        if (label === 'largo') parsed.length = measure;
+        if (label === 'fondo') parsed.depth = measure;
+        if (label === 'radio') parsed.radius = measure;
+    });
+    return parsed;
+}
+
+function getProductMeasurementFormData() {
+    const kind = getInputValue('prod-size-kind');
+    const textileSize = cleanMeasurementValue(getInputValue('prod-textile-custom')) || getInputValue('prod-textile-size');
+    return {
+        kind,
+        unit: getInputValue('prod-measure-unit') || 'cm',
+        width: cleanMeasurementValue(getInputValue('prod-measure-width')),
+        length: cleanMeasurementValue(getInputValue('prod-measure-length')),
+        depth: cleanMeasurementValue(getInputValue('prod-measure-depth')),
+        radius: cleanMeasurementValue(getInputValue('prod-measure-radius')),
+        textileSize: textileSize.trim()
+    };
+}
+
+function getProductSizeValue() {
+    const data = getProductMeasurementFormData();
+    if (data.kind === 'textil') return data.textileSize || getInputValue('prod-tamano');
+    if (data.kind === 'medidas') return formatProductPhysicalSizeLabel(data) || getInputValue('prod-tamano');
+    return getInputValue('prod-tamano');
+}
+
+function buildProductMeasurementPayload(data = getProductMeasurementFormData()) {
+    return {
+        'Tipo Medida': data.kind,
+        TipoMedida: data.kind,
+        'Unidad Medida': data.unit,
+        UnidadMedida: data.unit,
+        Ancho: data.width,
+        Largo: data.length,
+        Fondo: data.depth,
+        Radio: data.radius,
+        'Talla Textil': data.textileSize,
+        TallaTextil: data.textileSize
+    };
+}
+
+function updateProductMeasurementFields() {
+    const data = getProductMeasurementFormData();
+    const textilePanel = document.getElementById('prod-textile-size-fields');
+    const physicalPanel = document.getElementById('prod-physical-size-fields');
+    if (textilePanel) textilePanel.classList.toggle('is-visible', data.kind === 'textil');
+    if (physicalPanel) physicalPanel.classList.toggle('is-visible', data.kind === 'medidas');
+
+    if (data.kind === 'textil' || data.kind === 'medidas') {
+        setInputValue('prod-tamano', getProductSizeValue());
+    }
+    updateLivePreview();
+}
+
+function initProductMeasurementControls() {
+    [
+        'prod-size-kind',
+        'prod-textile-size',
+        'prod-textile-custom',
+        'prod-measure-unit',
+        'prod-measure-width',
+        'prod-measure-length',
+        'prod-measure-depth',
+        'prod-measure-radius'
+    ].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.addEventListener('input', updateProductMeasurementFields);
+        input.addEventListener('change', updateProductMeasurementFields);
+    });
+    updateProductMeasurementFields();
+}
+
 function normalizeGoogleProduct(product) {
     const styleValue = cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], ''));
     const idVariacion = getProductField(product, ['ID Variacion', 'ID Variación', 'ID VariaciÃ³n', 'idVariacion', 'ID', 'id', 'SKU'], '');
@@ -348,6 +456,13 @@ function normalizeGoogleProduct(product) {
         Galeria: parseAdminGalleryValue(getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], '')),
         Descripcion: getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion'], ''),
         Tamano: getProductField(product, ['Tamano', 'Tamaño', 'Talla'], ''),
+        TipoMedida: getProductField(product, ['Tipo Medida', 'TipoMedida'], ''),
+        UnidadMedida: getProductField(product, ['Unidad Medida', 'UnidadMedida'], ''),
+        Ancho: getProductField(product, ['Ancho'], ''),
+        Largo: getProductField(product, ['Largo'], ''),
+        Fondo: getProductField(product, ['Fondo'], ''),
+        Radio: getProductField(product, ['Radio'], ''),
+        TallaTextil: getProductField(product, ['Talla Textil', 'TallaTextil'], ''),
         Estilo: styleValue,
         SKU: getProductField(product, ['SKU'], ''),
         Estado: getProductField(product, ['Estado'], 'Activo'),
@@ -839,6 +954,8 @@ function buildProductPayload() {
     const categoria = getInputValue('prod-categoria');
     const descripcion = getInputValue('prod-descripcion');
     const imagen = getInputValue('prod-imagen');
+    const measurementData = getProductMeasurementFormData();
+    const tamano = getProductSizeValue();
 
     return {
         'ID Variacion': idVariacion,
@@ -858,9 +975,10 @@ function buildProductPayload() {
         Stock: stock,
         Descripcion: descripcion,
         'Caracteristicas del producto': descripcion,
-        Tamano: getInputValue('prod-tamano'),
-        Talla: getInputValue('prod-tamano'),
-        'Tamaño': getInputValue('prod-tamano'),
+        Tamano: tamano,
+        Talla: measurementData.kind === 'textil' ? measurementData.textileSize : tamano,
+        'Tamaño': tamano,
+        ...buildProductMeasurementPayload(measurementData),
         Color: getInputValue('prod-color'),
         Estilo: getProductStyleValue(),
         Promocion: normalizePromotionValue(document.getElementById('prod-promocion')?.value || 'FALSO'),
@@ -969,6 +1087,11 @@ function buildVariantPayloadFromCard(card) {
     const color = card.querySelector('.var-color')?.value?.trim() || '';
     const estiloInput = card.querySelector('.var-estilo');
     const estilo = estiloInput ? cleanProductStyleValue(estiloInput.value) : getProductStyleValue();
+    const measurementData = getProductMeasurementFormData();
+    const variantMeasurementData = {
+        ...measurementData,
+        textileSize: measurementData.kind === 'textil' && tamano ? tamano : measurementData.textileSize
+    };
 
     return {
         __adminForceCreate: true,
@@ -992,6 +1115,7 @@ function buildVariantPayloadFromCard(card) {
         Tamano: tamano,
         Talla: tamano,
         'TamaÃ±o': tamano,
+        ...buildProductMeasurementPayload(variantMeasurementData),
         Color: color,
         Estilo: estilo,
         SKU: card.querySelector('.var-sku')?.value?.trim() || '',
@@ -1119,6 +1243,14 @@ function resetProductForm() {
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
     setInputValue('prod-estilo', '');
+    setInputValue('prod-size-kind', '');
+    setInputValue('prod-textile-size', '');
+    setInputValue('prod-textile-custom', '');
+    setInputValue('prod-measure-unit', 'cm');
+    setInputValue('prod-measure-width', '');
+    setInputValue('prod-measure-length', '');
+    setInputValue('prod-measure-depth', '');
+    setInputValue('prod-measure-radius', '');
     setInputValue('variation-styles', '');
     setInputValue('variation-sizes', '');
     setInputValue('variation-colors', '');
@@ -1139,6 +1271,7 @@ function resetProductForm() {
     if (vc) vc.innerHTML = '';
     var grpBtn = document.getElementById('btn-save-group');
     if (grpBtn) grpBtn.remove();
+    updateProductMeasurementFields();
 }
 
 function updateCategoryOptions() {
@@ -1544,6 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarouselImageAdmin();
     initProductImageUpload();
     initProductGalleryUpload();
+    initProductMeasurementControls();
     resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
@@ -1851,6 +1985,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             const originalText = btn.textContent;
             btn.textContent = 'Guardando...';
+            const measurementData = getProductMeasurementFormData();
+            const variantTamano = card.querySelector('.var-tamano')?.value || '';
+            const variantMeasurementData = {
+                ...measurementData,
+                textileSize: measurementData.kind === 'textil' && variantTamano ? variantTamano : measurementData.textileSize
+            };
 
                 const data = {
                     'ID Variacion': card.querySelector('.var-id').value,
@@ -1869,9 +2009,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Stock Inicial': Number(card.querySelector('.var-stock')?.value || 12),
                     Descripcion: getInputValue('prod-descripcion'),
                     'Caracteristicas del producto': getInputValue('prod-descripcion'),
-                    Tamano: card.querySelector('.var-tamano')?.value || '',
-                    Talla: card.querySelector('.var-tamano')?.value || '',
+                    Tamano: variantTamano,
+                    Talla: variantTamano,
                     'Tamaño': card.querySelector('.var-tamano')?.value || '',
+                    ...buildProductMeasurementPayload(variantMeasurementData),
                     Color: card.querySelector('.var-color')?.value || '',
                     Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
                     SKU: card.querySelector('.var-sku')?.value || '',
@@ -4007,6 +4148,13 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         var vid = getInventoryVariationId(v) || '-';
         var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
         var vTamano = getProductField(v, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], '');
+        var vTipoMedida = normalizeSearchText(v.TipoMedida || v['Tipo Medida'] || '');
+        var vUnidadMedida = v.UnidadMedida || v['Unidad Medida'] || 'cm';
+        var vAncho = v.Ancho || '';
+        var vLargo = v.Largo || '';
+        var vFondo = v.Fondo || '';
+        var vRadio = v.Radio || '';
+        var vTallaTextil = v.TallaTextil || v['Talla Textil'] || '';
         var vColor = v.Color || '-';
         var vStock = v.Stock || v.Cantidad || 0;
         var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
@@ -4032,6 +4180,13 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio Mayor</label><input class="form-control ve-precio-mayorista" value="' + (v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tipo tama&ntilde;o</label><select class="form-control ve-size-kind" style="padding:6px 10px;font-size:11px;"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option></select></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Unidad</label><select class="form-control ve-measure-unit" style="padding:6px 10px;font-size:11px;"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option></select></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Talla textil</label><input class="form-control ve-textile-size" value="' + escapeHtml(vTallaTextil) + '" placeholder="XS, S, M..." style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Ancho</label><input class="form-control ve-measure-width" value="' + escapeHtml(vAncho) + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Largo</label><input class="form-control ve-measure-length" value="' + escapeHtml(vLargo) + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Fondo</label><input class="form-control ve-measure-depth" value="' + escapeHtml(vFondo) + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Radio</label><input class="form-control ve-measure-radius" value="' + escapeHtml(vRadio) + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '</div>';
         tableHtml += '<div style="display:flex;gap:8px;"><button type="button" class="admin-btn" onclick="guardarVarianteEditada(\'' + vid + '\',\'' + idProducto + '\')" style="width:auto;padding:6px 16px;font-size:10px;background:linear-gradient(135deg,#FFA500,#FF6347);">Guardar cambios</button>';
         tableHtml += '<button type="button" class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:6px 16px;font-size:10px;">Cancelar</button></div>';
@@ -4050,9 +4205,25 @@ window.cerrarVarianteEdicion = function (vid) {
     var row = document.getElementById('var-expand-' + vid);
     if (row) row.style.display = 'none';
 };
+
+function getVariantEditMeasurementPayload(row, tamano = '') {
+    const kind = row.querySelector('.ve-size-kind')?.value || '';
+    const data = {
+        kind,
+        unit: row.querySelector('.ve-measure-unit')?.value || 'cm',
+        width: cleanMeasurementValue(row.querySelector('.ve-measure-width')?.value || ''),
+        length: cleanMeasurementValue(row.querySelector('.ve-measure-length')?.value || ''),
+        depth: cleanMeasurementValue(row.querySelector('.ve-measure-depth')?.value || ''),
+        radius: cleanMeasurementValue(row.querySelector('.ve-measure-radius')?.value || ''),
+        textileSize: cleanMeasurementValue(row.querySelector('.ve-textile-size')?.value || (kind === 'textil' ? tamano : ''))
+    };
+    return buildProductMeasurementPayload(data);
+}
+
 window.guardarVarianteEditada = async function (vid, idProducto) {
     var row = document.getElementById('var-expand-' + vid);
     if (!row) return;
+    var editedTamano = row.querySelector('.ve-tamano')?.value || '';
     var data = {
         __adminOriginalId: vid,
         'ID Variacion': row.querySelector('.ve-id').value,
@@ -4066,9 +4237,10 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
         Cantidad: Number(row.querySelector('.ve-stock').value || 0),
         'Stock Inicial': Number(row.querySelector('.ve-stock').value || 0),
         Descripcion: getInputValue('prod-descripcion'),
-        Tamano: row.querySelector('.ve-tamano')?.value || '',
-        Talla: row.querySelector('.ve-tamano')?.value || '',
+        Tamano: editedTamano,
+        Talla: editedTamano,
         'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
+        ...getVariantEditMeasurementPayload(row, editedTamano),
         Color: row.querySelector('.ve-color').value,
         Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
         SKU: row.querySelector('.ve-sku').value,
@@ -4104,6 +4276,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
     for (var i = 0; i < expandedRows.length; i++) {
         var row = expandedRows[i];
         var vid = row.querySelector('.ve-id')?.value || '';
+        var editedTamano = row.querySelector('.ve-tamano')?.value || '';
         var vdata = {
             __adminOriginalId: row.getAttribute('id')?.replace('var-expand-', '') || vid,
             'ID Variacion': vid,
@@ -4117,9 +4290,10 @@ window.guardarGrupoCompleto = async function (idProducto) {
             Cantidad: Number(row.querySelector('.ve-stock')?.value || 0),
             'Stock Inicial': Number(row.querySelector('.ve-stock')?.value || 0),
             Descripcion: getInputValue('prod-descripcion'),
-            Tamano: row.querySelector('.ve-tamano')?.value || '',
-            Talla: row.querySelector('.ve-tamano')?.value || '',
+            Tamano: editedTamano,
+            Talla: editedTamano,
             'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
+            ...getVariantEditMeasurementPayload(row, editedTamano),
             Color: row.querySelector('.ve-color')?.value || '',
             Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
             SKU: row.querySelector('.ve-sku')?.value || '',
@@ -4176,6 +4350,28 @@ function editarProducto(index) {
     setInputValue('prod-stock-inicial', stockInicialVal);
     setInputValue('prod-descripcion', p.Descripcion || p['Caracteristicas del producto'] || '');
     setInputValue('prod-tamano', p.Tamano || p['Tamano'] || '');
+    var storedSizeKind = normalizeSearchText(p.TipoMedida || p['Tipo Medida'] || '');
+    var storedTextileSize = p.TallaTextil || p['Talla Textil'] || '';
+    var legacyMeasures = parseProductMeasurementText(p.Tamano || p['Tamano'] || '');
+    var editAncho = p.Ancho || legacyMeasures.width || '';
+    var editLargo = p.Largo || legacyMeasures.length || '';
+    var editFondo = p.Fondo || legacyMeasures.depth || '';
+    var editRadio = p.Radio || legacyMeasures.radius || '';
+    var hasPhysicalMeasure = [editAncho, editLargo, editFondo, editRadio].some(function (value) {
+        return value !== undefined && String(value).trim() !== '';
+    });
+    if (!storedSizeKind && storedTextileSize) storedSizeKind = 'textil';
+    if (!storedSizeKind && hasPhysicalMeasure) storedSizeKind = 'medidas';
+    if (!storedTextileSize && storedSizeKind === 'textil') storedTextileSize = p.Tamano || p['Tamano'] || '';
+    setInputValue('prod-size-kind', storedSizeKind);
+    setInputValue('prod-textile-size', storedTextileSize);
+    setInputValue('prod-textile-custom', '');
+    setInputValue('prod-measure-unit', p.UnidadMedida || p['Unidad Medida'] || legacyMeasures.unit || 'cm');
+    setInputValue('prod-measure-width', editAncho);
+    setInputValue('prod-measure-length', editLargo);
+    setInputValue('prod-measure-depth', editFondo);
+    setInputValue('prod-measure-radius', editRadio);
+    updateProductMeasurementFields();
     setInputValue('prod-estilo', cleanProductStyleValue(p.Estilo || ''));
     
     var promoScope = getProductPromotionValue(p, 'FALSO');

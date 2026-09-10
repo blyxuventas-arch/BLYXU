@@ -65,6 +65,8 @@ const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 function initParticles() {
     const canvas = document.getElementById('particles-canvas');
     if (!canvas) return;
+    canvas.remove();
+    return;
     const ctx = canvas.getContext('2d');
     let particles = [];
     const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
@@ -94,6 +96,8 @@ function initParticles() {
 function initWholesaleParticlesLegacy() {
     const canvas = document.getElementById('wholesale-particles');
     if (!canvas) return;
+    canvas.remove();
+    return;
     
     // Configurar estilos del canvas dinámicamente
     canvas.style.position = 'absolute';
@@ -246,6 +250,8 @@ function initWholesaleParticlesLegacy() {
 function initWholesaleParticles() {
     const canvas = document.getElementById('wholesale-particles');
     if (!canvas) return;
+    canvas.remove();
+    return;
 
     canvas.style.position = 'absolute';
     canvas.style.inset = '0';
@@ -547,6 +553,39 @@ function getShuffledProducts(products, seed = catalogShuffleSeed) {
     });
 }
 
+function getCategoryVariedProducts(products, seed = catalogShuffleSeed) {
+    const groups = new Map();
+
+    products.forEach(product => {
+        const categoryKey = normalizeSearchText(getProductCategory(product) || 'sin categoria');
+        if (!groups.has(categoryKey)) groups.set(categoryKey, []);
+        groups.get(categoryKey).push(product);
+    });
+
+    const categoryGroups = Array.from(groups.entries())
+        .map(([categoryKey, items]) => ({
+            categoryKey,
+            items: getShuffledProducts(items, `${seed}|${categoryKey}`)
+        }))
+        .sort((a, b) => hashText(`${seed}|category|${a.categoryKey}`) - hashText(`${seed}|category|${b.categoryKey}`));
+
+    const mixed = [];
+    let hasProducts = true;
+
+    while (hasProducts) {
+        hasProducts = false;
+        categoryGroups.forEach(group => {
+            const product = group.items.shift();
+            if (product) {
+                mixed.push(product);
+                hasProducts = true;
+            }
+        });
+    }
+
+    return mixed;
+}
+
 function readCache(key) {
     try {
         const value = JSON.parse(localStorage.getItem(key) || 'null');
@@ -664,6 +703,13 @@ function normalizeGoogleProduct(product) {
         Galeria: galeria,
         Color: getProductField(product, ['Color', 'Color ', 'color'], ''),
         Tamano: getProductField(product, ['Tama\u00f1o', 'Tamano', 'Tamaño', 'tamano'], ''),
+        TipoMedida: getProductField(product, ['Tipo Medida', 'TipoMedida'], ''),
+        UnidadMedida: getProductField(product, ['Unidad Medida', 'UnidadMedida'], ''),
+        Ancho: getProductField(product, ['Ancho'], ''),
+        Largo: getProductField(product, ['Largo'], ''),
+        Fondo: getProductField(product, ['Fondo'], ''),
+        Radio: getProductField(product, ['Radio'], ''),
+        TallaTextil: getProductField(product, ['Talla Textil', 'TallaTextil'], ''),
         Estilo: cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
         Descripcion: getProductField(product, ['Caracter\u00edsticas del producto', 'Caracteristicas del producto', 'Características del producto', 'Caractreristicas del producto', 'Descripcion', 'descripcion'], ''),
         SKU: getProductField(product, ['SKU', 'sku'], ''),
@@ -1291,8 +1337,8 @@ function renderHomeCategories() {
     }
 
     track.classList.toggle('is-centered', categories.length <= 4);
-    track.innerHTML = categories.map((category, index) => `
-        <button class="home-category-pill ${index === 0 ? 'active' : ''}" type="button" data-category="${escapeHtml(category.label)}">
+    track.innerHTML = categories.map(category => `
+        <button class="home-category-pill" type="button" data-category="${escapeHtml(category.label)}">
             <span>${escapeHtml(category.label)}</span>
             <small>${category.count}</small>
         </button>
@@ -1325,8 +1371,6 @@ function renderHomeCategories() {
         if (!buttons.length || track.matches(':hover')) return;
         currentIndex = nextIndex % buttons.length;
         const nextButton = buttons[currentIndex];
-        buttons.forEach(item => item.classList.remove('active'));
-        nextButton.classList.add('active');
         track.scrollTo({
             left: Math.max(0, nextButton.offsetLeft - 12),
             behavior: 'smooth'
@@ -2202,6 +2246,96 @@ function renderWholesaleCatalogProducts() {
     });
 }
 
+function getProductMeasurementData(product) {
+    let width = String(product?.Ancho || product?.ancho || '').trim();
+    let length = String(product?.Largo || product?.largo || '').trim();
+    let depth = String(product?.Fondo || product?.fondo || '').trim();
+    let radius = String(product?.Radio || product?.radio || '').trim();
+    const sizeText = String(product?.Tamano || product?.['Tamaño'] || product?.['TamaÃ±o'] || product?.tamaño || product?.Talla || '').trim();
+    let textileSize = String(product?.TallaTextil || product?.['Talla Textil'] || '').trim();
+    let kind = normalizeSearchText(product?.TipoMedida || product?.['Tipo Medida'] || '');
+    let unit = String(product?.UnidadMedida || product?.['Unidad Medida'] || '').trim();
+
+    if (![width, length, depth, radius].some(Boolean)) {
+        const unitMatch = sizeText.match(/\b(cm|m3|m)\b/i);
+        if (unitMatch) unit = unit || unitMatch[1].toLowerCase();
+        const measureMatches = Array.from(sizeText.matchAll(/(ancho|largo|fondo|radio)\s*[:\-]?\s*([\d.,]+)/gi));
+        measureMatches.forEach(match => {
+            const label = normalizeSearchText(match[1]);
+            const value = match[2];
+            if (label === 'ancho') width = value;
+            if (label === 'largo') length = value;
+            if (label === 'fondo') depth = value;
+            if (label === 'radio') radius = value;
+        });
+    }
+
+    if (!textileSize && kind === 'textil') textileSize = sizeText;
+    if (!kind && textileSize) kind = 'textil';
+    if (!kind && [width, length, depth, radius].some(Boolean)) kind = 'medidas';
+
+    return {
+        kind,
+        unit: unit || 'cm',
+        width,
+        length,
+        depth,
+        radius,
+        textileSize
+    };
+}
+
+function hasPhysicalProductMeasurements(product) {
+    const data = getProductMeasurementData(product);
+    return data.kind === 'medidas' && [data.width, data.length, data.depth, data.radius].some(Boolean);
+}
+
+function getProductMeasurementMarkup(product) {
+    const data = getProductMeasurementData(product);
+
+    if (data.kind === 'textil' && data.textileSize) {
+        const sizes = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+        const normalizedActive = normalizeSearchText(data.textileSize);
+        const hasKnownSize = sizes.some(size => normalizeSearchText(size) === normalizedActive);
+        const visibleSizes = hasKnownSize ? sizes : [data.textileSize];
+        return `
+            <div class="product-card-textile-size" aria-label="Talla textil ${escapeHtml(data.textileSize)}">
+                ${visibleSizes.map(size => `<span class="${normalizeSearchText(size) === normalizedActive ? 'active' : ''}">${escapeHtml(size)}</span>`).join('')}
+            </div>
+        `;
+    }
+
+    if (!hasPhysicalProductMeasurements(product)) return '';
+
+    const dimensionItems = data.radius
+        ? [{ label: 'Radio', value: data.radius }]
+        : [
+            { label: 'Ancho', value: data.width },
+            { label: 'Largo', value: data.length },
+            { label: 'Fondo', value: data.depth }
+        ].filter(item => item.value);
+    const maxDimension = Math.max(...dimensionItems.map(item => parseCatalogAmount(item.value)), 1);
+
+    return `
+        <div class="product-card-measure product-card-specs" aria-label="Medidas del producto">
+            <div class="product-card-specs-title">Medidas</div>
+            ${dimensionItems.map(item => {
+                const amount = parseCatalogAmount(item.value);
+                const width = Math.max(14, Math.min(100, Math.round((amount / maxDimension) * 100)));
+                return `
+                    <div class="product-card-spec-row">
+                        <span class="product-card-spec-label">${escapeHtml(item.label)}</span>
+                        <span class="product-card-spec-bar" aria-hidden="true">
+                            <span style="width:${width}%"></span>
+                        </span>
+                        <span class="product-card-spec-value">${escapeHtml(item.value)} ${escapeHtml(data.unit)}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
 function getVariantSummary(product) {
     function isCatalogOnlyValue(value) {
         const clean = normalizeSearchText(value);
@@ -2219,7 +2353,7 @@ function getVariantSummary(product) {
 
     const parts = [
         product.Estilo || product.estilo,
-        product.Tamano || product.tamano || product.Talla,
+        hasPhysicalProductMeasurements(product) ? '' : (product.Tamano || product.tamano || product.Talla),
         product.Color || product.color
     ]
         .map(value => String(value || '').trim())
@@ -2251,7 +2385,11 @@ function renderProducts(products, options = {}) {
         ? collapseSearchResultsToGeneralReferences(searched, filteredByPrice)
         : searched;
 
-    const filtered = getShuffledProducts(collapseCatalogProductsToRepresentatives(visibleResults, mode));
+    const representativeProducts = collapseCatalogProductsToRepresentatives(visibleResults, mode);
+    const isGeneralCatalogView = normalizeSearchText(filter) === 'todos' && !normalizeSearchText(searchQuery);
+    const filtered = isGeneralCatalogView
+        ? getCategoryVariedProducts(representativeProducts, `${catalogShuffleSeed}|${gridId}|${mode}|${priceFilter}`)
+        : getShuffledProducts(representativeProducts);
 
     if (!filtered.length) {
         const categoryLabel = filter !== 'todos' ? ` en la categor\u00eda ${escapeHtml(filter)}` : '';
