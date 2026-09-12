@@ -8,7 +8,7 @@
     <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="stylesheet" href="blyxu-style.css?v=motion-lite-20260910">
+    <link rel="stylesheet" href="blyxu-style.css?v=apple-font-20260910">
     <style>
         .orders-page {
             position: relative;
@@ -33,8 +33,8 @@
         .orders-intro,
         .orders-login,
         .orders-panel {
-            background: rgba(16, 8, 30, 0.78);
-            border: 1px solid rgba(246, 200, 76, 0.16);
+            background: rgba(17, 17, 20, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.09);
             border-radius: 18px;
             box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(18px);
@@ -47,12 +47,12 @@
             justify-content: center;
             min-height: 320px;
             background:
-                linear-gradient(145deg, rgba(16, 8, 30, 0.86), rgba(33, 13, 54, 0.82)),
-                radial-gradient(circle at 16% 20%, rgba(246, 200, 76, 0.12), transparent 30%);
+                linear-gradient(145deg, rgba(17, 17, 20, 0.92), rgba(20, 20, 24, 0.88)),
+                radial-gradient(circle at 16% 20%, rgba(255, 255, 255, 0.04), transparent 30%);
         }
 
         .orders-kicker {
-            color: var(--nav-gold);
+            color: rgba(216, 209, 194, 0.72);
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 2.4px;
@@ -61,11 +61,11 @@
         }
 
         .orders-intro h1 {
-            font-family: Georgia, 'Times New Roman', serif;
+            font-family: "Inter", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
             font-size: clamp(34px, 6vw, 58px);
             line-height: 0.94;
-            letter-spacing: 0;
-            color: #fff;
+            letter-spacing: -0.5px;
+            color: #f4f2ee;
             margin: 0 0 16px;
         }
 
@@ -104,9 +104,9 @@
         .orders-form input {
             width: 100%;
             min-height: 54px;
-            border: 1px solid rgba(168, 85, 247, 0.34);
+            border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.34);
+            background: rgba(255, 255, 255, 0.04);
             color: #fff;
             padding: 0 16px;
             font: inherit;
@@ -117,9 +117,9 @@
         }
 
         .orders-form input:focus {
-            border-color: rgba(246, 200, 76, 0.82);
-            background: rgba(0, 0, 0, 0.44);
-            box-shadow: 0 0 0 3px rgba(246, 200, 76, 0.1), 0 0 28px rgba(168, 85, 247, 0.18);
+            border-color: rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.055);
         }
 
         .orders-form button,
@@ -127,21 +127,23 @@
             min-height: 50px;
             border: 0;
             border-radius: 12px;
-            background: linear-gradient(135deg, #ffe477, #d8ac16 55%, #f4c441);
-            color: #09030f;
+            background: rgba(255, 255, 255, 0.92);
+            color: #0a0a0c;
             font: inherit;
             font-size: 12px;
             font-weight: 900;
             letter-spacing: 1px;
             text-transform: uppercase;
             cursor: pointer;
-            transition: transform 0.2s ease, filter 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
         }
 
         .orders-form button:hover,
         .orders-action-btn:hover {
-            transform: translateY(-1px);
-            filter: brightness(1.06);
+            transform: translateY(-2px);
+            background: #fff;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
         }
 
         .orders-form button:disabled {
@@ -212,9 +214,9 @@
         }
 
         .orders-tab.active {
-            border-color: rgba(246, 200, 76, 0.45);
-            background: rgba(246, 200, 76, 0.12);
-            color: #fff4c3;
+            border-color: rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
         }
 
         .orders-results {
@@ -254,8 +256,8 @@
         .order-status {
             border-radius: 999px;
             padding: 6px 10px;
-            background: rgba(168, 85, 247, 0.12);
-            color: #d8b4fe;
+            background: rgba(255, 255, 255, 0.07);
+            color: rgba(216, 209, 194, 0.82);
             font-size: 11px;
             font-weight: 900;
             white-space: nowrap;
@@ -397,7 +399,7 @@
 
         .items-more-note {
             padding: 10px;
-            border: 1px dashed rgba(246, 200, 76, 0.22);
+            border: 1px dashed rgba(255, 255, 255, 0.12);
             border-radius: 12px;
             color: rgba(255, 255, 255, 0.62);
             font-size: 12px;
@@ -405,7 +407,7 @@
         }
 
         .invoice-card .order-card-head {
-            background: linear-gradient(90deg, rgba(246, 200, 76, 0.1), rgba(168, 85, 247, 0.08));
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
         }
 
         .invoice-total {
@@ -1027,6 +1029,12 @@
         </ul>
 
         <div class="nav-actions">
+            <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="M16.5 16.5 21 21"></path>
+                </svg>
+            </button>
             <div class="nav-icon" id="cart-btn" onclick="openCart()" role="button" tabindex="0" aria-label="Ver Carrito de Compras" style="position:relative">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0" />
@@ -1134,7 +1142,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=lite-cursor-motion-lite-20260910"></script>
+    <script src="blyxu-lite.js?v=lite-url-clean-safe-20260910"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');

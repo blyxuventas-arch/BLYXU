@@ -61,6 +61,21 @@ let inventorySpotlightRendered = false;
 let googleIdentityLoadPromise = null;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 
+function cleanBrowserUrl() {
+    try {
+        if (!window.history?.replaceState) return;
+        if (!/^https?:$/.test(window.location.protocol)) return;
+        const { pathname, search, hash } = window.location;
+        const nextPath = pathname.replace(/\/index\.html$/i, '/');
+        const nextHash = (hash === '#' || hash === '#inicio') ? '' : hash;
+        if (nextPath !== pathname || nextHash !== hash) {
+            history.replaceState(null, '', `${nextPath}${search}${nextHash}`);
+        }
+    } catch (error) {
+        console.warn('No se pudo limpiar la URL:', error);
+    }
+}
+
 // -- PARTICLES --
 function initParticles() {
     const canvas = document.getElementById('particles-canvas');
@@ -3382,6 +3397,27 @@ function setWholesalePriceFilter(priceFilter) {
     renderWholesaleCatalogProducts();
 }
 
+function openCatalogSearch() {
+    const input = document.getElementById('catalog-search') || document.getElementById('wholesale-catalog-search');
+    const target = document.getElementById('coleccion') || document.getElementById('catalogo-mayorista');
+
+    if (!input) {
+        window.location.href = 'index.html#coleccion';
+        return;
+    }
+
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    setTimeout(() => {
+        input.focus({ preventScroll: true });
+        input.select?.();
+    }, 360);
+}
+
+window.openCatalogSearch = openCatalogSearch;
+
 function initCatalogSearch() {
     const input = document.getElementById('catalog-search');
     const wholesaleInput = document.getElementById('wholesale-catalog-search');
@@ -4979,6 +5015,8 @@ async function checkout(skipPrompt = false) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    cleanBrowserUrl();
+    window.addEventListener('hashchange', cleanBrowserUrl);
     if (document.body?.dataset.catalogMode === 'wholesale') {
         activeCatalogMode = 'wholesale';
         setCartMode('wholesale');

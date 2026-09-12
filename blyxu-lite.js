@@ -8,6 +8,21 @@ let siteConfig = {};
 let configLoadPromise = null;
 let cart = loadLiteCart();
 
+function cleanBrowserUrl() {
+    try {
+        if (!window.history?.replaceState) return;
+        if (!/^https?:$/.test(window.location.protocol)) return;
+        const { pathname, search, hash } = window.location;
+        const nextPath = pathname.replace(/\/index\.html$/i, '/');
+        const nextHash = (hash === '#' || hash === '#inicio') ? '' : hash;
+        if (nextPath !== pathname || nextHash !== hash) {
+            history.replaceState(null, '', `${nextPath}${search}${nextHash}`);
+        }
+    } catch (error) {
+        console.warn('No se pudo limpiar la URL:', error);
+    }
+}
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
         '&': '&amp;',
@@ -300,6 +315,12 @@ function closeCart() {
     document.getElementById('cart-sidebar')?.classList.remove('open');
 }
 
+function openCatalogSearch() {
+    window.location.href = 'index.html#coleccion';
+}
+
+window.openCatalogSearch = openCatalogSearch;
+
 function renderFloatingWhatsApp() {
     const phone = getCommerceWhatsAppPhone();
     if (!phone || document.getElementById('floating-whatsapp')) return;
@@ -316,6 +337,8 @@ function renderFloatingWhatsApp() {
 function renderPromoWidget() {}
 
 document.addEventListener('DOMContentLoaded', () => {
+    cleanBrowserUrl();
+    window.addEventListener('hashchange', cleanBrowserUrl);
     initCustomCursor();
     initParticles();
     initNavbar();

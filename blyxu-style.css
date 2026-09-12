@@ -1,6 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Bebas+Neue&family=Barlow+Condensed:wght@700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
+
+    --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
     --bg-dark: #0a0514;
     --bg-card: #110a20;
     --primary: #9b2cfa;
@@ -28,11 +30,13 @@ html {
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: var(--font-apple);
     background: var(--bg-dark);
     color: var(--text-main);
     overflow-x: hidden;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -414,9 +418,9 @@ body {
 
 .nav-icon:hover,
 .nav-icon-btn:hover {
-    background: var(--primary);
-    border-color: var(--primary);
-    box-shadow: 0 0 20px var(--glow);
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(255,255,255,.3) !important;
+    box-shadow: 0 0 16px rgba(255,255,255,.08) !important;
 }
 
 .cart-badge {
@@ -426,12 +430,37 @@ body {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: var(--secondary);
+    background: rgba(255,255,255,.92);
+    color: #0a0a0c;
     font-size: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
+    font-weight: 800;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ── Cart icon green flash when item added ── */
+@keyframes cartIconFlashGreen {
+    0%   { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.12); box-shadow: none; }
+    25%  { background: rgba(34,197,94,.28); border-color: rgba(34,197,94,.8); box-shadow: 0 0 0 4px rgba(34,197,94,.22), 0 0 24px rgba(34,197,94,.45); }
+    55%  { background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.55); box-shadow: 0 0 0 2px rgba(34,197,94,.12), 0 0 14px rgba(34,197,94,.3); }
+    100% { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.12); box-shadow: none; }
+}
+
+@keyframes cartBadgePop {
+    0%   { transform: scale(1); background: rgba(255,255,255,.92); }
+    30%  { transform: scale(1.45); background: #22c55e; color: #fff; }
+    65%  { transform: scale(1.15); }
+    100% { transform: scale(1); background: rgba(255,255,255,.92); color: #0a0a0c; }
+}
+
+.cart-highlight-active {
+    animation: cartIconFlashGreen 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.cart-highlight-active .cart-badge {
+    animation: cartBadgePop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 .nav-toggle {
@@ -8347,3 +8376,1065 @@ textarea {
 *::after {
     animation-iteration-count: 1 !important;
 }
+
+
+/* ===========================================================================
+   ███████╗████████╗██╗   ██╗██████╗ ██╗ ██████╗     ███╗   ██╗ ██████╗ ██╗██████╗
+   ██╔════╝╚══██╔══╝██║   ██║██╔══██╗██║██╔═══██╗    ████╗  ██║██╔═══██╗██║██╔══██╗
+   ███████╗   ██║   ██║   ██║██║  ██║██║██║   ██║    ██╔██╗ ██║██║   ██║██║██████╔╝
+   ╚════██║   ██║   ██║   ██║██║  ██║██║██║   ██║    ██║╚██╗██║██║   ██║██║██╔══██╗
+   ███████║   ██║   ╚██████╔╝██████╔╝██║╚██████╔╝    ██║ ╚████║╚██████╔╝██║██║  ██║
+   ╚══════╝   ╚═╝    ╚═════╝ ╚═════╝ ╚═╝ ╚═════╝     ╚═╝  ╚═══╝ ╚═════╝ ╚═╝╚═╝  ╚═╝
+
+   BLYXU · STUDIO NOIR OVERRIDE — v2 · Unified with Admin aesthetic
+   Estrategia: override al final para máxima especificidad sin romper estructura.
+   Paleta: negro neutro #0a0a0c, crema #f4f2ee, beige apagado #d8d1c2, sin neón.
+   =========================================================================== */
+
+/* ── 1. GOOGLE FONT: Inter ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+/* ── 2. VARIABLES ROOT ── */
+:root {
+    /* Fondo */
+    --bg-dark:           #0a0a0c;
+    --bg-card:           #111114;
+    --bg-card-alt:       #17171b;
+
+    /* Textos */
+    --text-main:         #f4f2ee;
+    --text-muted:        rgba(244,242,238,.58);
+    --text-dim:          rgba(244,242,238,.36);
+
+    /* Acento unificado (beige/crema en lugar de oro brillante) */
+    --primary:           #d8d1c2;
+    --secondary:         #b8b0a5;
+    --accent-gold:       #c8bfa8;
+    --nav-gold:          #d8d1c2;
+
+    /* Bordes y superficies */
+    --glass-bg:          rgba(17,17,20,.88);
+    --glass-border:      rgba(255,255,255,.085);
+    --surface-1:         rgba(255,255,255,.028);
+    --surface-2:         rgba(255,255,255,.055);
+    --glow:              rgba(255,255,255,.06);
+
+    /* Tipografía */
+    --font-noir: "Inter", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── 3. BODY & TIPOGRAFÍA ── */
+body {
+    font-family: var(--font-noir) !important;
+    font-size: 14px;
+    letter-spacing: 0;
+    background:
+        radial-gradient(circle at 18% -8%, rgba(255,255,255,.04), transparent 30%),
+        radial-gradient(circle at 84% 6%,  rgba(255,255,255,.025), transparent 26%),
+        linear-gradient(180deg, #101012 0%, #070708 100%) !important;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Anula gradiente animado del fondo — demasiado saturado */
+.bg-animation {
+    background:
+        radial-gradient(circle at 22% 12%, rgba(255,255,255,.038), transparent 32%),
+        linear-gradient(180deg, #0e0e10 0%, #07070a 100%) !important;
+    animation: none !important;
+}
+.bg-animation::before,
+.bg-animation::after {
+    display: none !important;
+}
+
+/* ── 4. CURSOR (neutralizar el anillo magenta) ── */
+.cursor-dot {
+    background: rgba(255,255,255,.82) !important;
+    box-shadow: 0 0 8px rgba(255,255,255,.28) !important;
+    width: 6px !important;
+    height: 6px !important;
+}
+.cursor-ring {
+    border-color: rgba(255,255,255,.32) !important;
+    background: rgba(255,255,255,.04) !important;
+    box-shadow: none !important;
+}
+#blyxu-cursor.is-hovering .cursor-ring {
+    border-color: rgba(216,209,194,.48) !important;
+    background: rgba(216,209,194,.06) !important;
+}
+
+/* ── 5. NAVBAR ── */
+.navbar.scrolled {
+    background: rgba(10,10,12,.86) !important;
+    border-bottom-color: rgba(255,255,255,.075) !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,.4) !important;
+    backdrop-filter: blur(18px) !important;
+}
+
+.nav-links a {
+    color: var(--text-muted) !important;
+    font-weight: 600 !important;
+    letter-spacing: .4px !important;
+    text-transform: none !important;
+    font-size: 13.5px !important;
+    border-color: transparent !important;
+}
+.nav-links a:hover,
+.nav-links a.active {
+    color: var(--text-main) !important;
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    box-shadow: none !important;
+    transform: translateY(-1px) scale(1.01) !important;
+}
+.nav-links a::after {
+    background: rgba(216,209,194,.62) !important;
+    box-shadow: none !important;
+}
+
+.nav-icon:hover,
+.nav-icon-btn:hover {
+    background: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.18) !important;
+    box-shadow: none !important;
+}
+
+.customer-account-btn:hover,
+.customer-account-btn.is-logged {
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.08) !important;
+    color: var(--text-main) !important;
+}
+
+/* ── 6. BANNER PRINCIPAL ── */
+.main-banner-btn {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    border: none !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,.32) !important;
+    font-weight: 700 !important;
+    text-transform: none !important;
+    letter-spacing: .2px !important;
+    border-radius: 12px !important;
+}
+.main-banner-btn:hover {
+    background: #fff !important;
+    box-shadow: 0 14px 40px rgba(0,0,0,.4) !important;
+    transform: scale(1.03) !important;
+}
+.main-banner-btn:nth-child(2) {
+    background: rgba(255,255,255,.07) !important;
+    color: rgba(244,242,238,.88) !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+}
+.main-banner-btn:nth-child(2):hover {
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(255,255,255,.22) !important;
+}
+.main-banner-dot.active {
+    background: rgba(216,209,194,.72) !important;
+    box-shadow: none !important;
+}
+.main-banner-arrow:hover {
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: none !important;
+}
+
+/* ── 7. SVG TÍTULO BLYXU (glow a blanco neutro) ── */
+.blyxu-svg-title {
+    filter:
+        drop-shadow(0 0 10px rgba(255,255,255,.22))
+        drop-shadow(0 0 28px rgba(255,255,255,.1)) !important;
+}
+@keyframes blyxuSvgGlowNoir {
+    0%, 100% { filter: drop-shadow(0 0 8px rgba(255,255,255,.18)) drop-shadow(0 0 22px rgba(255,255,255,.08)); }
+    50%       { filter: drop-shadow(0 0 16px rgba(255,255,255,.32)) drop-shadow(0 0 40px rgba(255,255,255,.14)); }
+}
+.blyxu-svg-title { animation: blyxuSvgGlowNoir 4s ease-in-out infinite !important; }
+
+/* ── 8. SECTION TÍTULOS ── */
+.section-title {
+    letter-spacing: -.5px !important;
+    font-weight: 820 !important;
+    color: var(--text-main) !important;
+}
+.gradient,
+.hero-title .gradient {
+    background: linear-gradient(135deg, #f4f2ee 0%, #c8bfa8 60%, #8a8279 100%) !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+/* ── 9. FILTROS DE CATÁLOGO ── */
+.category-select-wrap {
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(255,255,255,.04) !important;
+    box-shadow: none !important;
+}
+.category-select-wrap:focus-within,
+.category-select-wrap:hover {
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.07) !important;
+    box-shadow: none !important;
+    transform: translateY(-1px) !important;
+}
+.category-select-wrap svg { color: rgba(216,209,194,.72) !important; }
+.category-select-wrap::after { border-top-color: rgba(216,209,194,.72) !important; }
+
+.price-slider-wrap {
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(255,255,255,.04) !important;
+    box-shadow: none !important;
+}
+.price-slider-wrap:hover,
+.price-slider-wrap:focus-within {
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.07) !important;
+    box-shadow: none !important;
+    transform: translateY(-1px) !important;
+}
+.price-slider-wrap svg { color: rgba(216,209,194,.72) !important; }
+.price-slider-wrap input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, rgba(216,209,194,.72) 0 var(--price-progress, 100%), rgba(255,255,255,.14) var(--price-progress, 100%) 100%) !important;
+}
+.price-slider-wrap input[type="range"]::-webkit-slider-thumb {
+    background: rgba(216,209,194,.9) !important;
+    border-color: rgba(255,255,255,.8) !important;
+    box-shadow: none !important;
+}
+
+.smart-search input:focus {
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.055) !important;
+}
+
+/* ── 10. TARJETAS DE PRODUCTO ── */
+.product-card {
+    background: #111114 !important;
+    border-color: rgba(255,255,255,.07) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,.3) !important;
+}
+@media (hover: hover) and (pointer: fine) {
+    .product-card:hover {
+        border-color: rgba(255,255,255,.16) !important;
+        box-shadow: 0 16px 48px rgba(0,0,0,.48), 0 0 0 1px rgba(255,255,255,.06) !important;
+        transform: translateY(-4px) !important;
+    }
+}
+.product-card-img {
+    background: linear-gradient(135deg, #16161a, #0d0d10) !important;
+}
+.product-card-quick {
+    background: rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(8px) !important;
+}
+.product-card-favorite:hover,
+.product-card-favorite.is-saved {
+    border-color: rgba(216,209,194,.5) !important;
+    background: rgba(216,209,194,.1) !important;
+    color: var(--nav-gold) !important;
+}
+.badge-new { background: rgba(255,255,255,.18) !important; color: #fff !important; }
+.product-card-price.discount-active {
+    color: #e8dfc4 !important;
+    text-shadow: none !important;
+    animation: none !important;
+}
+.product-card-specs-title { color: rgba(216,209,194,.72) !important; }
+.product-card-spec-bar > span {
+    background: linear-gradient(90deg, rgba(216,209,194,.8), rgba(216,209,194,.4)) !important;
+    background-size: 100% 100% !important;
+    box-shadow: none !important;
+    animation: productSpecFill .6s ease-out both !important;
+}
+.product-card-textile-size span.active {
+    border-color: rgba(216,209,194,.6) !important;
+    background: rgba(216,209,194,.1) !important;
+    box-shadow: none !important;
+}
+
+/* ── 11. BOTONES GLOBALES ── */
+.btn-add-cart {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28) !important;
+}
+.btn-add-cart:hover {
+    box-shadow: 0 12px 32px rgba(0,0,0,.38) !important;
+    transform: translateY(-2px) !important;
+    background: #fff !important;
+}
+.btn-checkout {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28) !important;
+}
+.btn-checkout:hover {
+    box-shadow: 0 14px 34px rgba(0,0,0,.36) !important;
+}
+.btn-filter {
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    box-shadow: none !important;
+}
+.btn-filter:hover {
+    background: rgba(255,255,255,.09) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: none !important;
+}
+.btn-mercadopago {
+    box-shadow: 0 8px 22px rgba(0,158,227,.24) !important;
+}
+
+/* ── 12. SPINNER / LOADING ── */
+.spinner {
+    border-color: rgba(255,255,255,.1) !important;
+    border-top-color: rgba(216,209,194,.72) !important;
+}
+
+/* ── 13. CARRITO SIDEBAR ── */
+.cart-sidebar {
+    background: #111114 !important;
+    border-left-color: rgba(255,255,255,.08) !important;
+}
+.cart-item-price { color: rgba(216,209,194,.88) !important; }
+.cart-item-qty { border-color: rgba(255,255,255,.12) !important; }
+.cart-item-qty button {
+    background: rgba(255,255,255,.07) !important;
+    color: rgba(216,209,194,.82) !important;
+}
+.cart-item-qty button:hover { background: rgba(255,255,255,.14) !important; }
+.cart-note-input:focus { border-color: rgba(255,255,255,.22) !important; }
+.cart-total { font-weight: 800 !important; }
+
+/* ── 14. PANEL DE PAGO (CART CHECKOUT) ── */
+.cart-payment-card {
+    background: linear-gradient(160deg, #151519 0%, #0d0d10 100%) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    box-shadow: 0 24px 60px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+.cart-payment-kicker { color: rgba(216,209,194,.72) !important; }
+.cart-payment-badge {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(216,209,194,.82) !important;
+}
+.cart-payment-tab.active {
+    background: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+.cart-input-ctrl:focus {
+    border-color: rgba(255,255,255,.28) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.055) !important;
+}
+.cart-summary-line.cart-summary-total strong {
+    color: rgba(216,209,194,.92) !important;
+    text-shadow: none !important;
+}
+.btn-cart-checkout-main {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28) !important;
+}
+.btn-cart-checkout-main:hover:not(:disabled) {
+    background: #fff !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.36) !important;
+    transform: translateY(-2px) !important;
+}
+.btn-cart-checkout-main.btn-ws-mode {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 24px rgba(16,185,129,.28) !important;
+}
+.cart-btn-browse {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,.28) !important;
+}
+.cart-btn-browse:hover {
+    box-shadow: 0 10px 26px rgba(0,0,0,.36) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── 15. PANEL MAYORISTA (OVERLAY) ── */
+.wholesale-overlay {
+    background:
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,.025), transparent 30%),
+        linear-gradient(180deg, #08080a 0%, #0d0d10 50%, #050507 100%) !important;
+}
+.wholesale-overlay::before,
+.wholesale-overlay::after { opacity: .18 !important; }
+
+.wholesale-panel {
+    background:
+        radial-gradient(circle at 50% -14%, rgba(255,255,255,.06), transparent 32%),
+        linear-gradient(180deg, rgba(20,20,24,.96), rgba(12,12,15,.98)) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    box-shadow:
+        0 34px 90px rgba(0,0,0,.72),
+        0 0 0 1px rgba(255,255,255,.06),
+        inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.wholesale-panel::before {
+    text-shadow: none !important;
+    color: var(--text-main) !important;
+}
+.wholesale-kicker {
+    color: rgba(216,209,194,.7) !important;
+    letter-spacing: 3px !important;
+}
+.wholesale-form input {
+    border-color: rgba(255,255,255,.14) !important;
+    background: rgba(255,255,255,.04) !important;
+    box-shadow: none !important;
+}
+.wholesale-form input:focus {
+    border-color: rgba(255,255,255,.3) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.055) !important;
+}
+.wholesale-form button {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,.28) !important;
+    font-weight: 800 !important;
+}
+.wholesale-form button::before { display: none !important; }
+.wholesale-form button:hover {
+    background: #fff !important;
+    filter: none !important;
+    box-shadow: 0 16px 36px rgba(0,0,0,.36) !important;
+}
+.wholesale-close {
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(244,242,238,.72) !important;
+}
+.wholesale-close:hover {
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+}
+
+/* ── 16. HERO SECTIONS ── */
+.hero-tag {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(216,209,194,.82) !important;
+}
+.hero-tag .dot { background: rgba(216,209,194,.72) !important; }
+.hero-sizes span:hover,
+.hero-sizes span.active {
+    background: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: none !important;
+}
+
+/* ── 17. MARQUEE / CATEGORÍAS ── */
+.home-category-pill {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.04) !important;
+}
+.home-category-pill:hover,
+.home-category-pill.active {
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.09) !important;
+    color: #fff !important;
+    box-shadow: none !important;
+}
+
+/* ── 18. INLINE PROMO BANNER ── */
+.inline-promo-banner {
+    background: rgba(255,255,255,.04) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+.inline-promo-icon {
+    background: rgba(255,255,255,.1) !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+.inline-promo-timer { color: rgba(216,209,194,.88) !important; }
+
+/* ── 19. BRAND LOADER ── */
+.brand-loader {
+    background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.04), rgba(10,10,12,.96) 52%) !important;
+}
+.brand-loader-card img {
+    filter: none !important;
+    animation: none !important;
+}
+.brand-loader-progress {
+    background: linear-gradient(90deg, rgba(216,209,194,.7), rgba(255,255,255,.88)) !important;
+}
+
+/* ── 20. FOOTER ── */
+.footer {
+    border-top-color: rgba(255,255,255,.07) !important;
+    background: rgba(10,10,12,.98) !important;
+}
+.footer h4 { color: rgba(216,209,194,.7) !important; font-weight: 720 !important; }
+.footer a:hover { color: var(--text-main) !important; }
+.footer-bottom { border-top-color: rgba(255,255,255,.06) !important; }
+.footer-social-icon-link svg {
+    stroke: rgba(216,209,194,.62) !important;
+    fill: none !important;
+}
+.footer-social-icon-link:hover svg { stroke: #fff !important; }
+.footer-search input:focus {
+    border-color: rgba(255,255,255,.22) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.04) !important;
+}
+
+/* ── 21. CONTACTO ── */
+.contact-card {
+    border-color: rgba(255,255,255,.09) !important;
+    background: rgba(17,17,20,.88) !important;
+}
+.contact-card:hover {
+    border-color: rgba(255,255,255,.18) !important;
+    box-shadow: 0 24px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06) !important;
+}
+.contact-kicker,
+.contact-card-label { color: rgba(216,209,194,.72) !important; }
+.contact-hero-btn,
+.contact-request-form button {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    border: none !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.28) !important;
+}
+.contact-hero-btn:hover,
+.contact-request-form button:hover {
+    background: #fff !important;
+    box-shadow: 0 18px 42px rgba(0,0,0,.36) !important;
+    filter: none !important;
+}
+.contact-action,
+.contact-links a {
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(216,209,194,.82) !important;
+}
+.contact-action:hover,
+.contact-links a:hover {
+    background: rgba(255,255,255,.07) !important;
+    box-shadow: none !important;
+}
+.contact-social-link {
+    border-color: rgba(255,255,255,.1) !important;
+}
+.contact-social-link:hover {
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.07) !important;
+    box-shadow: none !important;
+}
+.contact-social-icon {
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+}
+.contact-hours-timeline::before {
+    background: linear-gradient(180deg, rgba(216,209,194,.6), rgba(216,209,194,.1)) !important;
+}
+.contact-time-node::before {
+    background: #2a2a2e !important;
+    border-color: rgba(216,209,194,.5) !important;
+}
+.contact-time-node.active::before {
+    background: rgba(216,209,194,.8) !important;
+    box-shadow: 0 0 0 8px rgba(216,209,194,.07), 0 0 16px rgba(216,209,194,.24) !important;
+}
+.contact-time-node strong { color: rgba(216,209,194,.82) !important; }
+.contact-live-clock {
+    color: rgba(216,209,194,.9) !important;
+    text-shadow: none !important;
+}
+.contact-map-card span { color: rgba(216,209,194,.72) !important; }
+.contact-map-pin {
+    background: linear-gradient(135deg, rgba(216,209,194,.9), rgba(180,172,158,.9)) !important;
+    box-shadow: 0 0 16px rgba(216,209,194,.22) !important;
+}
+.contact-map-card {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(14,14,18,.9) !important;
+}
+
+/* ── 22. CART MODAL DE VISTA PREVIA ── */
+.cart-preview-dialog {
+    background: linear-gradient(145deg, rgba(18,18,22,.98), rgba(10,10,12,.98)) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    box-shadow: 0 40px 100px rgba(0,0,0,.72) !important;
+}
+.cart-preview-kicker { color: rgba(216,209,194,.72) !important; }
+.cart-preview-price { color: rgba(216,209,194,.88) !important; }
+.cart-preview-variant.active {
+    border-color: rgba(216,209,194,.6) !important;
+    background: rgba(216,209,194,.08) !important;
+    box-shadow: 0 0 0 3px rgba(216,209,194,.06) !important;
+}
+.cart-preview-link {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+}
+
+/* ── 23. CART COPY / SUCCESS ── */
+.cart-copy-reference-btn {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 8px 20px rgba(0,0,0,.24) !important;
+}
+.cart-required-pill,
+.cart-payment-badge {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(216,209,194,.82) !important;
+}
+
+/* ── 24. LOADING CART BAR ── */
+.cart-loading-track span {
+    background: linear-gradient(90deg, rgba(216,209,194,.5), rgba(255,255,255,.8), rgba(216,209,194,.5)) !important;
+}
+
+/* ── 25. FLOATING WHATSAPP ── */
+.floating-whatsapp {
+    border-color: rgba(37,211,102,.28) !important;
+    background: rgba(12,12,14,.9) !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,.3) !important;
+}
+.floating-whatsapp-logo {
+    background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.12), rgba(37,211,102,.4) 48%, rgba(10,10,12,.9) 100%) !important;
+    box-shadow: 0 0 0 2px rgba(37,211,102,.24) !important;
+}
+
+/* ── 26. PRODUCT CARD MARQUEE ── */
+.marquee-item {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(17,17,20,.88) !important;
+}
+.marquee-item:hover {
+    border-color: rgba(255,255,255,.16) !important;
+    box-shadow: 0 14px 36px rgba(0,0,0,.42) !important;
+}
+
+/* ── 27. HOME AD / BANNER PUBLICITARIO ── */
+.home-ad-section {
+    border-color: rgba(255,255,255,.07) !important;
+    background: rgba(17,17,20,.88) !important;
+}
+.home-ad-kicker { color: rgba(216,209,194,.68) !important; }
+.home-ad-button {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
+}
+.home-ad-button:hover {
+    background: #fff !important;
+    box-shadow: 0 12px 30px rgba(0,0,0,.36) !important;
+}
+
+/* ── 28. PÁGINA DE PRODUCTO ── */
+.product-detail-luxury::before { display: none !important; }
+.product-detail-luxury .product-main-img {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(16,16,19,.85) !important;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45) !important;
+    border-radius: 20px !important;
+}
+.product-detail-luxury .gallery-thumb {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(18,18,22,.6) !important;
+    border-radius: 12px !important;
+}
+.product-detail-luxury .gallery-thumb:hover,
+.product-detail-luxury .gallery-thumb.active {
+    border-color: rgba(255,255,255,.85) !important;
+    background: rgba(255,255,255,.08) !important;
+    box-shadow: 0 4px 14px rgba(0,0,0,.4) !important;
+    opacity: 1 !important;
+}
+.product-detail-luxury .product-info {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(18,18,22,.82) !important;
+    box-shadow: 0 28px 70px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06) !important;
+    border-radius: 22px !important;
+}
+.product-detail-luxury .product-info-cat {
+    color: rgba(216,209,194,.9) !important;
+    border-color: rgba(255,255,255,.09) !important;
+    background: rgba(255,255,255,.05) !important;
+}
+.product-detail-luxury .product-info-name {
+    color: #fff !important;
+}
+.product-detail-luxury .product-info-price,
+#detail-price {
+    color: #fff !important;
+    text-shadow: none !important;
+}
+#detail-old-price { color: rgba(255,255,255,.36) !important; }
+.detail-promo-badge {
+    background: rgba(255,255,255,.08) !important;
+    color: #fff !important;
+    border-color: rgba(255,255,255,.18) !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+.detail-variant-chip {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(255,255,255,.03) !important;
+    color: rgba(255,255,255,.65) !important;
+    border-radius: 12px !important;
+}
+.detail-variant-chip:hover {
+    border-color: rgba(255,255,255,.28) !important;
+    background: rgba(255,255,255,.06) !important;
+    color: #fff !important;
+}
+.detail-variant-chip.active {
+    border-color: #fff !important;
+    color: #fff !important;
+    background: rgba(255,255,255,.08) !important;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.8), 0 8px 24px rgba(0,0,0,.5) !important;
+}
+.product-detail-luxury .btn-buy-now,
+.detail-add-cart {
+    background: #fff !important;
+    color: #0a0a0c !important;
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35) !important;
+    border: none !important;
+}
+.product-detail-luxury .btn-buy-now:hover,
+.detail-add-cart:hover {
+    background: #f2eee5 !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.5) !important;
+}
+.btn-save-favorite-detail {
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(255,255,255,.05) !important;
+    color: #fff !important;
+    border-radius: 12px !important;
+}
+.btn-save-favorite-detail:hover {
+    border-color: rgba(255,255,255,.28) !important;
+    background: rgba(255,255,255,.1) !important;
+}
+.product-detail-luxury .btn-consult-direct {
+    background: rgba(37,211,102,.08) !important;
+    border-color: rgba(37,211,102,.28) !important;
+    color: #25d366 !important;
+    border-radius: 12px !important;
+}
+.product-detail-luxury .btn-consult-direct:hover {
+    background: rgba(37,211,102,.16) !important;
+    border-color: rgba(37,211,102,.45) !important;
+}
+.product-detail-luxury .product-specs {
+    border-color: rgba(255,255,255,.07) !important;
+    background: rgba(255,255,255,.02) !important;
+}
+.product-detail-luxury .spec-item {
+    border-bottom-color: rgba(255,255,255,.05) !important;
+}
+.product-detail-luxury .spec-label {
+    color: rgba(255,255,255,.45) !important;
+}
+.product-detail-luxury .spec-value {
+    color: #fff !important;
+}
+
+/* ── 29. PAGOS (QR PAGE) ── */
+.qr-card,
+.payment-method-card {
+    border-color: rgba(255,255,255,.09) !important;
+    background: rgba(17,17,20,.88) !important;
+}
+.qr-image-container::before { animation: none !important; }
+.ally-card::before,
+.ally-avatar,
+.ally-avatar::before { animation: none !important; }
+
+/* ── 30. PROMO COUNTDOWN ── */
+.promo-countdown-circle::before { animation: none !important; }
+.promo-countdown-section {
+    background: rgba(17,17,20,.88) !important;
+    border-color: rgba(255,255,255,.08) !important;
+}
+
+/* ── 31. OVERRIDE MOTION (evita conflicto con bloque @media al final) ── */
+@media (prefers-reduced-motion: no-preference) {
+    .blyxu-svg-title { animation: blyxuSvgGlowNoir 4s ease-in-out infinite; }
+}
+
+/* ── 32. TYPOGRAPHY FINAL — Inter en todo ── */
+html, body,
+h1, h2, h3, h4, h5, h6,
+p, span, a, li, button, input, textarea, select, label, th, td {
+    font-family: var(--font-noir) !important;
+}
+
+/* ── 33. CUSTOMER ACCOUNT MODAL ── */
+.customer-auth-modal-panel,
+.customer-account-sheet {
+    background: linear-gradient(160deg, #151518 0%, #0d0d10 100%) !important;
+    border-color: rgba(255,255,255,.1) !important;
+}
+.customer-auth-tab.active {
+    color: #fff !important;
+    border-bottom-color: rgba(216,209,194,.72) !important;
+}
+.customer-auth-input:focus {
+    border-color: rgba(255,255,255,.28) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.05) !important;
+}
+.customer-auth-btn-primary {
+    background: rgba(255,255,255,.92) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 8px 22px rgba(0,0,0,.28) !important;
+}
+
+/* ── 34. CARRITO / CHECKOUT PAGE (carrito.html) ── */
+
+/* Section background */
+.cart-standalone-section {
+    background: #0a0a0c !important;
+}
+.cart-standalone-section::before {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent) !important;
+}
+
+/* Section header */
+.cart-section-kicker {
+    color: rgba(216,209,194,.75) !important;
+}
+.cart-section-title {
+    text-shadow: none !important;
+}
+.cart-badge-pill {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(216,209,194,.9) !important;
+}
+.cart-count-pill {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(255,255,255,.8) !important;
+}
+
+/* Left card: Products table */
+.cart-table-card {
+    background: rgba(18,18,22,.78) !important;
+    border-color: rgba(255,255,255,.08) !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: 0 20px 45px rgba(0,0,0,.4) !important;
+}
+.cart-table-header {
+    border-bottom-color: rgba(255,255,255,.07) !important;
+    color: rgba(255,255,255,.38) !important;
+}
+.cart-sec-row {
+    border-bottom-color: rgba(255,255,255,.06) !important;
+}
+
+/* Thumbnail */
+.cart-sec-thumb-wrap {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.03) !important;
+}
+.cart-sec-thumb-wrap:hover {
+    border-color: rgba(255,255,255,.3) !important;
+}
+
+/* Price in cart rows */
+.cart-sec-prod-price {
+    color: rgba(216,209,194,.9) !important;
+}
+
+/* Variant select */
+.cart-sec-variant-select {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.04) !important;
+    color: #fff !important;
+}
+.cart-sec-variant-select:focus {
+    border-color: rgba(255,255,255,.36) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06) !important;
+}
+.cart-sec-variant-select option {
+    background: #111114 !important;
+}
+
+/* Quantity stepper */
+.cart-sec-qty-stepper {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.03) !important;
+}
+.cart-sec-qty-btn {
+    background: rgba(255,255,255,.08) !important;
+    color: #fff !important;
+}
+.cart-sec-qty-btn:hover {
+    background: rgba(255,255,255,.18) !important;
+}
+
+/* Delete button */
+.cart-sec-del-btn {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.03) !important;
+}
+
+/* Bottom bar */
+.cart-table-bottom-bar {
+    border-top-color: rgba(255,255,255,.07) !important;
+}
+.cart-btn-continue {
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(255,255,255,.04) !important;
+    color: #fff !important;
+}
+.cart-btn-continue:hover {
+    border-color: rgba(255,255,255,.28) !important;
+    background: rgba(255,255,255,.09) !important;
+}
+
+/* Summary totals */
+.cart-summary-line {
+    color: rgba(255,255,255,.55) !important;
+}
+.cart-summary-line strong { color: #fff !important; }
+.cart-summary-line.cart-summary-total { border-top-color: rgba(255,255,255,.07) !important; }
+.cart-summary-line.cart-summary-total strong {
+    color: #fff !important;
+    font-size: 22px !important;
+    text-shadow: none !important;
+}
+
+/* Empty state */
+.cart-empty-icon {
+    filter: none !important;
+    opacity: .65;
+}
+.cart-btn-browse {
+    background: rgba(255,255,255,.9) !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,.35) !important;
+}
+.cart-btn-browse:hover {
+    background: #fff !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,.5) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* RIGHT COLUMN: Payment card */
+.cart-payment-card {
+    background: linear-gradient(160deg, rgba(20,20,25,.92) 0%, rgba(12,12,15,.96) 100%) !important;
+    border-color: rgba(255,255,255,.09) !important;
+    box-shadow: 0 25px 60px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.cart-payment-header {
+    border-bottom-color: rgba(255,255,255,.07) !important;
+}
+.cart-payment-kicker {
+    color: rgba(216,209,194,.7) !important;
+}
+.cart-payment-badge {
+    background: rgba(255,255,255,.06) !important;
+    border-color: rgba(255,255,255,.12) !important;
+    color: rgba(255,255,255,.75) !important;
+}
+
+/* Payment method tabs */
+.cart-payment-tab {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.04) !important;
+    color: rgba(255,255,255,.55) !important;
+}
+.cart-payment-tab:hover {
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+    border-color: rgba(255,255,255,.25) !important;
+}
+.cart-payment-tab.active {
+    background: rgba(255,255,255,.1) !important;
+    border-color: rgba(255,255,255,.55) !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.2) !important;
+}
+
+/* Form inputs */
+.cart-input-field label {
+    color: rgba(255,255,255,.65) !important;
+}
+.cart-input-ctrl {
+    border-color: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.04) !important;
+    color: #fff !important;
+}
+.cart-input-ctrl:focus {
+    border-color: rgba(255,255,255,.4) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06) !important;
+    background: rgba(255,255,255,.07) !important;
+}
+.cart-input-ctrl::placeholder {
+    color: rgba(255,255,255,.22) !important;
+}
+
+/* Payment method chips */
+.cart-sec-chip {
+    background: rgba(255,255,255,.05) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    color: rgba(255,255,255,.6) !important;
+}
+
+/* Main checkout CTA — white for Studio Noir */
+.btn-cart-checkout-main {
+    background: #ffffff !important;
+    color: #0a0a0c !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.38) !important;
+    border: none !important;
+}
+.btn-cart-checkout-main:hover:not(:disabled) {
+    background: #f2eee5 !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.52) !important;
+    transform: translateY(-2px) !important;
+}
+/* WhatsApp mode stays green */
+.btn-cart-checkout-main.btn-ws-mode {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 25px rgba(34,197,94,.35) !important;
+}
+.btn-cart-checkout-main.btn-ws-mode:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%) !important;
+    box-shadow: 0 12px 32px rgba(34,197,94,.5) !important;
+}
+
+/* Trust bar */
+.cart-sec-trust {
+    color: rgba(255,255,255,.38) !important;
+}
+.cart-sec-trust svg {
+    color: #22c55e !important;
+}
+
+/* Highlight pulse (cart section glow) — neutral */
+@keyframes cartSectionPulseNoir {
+    0%   { box-shadow: none; }
+    30%  { box-shadow: inset 0 0 80px 10px rgba(255,255,255,.04), inset 0 0 0 1px rgba(255,255,255,.12); }
+    100% { box-shadow: none; }
+}
+.cart-standalone-section.highlight-glow {
+    animation: cartSectionPulseNoir 1.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* ── FIN STUDIO NOIR OVERRIDE ── */

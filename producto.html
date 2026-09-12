@@ -4,82 +4,643 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Producto — BLYXU</title>
-    <meta name="description" content="Consulta productos BLYXU de joyeria y accesorios premium.">
+    <meta name="description" content="Consulta joyas y accesorios BLYXU: piezas, colores, medidas, disponibilidad y opciones para hacer tu pedido.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <meta property="og:title" content="Producto BLYXU">
-    <meta property="og:description" content="Consulta productos BLYXU de joyeria y accesorios premium.">
+    <meta property="og:description" content="Consulta joyas y accesorios BLYXU: piezas, colores, medidas, disponibilidad y opciones para hacer tu pedido.">
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=motion-lite-20260910">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="blyxu-style.css?v=apple-font-20260910">
     <style>
-        .product-info-price {
+        /* ── STUDIO NOIR PRODUCT DETAIL ── */
+        .product-detail-luxury {
+            max-width: 1260px;
+            margin: 0 auto;
+            padding: 120px 4% 60px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+            gap: clamp(28px, 4vw, 56px);
+            align-items: start;
+        }
+
+        .product-detail-luxury::before {
+            display: none !important;
+        }
+
+        /* Gallery */
+        .product-detail-luxury .product-gallery {
+            top: 100px;
+            position: sticky;
+            display: grid;
+            grid-template-columns: 74px minmax(0, 1fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        .product-detail-luxury .product-gallery.has-single-image {
+            grid-template-columns: 1fr;
+        }
+
+        .product-detail-luxury .product-main-img {
+            grid-column: 2;
+            grid-row: 1;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(16, 16, 19, 0.85);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+            overflow: hidden;
+            aspect-ratio: 1 / 1;
+            cursor: zoom-in;
+            position: relative;
+        }
+
+        .product-detail-luxury .product-gallery.has-single-image .product-main-img {
+            grid-column: 1;
+        }
+
+        .product-detail-luxury .product-main-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .product-detail-luxury .product-thumbnails {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: min(65vh, 580px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            padding-right: 2px;
+        }
+
+        .product-detail-luxury .gallery-thumb {
+            width: 72px;
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(18, 18, 22, 0.6);
+            opacity: 0.55;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .product-detail-luxury .gallery-thumb img {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .product-detail-luxury .gallery-thumb span {
+            display: block;
+            margin-top: 3px;
+            font-size: 9px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .product-detail-luxury .gallery-thumb:hover,
+        .product-detail-luxury .gallery-thumb.active {
+            opacity: 1;
+            border-color: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Info Card */
+        .product-detail-luxury .product-info {
+            background: rgba(18, 18, 22, 0.82) !important;
+            backdrop-filter: blur(28px) saturate(180%);
+            -webkit-backdrop-filter: blur(28px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 22px !important;
+            padding: clamp(24px, 3.5vw, 36px) !important;
+            box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Header row: Cat + Stock */
+        .product-header-row {
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin: 18px 0 24px;
+            justify-content: space-between;
+            gap: 12px;
             flex-wrap: wrap;
         }
+
+        .product-info-cat {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            color: rgba(216, 209, 194, 0.9) !important;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .product-stock-alert {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            width: fit-content;
+            margin: 0;
+        }
+
+        .product-stock-alert.is-low {
+            background: rgba(245, 158, 11, 0.12) !important;
+            border: 1px solid rgba(245, 158, 11, 0.3) !important;
+            color: #fbbf24 !important;
+            box-shadow: none !important;
+        }
+
+        .product-stock-alert.is-out {
+            background: rgba(239, 68, 68, 0.12) !important;
+            border: 1px solid rgba(239, 68, 68, 0.3) !important;
+            color: #f87171 !important;
+            box-shadow: none !important;
+        }
+
+        /* Product Title */
+        .product-info-name {
+            font-size: clamp(26px, 2.8vw, 38px) !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.025em !important;
+            line-height: 1.15 !important;
+            color: #ffffff !important;
+            margin: 0 !important;
+        }
+
+        /* Price */
+        .product-info-price {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin: 0 !important;
+            flex-wrap: wrap;
+        }
+
         #detail-price {
-            font-size: 30px;
-            font-weight: 900;
-            color: #ffffff;
-            letter-spacing: 0;
+            font-size: clamp(30px, 3.2vw, 40px);
+            font-weight: 800;
+            color: #ffffff !important;
+            letter-spacing: -0.02em;
+            line-height: 1;
+            text-shadow: none !important;
         }
+
         #detail-price.discount-active {
-            color: #ffd969;
-            text-shadow: 0 0 24px rgba(255, 217, 105, 0.45);
+            color: #ffffff !important;
+            text-shadow: none !important;
         }
+
         #detail-old-price {
             font-size: 18px;
-            color: rgba(255, 255, 255, 0.42);
+            color: rgba(255, 255, 255, 0.36) !important;
             text-decoration: line-through;
             font-weight: 600;
         }
+
         .detail-promo-badge {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #ec4899 100%);
-            border: 1.5px solid rgba(255, 255, 255, 0.55);
-            color: #ffffff;
             display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid rgba(255, 255, 255, 0.18) !important;
+            color: #ffffff !important;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            box-shadow: none !important;
+            animation: none !important;
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+        }
+
+        .promo-circle-num {
+            font-size: 11px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .promo-circle-text {
+            font-size: 10px;
+            font-weight: 700;
+            color: rgba(216, 209, 194, 0.85);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            margin: 0;
+        }
+
+        /* Variations Container */
+        #product-variations {
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            margin: 0 !important;
+        }
+
+        .variant-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .variant-heading-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .variant-active-badge {
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 3px 10px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-variant-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+            gap: 10px;
+        }
+
+        .detail-variant-chip {
+            min-width: 0;
+            padding: 6px;
+            border-radius: 12px !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: rgba(255, 255, 255, 0.65) !important;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
             flex-direction: column;
+            gap: 0;
+            text-align: center;
+            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+            position: relative;
+        }
+
+        .detail-variant-img-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .detail-variant-chip img {
+            width: 100%;
+            height: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 8px !important;
+            transition: transform 0.25s ease;
+        }
+
+        .variant-check-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            color: #0a0a0c;
+            display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 6px 22px rgba(192, 38, 211, 0.5), 0 0 14px rgba(124, 58, 237, 0.35);
-            animation: promoCirclePulse 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-            line-height: 1.1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .detail-variant-chip .detail-variant-label,
+        .detail-variant-chip span:not(.variant-check-indicator) {
+            display: block;
+            margin-top: 6px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
             text-align: center;
-            vertical-align: middle;
-            margin-left: 6px;
-        }
-        .promo-circle-num {
-            font-size: 14px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-            color: #ffffff;
-            line-height: 1;
-        }
-        .promo-circle-text {
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #ffd969;
             text-transform: uppercase;
-            margin-top: 2px;
-            line-height: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: inherit;
         }
-        @keyframes promoCirclePulse {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 6px 20px rgba(192, 38, 211, 0.45), 0 0 12px rgba(124, 58, 237, 0.35);
+
+        .detail-variant-chip:hover {
+            border-color: rgba(255, 255, 255, 0.28) !important;
+            background: rgba(255, 255, 255, 0.06) !important;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+        }
+
+        .detail-variant-chip:hover img {
+            transform: scale(1.05);
+        }
+
+        .detail-variant-chip.active {
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8), 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+            transform: translateY(-2px);
+        }
+
+        .detail-variant-chip.active .detail-variant-label {
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        /* Actions CTA */
+        .product-detail-luxury .product-info-actions {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .product-detail-luxury .btn-buy-now {
+            min-height: 52px;
+            padding: 12px 20px;
+            border-radius: 12px !important;
+            background: #ffffff !important;
+            color: #0a0a0c !important;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            border: none !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+            transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+        }
+
+        .product-detail-luxury .btn-buy-now:hover:not(:disabled) {
+            background: #f2eee5 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .product-detail-luxury .btn-buy-now:disabled {
+            opacity: 0.4 !important;
+            background: rgba(255, 255, 255, 0.12) !important;
+            color: rgba(255, 255, 255, 0.4) !important;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-save-favorite-detail {
+            min-height: 52px;
+            padding: 0 18px;
+            border-radius: 12px !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            color: #ffffff !important;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-save-favorite-detail:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.28) !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+        }
+
+        .btn-save-favorite-detail.is-saved {
+            background: rgba(239, 68, 68, 0.12) !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            color: #f87171 !important;
+        }
+
+        .product-detail-luxury .btn-consult-direct {
+            min-height: 48px;
+            padding: 12px 18px;
+            border-radius: 12px !important;
+            background: rgba(37, 211, 102, 0.08) !important;
+            border: 1px solid rgba(37, 211, 102, 0.28) !important;
+            color: #25d366 !important;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            grid-column: 1 / -1;
+        }
+
+        .product-detail-luxury .btn-consult-direct:hover {
+            background: rgba(37, 211, 102, 0.16) !important;
+            border-color: rgba(37, 211, 102, 0.45) !important;
+            color: #25d366 !important;
+            transform: translateY(-1px);
+        }
+
+        .product-detail-luxury .cart-consult-note {
+            grid-column: 1 / -1;
+            margin: 0;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03) !important;
+            color: rgba(255, 255, 255, 0.65) !important;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        /* Trust Perks */
+        .product-perks {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            flex-wrap: wrap;
+        }
+
+        .perk-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.65);
+        }
+
+        .perk-item svg {
+            color: rgba(216, 209, 194, 0.85);
+            flex-shrink: 0;
+        }
+
+        /* Details & Specs Block */
+        .product-details-block {
+            padding-top: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .detail-desc-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-block-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.4px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        .product-info-desc {
+            color: rgba(255, 255, 255, 0.75) !important;
+            font-size: 14px !important;
+            line-height: 1.65 !important;
+            margin: 0 !important;
+        }
+
+        /* Specifications */
+        .product-specs {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.07) !important;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.02) !important;
+            overflow: hidden;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 16px !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+            margin: 0 !important;
+            gap: 14px;
+        }
+
+        .spec-item:last-child {
+            border-bottom: none !important;
+        }
+
+        .spec-label {
+            color: rgba(255, 255, 255, 0.45) !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .spec-value {
+            color: #ffffff !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            text-align: right;
+        }
+
+        .detail-measurements {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        @media (max-width: 900px) {
+            .product-detail-luxury {
+                grid-template-columns: 1fr;
+                padding-top: 100px;
             }
-            50% {
-                transform: scale(1.06);
-                box-shadow: 0 8px 26px rgba(192, 38, 211, 0.75), 0 0 18px rgba(236, 72, 153, 0.55);
+            .product-detail-luxury .product-gallery {
+                position: static;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .product-detail-luxury {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            .product-detail-luxury .product-gallery {
+                grid-template-columns: 1fr;
+            }
+            .product-detail-luxury .product-thumbnails {
+                flex-direction: row;
+                max-height: none;
+                overflow-x: auto;
+            }
+            .product-detail-luxury .product-info-actions {
+                grid-template-columns: 1fr;
+            }
+            .btn-save-favorite-detail {
+                width: 100%;
+            }
+            .product-perks {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
             }
         }
     </style>
@@ -106,6 +667,12 @@
             </ul>
 
             <div class="nav-actions">
+                <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="7"></circle>
+                        <path d="M16.5 16.5 21 21"></path>
+                    </svg>
+                </button>
                 <button class="nav-icon-btn" id="cart-btn" onclick="openCart()" aria-label="Ver Carrito de Compras">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
                     <span class="cart-badge" id="cart-count">0</span>
@@ -127,51 +694,84 @@
         </section>
 
         <section class="product-info">
-            <div class="product-stock-alert" id="detail-stock-alert" style="display:none;"></div>
-            <div class="product-info-cat" id="detail-cat">Categoría</div>
+            <!-- 1. Header: Categoría & Stock Badge -->
+            <div class="product-header-row">
+                <div class="product-info-cat" id="detail-cat">Categoría</div>
+                <div class="product-stock-alert" id="detail-stock-alert" style="display:none;"></div>
+            </div>
+
+            <!-- 2. Product Title -->
             <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
             
+            <!-- 3. Price & Badges -->
             <div class="product-info-price">
                 <span id="detail-price">$0</span>
                 <span class="old" id="detail-old-price" style="display:none;">$0</span>
                 <span class="detail-promo-badge" id="detail-promo-badge" style="display:none;"></span>
             </div>
 
-            <p class="product-info-desc" id="detail-desc">
-                Cargando detalles del producto...
-            </p>
+            <!-- 4. Variations (Opciones disponibles) -->
+            <div id="product-variations" style="display: none;"></div>
 
-            <div id="product-variations" style="display: none; margin-bottom: 24px;"></div>
-
-            <div class="product-specs">
-                <div class="spec-item">
-                    <span class="spec-label">Disponibilidad</span>
-                    <span class="spec-value" id="detail-stock">En Stock</span>
-                </div>
-                <div class="spec-item" id="spec-color-row">
-                    <span class="spec-label" id="detail-color-label">Colores</span>
-                    <span class="spec-value" id="detail-colors">Varios</span>
-                </div>
-                <div class="spec-item" id="spec-sku-row" style="display: none;">
-                    <span class="spec-label">SKU / Ref</span>
-                    <span class="spec-value" id="detail-sku"></span>
-                </div>
-                <div class="spec-item" id="spec-size-row" style="display: none;">
-                    <span class="spec-label">Tamaño</span>
-                    <span class="spec-value" id="detail-size"></span>
-                </div>
-                <div class="spec-item" id="spec-style-row" style="display: none;">
-                    <span class="spec-label">Estilo</span>
-                    <span class="spec-value" id="detail-style"></span>
-                </div>
-            </div>
-            <div id="detail-measurements" class="detail-measurements" style="display:none;"></div>
-
+            <!-- 5. Actions (CTA: Add to cart, Favorite, WhatsApp) -->
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
-                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail" type="button">Guardar favorito</button>
+                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail" type="button" aria-label="Guardar favorito">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span>Guardar favorito</span>
+                </button>
                 <button class="btn-consult-direct" id="btn-consult-product-detail" type="button" style="display:none;">Consultar este producto por WhatsApp</button>
                 <p class="cart-consult-note" id="detail-cart-note" style="display:none;">Añadir al carrito sirve para hacer una consulta general de varios productos.</p>
+            </div>
+
+            <!-- 6. Trust Perks -->
+            <div class="product-perks">
+                <div class="perk-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                    <span>Envíos a todo el país</span>
+                </div>
+                <div class="perk-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Garantía de calidad</span>
+                </div>
+                <div class="perk-item">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Atención inmediata</span>
+                </div>
+            </div>
+
+            <!-- 7. Details Block: Description & Technical Specs -->
+            <div class="product-details-block">
+                <div class="detail-desc-card">
+                    <span class="detail-block-label">Descripción</span>
+                    <p class="product-info-desc" id="detail-desc">
+                        Cargando detalles del producto...
+                    </p>
+                </div>
+
+                <div class="product-specs">
+                    <div class="spec-item">
+                        <span class="spec-label">Disponibilidad</span>
+                        <span class="spec-value" id="detail-stock">En Stock</span>
+                    </div>
+                    <div class="spec-item" id="spec-color-row">
+                        <span class="spec-label" id="detail-color-label">Colores</span>
+                        <span class="spec-value" id="detail-colors">Varios</span>
+                    </div>
+                    <div class="spec-item" id="spec-sku-row" style="display: none;">
+                        <span class="spec-label">SKU / Ref</span>
+                        <span class="spec-value" id="detail-sku"></span>
+                    </div>
+                    <div class="spec-item" id="spec-size-row" style="display: none;">
+                        <span class="spec-label">Tamaño</span>
+                        <span class="spec-value" id="detail-size"></span>
+                    </div>
+                    <div class="spec-item" id="spec-style-row" style="display: none;">
+                        <span class="spec-label">Estilo</span>
+                        <span class="spec-value" id="detail-style"></span>
+                    </div>
+                </div>
+                <div id="detail-measurements" class="detail-measurements" style="display:none;"></div>
             </div>
         </section>
     </main>
@@ -210,7 +810,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=app-cursor-motion-lite-20260910"></script>
+    <script src="blyxu-app.js?v=app-url-clean-safe-20260910"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -474,29 +1074,54 @@
                     return;
                 }
 
-                variationContainer.innerHTML = '<h3>Opciones disponibles</h3><div class="detail-variant-list"></div>';
-                const list = variationContainer.querySelector('.detail-variant-list');
                 const variantDimension = getGroupVariantDimension(siblings);
+                const activeSib = siblings.find(sib => allProducts.indexOf(sib) === productId) || product;
+                const activeDimLabel = getVariantFieldValue(activeSib, variantDimension);
+                const activeParts = getVisibleVariantParts(activeSib);
+                const activeLabel = activeDimLabel || activeParts.join(' - ') || '';
+
+                variationContainer.innerHTML = `
+                    <div class="variant-header-row">
+                        <span class="variant-heading-title">Opciones disponibles</span>
+                        ${activeLabel ? `<span class="variant-active-badge">${activeLabel}</span>` : ''}
+                    </div>
+                    <div class="detail-variant-list"></div>
+                `;
+                const list = variationContainer.querySelector('.detail-variant-list');
 
                 siblings.forEach((sib, index) => {
                     const sibIndex = allProducts.indexOf(sib);
+                    const isActive = sibIndex === productId;
                     const chip = document.createElement('button');
                     chip.type = 'button';
-                    chip.className = `detail-variant-chip ${sibIndex === productId ? 'active' : ''}`;
+                    chip.className = `detail-variant-chip ${isActive ? 'active' : ''}`;
                     chip.dataset.productIndex = String(sibIndex);
 
                     const dimensionLabel = getVariantFieldValue(sib, variantDimension);
                     const labelParts = getVisibleVariantParts(sib);
-                    const label = dimensionLabel || labelParts.join(' - ') || `Opcion ${index + 1}`;
+                    const label = dimensionLabel || labelParts.join(' - ') || `Opción ${index + 1}`;
                     const variantImg = getProductImageSet(sib)[0] || 'Logo2.png';
+
+                    const imgWrap = document.createElement('div');
+                    imgWrap.className = 'detail-variant-img-wrap';
 
                     const img = document.createElement('img');
                     img.src = variantImg;
                     img.alt = label;
                     img.onerror = () => { img.src = 'Logo2.png'; };
-                    chip.appendChild(img);
+                    imgWrap.appendChild(img);
+
+                    if (isActive) {
+                        const checkIndicator = document.createElement('span');
+                        checkIndicator.className = 'variant-check-indicator';
+                        checkIndicator.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                        imgWrap.appendChild(checkIndicator);
+                    }
+
+                    chip.appendChild(imgWrap);
 
                     const text = document.createElement('span');
+                    text.className = 'detail-variant-label';
                     text.textContent = label;
                     chip.appendChild(text);
 

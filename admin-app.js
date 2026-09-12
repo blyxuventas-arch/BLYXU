@@ -88,6 +88,12 @@ function updateLivePreview() {
     const galleryUrls = getAdminGalleryUrls();
     const imagenUrl = document.getElementById('prod-imagen')?.value || galleryUrls[0] || 'Logo2.png';
     const estado = document.getElementById('prod-estado')?.value || 'Activo';
+    const catalogo = document.getElementById('prod-catalogo')?.value || 'Ambos';
+    const stock = Number(document.getElementById('prod-stock-inicial')?.value || 0);
+    const descripcion = document.getElementById('prod-descripcion')?.value?.trim() || '';
+    const color = document.getElementById('prod-color')?.value?.trim() || '';
+    const estilo = document.getElementById('prod-estilo')?.value?.trim() || '';
+    const medida = typeof getProductSizeValue === 'function' ? getProductSizeValue() : (document.getElementById('prod-tamano')?.value || '');
     var idVar = document.getElementById('prod-id')?.value || '';
     var idProd = document.getElementById('prod-id-producto')?.value || '';
 
@@ -191,6 +197,27 @@ function updateLivePreview() {
             badgeEl.style.display = 'none';
         }
     }
+
+    const setPreviewDetail = (id, value) => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = value;
+    };
+    const galleryCount = (document.getElementById('prod-imagen')?.value ? 1 : 0) + galleryUrls.length;
+    const variantParts = [color, estilo, medida].filter(Boolean);
+    const promoText = promoScope === 'FALSO'
+        ? 'No aplica'
+        : `${promoScope} -${discountPercent || 0}%`;
+
+    setPreviewDetail('preview-detail-state', estado);
+    setPreviewDetail('preview-detail-id', idProd || 'Automatico');
+    setPreviewDetail('preview-detail-catalog', catalogo);
+    setPreviewDetail('preview-detail-stock', `${stock} ${stock === 1 ? 'unidad' : 'unidades'}`);
+    setPreviewDetail('preview-detail-price', parsedPrecio > 0 ? formatAdminMoney(parsedPrecio) : '$0');
+    setPreviewDetail('preview-detail-wholesale', parsedMayorista > 0 ? formatAdminMoney(parsedMayorista) : 'Sin precio');
+    setPreviewDetail('preview-detail-variant', variantParts.length ? variantParts.join(' / ') : 'Sin color / talla');
+    setPreviewDetail('preview-detail-gallery', galleryCount > 0 ? `${galleryCount} ${galleryCount === 1 ? 'imagen' : 'imagenes'}` : 'Sin imagen');
+    setPreviewDetail('preview-detail-promo', promoText);
+    setPreviewDetail('preview-detail-desc', descripcion || 'La descripcion aparecera aqui mientras escribes.');
 
     renderProductPreviewGallery(imagenUrl);
 }
@@ -1647,6 +1674,7 @@ function initSettingsTabs() {
     sections.forEach(item => {
         item.button.addEventListener('click', () => activateSettingsTab(item.id));
     });
+    window.activateSettingsTab = activateSettingsTab;
 
     let savedTab = '';
     try {
@@ -1660,6 +1688,10 @@ function initSettingsTabs() {
 document.addEventListener('DOMContentLoaded', () => {
     initAdminParticles();
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
+    const settingsSidebarBtn = document.querySelector('.sidebar-btn[onclick*="settings"]');
+    if (settingsSidebarBtn) {
+        settingsSidebarBtn.innerHTML = '<span style="font-size:18px; width:24px;">&#9881;</span> Ajustes y Banner';
+    }
     initSettingsTabs();
     initOrdersAdminTabs();
     initChinaOrdersBuilder();
@@ -1726,7 +1758,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Configurar listeners para la Vista Previa
-    const inputsToWatch = ['prod-nombre', 'prod-categoria', 'prod-precio', 'prod-precio-mayorista', 'prod-imagen', 'prod-galeria', 'prod-estado', 'prod-promocion'];
+    const inputsToWatch = [
+        'prod-nombre', 'prod-categoria', 'prod-catalogo', 'prod-precio', 'prod-precio-mayorista',
+        'prod-descripcion', 'prod-imagen', 'prod-galeria', 'prod-estado', 'prod-promocion',
+        'prod-stock-inicial', 'prod-color', 'prod-estilo', 'prod-tamano', 'prod-size-kind',
+        'prod-textile-size', 'prod-textile-custom', 'prod-measure-unit', 'prod-measure-width',
+        'prod-measure-length', 'prod-measure-depth', 'prod-measure-radius', 'prod-id-producto',
+        'prod-id', 'prod-sku'
+    ];
     inputsToWatch.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -1791,6 +1830,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 if (typeof window.stopAdminParticles === 'function') window.stopAdminParticles();
                                 mainContent.style.display = ''; // Permite que actúe el CSS grid (dashboard-layout)
                                 cargarInventario(); // Load only after login
+                                cargarPedidos();
+                                renderAdminDashboard();
                             }, 500);
                         }, 400);
                     }
@@ -3219,6 +3260,52 @@ function initCarouselImageAdmin() {
     if (!form || !fileInput || !imageUrlInput || !preview || !btn) return;
 
     const fixedHomeBannerId = 'BANNER-HOME-01';
+    let pendingCarouselFiles = [];
+    if (modeInput) {
+        modeInput.innerHTML = `
+            <option value="add">A&ntilde;adir al carrusel</option>
+            <option value="replace">Reemplazar portada principal</option>
+        `;
+        modeInput.value = 'add';
+    }
+    form.classList.add('carousel-admin-form');
+    preview.classList.add('carousel-upload-zone');
+    fileInput.style.display = 'none';
+    fileInput.closest('.form-group')?.classList.add('carousel-native-file-group');
+
+    if (!form.querySelector('.carousel-admin-intro')) {
+        const intro = document.createElement('div');
+        intro.className = 'carousel-admin-intro';
+        intro.innerHTML = `
+            <div>
+                <span>Carrusel principal</span>
+                <strong>Agrega imagenes para que el banner rote en el inicio</strong>
+                <p>Selecciona varias imagenes a la vez o arrastralas aqui. Cada imagen se guarda como un slide independiente.</p>
+            </div>
+            <button type="button" class="admin-btn carousel-pick-btn" id="carousel-pick-files-btn">A&ntilde;adir imagenes</button>
+        `;
+        form.insertBefore(intro, preview);
+    }
+
+    if (!form.querySelector('.carousel-selected-note')) {
+        const note = document.createElement('div');
+        note.className = 'carousel-selected-note';
+        note.id = 'carousel-selected-note';
+        note.textContent = 'Sin imagenes seleccionadas';
+        preview.insertAdjacentElement('afterend', note);
+    }
+
+    const pickFilesBtn = document.getElementById('carousel-pick-files-btn');
+    const selectedNote = document.getElementById('carousel-selected-note');
+    pickFilesBtn?.addEventListener('click', () => fileInput.click());
+    preview.addEventListener('click', () => fileInput.click());
+
+    function updateCarouselSelectedNote(count) {
+        if (!selectedNote) return;
+        selectedNote.textContent = count
+            ? `${count} imagen${count === 1 ? '' : 'es'} lista${count === 1 ? '' : 's'} para guardar`
+            : 'Sin imagenes seleccionadas';
+    }
 
     function makeCarouselBannerId() {
         return 'BANNER-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
@@ -3226,6 +3313,67 @@ function initCarouselImageAdmin() {
 
     function renderCarouselPreview(src) {
         preview.innerHTML = `<img src="${src}" alt="Preview carrusel">`;
+        updateCarouselSelectedNote(src ? 1 : 0);
+    }
+
+    function renderCarouselPreviewList(files) {
+        const imageFiles = Array.from(files || []).filter(file => file && file.type?.startsWith('image/'));
+        if (!imageFiles.length) {
+            preview.innerHTML = '<div class="carousel-empty-preview"><strong>Arrastra tus banners aqui</strong><span>o usa el boton A&ntilde;adir imagenes</span></div>';
+            updateCarouselSelectedNote(0);
+            return;
+        }
+
+        const columns = Math.min(imageFiles.length, 4);
+        preview.innerHTML = `<div class="carousel-preview-grid" style="grid-template-columns:repeat(${columns}, minmax(0, 1fr));"></div>`;
+        const grid = preview.querySelector('div');
+        imageFiles.slice(0, 8).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = document.createElement('img');
+                img.src = reader.result;
+                img.alt = 'Preview carrusel';
+                grid?.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+        updateCarouselSelectedNote(imageFiles.length);
+    }
+    renderCarouselPreviewList([]);
+
+    function buildCarouselBannerPayload(imageUrl, options = {}) {
+        const index = options.index || 0;
+        const total = options.total || 1;
+        const bannerId = options.bannerId || makeCarouselBannerId();
+        const baseTitle = titleInput?.value?.trim() || 'BLYXU';
+        const title = total > 1 ? `${baseTitle} ${index + 1}` : baseTitle;
+        const description = descriptionInput?.value?.trim() || '';
+
+        return {
+            'ID Variacion': bannerId,
+            'ID VariaciÃƒÂ³n': bannerId,
+            idVariacion: bannerId,
+            'ID Producto': bannerId,
+            ID_Producto: bannerId,
+            idProducto: bannerId,
+            'Nombre del Producto': title,
+            Nombre: title,
+            Categoria: 'BANNER',
+            Catalogo: 'Ambos',
+            'CategorÃ­a': 'BANNER',
+            Precio: 0,
+            'Precio Mayor': 0,
+            'Stock Inicial': 1,
+            Stock: 1,
+            Cantidad: 1,
+            'Imagen Principal': imageUrl,
+            Imagen: imageUrl,
+            Color: description,
+            'Caracteristicas del producto': description,
+            Descripcion: description,
+            Estilo: 'Inicio',
+            Estado: 'Activo'
+        };
     }
 
     async function deactivateOtherHomeBanners(activeId) {
@@ -3265,23 +3413,100 @@ function initCarouselImageAdmin() {
     }
 
     fileInput.addEventListener('change', () => {
-        const file = fileInput.files?.[0];
-        if (!file) {
-            preview.innerHTML = '<span>Selecciona una imagen para previsualizarla</span>';
+        const files = Array.from(fileInput.files || []).filter(file => file && file.type.startsWith('image/'));
+        pendingCarouselFiles = files;
+        if (!files.length) {
+            renderCarouselPreviewList([]);
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-            renderCarouselPreview(reader.result);
-        };
-        reader.readAsDataURL(file);
+        renderCarouselPreviewList(files);
     });
 
     imageUrlInput.addEventListener('input', () => {
         const url = imageUrlInput.value.trim();
         if (url) {
             preview.innerHTML = `<img src="${url}" alt="Preview carrusel" onerror="this.parentElement.innerHTML='<span>No se pudo cargar la URL</span>'">`;
+            pendingCarouselFiles = [];
+            updateCarouselSelectedNote(1);
+        }
+    });
+
+    preview.addEventListener('drop', (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        preview.classList.remove('drag-over');
+        const files = Array.from(event.dataTransfer?.files || []).filter(file => file && file.type.startsWith('image/'));
+        if (!files.length) {
+            showToast('Arrastra solo imagenes para el carrusel', 'warning');
+            return;
+        }
+        pendingCarouselFiles = files;
+        renderCarouselPreviewList(files);
+        showToast(`${files.length} imagen${files.length === 1 ? '' : 'es'} lista${files.length === 1 ? '' : 's'} para guardar`, 'success');
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Guardando banner...';
+
+        try {
+            const files = pendingCarouselFiles.length
+                ? pendingCarouselFiles
+                : Array.from(fileInput.files || []).filter(file => file && file.type.startsWith('image/'));
+            const mode = modeInput?.value || 'add';
+            const imageUrls = [];
+
+            if (files.length) {
+                for (let index = 0; index < files.length; index += 1) {
+                    btn.textContent = `Subiendo imagen ${index + 1} de ${files.length}...`;
+                    const uploadedUrl = await uploadCarouselImage(files[index]);
+                    imageUrls.push(uploadedUrl);
+                }
+                imageUrlInput.value = imageUrls[0] || '';
+            } else {
+                const imageUrl = imageUrlInput.value.trim();
+                if (imageUrl) imageUrls.push(imageUrl);
+            }
+
+            if (!imageUrls.length) {
+                throw new Error('Sube una o varias imagenes, o pega una URL');
+            }
+
+            if (mode === 'replace') {
+                await deactivateOtherHomeBanners(fixedHomeBannerId);
+            }
+
+            const bannerPayloads = imageUrls.map((imageUrl, index) => buildCarouselBannerPayload(imageUrl, {
+                index,
+                total: imageUrls.length,
+                bannerId: mode === 'replace' && index === 0 ? fixedHomeBannerId : makeCarouselBannerId()
+            }));
+
+            btn.textContent = bannerPayloads.length > 1 ? 'Guardando banners...' : 'Guardando banner...';
+            if (bannerPayloads.length === 1) {
+                await postProductToGoogleSheets(bannerPayloads[0], false);
+            } else {
+                await saveProductListToGoogleSheets(bannerPayloads, { fallbackEditOverride: false });
+            }
+
+            const plural = bannerPayloads.length === 1 ? '' : 's';
+            showToast(mode === 'replace' ? 'Portada de inicio actualizada' : `${bannerPayloads.length} banner${plural} anadido${plural} al carrusel`, 'success');
+            form.reset();
+            pendingCarouselFiles = [];
+            if (modeInput) modeInput.value = 'add';
+            renderCarouselPreviewList([]);
+            clearPublicProductsCache();
+            setTimeout(() => cargarInventario({ silent: true }), 2000);
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'No se pudo guardar el banner');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
         }
     });
 
@@ -3504,10 +3729,12 @@ function paintInventory(list) {
 
     if (inventario.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay productos en el inventario.</td></tr>';
+        renderAdminDashboard();
         return;
     }
 
     renderInventoryInBatches();
+    renderAdminDashboard();
 }
 
 async function cargarInventario(options) {
@@ -4704,12 +4931,110 @@ function showToast(msg, type) {
     setTimeout(function () { t.classList.remove('show'); }, 3000);
 }
 
+function setDashboardText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function getDashboardMoney(value) {
+    if (typeof formatAdminInvoiceMoney === 'function') return formatAdminInvoiceMoney(value);
+    return '$' + (Number(value) || 0).toLocaleString('es-CO');
+}
+
+function getDashboardProductStock(product) {
+    return Number(product?.Stock || product?.Cantidad || product?.['Stock Inicial'] || 0) || 0;
+}
+
+function renderAdminDashboard() {
+    if (!document.getElementById('view-dashboard')) return;
+
+    const products = (inventario || []).filter(product => {
+        const category = String(product?.Categoria || product?.categoria || '').toUpperCase();
+        const status = String(product?.Estado || product?.estado || 'Activo').toLowerCase();
+        return category !== 'BANNER' && status !== 'inactivo';
+    });
+    const totalStock = products.reduce((sum, product) => sum + getDashboardProductStock(product), 0);
+    const facturedOrderIds = typeof getFacturedOrderIds === 'function' ? getFacturedOrderIds() : new Set();
+    const pendingOrders = (window.pedidosList || []).filter(order => {
+        const id = String(typeof getOrderIdValue === 'function' ? getOrderIdValue(order) : (order?.['ID Pedido'] || '')).trim();
+        const status = String(order?.['Estado Pedido'] || order?.Estado || '').toLowerCase();
+        return !(id && facturedOrderIds.has(id)) && !status.includes('factur');
+    });
+    const invoices = window.facturasList || [];
+    const totalSales = invoices.reduce((sum, invoice) => {
+        const value = typeof parseAdminInvoiceMoney === 'function'
+            ? parseAdminInvoiceMoney(invoice?.Subtotal || invoice?.Total || 0)
+            : Number(invoice?.Subtotal || invoice?.Total || 0) || 0;
+        return sum + value;
+    }, 0);
+
+    setDashboardText('dash-total-sales', getDashboardMoney(totalSales));
+    setDashboardText('dash-pending-orders', String(pendingOrders.length));
+    setDashboardText('dash-active-products', String(products.length));
+    setDashboardText('dash-total-stock', String(totalStock.toLocaleString('es-CO')));
+
+    const lowStock = products
+        .filter(product => getDashboardProductStock(product) <= 3)
+        .sort((a, b) => getDashboardProductStock(a) - getDashboardProductStock(b))
+        .slice(0, 5);
+    const lowStockBox = document.getElementById('dash-low-stock');
+    if (lowStockBox) {
+        lowStockBox.innerHTML = lowStock.length ? lowStock.map(product => `
+            <div class="dashboard-list-item">
+                <div>
+                    <strong>${escapeHtml(product.Nombre || product['Nombre del Producto'] || 'Producto')}</strong>
+                    <span>${escapeHtml(product.Categoria || 'Sin categoria')}</span>
+                </div>
+                <em>${getDashboardProductStock(product)} und.</em>
+            </div>
+        `).join('') : '<div class="dashboard-empty">No hay productos con stock bajo</div>';
+    }
+
+    const recentOrdersBox = document.getElementById('dash-recent-orders');
+    if (recentOrdersBox) {
+        const recent = (window.pedidosList || []).slice(0, 5);
+        recentOrdersBox.innerHTML = recent.length ? recent.map(order => {
+            const id = typeof getOrderIdValue === 'function' ? getOrderIdValue(order) : (order?.['ID Pedido'] || '-');
+            const total = typeof parseAdminInvoiceMoney === 'function'
+                ? parseAdminInvoiceMoney(order?.Subtotal || order?.Total || 0)
+                : Number(order?.Subtotal || order?.Total || 0) || 0;
+            return `
+                <div class="dashboard-list-item">
+                    <div>
+                        <strong>${escapeHtml(id || 'Pedido')}</strong>
+                        <span>${escapeHtml(order?.['Nombre Cliente'] || order?.Nombre || 'Cliente')} · ${escapeHtml(order?.['Estado Pedido'] || order?.Estado || 'Pendiente')}</span>
+                    </div>
+                    <em>${getDashboardMoney(total)}</em>
+                </div>
+            `;
+        }).join('') : '<div class="dashboard-empty">No hay pedidos cargados</div>';
+    }
+
+    const statusBars = document.getElementById('dash-status-bars');
+    if (statusBars) {
+        const rows = [
+            ['Pedidos', pendingOrders.length],
+            ['Facturas', invoices.length],
+            ['Productos', products.length],
+            ['Stock bajo', lowStock.length]
+        ];
+        const max = Math.max(...rows.map(([, count]) => count), 1);
+        statusBars.innerHTML = rows.map(([label, count]) => `
+            <div class="dashboard-bar-row">
+                <span>${escapeHtml(label)}</span>
+                <div class="dashboard-bar-track"><div class="dashboard-bar-fill" style="width:${Math.max(8, Math.round((count / max) * 100))}%"></div></div>
+                <strong>${count}</strong>
+            </div>
+        `).join('');
+    }
+}
+
 function switchDashboardView(viewId, title) {
     document.querySelectorAll('.dashboard-section').forEach(function (el) { el.classList.remove('active'); });
     document.querySelectorAll('.sidebar-btn').forEach(function (el) { el.classList.remove('active'); });
     var target = document.getElementById('view-' + viewId);
     if (target) target.classList.add('active');
-    var btn = document.querySelector('.sidebar-btn[onclick*="' + viewId + '"]');
+    var btn = document.querySelector('.sidebar-btn[data-view="' + viewId + '"]') || document.querySelector('.sidebar-btn[onclick*="' + viewId + '"]');
     if (btn) btn.classList.add('active');
     var titleEl = document.getElementById('current-section-title');
     if (titleEl) titleEl.textContent = title || 'Panel';
@@ -4721,6 +5046,12 @@ function switchDashboardView(viewId, title) {
     }
     if (viewId === 'china-orders') {
         fetchChinaOrdersFromServer();
+    }
+    if (viewId === 'dashboard') {
+        renderAdminDashboard();
+    }
+    if (viewId === 'settings' && typeof window.activateSettingsTab === 'function') {
+        window.activateSettingsTab('storefront');
     }
 }
 
@@ -5993,6 +6324,7 @@ async function cargarPedidos(options = {}) {
         window.facturasList = cached.facturas;
         renderPedidos();
         renderFacturas();
+        renderAdminDashboard();
         if (!force && isAdminOrdersCacheFresh(cached)) return;
         if (!force && adminOrdersLoadPromise) return adminOrdersLoadPromise;
     } else {
@@ -6029,6 +6361,7 @@ async function cargarPedidos(options = {}) {
         writeAdminOrdersCache();
         renderPedidos();
         renderFacturas();
+        renderAdminDashboard();
     } catch (err) {
         console.error(err);
         if (!cached) {
@@ -6313,7 +6646,7 @@ function buildInvoiceRowHtml(f, idx) {
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
                     Ver
                 </button>
-                <button class="orders-action-btn" onclick="sendAdminInvoiceRowToWhatsApp(${idx})" type="button" title="Enviar PDF de factura a cliente por WhatsApp" style="background: linear-gradient(135deg, #25D366, #128C7E); color: #fff;">
+                <button class="orders-action-btn orders-whatsapp-btn" onclick="sendAdminInvoiceRowToWhatsApp(${idx})" type="button" title="Enviar PDF de factura a cliente por WhatsApp">
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="currentColor"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.758.459 3.474 1.33 4.982L2 22l5.176-1.348c1.45.791 3.097 1.207 4.832 1.208h.004c5.505 0 9.987-4.478 9.988-9.985 0-2.667-1.038-5.174-2.924-7.06A9.923 9.923 0 0 0 12.012 2zm5.666 14.155c-.234.66-1.164 1.213-1.61 1.264-.42.047-.962.217-3.237-.723-2.73-1.127-4.48-3.9-4.617-4.084-.136-.184-1.11-1.48-1.11-2.822 0-1.343.702-2.003.953-2.274.252-.27.548-.338.732-.338.183 0 .366.002.525.01.17.007.397-.064.62.47.234.56.797 1.946.866 2.086.069.14.115.303.023.486-.092.183-.138.297-.275.457-.137.16-.289.358-.413.481-.137.137-.28.287-.12.562.16.275.71 1.173 1.526 1.9 1.05.937 1.936 1.228 2.21 1.365.275.137.435.115.596-.068.16-.184.686-.8.869-1.075.183-.275.366-.229.617-.137.251.092 1.597.753 1.871.89.275.137.458.206.526.32.069.115.069.664-.165 1.324z"/></svg>
                     WhatsApp
                 </button>
