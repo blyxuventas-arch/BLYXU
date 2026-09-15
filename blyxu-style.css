@@ -670,6 +670,11 @@ a,
     align-items: center;
     justify-content: center;
     padding: 0 8%;
+    background: #08070b;
+}
+
+.main-banner-slide.is-placeholder {
+    background: linear-gradient(180deg, #111014 0%, #07070a 100%);
 }
 
 .main-banner-slide img {
@@ -678,13 +683,13 @@ a,
     width: 100%;
     height: 100%;
     object-fit: cover;
-    z-index: -2;
+    z-index: 0;
 }
 
 .main-banner-overlay {
     position: absolute;
     inset: 0;
-    z-index: -1;
+    z-index: 1;
     background: linear-gradient(90deg, rgba(10, 5, 20, 0.95) 0%, rgba(10, 5, 20, 0.6) 40%, transparent 100%),
         linear-gradient(0deg, rgba(10, 5, 20, 0.9) 0%, transparent 40%);
 }
@@ -793,11 +798,11 @@ a,
 @media (min-width: 769px) {
     .main-banner-actions {
         justify-content: center;
-        margin-top: 0;
+        margin-top: clamp(58px, 8vh, 104px);
     }
 
     .main-banner-desc + .main-banner-actions {
-        margin-top: 0;
+        margin-top: clamp(42px, 6vh, 78px);
     }
 }
 

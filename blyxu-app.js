@@ -26,7 +26,7 @@ let bannerProducts = [];
 let productsLoadError = '';
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
-const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
+const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v3';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const CUSTOMER_SESSION_KEY = 'blyxu_customer_session_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
@@ -558,6 +558,29 @@ function getProductField(product, fields, fallback = '') {
     return fallback;
 }
 
+function normalizeProductKeyName(value) {
+    return normalizeSearchText(value).replace(/[^a-z0-9]/g, '');
+}
+
+function getProductFieldLoose(product, fields, fallback = '') {
+    const exactValue = getProductField(product, fields, '');
+    if (exactValue !== undefined && exactValue !== null && exactValue !== '') return exactValue;
+    if (!product || typeof product !== 'object') return fallback;
+
+    const names = (Array.isArray(fields) ? fields : [fields]).map(normalizeProductKeyName).filter(Boolean);
+    const looseKey = Object.keys(product).find(key => {
+        const normalizedKey = normalizeProductKeyName(key);
+        if (!normalizedKey) return false;
+        return names.some(name => normalizedKey === name || normalizedKey.includes(name) || name.includes(normalizedKey));
+    });
+
+    if (looseKey && product[looseKey] !== undefined && product[looseKey] !== null && product[looseKey] !== '') {
+        return product[looseKey];
+    }
+
+    return fallback;
+}
+
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({
         '&': '&amp;',
@@ -656,18 +679,25 @@ function setProductsLoading(isLoading) {
     if (loading) loading.style.display = isLoading ? 'flex' : 'none';
 }
 
-function hydrateProductsFromCache() {
-    const cached = readCache(PRODUCTS_CACHE_KEY);
+function hydrateProductsFromCache(cached = readCache(PRODUCTS_CACHE_KEY)) {
     const products = cached?.data?.products;
     const banners = cached?.data?.banners;
 
     if (!Array.isArray(products) || !products.length) return false;
 
     allProducts = products;
-    bannerProducts = Array.isArray(banners) ? banners : [];
+    bannerProducts = Array.isArray(banners) ? banners.filter(isActiveProduct) : [];
     productsLoadError = '';
     setProductsLoading(false);
     return true;
+}
+
+function cacheHasActiveBanner(cached) {
+    const banners = cached?.data?.banners;
+    return Array.isArray(banners) && banners.some(banner =>
+        isActiveProduct(banner) &&
+        getPublicProductImage(banner)
+    );
 }
 
 function hydrateSiteConfigFromCache() {
@@ -752,11 +782,23 @@ function handleCatalogImageError(img) {
     img.src = fallback;
 }
 
+function handleBannerImageError(img) {
+    if (!img) return;
+    const fallback = getImageFallbackUrl(img.currentSrc || img.src);
+    if (fallback && fallback !== 'hero_necklace.png' && img.dataset.fallbackTried !== 'true') {
+        img.dataset.fallbackTried = 'true';
+        img.src = fallback;
+        return;
+    }
+    img.onerror = null;
+    img.style.display = 'none';
+}
+
 function normalizeGoogleProduct(product) {
     const galeria = parseGallery(getProductField(product, ['Galer\u00eda JSON', 'Galeria JSON', 'Galería JSON', 'galeria'], []))
         .map(normalizeImageUrl)
         .filter(Boolean);
-    const imageUrl = normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen', 'imagen', 'Foto'], galeria[0] || ''));
+    const imageUrl = normalizeImageUrl(getProductFieldLoose(product, ['Imagen Principal', 'Imagen_Principal', 'imagenPrincipal', 'Imagen', 'imagen', 'Foto', 'foto', 'url', 'image', 'src', 'directUrl'], galeria[0] || ''));
 
     return {
         ...product,
@@ -764,7 +806,7 @@ function normalizeGoogleProduct(product) {
         idProducto: getProductField(product, ['ID Producto', ' ID Producto', 'idProducto']),
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'nombre', 'Producto'], 'Producto'),
         Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], ''),
-        Categoria: getProductField(product, ['Categor\u00eda', 'Categoria', 'Categoría', 'categoria'], ''),
+        Categoria: getProductFieldLoose(product, ['Categor\u00eda', 'Categoria', 'Categoría', 'categoria'], ''),
         Precio: getProductField(product, ['Precio', 'precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista', 'precio_mayorista', 'Mayorista'], 0),
         Stock: getProductField(product, ['Cantidad', 'Stock', 'stock', 'Stock Inicial'], 0),
@@ -782,13 +824,38 @@ function normalizeGoogleProduct(product) {
         Estilo: cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
         Descripcion: getProductField(product, ['Caracter\u00edsticas del producto', 'Caracteristicas del producto', 'Características del producto', 'Caractreristicas del producto', 'Descripcion', 'descripcion'], ''),
         SKU: getProductField(product, ['SKU', 'sku'], ''),
-        Estado: getProductField(product, ['Estado', 'estado'], 'Activo'),
+        Estado: getProductFieldLoose(product, ['Estado', 'estado'], 'Activo'),
         Fecha_Creacion: getProductField(product, ['Fecha de Creaci\u00f3n', 'Fecha de Creacion', 'Fecha_Creacion', 'Fecha de CreaciÃ³n', 'Fecha de CreaciÃ³n', 'createdAt', 'created_at'], ''),
         Promocion: normalizePromotionValue(getProductField(product, PRODUCT_PROMOTION_FIELD_KEYS, false))
     };
 }
+
+function getPublicProductCategory(product) {
+    return getProductField(product, ['Categoria', 'Categor\u00eda', 'CategorÃ­a', 'CategorÃƒÂ­a', 'categoria'], product?.Categoria || product?.categoria || '');
+}
+
+function getPublicProductCategoryLoose(product) {
+    return getProductFieldLoose(product, ['Categoria', 'Categor\u00eda', 'Categoría', 'categoria'], product?.Categoria || product?.categoria || '');
+}
+
+function getPublicProductImage(product) {
+    return normalizeImageUrl(getProductFieldLoose(
+        product,
+        ['Imagen Principal', 'Imagen_Principal', 'imagenPrincipal', 'Imagen', 'imagen', 'Foto', 'foto', 'url', 'image', 'directUrl', 'src'],
+        product?.Imagen || product?.['Imagen Principal'] || product?.imagen || product?.Foto || product?.url || product?.image || ''
+    ));
+}
+
+function isPublicBannerProduct(product) {
+    return normalizeSearchText(getPublicProductCategoryLoose(product)) === 'banner';
+}
+
 function isActiveProduct(product) {
-    const estado = String(getProductField(product, ['Estado', 'estado'], 'Activo')).toLowerCase();
+    const estado = String(getProductFieldLoose(product, ['Estado', 'estado'], 'Activo'))
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
     return !estado || estado === 'activo' || estado === 'disponible' || estado === 'agotado';
 }
 
@@ -1076,8 +1143,9 @@ function applyPromotionsToProducts() {
 // -- LOAD PRODUCTS FROM GOOGLE SHEETS --
 async function loadProducts(options = {}) {
     const { renderCatalog = true, useCache = true } = options;
-    const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache();
-    const productCacheIsFresh = usedProductCache && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
+    const productCache = readCache(PRODUCTS_CACHE_KEY);
+    const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache(productCache);
+    const productCacheIsFresh = usedProductCache && cacheHasActiveBanner(productCache) && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
 
     const usedConfigCache = useCache && Object.keys(siteConfig).length === 0 && hydrateSiteConfigFromCache();
     const configCacheIsFresh = usedConfigCache && isCacheFresh(SITE_CONFIG_CACHE_KEY, SITE_CONFIG_CACHE_TTL);
@@ -1466,7 +1534,7 @@ function renderHomeAdBanner() {
         return;
     }
 
-    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', 'hero_necklace.png'));
+    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', ''));
     const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
     const title = getSiteConfigValue('Home_Ad_Title', 'Brilla con tus favoritos');
     const message = getSiteConfigValue('Home_Ad_Message', 'Descubre piezas seleccionadas, promociones y anuncios especiales de BLYXU.');
@@ -1476,8 +1544,14 @@ function renderHomeAdBanner() {
     banner.style.display = '';
     const img = document.getElementById('home-ad-image');
     if (img) {
-        img.src = image || 'hero_necklace.png';
-        img.onerror = () => { img.src = 'hero_necklace.png'; };
+        if (image) {
+            img.style.display = '';
+            img.src = image;
+            img.onerror = () => { img.style.display = 'none'; };
+        } else {
+            img.removeAttribute('src');
+            img.style.display = 'none';
+        }
     }
     setTextById('home-ad-kicker', kicker);
     setTextById('home-ad-title', title);
@@ -1569,8 +1643,8 @@ async function fetchProducts(options = {}) {
     }
     
     // Separar banners del catalogo regular
-    bannerProducts = dataProducts.filter(p => String(p.Categoria || p.categoria || '').toUpperCase() === 'BANNER');
-    allProducts = dataProducts.filter(p => String(p.Categoria || p.categoria || '').toUpperCase() !== 'BANNER');
+    bannerProducts = dataProducts.filter(p => isPublicBannerProduct(p) && isActiveProduct(p) && getPublicProductImage(p));
+    allProducts = dataProducts.filter(p => !isPublicBannerProduct(p));
     writeCache(PRODUCTS_CACHE_KEY, { products: allProducts, banners: bannerProducts });
 
     return allProducts;
@@ -1759,15 +1833,14 @@ function renderBanners(banners) {
     banners = (Array.isArray(banners) ? banners : [])
         .map(normalizeGoogleProduct)
         .filter(isActiveProduct)
-        .filter(b => String(b.Categoria || b.categoria || '').toUpperCase() === 'BANNER')
-        .filter(b => normalizeImageUrl(b.Imagen || b.imagen || b.Foto || ''));
+        .filter(isPublicBannerProduct)
+        .filter(getPublicProductImage);
     
     if (!banners.length) {
-        // Fallback demo banner
         banners = [{
-            Nombre: 'COLECCI\u00d3N EXCLUSIVA 2026',
-            Descripcion: 'Piezas artesanales con piedras naturales seleccionadas. Elegancia y poder en cada detalle.',
-            Imagen: 'hero_necklace.png'
+            Nombre: 'BLYXU',
+            Descripcion: '',
+            Imagen: ''
         }];
     }
     
@@ -1775,10 +1848,14 @@ function renderBanners(banners) {
         const rawDesc = String(b.Descripcion || b.Color || '').trim();
         const isPlaceholder = !rawDesc || rawDesc.toLowerCase().includes('nueva imagen');
         const descHtml = isPlaceholder ? '' : `<p class="main-banner-desc">${escapeHtml(rawDesc)}</p>`;
+        const imageUrl = getPublicProductImage(b);
+        const imageHtml = imageUrl
+            ? `<img src="${escapeHtml(imageUrl)}" alt="Banner BLYXU" style="filter: brightness(0.55);" onerror="handleBannerImageError(this)">`
+            : '';
 
         return `
-        <div class="main-banner-slide ${i===0?'active':''}">
-            <img src="${normalizeImageUrl(b.Imagen || b.imagen || b.Foto || 'hero_necklace.png')}" alt="Banner BLYXU" style="filter: brightness(0.55);" onerror="this.src='hero_necklace.png'">
+        <div class="main-banner-slide ${i===0?'active':''} ${imageUrl ? '' : 'is-placeholder'}">
+            ${imageHtml}
             <div class="main-banner-overlay"></div>
             <div class="main-banner-content">
                 <h1 class="main-banner-title">
@@ -3570,7 +3647,7 @@ function renderGlobalSearchResults() {
 
     const query = input.value.trim();
     const productResults = getGlobalProductResults(query);
-    const pageResults = [];
+    const pageResults = getGlobalPageResults(query).slice(0, query ? 6 : 8);
     const pageHtml = pageResults.length ? `
         <div class="global-search-group-title">Secciones</div>
         ${pageResults.map(item => `

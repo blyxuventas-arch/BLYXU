@@ -23,7 +23,7 @@ const INVOICE_CONFIG_FIELDS = [
     ['Factura_Email', 'inv-config-email']
 ];
 const INVENTORY_CACHE_KEY = 'blyxu_admin_inventory_cache_v3';
-const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v2';
+const PUBLIC_PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v3';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
@@ -33,6 +33,7 @@ const IMAGE_UPLOAD_QUALITY = 0.82;
 function clearPublicProductsCache() {
     try {
         localStorage.removeItem(PUBLIC_PRODUCTS_CACHE_KEY);
+        localStorage.removeItem('blyxu_products_cache_v2');
         localStorage.removeItem(SITE_CONFIG_CACHE_KEY);
     } catch (e) {
         console.warn('No se pudo limpiar caché pública:', e);
@@ -3667,6 +3668,47 @@ function initCarouselImageAdmin() {
     }
     const clearCarouselBtn = document.getElementById('btn-clear-carousel');
     const uploadedBannersList = document.getElementById('carousel-uploaded-list');
+    let editingCarouselBannerId = '';
+
+    function getCarouselBannerRecordId(banner) {
+        return getInventoryVariationId(banner) || banner?.idVariacion || banner?.ID || banner?.['ID Variacion'] || '';
+    }
+
+    function getCarouselBannerImage(banner) {
+        return normalizeImageUrl(banner?.Imagen || banner?.['Imagen Principal'] || banner?.imagen || banner?.Foto || '');
+    }
+
+    function getCarouselBannerTitle(banner, fallback = 'BLYXU') {
+        return banner?.Nombre || banner?.['Nombre del Producto'] || fallback;
+    }
+
+    function getCarouselBannerDescription(banner) {
+        return banner?.Descripcion || banner?.['Caracteristicas del producto'] || banner?.Color || '';
+    }
+
+    function getCarouselBannerById(id) {
+        const cleanId = String(id || '').trim();
+        return (Array.isArray(inventario) ? inventario : []).find(item => getCarouselBannerRecordId(item) === cleanId);
+    }
+
+    async function deactivateCarouselBanner(banner) {
+        const id = getCarouselBannerRecordId(banner);
+        if (!id) throw new Error('No se encontro el ID del banner');
+        const motherId = getInventoryMotherId(banner) || banner?.['ID Producto'] || id;
+        await postProductToGoogleSheets({
+            ...banner,
+            __adminOriginalId: id,
+            'ID Variacion': id,
+            'ID Variaci\u00f3n': id,
+            idVariacion: id,
+            'ID Producto': motherId,
+            ID_Producto: motherId,
+            idProducto: motherId,
+            Categoria: 'BANNER',
+            categoria: 'BANNER',
+            Estado: 'Inactivo'
+        }, true);
+    }
 
     function getBannerRecordId(banner) {
         return banner?.idVariacion || banner?.ID || banner?.['ID Variacion'] || banner?.['ID VariaciÃƒÂ³n'] || banner?.['ID VariaciÃ³n'] || '';
@@ -3676,7 +3718,7 @@ function initCarouselImageAdmin() {
         return (Array.isArray(inventario) ? inventario : [])
             .filter(item => String(item.Categoria || item.categoria || '').toUpperCase() === 'BANNER')
             .filter(item => String(item.Estado || item.estado || 'Activo').toLowerCase() !== 'inactivo')
-            .filter(item => normalizeImageUrl(item.Imagen || item['Imagen Principal'] || item.imagen || item.Foto || ''));
+            .filter(item => getCarouselBannerImage(item));
     }
 
     function renderUploadedBanners() {
@@ -3689,20 +3731,70 @@ function initCarouselImageAdmin() {
         }
 
         uploadedBannersList.innerHTML = banners.map((banner, index) => {
-            const image = normalizeImageUrl(banner.Imagen || banner['Imagen Principal'] || banner.imagen || banner.Foto || '');
-            const name = banner.Nombre || banner['Nombre del Producto'] || `Banner ${index + 1}`;
-            const id = getBannerRecordId(banner) || 'Sin ID';
+            const image = getCarouselBannerImage(banner);
+            const name = getCarouselBannerTitle(banner, `Banner ${index + 1}`);
+            const id = getCarouselBannerRecordId(banner) || 'Sin ID';
             return `
-                <article class="carousel-uploaded-item">
-                    <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}">
+                <article class="carousel-uploaded-item" data-banner-id="${escapeHtml(id)}">
+                    <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" onerror="this.style.opacity='.35'">
                     <div>
                         <strong>${escapeHtml(name)}</strong>
                         <span>${escapeHtml(id)}</span>
+                    </div>
+                    <div class="carousel-uploaded-actions">
+                        <button type="button" class="admin-btn secondary" data-carousel-banner-action="edit" data-banner-id="${escapeHtml(id)}">Cambiar</button>
+                        <button type="button" class="admin-btn secondary" data-carousel-banner-action="delete" data-banner-id="${escapeHtml(id)}">Eliminar</button>
                     </div>
                 </article>
             `;
         }).join('');
     }
+    window.renderUploadedBanners = renderUploadedBanners;
+
+    uploadedBannersList?.addEventListener('click', async event => {
+        const actionBtn = event.target.closest('[data-carousel-banner-action]');
+        if (!actionBtn) return;
+        const id = actionBtn.dataset.bannerId || '';
+        const banner = getCarouselBannerById(id);
+        if (!banner) {
+            showToast('No se encontro ese banner en inventario', 'warning');
+            return;
+        }
+
+        if (actionBtn.dataset.carouselBannerAction === 'edit') {
+            editingCarouselBannerId = id;
+            form.dataset.editingBannerId = id;
+            imageUrlInput.value = getCarouselBannerImage(banner);
+            if (titleInput) titleInput.value = getCarouselBannerTitle(banner, '');
+            if (descriptionInput) descriptionInput.value = getCarouselBannerDescription(banner);
+            if (modeInput) modeInput.value = 'add';
+            pendingCarouselFiles = [];
+            renderCarouselPreview(imageUrlInput.value);
+            btn.textContent = 'Guardar cambios del banner';
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast('Banner cargado para cambiar', 'success');
+            return;
+        }
+
+        if (!confirm('Quieres eliminar este banner del carrusel?')) return;
+        const originalText = actionBtn.textContent;
+        actionBtn.disabled = true;
+        actionBtn.textContent = 'Eliminando...';
+        try {
+            await deactivateCarouselBanner(banner);
+            inventario = (Array.isArray(inventario) ? inventario : []).map(item => (
+                getCarouselBannerRecordId(item) === id ? { ...item, Estado: 'Inactivo' } : item
+            ));
+            renderUploadedBanners();
+            clearPublicProductsCache();
+            showToast('Banner eliminado del carrusel', 'success');
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'No se pudo eliminar el banner', 'error');
+            actionBtn.disabled = false;
+            actionBtn.textContent = originalText;
+        }
+    });
 
     clearCarouselBtn?.addEventListener('click', async () => {
         const banners = getActiveCarouselBanners();
@@ -3717,6 +3809,8 @@ function initCarouselImageAdmin() {
         clearCarouselBtn.textContent = 'Limpiando...';
         try {
             for (const banner of banners) {
+                await deactivateCarouselBanner(banner);
+                continue;
                 const id = getBannerRecordId(banner);
                 await postProductToGoogleSheets({
                     ...banner,
@@ -3829,6 +3923,7 @@ function initCarouselImageAdmin() {
             'Nombre del Producto': title,
             Nombre: title,
             Categoria: 'BANNER',
+            categoria: 'BANNER',
             Catalogo: 'Ambos',
             'CategorÃ­a': 'BANNER',
             Precio: 0,
@@ -3837,7 +3932,11 @@ function initCarouselImageAdmin() {
             Stock: 1,
             Cantidad: 1,
             'Imagen Principal': imageUrl,
+            Imagen_Principal: imageUrl,
             Imagen: imageUrl,
+            imagen: imageUrl,
+            image: imageUrl,
+            url: imageUrl,
             Color: description,
             'Caracteristicas del producto': description,
             Descripcion: description,
@@ -3920,6 +4019,7 @@ function initCarouselImageAdmin() {
         event.preventDefault();
         event.stopImmediatePropagation();
         const originalText = btn.textContent;
+        let finalButtonText = originalText;
         btn.disabled = true;
         btn.textContent = 'Guardando banner...';
 
@@ -3928,6 +4028,7 @@ function initCarouselImageAdmin() {
                 ? pendingCarouselFiles
                 : Array.from(fileInput.files || []).filter(file => file && file.type.startsWith('image/'));
             const mode = modeInput?.value || 'add';
+            const editingBannerId = form.dataset.editingBannerId || editingCarouselBannerId;
             const imageUrls = [];
 
             if (files.length) {
@@ -3946,30 +4047,42 @@ function initCarouselImageAdmin() {
                 throw new Error('Sube una o varias imagenes, o pega una URL');
             }
 
-            if (mode === 'replace') {
+            if (editingBannerId && imageUrls.length > 1) {
+                throw new Error('Para cambiar un banner existente, selecciona solo una imagen');
+            }
+
+            if (!editingBannerId && mode === 'replace') {
                 await deactivateOtherHomeBanners(fixedHomeBannerId);
             }
 
             const bannerPayloads = imageUrls.map((imageUrl, index) => buildCarouselBannerPayload(imageUrl, {
                 index,
                 total: imageUrls.length,
-                bannerId: mode === 'replace' && index === 0 ? fixedHomeBannerId : makeCarouselBannerId()
+                bannerId: editingBannerId || (mode === 'replace' && index === 0 ? fixedHomeBannerId : makeCarouselBannerId())
             }));
 
             btn.textContent = bannerPayloads.length > 1 ? 'Guardando banners...' : 'Guardando banner...';
-            if (bannerPayloads.length === 1) {
+            if (editingBannerId) {
+                bannerPayloads[0].__adminOriginalId = editingBannerId;
+                await postProductToGoogleSheets(bannerPayloads[0], true);
+            } else if (bannerPayloads.length === 1) {
                 await postProductToGoogleSheets(bannerPayloads[0], false);
             } else {
                 await saveProductListToGoogleSheets(bannerPayloads, { fallbackEditOverride: false });
             }
 
             const plural = bannerPayloads.length === 1 ? '' : 's';
-            showToast(mode === 'replace' ? 'Portada de inicio actualizada' : `${bannerPayloads.length} banner${plural} anadido${plural} al carrusel`, 'success');
+            showToast(editingBannerId ? 'Banner actualizado correctamente' : (mode === 'replace' ? 'Portada de inicio actualizada' : `${bannerPayloads.length} banner${plural} anadido${plural} al carrusel`), 'success');
             form.reset();
+            editingCarouselBannerId = '';
+            delete form.dataset.editingBannerId;
+            finalButtonText = 'Guardar banner';
             pendingCarouselFiles = [];
             if (modeInput) modeInput.value = 'add';
             renderCarouselPreviewList([]);
-            inventario = bannerPayloads.concat(Array.isArray(inventario) ? inventario : []);
+            inventario = editingBannerId
+                ? (Array.isArray(inventario) ? inventario : []).map(item => getCarouselBannerRecordId(item) === editingBannerId ? normalizeGoogleProduct(bannerPayloads[0]) : item)
+                : bannerPayloads.concat(Array.isArray(inventario) ? inventario : []);
             renderUploadedBanners();
             clearPublicProductsCache();
             setTimeout(() => cargarInventario({ silent: true }).then(renderUploadedBanners), 2000);
@@ -3978,7 +4091,7 @@ function initCarouselImageAdmin() {
             showToast(error.message || 'No se pudo guardar el banner');
         } finally {
             btn.disabled = false;
-            btn.textContent = originalText;
+            btn.textContent = finalButtonText;
         }
     });
 
@@ -4015,6 +4128,7 @@ function initCarouselImageAdmin() {
                 'Nombre del Producto': title,
                 Nombre: title,
                 Categoria: 'BANNER',
+                categoria: 'BANNER',
                 Catalogo: 'Ambos',
                 'Categoría': 'BANNER',
                 Precio: 0,
@@ -4023,7 +4137,11 @@ function initCarouselImageAdmin() {
                 Stock: 1,
                 Cantidad: 1,
                 'Imagen Principal': imageUrl,
+                Imagen_Principal: imageUrl,
                 Imagen: imageUrl,
+                imagen: imageUrl,
+                image: imageUrl,
+                url: imageUrl,
                 Color: description,
                 'Caracteristicas del producto': description,
                 Descripcion: description,
@@ -4187,6 +4305,8 @@ function writeInventoryCache(list) {
 function clearPublicProductsCache() {
     try {
         localStorage.removeItem(PUBLIC_PRODUCTS_CACHE_KEY);
+        localStorage.removeItem('blyxu_products_cache_v2');
+        localStorage.removeItem(SITE_CONFIG_CACHE_KEY);
     } catch (e) {
         console.warn('No se pudo limpiar cache publico:', e.message);
     }

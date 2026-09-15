@@ -699,7 +699,7 @@
         }
         .carousel-uploaded-item {
             display:grid;
-            grid-template-columns:64px minmax(0,1fr);
+            grid-template-columns:76px minmax(0,1fr);
             gap:10px;
             align-items:center;
             padding:10px;
@@ -708,8 +708,8 @@
             background:rgba(255,255,255,.035);
         }
         .carousel-uploaded-item img {
-            width:64px;
-            height:48px;
+            width:76px;
+            height:58px;
             object-fit:cover;
             border-radius:8px;
             background:#111;
@@ -722,6 +722,17 @@
             white-space:nowrap;
         }
         .carousel-uploaded-item span { color:var(--muted); font-size:12px; margin-top:4px; }
+        .carousel-uploaded-actions {
+            grid-column:1/-1;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:8px;
+        }
+        .carousel-uploaded-actions button {
+            min-height:34px;
+            padding:7px 9px;
+            font-size:10px;
+        }
         .carousel-uploaded-empty { color:var(--muted); padding:12px 2px; }
         .modal {
             position:fixed;
@@ -1667,6 +1678,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=search-banner2-20260914"></script>
+    <script src="admin-app.js?v=banner-load-20260915b"></script>
 </body>
 </html>
