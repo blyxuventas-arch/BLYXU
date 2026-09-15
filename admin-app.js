@@ -49,9 +49,47 @@ let isEditingProduct = false;
 let inventoryFetchToken = 0;
 const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
+const PRODUCT_BARCODE_FIELD_KEYS = ['Codigo Barras', 'Codigo de Barras', 'C\u00f3digo de Barras', 'Codigo_Barras', 'codigoBarras', 'barcode', 'Barcode'];
 
 function formatAdminMoney(value) {
     return '$' + (parseFloat(value) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 });
+}
+
+function normalizeBarcodeValue(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_-]+/g, '')
+        .toUpperCase()
+        .slice(0, 48);
+}
+
+function makeProductBarcode(idProducto, idVariacion) {
+    const base = normalizeBarcodeValue(idVariacion || idProducto);
+    return base ? `BLYXU-${base}` : '';
+}
+
+function getProductBarcode(product, fallback = '') {
+    const stored = getProductField(product, PRODUCT_BARCODE_FIELD_KEYS, '');
+    if (stored) return normalizeBarcodeValue(stored);
+    const idProducto = getProductField(product, ['ID Producto', 'idProducto'], '');
+    const idVariacion = getProductField(product, ['ID Variacion', 'ID Variación', 'idVariacion', 'ID', 'id'], '');
+    return makeProductBarcode(idProducto, idVariacion) || fallback;
+}
+
+function setProductBarcodeAliases(payload, barcode) {
+    const cleanBarcode = normalizeBarcodeValue(barcode || makeProductBarcode(
+        payload?.['ID Producto'] || payload?.idProducto,
+        payload?.['ID Variacion'] || payload?.['ID Variación'] || payload?.idVariacion || payload?.ID
+    ));
+    if (!cleanBarcode) return payload;
+    payload['Codigo Barras'] = cleanBarcode;
+    payload['Codigo de Barras'] = cleanBarcode;
+    payload['Código de Barras'] = cleanBarcode;
+    payload.Codigo_Barras = cleanBarcode;
+    payload.codigoBarras = cleanBarcode;
+    payload.Barcode = cleanBarcode;
+    return payload;
 }
 
 function readAdminCachedSiteConfigValue(key, fallback = '') {
@@ -492,6 +530,7 @@ function normalizeGoogleProduct(product) {
         TallaTextil: getProductField(product, ['Talla Textil', 'TallaTextil'], ''),
         Estilo: styleValue,
         SKU: getProductField(product, ['SKU'], ''),
+        CodigoBarras: getProductBarcode(product),
         Estado: getProductField(product, ['Estado'], 'Activo'),
         Promocion: getProductPromotionValue(product, false),
         Fecha_Creacion: getProductField(product, ['Fecha de Creacion', 'Fecha de Creación'], '')
@@ -545,6 +584,7 @@ function inventorySearchBlob(product) {
         product.Tamano,
         product.Estilo,
         product.SKU,
+        product.CodigoBarras,
         getInventoryMotherId(product),
         getInventoryVariationId(product),
         product.Estado,
@@ -809,8 +849,220 @@ function ensureProductHierarchyIds() {
         setInputValue('prod-id', idVariacion);
     }
 
+    updateProductBarcodeField();
     return { idProducto, idVariacion };
 }
+
+function updateProductBarcodeField(force = false) {
+    const barcodeInput = document.getElementById('prod-barcode');
+    if (!barcodeInput) return;
+    const generated = makeProductBarcode(getInputValue('prod-id-producto'), getInputValue('prod-id'));
+    const current = normalizeBarcodeValue(barcodeInput.value);
+    const previousGenerated = normalizeBarcodeValue(barcodeInput.dataset.generatedBarcode || '');
+    const scanModeEnabled = document.getElementById('prod-barcode-scan-mode')?.checked === true;
+    const shouldUseGenerated = force || !scanModeEnabled || (scanModeEnabled && current && (barcodeInput.dataset.autoBarcode === '1' || current === previousGenerated));
+    barcodeInput.dataset.generatedBarcode = generated;
+    if (shouldUseGenerated) {
+        barcodeInput.value = generated;
+        barcodeInput.dataset.autoBarcode = '1';
+    }
+}
+
+function setProductBarcodeScanMode(enabled) {
+    const toggle = document.getElementById('prod-barcode-scan-mode');
+    const panel = document.getElementById('prod-barcode-panel');
+    const input = document.getElementById('prod-barcode');
+    const hint = document.getElementById('prod-barcode-hint');
+    const scanModeEnabled = Boolean(enabled);
+
+    if (toggle) toggle.checked = scanModeEnabled;
+    panel?.classList.toggle('is-visible', scanModeEnabled);
+
+    if (!input) return;
+    if (scanModeEnabled) {
+        const generated = normalizeBarcodeValue(input.dataset.generatedBarcode || makeProductBarcode(getInputValue('prod-id-producto'), getInputValue('prod-id')));
+        const current = normalizeBarcodeValue(input.value);
+        if (!current || current === generated || input.dataset.autoBarcode === '1') {
+            input.value = '';
+        }
+        input.dataset.autoBarcode = '0';
+        if (hint) hint.textContent = 'Escanea la marquilla real o escribe el codigo; si lo dejas apagado se asigna automatico.';
+    } else {
+        input.dataset.autoBarcode = '1';
+        updateProductBarcodeField(true);
+        if (hint) hint.textContent = 'Se genera solo para unir todas las variantes y asigna codigo interno automatico.';
+    }
+}
+
+function initProductBarcodeField() {
+    let barcodeInput = document.getElementById('prod-barcode');
+    if (!barcodeInput) {
+        const skuInput = document.getElementById('prod-sku');
+        const skuGroup = skuInput?.closest('.form-group');
+        if (!skuGroup) return;
+
+        skuGroup.insertAdjacentHTML('afterend', `
+            <div class="form-group admin-form-wide">
+                <label>Codigo de barras</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Automatico o escaneado">
+                    <button type="button" class="admin-btn secondary" id="btn-scan-product-barcode" style="min-width:118px;">Escanear</button>
+                </div>
+                <small class="field-hint">Puedes escanear la marquilla real con el celular o dejar el codigo interno automatico.</small>
+            </div>
+        `);
+        barcodeInput = document.getElementById('prod-barcode');
+    }
+
+    if (barcodeInput?.dataset.barcodeReady === '1') {
+        updateProductBarcodeField();
+        setProductBarcodeScanMode(document.getElementById('prod-barcode-scan-mode')?.checked);
+        return;
+    }
+    if (barcodeInput) barcodeInput.dataset.barcodeReady = '1';
+
+    barcodeInput?.addEventListener('input', () => {
+        const scanModeEnabled = document.getElementById('prod-barcode-scan-mode')?.checked === true;
+        barcodeInput.dataset.autoBarcode = scanModeEnabled && barcodeInput.value.trim() ? '0' : '1';
+    });
+    document.getElementById('prod-barcode-scan-mode')?.addEventListener('change', event => {
+        setProductBarcodeScanMode(event.target.checked);
+    });
+    document.getElementById('btn-scan-product-barcode')?.addEventListener('click', () => {
+        setProductBarcodeScanMode(true);
+        openBarcodeScanner({
+            targetInputId: 'prod-barcode',
+            onDetected: code => {
+                const input = document.getElementById('prod-barcode');
+                if (input) {
+                    input.value = normalizeBarcodeValue(code);
+                    input.dataset.autoBarcode = '0';
+                    setProductBarcodeScanMode(true);
+                }
+            }
+        });
+    });
+
+    ['prod-id-producto', 'prod-id'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', () => updateProductBarcodeField());
+        document.getElementById(id)?.addEventListener('change', () => updateProductBarcodeField());
+    });
+    updateProductBarcodeField();
+    setProductBarcodeScanMode(false);
+}
+
+let activeBarcodeScannerStream = null;
+let activeBarcodeScannerFrame = null;
+
+function closeBarcodeScanner() {
+    if (activeBarcodeScannerFrame) {
+        cancelAnimationFrame(activeBarcodeScannerFrame);
+        activeBarcodeScannerFrame = null;
+    }
+    if (activeBarcodeScannerStream) {
+        activeBarcodeScannerStream.getTracks().forEach(track => track.stop());
+        activeBarcodeScannerStream = null;
+    }
+    document.getElementById('barcode-scanner-modal')?.remove();
+}
+
+function buildBarcodeScannerModal() {
+    closeBarcodeScanner();
+    const modal = document.createElement('div');
+    modal.id = 'barcode-scanner-modal';
+    modal.className = 'modal open';
+    modal.innerHTML = `
+        <div class="modal-card" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+                <h2 style="margin:0;">Escanear codigo</h2>
+                <button type="button" class="admin-btn secondary" data-barcode-close>Cerrar</button>
+            </div>
+            <div id="barcode-scanner-status" class="field-hint" style="margin-bottom:10px;">Apunta la camara a la marquilla del producto.</div>
+            <video id="barcode-scanner-video" playsinline muted style="width:100%;min-height:260px;border-radius:12px;background:#05020a;object-fit:cover;border:1px solid rgba(255,255,255,.12);"></video>
+            <div style="display:grid;gap:8px;margin-top:12px;">
+                <input class="form-control" id="barcode-scanner-manual" placeholder="Escribir codigo manualmente">
+                <button type="button" class="admin-btn" id="barcode-scanner-use-manual">Usar codigo</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('[data-barcode-close]')) closeBarcodeScanner();
+    });
+    return modal;
+}
+
+async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
+    const modal = buildBarcodeScannerModal();
+    const video = modal.querySelector('#barcode-scanner-video');
+    const status = modal.querySelector('#barcode-scanner-status');
+    const manualInput = modal.querySelector('#barcode-scanner-manual');
+    const useCode = code => {
+        const cleanCode = normalizeBarcodeValue(code);
+        if (!cleanCode) return;
+        if (typeof onDetected === 'function') {
+            onDetected(cleanCode);
+        } else if (targetInputId) {
+            const target = document.getElementById(targetInputId);
+            if (target) target.value = cleanCode;
+        }
+        showToast('Codigo de barras capturado', 'success');
+        closeBarcodeScanner();
+    };
+
+    modal.querySelector('#barcode-scanner-use-manual')?.addEventListener('click', () => useCode(manualInput?.value || ''));
+
+    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+        if (status) status.textContent = 'Tu navegador no permite escaneo automatico aqui. Escribe o pega el codigo de la marquilla.';
+        if (video) video.style.display = 'none';
+        manualInput?.focus();
+        return;
+    }
+
+    try {
+        const detector = new BarcodeDetector({
+            formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code']
+        });
+        activeBarcodeScannerStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+        });
+        video.srcObject = activeBarcodeScannerStream;
+        await video.play();
+
+        const scan = async () => {
+            if (!document.getElementById('barcode-scanner-modal')) return;
+            try {
+                const codes = await detector.detect(video);
+                if (codes && codes.length) {
+                    useCode(codes[0].rawValue || codes[0].rawText || '');
+                    return;
+                }
+            } catch (error) {
+                if (status) status.textContent = 'No se pudo leer la imagen. Ajusta luz/enfoque o escribe el codigo manualmente.';
+            }
+            activeBarcodeScannerFrame = requestAnimationFrame(scan);
+        };
+        scan();
+    } catch (error) {
+        if (status) status.textContent = 'No se pudo abrir la camara. Revisa permisos o escribe el codigo manualmente.';
+        if (video) video.style.display = 'none';
+        manualInput?.focus();
+    }
+}
+
+window.scanBarcodeToElement = function (elementId) {
+    openBarcodeScanner({
+        targetInputId: elementId,
+        onDetected: code => {
+            const input = document.getElementById(elementId);
+            if (input) {
+                input.value = normalizeBarcodeValue(code);
+                input.dataset.autoBarcode = '0';
+            }
+        }
+    });
+};
 
 function getSubmittedStockValue(payload) {
     const candidates = [
@@ -882,6 +1134,7 @@ function normalizeProductPayloadForSubmit(data) {
     payload['ID Variacion'] = idVariacion;
     payload['ID Variación'] = idVariacion;
     payload.idVariacion = idVariacion;
+    setProductBarcodeAliases(payload, getProductField(payload, PRODUCT_BARCODE_FIELD_KEYS, makeProductBarcode(idProducto, idVariacion)));
     payload.Catalogo = catalogo;
     payload['Catálogo'] = catalogo;
     payload['CatÃ¡logo'] = catalogo;
@@ -1013,6 +1266,7 @@ function buildProductPayload() {
         Imagen: imagen,
         'Galeria JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
         'Galería JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
+        'Codigo Barras': getInputValue('prod-barcode') || makeProductBarcode(idProducto, idVariacion),
         SKU: getInputValue('prod-sku'),
         Estado: getInputValue('prod-estado') || 'Activo',
         'Fecha de Creación': getInputValue('prod-fecha-creacion') || new Date().toISOString()
@@ -1145,6 +1399,7 @@ function buildVariantPayloadFromCard(card) {
         ...buildProductMeasurementPayload(variantMeasurementData),
         Color: color,
         Estilo: estilo,
+        'Codigo Barras': card.querySelector('.var-barcode')?.value?.trim() || makeProductBarcode(ids.idProducto, variantId),
         SKU: card.querySelector('.var-sku')?.value?.trim() || '',
         Imagen: imagen,
         'Imagen Principal': imagen,
@@ -1259,6 +1514,8 @@ function resetProductForm() {
     setMotherProductId(generateMotherProductId());
     const currentMotherId = getInputValue('prod-id-producto');
     setInputValue('prod-id', `${currentMotherId}-V01`);
+    setProductBarcodeScanMode(false);
+    updateProductBarcodeField();
     setInputValue('prod-fecha-creacion', '');
     setInputValue('prod-stock-inicial', '12');
     setInputValue('prod-stock', '12');
@@ -1710,6 +1967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initProductImageUpload();
     initProductGalleryUpload();
     initProductMeasurementControls();
+    initProductBarcodeField();
     resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
@@ -1948,6 +2206,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cardId = Date.now();
         const autoVariantId = getNextVariantId(ids.idProducto);
+        const barcodeInputId = `var-barcode-${cardId}`;
+        const barcodeModeId = `var-barcode-mode-${cardId}`;
         
         const card = document.createElement('div');
         card.className = 'admin-panel';
@@ -1967,9 +2227,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button type="button" class="admin-btn secondary" style="width:auto; padding:6px 12px; font-size:10px; border-radius:10px;" onclick="this.closest('.admin-panel').remove()">Cerrar / Quitar</button>
             </div>
             <div class="admin-form-grid">
-                <div class="form-group">
-                    <label>ID Variante / Hijo</label>
+                <div class="form-group product-id-field">
+                    <div class="product-id-label-row">
+                        <label>ID Variante / Hijo</label>
+                        <label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" class="var-barcode-mode" id="${barcodeModeId}"> Escanear</label>
+                    </div>
                     <input type="text" class="form-control var-id" value="${autoVariantId}" placeholder="Ej: ESTAMPADO-01">
+                    <div class="product-barcode-compact var-barcode-panel">
+                        <input type="text" class="form-control var-barcode" id="${barcodeInputId}" value="${makeProductBarcode(ids.idProducto, autoVariantId)}" placeholder="Escanea o escribe el codigo" data-auto-barcode="1" data-generated-barcode="${makeProductBarcode(ids.idProducto, autoVariantId)}">
+                        <button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement('${barcodeInputId}')">Escanear</button>
+                    </div>
+                    <small class="field-hint var-barcode-hint">Codigo interno automatico asignado.</small>
                 </div>
                 <div class="form-group">
                     <label>Nombre del Producto</label>
@@ -2000,10 +2268,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Stock</label>
                     <input type="number" class="form-control var-stock" value="12">
                 </div>
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Imagen de Variante (Arrastra o URL)</label>
-                    <div class="var-drop-zone" style="background:rgba(0,0,0,0.2); border:1px dashed rgba(255,255,255,0.1); border-radius:12px; padding:8px; display:flex; gap:10px; align-items:center; min-height:45px;">
-                        <img class="var-preview-thumb" src="" style="width:30px; height:30px; border-radius:4px; object-fit:cover; display:none; border:1px solid rgba(255,255,255,0.1);">
+                <div class="form-group variant-image-field">
+                    <label>Imagen de variante</label>
+                    <div class="var-drop-zone variant-image-picker">
+                        <div class="variant-image-preview-box"><img class="var-preview-thumb" src="" alt=""><span class="variant-image-empty">Sin imagen</span></div>
                         <input type="text" class="form-control var-imagen" placeholder="URL o Arrastra aquí..." style="margin:0; border:none; background:transparent; flex:1;">
                     </div>
                 </div>
@@ -2012,6 +2280,65 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         container.appendChild(card);
+        const variantIdInput = card.querySelector('.var-id');
+        const variantBarcodeInput = card.querySelector('.var-barcode');
+        const variantBarcodeMode = card.querySelector('.var-barcode-mode');
+        const variantBarcodePanel = card.querySelector('.var-barcode-panel');
+        const variantBarcodeHint = card.querySelector('.var-barcode-hint');
+        const syncVariantBarcode = (force = false) => {
+            if (!variantBarcodeInput) return;
+            const generated = makeProductBarcode(ids.idProducto, variantIdInput?.value || autoVariantId);
+            const current = normalizeBarcodeValue(variantBarcodeInput.value);
+            const previousGenerated = normalizeBarcodeValue(variantBarcodeInput.dataset.generatedBarcode || '');
+            variantBarcodeInput.dataset.generatedBarcode = generated;
+            const scanModeEnabled = variantBarcodeMode?.checked === true;
+            if (force || !scanModeEnabled || (scanModeEnabled && current && (variantBarcodeInput.dataset.autoBarcode === '1' || current === previousGenerated))) {
+                variantBarcodeInput.value = generated;
+                variantBarcodeInput.dataset.autoBarcode = '1';
+            }
+        };
+        const setVariantBarcodeMode = enabled => {
+            const scanModeEnabled = Boolean(enabled);
+            if (variantBarcodeMode) variantBarcodeMode.checked = scanModeEnabled;
+            variantBarcodePanel?.classList.toggle('is-visible', scanModeEnabled);
+            if (!variantBarcodeInput) return;
+            if (scanModeEnabled) {
+                const generated = normalizeBarcodeValue(variantBarcodeInput.dataset.generatedBarcode || makeProductBarcode(ids.idProducto, variantIdInput?.value || autoVariantId));
+                const current = normalizeBarcodeValue(variantBarcodeInput.value);
+                if (!current || current === generated || variantBarcodeInput.dataset.autoBarcode === '1') {
+                    variantBarcodeInput.value = '';
+                }
+                variantBarcodeInput.dataset.autoBarcode = '0';
+                if (variantBarcodeHint) variantBarcodeHint.textContent = 'Escanea la marquilla real de esta variante.';
+            } else {
+                variantBarcodeInput.dataset.autoBarcode = '1';
+                syncVariantBarcode(true);
+                if (variantBarcodeHint) variantBarcodeHint.textContent = 'Codigo interno automatico asignado.';
+            }
+        };
+        variantBarcodeInput?.addEventListener('input', () => {
+            const scanModeEnabled = variantBarcodeMode?.checked === true;
+            variantBarcodeInput.dataset.autoBarcode = scanModeEnabled && variantBarcodeInput.value.trim() ? '0' : '1';
+        });
+        variantBarcodeMode?.addEventListener('change', event => setVariantBarcodeMode(event.target.checked));
+        variantIdInput?.addEventListener('input', () => syncVariantBarcode());
+        variantIdInput?.addEventListener('change', () => syncVariantBarcode());
+        setVariantBarcodeMode(false);
+        const variantImageInput = card.querySelector('.var-imagen');
+        const variantPreviewThumb = card.querySelector('.var-preview-thumb');
+        const syncVariantImagePreview = () => {
+            const url = String(variantImageInput?.value || '').trim();
+            if (!variantPreviewThumb) return;
+            if (url) {
+                variantPreviewThumb.src = url;
+                variantPreviewThumb.style.display = 'block';
+            } else {
+                variantPreviewThumb.removeAttribute('src');
+                variantPreviewThumb.style.display = 'none';
+            }
+        };
+        variantImageInput?.addEventListener('input', syncVariantImagePreview);
+        variantImageInput?.addEventListener('change', syncVariantImagePreview);
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Evento de guardado para esta tarjeta específica
@@ -2056,6 +2383,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ...buildProductMeasurementPayload(variantMeasurementData),
                     Color: card.querySelector('.var-color')?.value || '',
                     Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
+                    'Codigo Barras': card.querySelector('.var-barcode')?.value || makeProductBarcode(motherId, card.querySelector('.var-id').value),
                     SKU: card.querySelector('.var-sku')?.value || '',
                     Imagen: card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
                     'Imagen Principal': card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
@@ -2139,20 +2467,29 @@ document.addEventListener('DOMContentLoaded', () => {
 function initRetailPriceToggle() {
     const toggle = document.getElementById('toggle-retail-prices');
     if (!toggle) return;
+    const toggleLabel = toggle.closest('.settings-toggle-row');
 
     function renderState(enabled) {
         if (enabled === undefined) enabled = localStorage.getItem(RETAIL_PRICE_VISIBILITY_KEY) !== '0';
-        toggle.textContent = enabled ? 'ON' : 'OFF';
-        toggle.classList.toggle('active', enabled);
+        toggle.checked = Boolean(enabled);
+        toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        if (toggleLabel) {
+            toggleLabel.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) node.textContent = enabled ? ' Activo' : ' Oculto';
+            });
+        }
         toggle.title = enabled ? 'Precios minoristas visibles' : 'Precios minoristas ocultos';
     }
 
-    toggle.addEventListener('click', async () => {
-        const enabled = localStorage.getItem(RETAIL_PRICE_VISIBILITY_KEY) === '1';
-        const nextEnabled = !enabled;
+    toggle.addEventListener('change', async () => {
+        const nextEnabled = toggle.checked;
         localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, nextEnabled ? '1' : '0');
         renderState(nextEnabled);
         await saveSiteConfig(RETAIL_PRICE_CONFIG_KEY, nextEnabled ? '1' : '0');
+        window.storeConfig = {
+            ...(window.storeConfig || {}),
+            [RETAIL_PRICE_CONFIG_KEY]: nextEnabled ? '1' : '0'
+        };
         showToast(nextEnabled ? 'Precios minoristas visibles' : 'Precios minoristas ocultos');
     });
 
@@ -2457,7 +2794,7 @@ const HOME_AD_CONFIG_FIELDS = [
     ['Home_Ad_Enabled', 'home-ad-config-enabled'],
     ['Home_Ad_Kicker', 'home-ad-config-kicker'],
     ['Home_Ad_Title', 'home-ad-config-title'],
-    ['Home_Ad_Message', 'home-ad-config-message'],
+    ['Home_Ad_Message', ['home-ad-config-message', 'home-ad-config-text']],
     ['Home_Category_Seconds', 'home-category-config-seconds'],
     ['Home_Ad_Image', 'home-ad-config-image'],
     ['Home_Ad_Cta', 'home-ad-config-cta'],
@@ -2471,12 +2808,21 @@ const CUSTOMER_PROMO_CONFIG_FIELDS = [
     ['Promo_Clientes_Expire', 'customer-promo-expire']
 ];
 
+function getConfigFieldElement(fieldIds) {
+    const ids = Array.isArray(fieldIds) ? fieldIds : [fieldIds];
+    for (const id of ids) {
+        const input = document.getElementById(id);
+        if (input) return input;
+    }
+    return null;
+}
+
 function fillHomeAdConfigForm(config) {
     if (!config) return;
     window.storeConfig = window.storeConfig || {};
     HOME_AD_CONFIG_FIELDS.forEach(([key, id]) => {
         window.storeConfig[key] = config[key] || '';
-        const input = document.getElementById(id);
+        const input = getConfigFieldElement(id);
         if (!input) return;
         if (input.type === 'checkbox') {
             input.checked = config[key] === undefined ? true : config[key] !== 'false';
@@ -2523,17 +2869,17 @@ function initHomeAdConfigAdmin() {
 
         try {
             const savedConfig = {};
-            await Promise.all(HOME_AD_CONFIG_FIELDS.map(([key, id]) => {
-                const input = document.getElementById(id);
-                let value = '';
-                if (input) {
-                    value = input.type === 'checkbox'
-                        ? (input.checked ? 'true' : 'false')
-                        : input.value.trim();
-                }
+            const saveJobs = [];
+            HOME_AD_CONFIG_FIELDS.forEach(([key, id]) => {
+                const input = getConfigFieldElement(id);
+                if (!input) return;
+                const value = input.type === 'checkbox'
+                    ? (input.checked ? 'true' : 'false')
+                    : input.value.trim();
                 savedConfig[key] = value;
-                return saveSiteConfig(key, value);
-            }));
+                saveJobs.push(saveSiteConfig(key, value));
+            });
+            await Promise.all(saveJobs);
             window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
             showToast('Banner del home guardado correctamente');
         } catch (error) {
@@ -3258,14 +3604,18 @@ function initCarouselImageAdmin() {
     const modeInput = document.getElementById('carousel-mode');
     const btn = document.getElementById('btn-save-carousel');
     if (!form || !fileInput || !imageUrlInput || !preview || !btn) return;
+    if (form.dataset.carouselAdminReady === 'true') return;
+    form.dataset.carouselAdminReady = 'true';
 
     const fixedHomeBannerId = 'BANNER-HOME-01';
     let pendingCarouselFiles = [];
     if (modeInput) {
-        modeInput.innerHTML = `
-            <option value="add">A&ntilde;adir al carrusel</option>
-            <option value="replace">Reemplazar portada principal</option>
-        `;
+        if (modeInput.tagName === 'SELECT' && !modeInput.options.length) {
+            modeInput.innerHTML = `
+                <option value="add">A&ntilde;adir al carrusel</option>
+                <option value="replace">Reemplazar portada principal</option>
+            `;
+        }
         modeInput.value = 'add';
     }
     form.classList.add('carousel-admin-form');
@@ -3297,8 +3647,127 @@ function initCarouselImageAdmin() {
 
     const pickFilesBtn = document.getElementById('carousel-pick-files-btn');
     const selectedNote = document.getElementById('carousel-selected-note');
-    pickFilesBtn?.addEventListener('click', () => fileInput.click());
-    preview.addEventListener('click', () => fileInput.click());
+    let bannerManager = document.getElementById('carousel-banner-manager');
+    if (!bannerManager) {
+        bannerManager = document.createElement('div');
+        bannerManager.id = 'carousel-banner-manager';
+        bannerManager.className = 'carousel-banner-manager';
+        bannerManager.innerHTML = `
+            <div class="carousel-admin-intro">
+                <div>
+                    <span>Banners subidos</span>
+                    <strong>Imagenes activas en el carrusel</strong>
+                    <p>Revisa lo que ya esta publicado y limpia el carrusel si quieres empezar de nuevo.</p>
+                </div>
+                <button type="button" class="admin-btn" id="btn-clear-carousel">Limpiar banners</button>
+            </div>
+            <div class="carousel-uploaded-list" id="carousel-uploaded-list"></div>
+        `;
+        preview.insertAdjacentElement('afterend', bannerManager);
+    }
+    const clearCarouselBtn = document.getElementById('btn-clear-carousel');
+    const uploadedBannersList = document.getElementById('carousel-uploaded-list');
+
+    function getBannerRecordId(banner) {
+        return banner?.idVariacion || banner?.ID || banner?.['ID Variacion'] || banner?.['ID VariaciÃƒÂ³n'] || banner?.['ID VariaciÃ³n'] || '';
+    }
+
+    function getActiveCarouselBanners() {
+        return (Array.isArray(inventario) ? inventario : [])
+            .filter(item => String(item.Categoria || item.categoria || '').toUpperCase() === 'BANNER')
+            .filter(item => String(item.Estado || item.estado || 'Activo').toLowerCase() !== 'inactivo')
+            .filter(item => normalizeImageUrl(item.Imagen || item['Imagen Principal'] || item.imagen || item.Foto || ''));
+    }
+
+    function renderUploadedBanners() {
+        if (!uploadedBannersList) return;
+        const banners = getActiveCarouselBanners();
+        clearCarouselBtn?.toggleAttribute('disabled', !banners.length);
+        if (!banners.length) {
+            uploadedBannersList.innerHTML = '<div class="carousel-uploaded-empty">No hay banners activos todavia.</div>';
+            return;
+        }
+
+        uploadedBannersList.innerHTML = banners.map((banner, index) => {
+            const image = normalizeImageUrl(banner.Imagen || banner['Imagen Principal'] || banner.imagen || banner.Foto || '');
+            const name = banner.Nombre || banner['Nombre del Producto'] || `Banner ${index + 1}`;
+            const id = getBannerRecordId(banner) || 'Sin ID';
+            return `
+                <article class="carousel-uploaded-item">
+                    <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}">
+                    <div>
+                        <strong>${escapeHtml(name)}</strong>
+                        <span>${escapeHtml(id)}</span>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    clearCarouselBtn?.addEventListener('click', async () => {
+        const banners = getActiveCarouselBanners();
+        if (!banners.length) {
+            showToast('No hay banners activos para limpiar', 'warning');
+            return;
+        }
+        if (!confirm(`Quieres desactivar ${banners.length} banner${banners.length === 1 ? '' : 's'} del carrusel?`)) return;
+
+        const originalText = clearCarouselBtn.textContent;
+        clearCarouselBtn.disabled = true;
+        clearCarouselBtn.textContent = 'Limpiando...';
+        try {
+            for (const banner of banners) {
+                const id = getBannerRecordId(banner);
+                await postProductToGoogleSheets({
+                    ...banner,
+                    'ID Variacion': id,
+                    'ID VariaciÃƒÂ³n': id,
+                    'ID Producto': banner.idProducto || banner['ID Producto'] || id,
+                    ID_Producto: banner.idProducto || banner['ID Producto'] || id,
+                    Estado: 'Inactivo'
+                }, true);
+            }
+            inventario = (Array.isArray(inventario) ? inventario : []).map(item => (
+                String(item.Categoria || item.categoria || '').toUpperCase() === 'BANNER'
+                    ? { ...item, Estado: 'Inactivo' }
+                    : item
+            ));
+            renderUploadedBanners();
+            clearPublicProductsCache();
+            showToast('Carrusel limpiado correctamente', 'success');
+            setTimeout(() => cargarInventario({ silent: true }).then(renderUploadedBanners), 1200);
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'No se pudieron limpiar los banners', 'error');
+        } finally {
+            clearCarouselBtn.disabled = false;
+            clearCarouselBtn.textContent = originalText;
+        }
+    });
+
+    const openFilePicker = (event) => {
+        event?.preventDefault();
+        event?.stopPropagation();
+        fileInput.click();
+    };
+    pickFilesBtn?.addEventListener('click', openFilePicker);
+    preview.addEventListener('click', openFilePicker);
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        preview.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            preview.classList.add('drag-over');
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        preview.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            preview.classList.remove('drag-over');
+        });
+    });
 
     function updateCarouselSelectedNote(count) {
         if (!selectedNote) return;
@@ -3340,6 +3809,7 @@ function initCarouselImageAdmin() {
         updateCarouselSelectedNote(imageFiles.length);
     }
     renderCarouselPreviewList([]);
+    renderUploadedBanners();
 
     function buildCarouselBannerPayload(imageUrl, options = {}) {
         const index = options.index || 0;
@@ -3499,8 +3969,10 @@ function initCarouselImageAdmin() {
             pendingCarouselFiles = [];
             if (modeInput) modeInput.value = 'add';
             renderCarouselPreviewList([]);
+            inventario = bannerPayloads.concat(Array.isArray(inventario) ? inventario : []);
+            renderUploadedBanners();
             clearPublicProductsCache();
-            setTimeout(() => cargarInventario({ silent: true }), 2000);
+            setTimeout(() => cargarInventario({ silent: true }).then(renderUploadedBanners), 2000);
         } catch (error) {
             console.error(error);
             showToast(error.message || 'No se pudo guardar el banner');
@@ -3510,7 +3982,7 @@ function initCarouselImageAdmin() {
         }
     });
 
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener('submit-old-disabled', async (event) => {
         event.preventDefault();
         const originalText = btn.textContent;
         btn.disabled = true;
@@ -3769,6 +4241,9 @@ async function cargarInventario(options) {
         var nextInventory = normalizeInventoryList(rawProducts);
         writeInventoryCache(nextInventory);
         paintInventory(nextInventory);
+        if (typeof window.renderUploadedBanners === 'function') {
+            window.renderUploadedBanners();
+        }
         return;
     } catch (err) {
         console.error("Error al cargar datos:", err);
@@ -3991,6 +4466,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     var name = escapeHtml(p.Nombre || p.Producto || 'Producto General');
     var category = escapeHtml(p.Categoria || p.Color || '-');
     var idVar = getInventoryVariationId(p);
+    var barcode = getProductBarcode(p);
     var price = Number(p.Precio || 0) || 0;
     var wholesalePrice = Number(p.Precio_Mayorista || p['Precio Mayor'] || 0) || 0;
     var minP = Number(itemMeta.minPrice || price) || 0;
@@ -4015,6 +4491,9 @@ function inventoryRowTemplate(p, index, itemMeta) {
         if (idVar && idVar !== motherId) {
             badgeHtml += ' <span class="variant-badge-id" title="ID Variacion" style="margin-left:4px;">Var: ' + escapeHtml(idVar) + '</span>';
         }
+        if (barcode) {
+            badgeHtml += ' <span class="variant-badge-id" title="Codigo de barras" style="margin-left:4px;">Cod: ' + escapeHtml(barcode) + '</span>';
+        }
 
         return '<tr class="' + rowClass + '" data-product-key="' + productKey + '">'
             + '<td><img src="' + image + '" width="46" height="46" loading="lazy" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
@@ -4037,7 +4516,9 @@ function inventoryRowTemplate(p, index, itemMeta) {
         + '<td><span class="tree-connector"></span><img src="' + image + '" width="30" height="30" loading="lazy" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
         + '<td><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);">' + name + '</div>'
         + '<div style="font-size:10px;margin-top:3px;"><span class="mother-badge-id" style="font-size:9px;">' + escapeHtml(motherId) + '</span>'
-        + ' <span class="variant-badge-id">' + escapeHtml(idVar || '-') + '</span></div></td>'
+        + ' <span class="variant-badge-id">' + escapeHtml(idVar || '-') + '</span>'
+        + (barcode ? ' <span class="variant-badge-id" title="Codigo de barras">Cod: ' + escapeHtml(barcode) + '</span>' : '')
+        + '</div></td>'
         + '<td><span style="font-size:11px;color:#9B2CFA;font-weight:600;">' + category + '</span></td>'
         + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + price.toLocaleString('es-CO') + '</td>'
         + '<td style="font-size:13px;color:#fbbf24;font-weight:700;">' + (wholesalePrice ? '$' + wholesalePrice.toLocaleString('es-CO') : '-') + '</td>'
@@ -4386,6 +4867,8 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         var vStock = v.Stock || v.Cantidad || 0;
         var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
         var vSku = v.SKU || '-';
+        var vBarcode = getProductBarcode(v);
+        var barcodeInputId = 've-barcode-' + cleanInventoryId(vid);
         tableHtml += '<tr class="var-edit-row" data-varid="' + vid + '">';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);border-radius:6px 0 0 6px;font-weight:700;color:#FFA500;white-space:nowrap;">' + vid + '</td>';
         tableHtml += '<td style="padding:6px 8px;background:rgba(255,255,255,0.02);color:#fff;">' + escapeHtml(getVariantAttributesLabel(v)) + '</td>';
@@ -4406,6 +4889,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio</label><input class="form-control ve-precio" value="' + (v.Precio || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio Mayor</label><input class="form-control ve-precio-mayorista" value="' + (v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Codigo barras</label><div style="display:flex;gap:6px;"><input class="form-control ve-barcode" id="' + barcodeInputId + '" value="' + escapeHtml(vBarcode) + '" style="padding:6px 10px;font-size:11px;"><button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement(\'' + barcodeInputId + '\')" style="width:auto;min-height:30px;padding:5px 9px;font-size:9px;">Scan</button></div></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tipo tama&ntilde;o</label><select class="form-control ve-size-kind" style="padding:6px 10px;font-size:11px;"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option></select></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Unidad</label><select class="form-control ve-measure-unit" style="padding:6px 10px;font-size:11px;"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option></select></div>';
@@ -4470,6 +4954,7 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
         ...getVariantEditMeasurementPayload(row, editedTamano),
         Color: row.querySelector('.ve-color').value,
         Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
+        'Codigo Barras': row.querySelector('.ve-barcode')?.value || makeProductBarcode(idProducto, row.querySelector('.ve-id').value),
         SKU: row.querySelector('.ve-sku').value,
         Imagen: row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
         'Imagen Principal': row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
@@ -4523,6 +5008,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
             ...getVariantEditMeasurementPayload(row, editedTamano),
             Color: row.querySelector('.ve-color')?.value || '',
             Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
+            'Codigo Barras': row.querySelector('.ve-barcode')?.value || makeProductBarcode(idProducto, vid),
             SKU: row.querySelector('.ve-sku')?.value || '',
             Imagen: row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
             'Imagen Principal': row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
@@ -4608,6 +5094,21 @@ function editarProducto(index) {
     setInputValue('prod-galeria', stringifyAdminGallery(p.Galeria || p['Galeria JSON'] || p['Galería JSON'] || ''));
     renderProductGalleryManager();
     setInputValue('prod-sku', p.SKU || '');
+    const storedBarcode = getProductField(p, PRODUCT_BARCODE_FIELD_KEYS, '');
+    const resolvedBarcode = getProductBarcode(p);
+    setInputValue('prod-barcode', resolvedBarcode);
+    const barcodeInput = document.getElementById('prod-barcode');
+    if (barcodeInput) {
+        const generatedBarcode = makeProductBarcode(getInputValue('prod-id-producto'), getInputValue('prod-id'));
+        const hasRealBarcode = Boolean(storedBarcode) && normalizeBarcodeValue(storedBarcode) !== normalizeBarcodeValue(generatedBarcode);
+        barcodeInput.dataset.generatedBarcode = generatedBarcode;
+        barcodeInput.dataset.autoBarcode = hasRealBarcode ? '0' : '1';
+        setProductBarcodeScanMode(hasRealBarcode);
+        if (!hasRealBarcode) {
+            barcodeInput.value = resolvedBarcode || generatedBarcode;
+            updateProductBarcodeField(true);
+        }
+    }
     setInputValue('prod-estado', p.Estado || 'Activo');
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
     setProductFormMode(true);
@@ -4945,45 +5446,261 @@ function getDashboardProductStock(product) {
     return Number(product?.Stock || product?.Cantidad || product?.['Stock Inicial'] || 0) || 0;
 }
 
+function getDashboardDateValue(row) {
+    const raw = row?.Fecha || row?.fecha || row?.['Fecha Actualizacion'] || row?.['Fecha Actualización'] || '';
+    if (!raw) return null;
+    if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDashboardTypeValue(row) {
+    const raw = String(row?.['Tipo Cliente'] || row?.tipoCliente || row?.Tipo || row?.Catalogo || '').toLowerCase();
+    if (raw.includes('mayor')) return 'mayor';
+    if (raw.includes('consulta')) return 'consulta';
+    const method = String(row?.['Metodo Contacto'] || row?.['Método Contacto'] || '').toLowerCase();
+    if (method.includes('consulta')) return 'consulta';
+    return 'detal';
+}
+
+function getDashboardStatusValue(row) {
+    return String(row?.['Estado Pedido'] || row?.['Estado Factura'] || row?.Estado || 'Pendiente').trim() || 'Pendiente';
+}
+
+function getDashboardProductCategory(product) {
+    if (typeof getProductField === 'function' && Array.isArray(PRODUCT_CATEGORY_FIELD_KEYS)) {
+        return getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, '');
+    }
+    return product?.Categoria || product?.categoria || product?.CategoriaProducto || '';
+}
+
+function matchesDashboardDateRange(row, range) {
+    if (!range || range === 'all') return true;
+    const date = getDashboardDateValue(row);
+    if (!date) return false;
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    if (range === 'today') return date >= start;
+    const days = Number(range);
+    if (!Number.isFinite(days)) return true;
+    start.setDate(start.getDate() - Math.max(0, days - 1));
+    return date >= start;
+}
+
+function getDashboardFilters() {
+    return {
+        range: document.getElementById('dashboard-range-filter')?.value || '30',
+        type: document.getElementById('dashboard-type-filter')?.value || 'all',
+        status: document.getElementById('dashboard-status-filter')?.value || 'all',
+        category: document.getElementById('dashboard-category-filter')?.value || 'all',
+        query: normalizeSearchText(document.getElementById('dashboard-query-filter')?.value || '')
+    };
+}
+
+function filterDashboardRows(rows, filters) {
+    return (rows || []).filter(row => {
+        if (!matchesDashboardDateRange(row, filters.range)) return false;
+        if (filters.type !== 'all' && getDashboardTypeValue(row) !== filters.type) return false;
+        if (filters.status !== 'all' && normalizeSearchText(getDashboardStatusValue(row)) !== normalizeSearchText(filters.status)) return false;
+        if (filters.query) {
+            const blob = normalizeSearchText(JSON.stringify(row));
+            if (!blob.includes(filters.query)) return false;
+        }
+        return true;
+    });
+}
+
+function countByDashboardValue(rows, getValue) {
+    return rows.reduce((acc, row) => {
+        const key = String(getValue(row) || 'Sin dato').trim() || 'Sin dato';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+}
+
+function getDashboardPercent(value, total) {
+    if (!total) return '0%';
+    return Math.round((Number(value || 0) / total) * 100) + '%';
+}
+
+function renderDashboardChartRows(targetId, rows, options = {}) {
+    const box = document.getElementById(targetId);
+    if (!box) return;
+    if (!rows.length) {
+        box.innerHTML = '<div class="dashboard-empty">Sin datos para este filtro</div>';
+        return;
+    }
+    const max = Math.max(...rows.map(row => Number(row.value || 0)), 1);
+    box.innerHTML = rows.map(row => {
+        const percent = Math.max(4, Math.round((Number(row.value || 0) / max) * 100));
+        const valueText = options.money ? getDashboardMoney(row.value) : String(row.value);
+        return `
+            <div class="dashboard-chart-row">
+                <div><strong>${escapeHtml(row.label)}</strong><span>${escapeHtml(row.detail || '')}</span></div>
+                <div class="dashboard-bar-track"><div class="dashboard-chart-fill" style="width:${percent}%"></div></div>
+                <em>${escapeHtml(valueText)}</em>
+            </div>
+        `;
+    }).join('');
+}
+
+function syncDashboardSelectOptions(selectId, values, fallbackLabel) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const current = select.value || 'all';
+    const uniqueValues = Array.from(new Set((values || []).map(value => String(value || '').trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'es'));
+    select.innerHTML = `<option value="all">${fallbackLabel}</option>` + uniqueValues.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+    select.value = uniqueValues.includes(current) ? current : 'all';
+}
+
+function syncDashboardDynamicFilters() {
+    const orderStatuses = (window.pedidosList || []).map(getDashboardStatusValue);
+    const productCategories = (inventario || [])
+        .map(getDashboardProductCategory)
+        .filter(category => normalizeSearchText(category) !== 'banner');
+    syncDashboardSelectOptions('dashboard-status-filter', orderStatuses, 'Todos');
+    syncDashboardSelectOptions('dashboard-category-filter', productCategories, 'Todas');
+}
+
+function ensureDashboardEnhancements() {
+    const shell = document.querySelector('#view-dashboard .admin-dashboard-shell');
+    if (!shell || shell.dataset.enhanced === '1') return;
+    shell.dataset.enhanced = '1';
+
+    const hero = shell.querySelector('.admin-dashboard-hero');
+    hero?.insertAdjacentHTML('afterend', `
+        <div class="dashboard-filter-bar">
+            <label>Periodo
+                <select class="form-control" id="dashboard-range-filter">
+                    <option value="today">Hoy</option>
+                    <option value="7">7 dias</option>
+                    <option value="30" selected>30 dias</option>
+                    <option value="90">90 dias</option>
+                    <option value="all">Todo</option>
+                </select>
+            </label>
+            <label>Tipo
+                <select class="form-control" id="dashboard-type-filter">
+                    <option value="all">Todos</option>
+                    <option value="detal">Detal</option>
+                    <option value="mayor">Mayorista</option>
+                    <option value="consulta">Consultas</option>
+                </select>
+            </label>
+            <label>Estado
+                <select class="form-control" id="dashboard-status-filter">
+                    <option value="all">Todos</option>
+                </select>
+            </label>
+            <label>Categoria
+                <select class="form-control" id="dashboard-category-filter">
+                    <option value="all">Todas</option>
+                </select>
+            </label>
+            <label>Buscar
+                <input class="form-control" id="dashboard-query-filter" placeholder="Cliente, pedido, estado...">
+            </label>
+            <button type="button" class="admin-btn secondary" id="dashboard-clear-filters">Limpiar</button>
+        </div>
+    `);
+
+    const statGrid = shell.querySelector('.dashboard-stat-grid');
+    statGrid?.insertAdjacentHTML('afterend', `
+        <div class="dashboard-mini-grid">
+            <article class="dashboard-stat-card"><span>Conversion</span><strong id="dash-conversion-rate">0%</strong><small>Facturas / pedidos filtrados</small></article>
+            <article class="dashboard-stat-card"><span>Ticket promedio</span><strong id="dash-average-ticket">$0</strong><small>Promedio facturado</small></article>
+            <article class="dashboard-stat-card"><span>Consultas</span><strong id="dash-consult-orders">0</strong><small>Pedidos por WhatsApp</small></article>
+            <article class="dashboard-stat-card"><span>Valor inventario</span><strong id="dash-inventory-value">$0</strong><small>Stock x precio detal</small></article>
+        </div>
+    `);
+
+    const bottomGrid = shell.querySelector('.dashboard-bottom-grid');
+    bottomGrid?.insertAdjacentHTML('beforebegin', `
+        <div class="dashboard-main-grid">
+            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Ventas</span><h3>Facturacion por dia</h3></div></div><div class="dashboard-chart-list" id="dash-sales-chart"></div></section>
+            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Catalogo</span><h3>Top categorias</h3></div></div><div class="dashboard-chart-list" id="dash-category-chart"></div></section>
+        </div>
+    `);
+
+    ['dashboard-range-filter', 'dashboard-type-filter', 'dashboard-status-filter', 'dashboard-category-filter', 'dashboard-query-filter'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', renderAdminDashboard);
+        document.getElementById(id)?.addEventListener('change', renderAdminDashboard);
+    });
+    document.getElementById('dashboard-clear-filters')?.addEventListener('click', () => {
+        setInputValue('dashboard-range-filter', '30');
+        setInputValue('dashboard-type-filter', 'all');
+        setInputValue('dashboard-status-filter', 'all');
+        setInputValue('dashboard-category-filter', 'all');
+        setInputValue('dashboard-query-filter', '');
+        renderAdminDashboard();
+    });
+}
+
 function renderAdminDashboard() {
     if (!document.getElementById('view-dashboard')) return;
+    ensureDashboardEnhancements();
+    syncDashboardDynamicFilters();
+    const filters = getDashboardFilters();
 
-    const products = (inventario || []).filter(product => {
-        const category = String(product?.Categoria || product?.categoria || '').toUpperCase();
+    const allProducts = (inventario || []).filter(product => {
+        const category = String(getDashboardProductCategory(product)).toUpperCase();
         const status = String(product?.Estado || product?.estado || 'Activo').toLowerCase();
         return category !== 'BANNER' && status !== 'inactivo';
     });
+    const products = allProducts.filter(product => {
+        const category = getDashboardProductCategory(product);
+        return filters.category === 'all' || normalizeSearchText(category) === normalizeSearchText(filters.category);
+    });
     const totalStock = products.reduce((sum, product) => sum + getDashboardProductStock(product), 0);
+    const lowStockAll = products.filter(product => getDashboardProductStock(product) <= 3);
+    const inventoryValue = products.reduce((sum, product) => {
+        const stock = getDashboardProductStock(product);
+        const price = Number(product?.Precio || 0) || 0;
+        return sum + (stock * price);
+    }, 0);
+
     const facturedOrderIds = typeof getFacturedOrderIds === 'function' ? getFacturedOrderIds() : new Set();
-    const pendingOrders = (window.pedidosList || []).filter(order => {
+    const filteredOrders = filterDashboardRows(window.pedidosList || [], filters);
+    const filteredInvoices = filterDashboardRows(window.facturasList || [], filters);
+    const pendingOrders = filteredOrders.filter(order => {
         const id = String(typeof getOrderIdValue === 'function' ? getOrderIdValue(order) : (order?.['ID Pedido'] || '')).trim();
         const status = String(order?.['Estado Pedido'] || order?.Estado || '').toLowerCase();
         return !(id && facturedOrderIds.has(id)) && !status.includes('factur');
     });
-    const invoices = window.facturasList || [];
-    const totalSales = invoices.reduce((sum, invoice) => {
+    const consultOrders = filteredOrders.filter(order => getDashboardTypeValue(order) === 'consulta' || getDashboardStatusValue(order).toLowerCase().includes('consulta'));
+    const totalSales = filteredInvoices.reduce((sum, invoice) => {
         const value = typeof parseAdminInvoiceMoney === 'function'
             ? parseAdminInvoiceMoney(invoice?.Subtotal || invoice?.Total || 0)
             : Number(invoice?.Subtotal || invoice?.Total || 0) || 0;
         return sum + value;
     }, 0);
+    const averageTicket = filteredInvoices.length ? Math.round(totalSales / filteredInvoices.length) : 0;
+    const conversionRate = getDashboardPercent(filteredInvoices.length, filteredOrders.length);
 
     setDashboardText('dash-total-sales', getDashboardMoney(totalSales));
     setDashboardText('dash-pending-orders', String(pendingOrders.length));
     setDashboardText('dash-active-products', String(products.length));
     setDashboardText('dash-total-stock', String(totalStock.toLocaleString('es-CO')));
+    const stockSmall = document.querySelector('#dash-total-stock')?.closest('.dashboard-stat-card')?.querySelector('small');
+    if (stockSmall) stockSmall.textContent = `${lowStockAll.length} en alerta (${getDashboardPercent(lowStockAll.length, products.length)})`;
+    setDashboardText('dash-conversion-rate', conversionRate);
+    setDashboardText('dash-average-ticket', getDashboardMoney(averageTicket));
+    setDashboardText('dash-consult-orders', String(consultOrders.length));
+    setDashboardText('dash-inventory-value', getDashboardMoney(inventoryValue));
 
     const lowStock = products
         .filter(product => getDashboardProductStock(product) <= 3)
         .sort((a, b) => getDashboardProductStock(a) - getDashboardProductStock(b))
-        .slice(0, 5);
+        .slice(0, 8);
     const lowStockBox = document.getElementById('dash-low-stock');
     if (lowStockBox) {
         lowStockBox.innerHTML = lowStock.length ? lowStock.map(product => `
             <div class="dashboard-list-item">
                 <div>
                     <strong>${escapeHtml(product.Nombre || product['Nombre del Producto'] || 'Producto')}</strong>
-                    <span>${escapeHtml(product.Categoria || 'Sin categoria')}</span>
+                    <span>${escapeHtml(getDashboardProductCategory(product) || 'Sin categoria')}</span>
                 </div>
                 <em>${getDashboardProductStock(product)} und.</em>
             </div>
@@ -4992,7 +5709,9 @@ function renderAdminDashboard() {
 
     const recentOrdersBox = document.getElementById('dash-recent-orders');
     if (recentOrdersBox) {
-        const recent = (window.pedidosList || []).slice(0, 5);
+        const recent = [...filteredOrders]
+            .sort((a, b) => (getDashboardDateValue(b)?.getTime() || 0) - (getDashboardDateValue(a)?.getTime() || 0))
+            .slice(0, 8);
         recentOrdersBox.innerHTML = recent.length ? recent.map(order => {
             const id = typeof getOrderIdValue === 'function' ? getOrderIdValue(order) : (order?.['ID Pedido'] || '-');
             const total = typeof parseAdminInvoiceMoney === 'function'
@@ -5012,21 +5731,45 @@ function renderAdminDashboard() {
 
     const statusBars = document.getElementById('dash-status-bars');
     if (statusBars) {
-        const rows = [
-            ['Pedidos', pendingOrders.length],
-            ['Facturas', invoices.length],
-            ['Productos', products.length],
-            ['Stock bajo', lowStock.length]
-        ];
+        const statusCounts = countByDashboardValue(filteredOrders, getDashboardStatusValue);
+        const rows = Object.entries(statusCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6);
+        if (!rows.length) rows.push(['Sin pedidos', 0]);
         const max = Math.max(...rows.map(([, count]) => count), 1);
         statusBars.innerHTML = rows.map(([label, count]) => `
             <div class="dashboard-bar-row">
                 <span>${escapeHtml(label)}</span>
                 <div class="dashboard-bar-track"><div class="dashboard-bar-fill" style="width:${Math.max(8, Math.round((count / max) * 100))}%"></div></div>
-                <strong>${count}</strong>
+                <strong>${count} (${getDashboardPercent(count, filteredOrders.length)})</strong>
             </div>
         `).join('');
     }
+
+    const salesByDay = {};
+    filteredInvoices.forEach(invoice => {
+        const date = getDashboardDateValue(invoice);
+        const label = date ? date.toLocaleDateString('es-CO', { month: 'short', day: '2-digit' }) : 'Sin fecha';
+        const value = typeof parseAdminInvoiceMoney === 'function'
+            ? parseAdminInvoiceMoney(invoice?.Subtotal || invoice?.Total || 0)
+            : Number(invoice?.Subtotal || invoice?.Total || 0) || 0;
+        salesByDay[label] = (salesByDay[label] || 0) + value;
+    });
+    renderDashboardChartRows('dash-sales-chart', Object.entries(salesByDay).slice(-10).map(([label, value]) => ({
+        label,
+        value,
+        detail: `${getDashboardPercent(value, totalSales)} del total`
+    })), { money: true });
+
+    const categoryCounts = countByDashboardValue(products, product => getDashboardProductCategory(product) || 'Sin categoria');
+    renderDashboardChartRows('dash-category-chart', Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([label, value]) => ({
+            label,
+            value,
+            detail: `${getDashboardPercent(value, products.length)} del catalogo`
+        })));
 }
 
 function switchDashboardView(viewId, title) {
@@ -7028,6 +7771,7 @@ function renderInvoiceProductSearch(query) {
             p.Categoria,
             p.Color,
             p.Estilo,
+            getProductBarcode(p),
             getInvoiceProductId(p)
         ].join(' ').toLowerCase();
         return searchable.includes(q);

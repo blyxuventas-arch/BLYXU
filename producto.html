@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=apple-font-20260910">
+    <link rel="stylesheet" href="blyxu-style.css?v=search-banner2-20260914">
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -658,7 +658,7 @@
             </a>
 
             <ul class="nav-links" id="nav-links">
-                <li><a href="index.html#inicio">Inicio</a></li>
+                <li><a href="index.html">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catálogo</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="pagos.html">Pagos</a></li>
@@ -667,11 +667,12 @@
             </ul>
 
             <div class="nav-actions">
-                <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos">
+                <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos" title="Buscar">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="7"></circle>
                         <path d="M16.5 16.5 21 21"></path>
                     </svg>
+                    <span>Buscar</span>
                 </button>
                 <button class="nav-icon-btn" id="cart-btn" onclick="openCart()" aria-label="Ver Carrito de Compras">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -810,13 +811,13 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=app-url-clean-safe-20260910"></script>
+    <script src="blyxu-app.js?v=search-banner2-20260914"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const detailCatalogMode = urlParams.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
-            const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : 'index.html#coleccion';
+            const catalogBackUrl = detailCatalogMode === 'wholesale' ? 'mayorista.html' : './#coleccion';
             let detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
             let currentDetailProductId = Number.parseInt(urlParams.get('id'), 10);
             activeCatalogMode = detailCatalogMode;

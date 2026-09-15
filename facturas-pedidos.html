@@ -8,7 +8,7 @@
     <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="stylesheet" href="blyxu-style.css?v=apple-font-20260910">
+    <link rel="stylesheet" href="blyxu-style.css?v=search-banner2-20260914">
     <style>
         .orders-page {
             position: relative;
@@ -1019,7 +1019,7 @@
         </a>
 
         <ul class="nav-links" id="nav-links">
-            <li><a href="index.html#inicio">Inicio</a></li>
+            <li><a href="index.html">Inicio</a></li>
             <li><a href="index.html#coleccion">Catalogo</a></li>
             <li><a href="mayorista.html">Mayorista</a></li>
             <li><a href="contacto.html">Contacto</a></li>
@@ -1029,11 +1029,12 @@
         </ul>
 
         <div class="nav-actions">
-            <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos">
+            <button class="nav-icon-btn nav-search-btn" type="button" onclick="openCatalogSearch()" aria-label="Buscar productos" title="Buscar">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="7"></circle>
                     <path d="M16.5 16.5 21 21"></path>
                 </svg>
+                <span>Buscar</span>
             </button>
             <div class="nav-icon" id="cart-btn" onclick="openCart()" role="button" tabindex="0" aria-label="Ver Carrito de Compras" style="position:relative">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1095,7 +1096,7 @@
         <div>
             <h4>Navegacion</h4>
             <ul>
-                <li><a href="index.html#inicio">Inicio</a></li>
+                <li><a href="index.html">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catalogo</a></li>
                 <li><a href="index.html#mayorista">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
@@ -1112,7 +1113,7 @@
                 <input type="search" id="footer-page-search" placeholder="Buscar en BLYXU" autocomplete="off">
             </label>
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
-                <a href="index.html#inicio" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
+                <a href="index.html" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
                 <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Catalogo</a>
                 <a href="index.html#mayorista" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="contacto.html" data-footer-search-item data-keywords="contacto horario telefono redes whatsapp">Contacto</a>
@@ -1142,7 +1143,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=lite-url-clean-safe-20260910"></script>
+    <script src="blyxu-lite.js?v=lite-clean-links-20260914"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');

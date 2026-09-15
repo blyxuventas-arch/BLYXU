@@ -46,6 +46,34 @@ body {
 
     a,
     button,
+    [role="button"],
+    .nav-icon,
+    .product-card,
+    .marquee-item {
+        cursor: none !important;
+    }
+}
+
+input,
+textarea,
+select,
+.global-search-input,
+.smart-search input {
+    cursor: text !important;
+    caret-color: #ffffff !important;
+}
+
+button,
+a,
+[role="button"],
+.nav-icon {
+    cursor: pointer;
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+    body,
+    a,
+    button,
     input,
     textarea,
     select,
@@ -53,8 +81,127 @@ body {
     .nav-icon,
     .product-card,
     .marquee-item {
-        cursor: none !important;
+        cursor: auto !important;
     }
+
+    #blyxu-cursor {
+        display: none !important;
+    }
+}
+
+.global-search-dialog {
+    max-width: min(720px, calc(100vw - 28px)) !important;
+    border-radius: 18px !important;
+    background: rgba(14,14,17,.96) !important;
+    box-shadow: 0 24px 80px rgba(0,0,0,.62) !important;
+}
+
+.global-search-head { grid-template-columns: 1fr 48px !important; padding: 12px !important; }
+.global-search-input {
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.11) !important;
+    font-size: 14px !important;
+}
+.global-search-close { width: 48px !important; height: 48px !important; border-radius: 14px !important; }
+.global-search-results { max-height: min(58vh, 480px) !important; padding: 8px 12px 14px !important; }
+.global-search-group-title { display: none !important; }
+.global-search-item {
+    grid-template-columns: 54px minmax(0, 1fr) auto !important;
+    min-height: 66px !important;
+    padding: 9px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+}
+.global-search-item:hover { background: rgba(255,255,255,.055) !important; border-color: rgba(255,255,255,.1) !important; }
+.global-search-thumb,
+.global-search-icon { width: 48px !important; height: 48px !important; border-radius: 10px !important; }
+
+.main-banner-slide.active .blyxu-svg-title {
+    animation: blyxuHeroTitleExit 3.35s ease forwards !important;
+}
+
+.main-banner-slide.active .blyxu-line {
+    animation: blyxuDrawOnceThenExit 2.55s ease-out forwards !important;
+}
+
+/* Buscador global limpio */
+.global-search-dialog {
+    max-width: min(720px, calc(100vw - 28px)) !important;
+    border-radius: 18px !important;
+    background: rgba(14,14,17,.96) !important;
+    box-shadow: 0 24px 80px rgba(0,0,0,.62) !important;
+}
+
+.global-search-head {
+    grid-template-columns: 1fr 48px !important;
+    padding: 12px !important;
+}
+
+.global-search-input {
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.11) !important;
+    font-size: 14px !important;
+}
+
+.global-search-close {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 14px !important;
+}
+
+.global-search-results {
+    max-height: min(58vh, 480px) !important;
+    padding: 8px 12px 14px !important;
+}
+
+.global-search-group-title {
+    display: none !important;
+}
+
+.global-search-item {
+    grid-template-columns: 54px minmax(0, 1fr) auto !important;
+    min-height: 66px !important;
+    padding: 9px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+}
+
+.global-search-item:hover {
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.1) !important;
+}
+
+.global-search-thumb,
+.global-search-icon {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 10px !important;
+}
+
+/* El logo animado del hero se dibuja y luego se retira */
+.main-banner-slide.active .blyxu-svg-title {
+    animation: blyxuHeroTitleExit 3.35s ease forwards !important;
+}
+
+.main-banner-slide.active .blyxu-line {
+    animation: blyxuDrawOnceThenExit 2.55s ease-out forwards !important;
+}
+
+@keyframes blyxuHeroTitleExit {
+    0%, 78% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-8px) scale(.985); }
+}
+
+@keyframes blyxuDrawOnceThenExit {
+    0% { stroke-dashoffset: 500; opacity: 1; }
+    62% { stroke-dashoffset: 0; opacity: 1; }
+    100% { stroke-dashoffset: 0; opacity: 0; }
 }
 
 #blyxu-cursor {
@@ -414,6 +561,21 @@ body {
 
 .nav-icon-btn {
     font: inherit;
+}
+
+.nav-search-btn {
+    width: auto;
+    min-width: 104px;
+    padding: 0 14px;
+    gap: 8px;
+    border-radius: 999px;
+}
+
+.nav-search-btn span {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 700;
+    color: inherit;
 }
 
 .nav-icon:hover,
@@ -1061,6 +1223,157 @@ body {
 .admin-smart-search {
     width: 100%;
     margin: 0 0 18px;
+}
+
+.global-search-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 11050;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 96px 18px 24px;
+    background: rgba(5, 5, 8, .74);
+    backdrop-filter: blur(18px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+}
+
+.global-search-modal.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.global-search-dialog {
+    width: min(720px, 100%);
+    max-height: min(76vh, 720px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 16px;
+    background: rgba(18, 18, 22, .98);
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .58);
+}
+
+.global-search-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.global-search-input {
+    width: 100%;
+    min-height: 50px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    padding: 0 15px;
+    outline: none;
+    caret-color: #ffffff;
+}
+
+.global-search-close {
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .05);
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.global-search-results {
+    max-height: calc(min(76vh, 720px) - 79px);
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.global-search-group-title {
+    padding: 12px 8px 7px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .9px;
+    text-transform: uppercase;
+}
+
+.global-search-item,
+.global-search-empty {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    min-height: 62px;
+    padding: 10px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #fff;
+    text-decoration: none;
+    background: transparent;
+}
+
+.global-search-item:hover {
+    border-color: rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .055);
+}
+
+.global-search-icon,
+.global-search-thumb {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .07);
+    color: var(--primary);
+    font-weight: 900;
+}
+
+.global-search-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.global-search-item strong {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.global-search-item span {
+    display: block;
+    overflow: hidden;
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.global-search-item em {
+    color: var(--primary);
+    font-style: normal;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.global-search-empty {
+    grid-template-columns: 1fr;
+    color: var(--text-muted);
+    text-align: center;
 }
 
 .catalog-filter-bar {
@@ -8072,6 +8385,16 @@ textarea {
     color: #ffffff;
 }
 
+.cart-payment-tab:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.cart-payment-tab:disabled:hover {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+}
+
 .cart-payment-tab.active {
     background: linear-gradient(135deg, rgba(155, 44, 250, 0.3), rgba(217, 70, 239, 0.2));
     border-color: var(--secondary);
@@ -9435,6 +9758,168 @@ p, span, a, li, button, input, textarea, select, label, th, td {
 }
 .cart-standalone-section.highlight-glow {
     animation: cartSectionPulseNoir 1.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Ajustes finos navbar */
+.nav-search-btn {
+    width: auto !important;
+    min-width: 104px !important;
+    height: 40px !important;
+    padding: 0 14px !important;
+    gap: 8px !important;
+    border-radius: 999px !important;
+}
+
+.nav-search-btn span {
+    display: inline-block !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: inherit !important;
+}
+
+@media (max-width: 640px) {
+    .nav-search-btn {
+        width: 40px !important;
+        min-width: 40px !important;
+        padding: 0 !important;
+    }
+
+    .nav-search-btn span {
+        display: none !important;
+    }
+}
+
+/* Restaurar cursor nativo */
+html,
+body {
+    cursor: auto !important;
+}
+
+#blyxu-cursor {
+    display: none !important;
+}
+
+a,
+button,
+[role="button"],
+.nav-icon,
+.nav-icon-btn,
+.nav-logo,
+.product-card,
+.marquee-item,
+.global-search-item {
+    cursor: pointer !important;
+}
+
+input,
+textarea,
+.global-search-input,
+.smart-search input,
+[contenteditable="true"] {
+    cursor: text !important;
+    caret-color: #ffffff !important;
+}
+
+select,
+input[type="range"],
+label,
+summary {
+    cursor: pointer !important;
+}
+
+/* Cursor personalizado elegante en escritorio */
+@media (hover: hover) and (pointer: fine) {
+    html,
+    body {
+        cursor: none !important;
+    }
+
+    a,
+    button,
+    select,
+    [role="button"],
+    .nav-icon,
+    .nav-icon-btn,
+    .nav-logo,
+    .product-card,
+    .marquee-item,
+    .global-search-item {
+        cursor: none !important;
+    }
+
+    #blyxu-cursor {
+        display: block !important;
+    }
+
+    #blyxu-cursor.is-text-field {
+        opacity: 0 !important;
+    }
+
+    input,
+    textarea,
+    .global-search-input,
+    .smart-search input,
+    [contenteditable="true"] {
+        cursor: text !important;
+        caret-color: #ffffff !important;
+    }
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+    html,
+    body,
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    [role="button"] {
+        cursor: auto !important;
+    }
+
+    #blyxu-cursor {
+        display: none !important;
+    }
+}
+
+/* Buscador global limpio - override final */
+.global-search-dialog {
+    max-width: min(720px, calc(100vw - 28px)) !important;
+    border-radius: 18px !important;
+    background: rgba(14,14,17,.96) !important;
+    box-shadow: 0 24px 80px rgba(0,0,0,.62) !important;
+}
+
+.global-search-head { grid-template-columns: 1fr 48px !important; padding: 12px !important; }
+.global-search-input {
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.055) !important;
+    border-color: rgba(255,255,255,.11) !important;
+    font-size: 14px !important;
+}
+.global-search-close { width: 48px !important; height: 48px !important; border-radius: 14px !important; }
+.global-search-results { max-height: min(58vh, 480px) !important; padding: 8px 12px 14px !important; }
+.global-search-group-title { display: none !important; }
+.global-search-item {
+    grid-template-columns: 54px minmax(0, 1fr) auto !important;
+    min-height: 66px !important;
+    padding: 9px !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+}
+.global-search-item:hover { background: rgba(255,255,255,.055) !important; border-color: rgba(255,255,255,.1) !important; }
+.global-search-thumb,
+.global-search-icon { width: 48px !important; height: 48px !important; border-radius: 10px !important; }
+
+/* El logo animado del hero se dibuja y luego se retira */
+.main-banner-slide.active .blyxu-svg-title {
+    animation: blyxuHeroTitleExit 3.35s ease forwards !important;
+}
+
+.main-banner-slide.active .blyxu-line {
+    animation: blyxuDrawOnceThenExit 2.55s ease-out forwards !important;
 }
 
 /* ── FIN STUDIO NOIR OVERRIDE ── */

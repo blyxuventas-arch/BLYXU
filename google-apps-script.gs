@@ -37,6 +37,7 @@ const SHEETS = {
       'Imagen Principal',
       'Galería JSON',
       'SKU',
+      'Codigo Barras',
       'Estado',
       'Fecha de Creación'
     ]
@@ -968,6 +969,49 @@ function getConfigValue_(key, fallback) {
   return found ? String(found.Valor || '') : (fallback || '');
 }
 
+function normalizeBarcode_(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '')
+    .toUpperCase()
+    .slice(0, 48);
+}
+
+function makeProductBarcode_(idProducto, idVariacion) {
+  const base = normalizeBarcode_(idVariacion || idProducto);
+  return base ? 'BLYXU-' + base : '';
+}
+
+function ensureProductBarcode_(rowObject) {
+  const current = rowObject['Codigo Barras'] ||
+    rowObject['Codigo de Barras'] ||
+    rowObject['Código de Barras'] ||
+    rowObject['Codigo_Barras'] ||
+    rowObject.codigoBarras ||
+    rowObject.Barcode ||
+    '';
+  const code = normalizeBarcode_(current) || makeProductBarcode_(rowObject['ID Producto'], rowObject['ID Variación'] || rowObject['ID Variacion']);
+  if (!code) return rowObject;
+
+  rowObject['Codigo Barras'] = code;
+  rowObject['Codigo de Barras'] = code;
+  rowObject['Código de Barras'] = code;
+  rowObject['Codigo_Barras'] = code;
+  rowObject.codigoBarras = code;
+  rowObject.Barcode = code;
+  return rowObject;
+}
+
+function shouldDiscountStockForOrder_(pedido) {
+  const stockFlag = normalizeKey_(pedido['Stock Descontado'] || pedido.stockDescontado || '');
+  if (['no', 'false', '0', 'pendiente'].indexOf(stockFlag) >= 0) return false;
+
+  const method = normalizeKey_(pedido['Método Contacto'] || pedido['Metodo Contacto'] || pedido['MÃ©todo Contacto'] || '');
+  const status = normalizeKey_(pedido['Estado Pedido'] || '');
+  return method.indexOf('consulta') < 0 && status.indexOf('consulta') < 0;
+}
+
 function createOrder_(data) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -976,7 +1020,9 @@ function createOrder_(data) {
     const pedido = appendRow_('Pedidos', data);
 
     upsertClientFromOrder_(pedido);
-    updateStockFromOrder_(pedido['Productos JSON']);
+    if (shouldDiscountStockForOrder_(pedido)) {
+      updateStockFromOrder_(pedido['Productos JSON']);
+    }
 
     return pedido;
   } finally {
@@ -1020,6 +1066,7 @@ function batchSaveRows_(sheetName, itemsList) {
       if (sheetName === 'Productos') {
         rowObject['ID Variación'] = rowObject['ID Variación'] || rowObject['ID Variacion'] || makeId_('VAR');
         rowObject['ID Producto'] = rowObject['ID Producto'] || rowObject['ID Variación'];
+        ensureProductBarcode_(rowObject);
         rowObject['Estado'] = rowObject['Estado'] || 'Activo';
         rowObject['Fecha de Creación'] = rowObject['Fecha de Creación'] || now;
       }
@@ -1071,6 +1118,7 @@ function appendRow_(sheetName, inputData) {
   if (sheetName === 'Productos') {
     rowObject['ID Variación'] = rowObject['ID Variación'] || rowObject['ID Variacion'] || makeId_('VAR');
     rowObject['ID Producto'] = rowObject['ID Producto'] || rowObject['ID Variación'];
+    ensureProductBarcode_(rowObject);
     rowObject['Estado'] = rowObject['Estado'] || 'Activo';
     rowObject['Fecha de Creación'] = rowObject['Fecha de Creación'] || now;
   }
@@ -2215,6 +2263,9 @@ function findHeader_(headers, key, sheetName) {
       imagenPrincipal: 'Imagen Principal',
       imagenprincipal: 'Imagen Principal',
       imagen: 'Imagen Principal',
+      codigobarras: 'Codigo Barras',
+      codigodebarras: 'Codigo Barras',
+      barcode: 'Codigo Barras',
       nombre: 'Nombre del Producto',
       producto: 'Nombre del Producto',
       categoria: 'Categoría',

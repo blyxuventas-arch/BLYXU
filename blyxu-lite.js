@@ -315,10 +315,107 @@ function closeCart() {
     document.getElementById('cart-sidebar')?.classList.remove('open');
 }
 
-function openCatalogSearch() {
-    window.location.href = 'index.html#coleccion';
+const LITE_GLOBAL_SEARCH_PAGES = [
+    { title: 'Inicio', detail: 'Banner principal y novedades', href: './', keywords: 'inicio home principal novedades banner' },
+    { title: 'Catalogo', detail: 'Productos minoristas, categorias y filtros', href: './#coleccion', keywords: 'catalogo coleccion productos comprar accesorios joyeria' },
+    { title: 'Mayorista', detail: 'Acceso y catalogo por mayor', href: 'mayorista.html', keywords: 'mayorista por mayor wholesale precios acceso clave' },
+    { title: 'Carrito', detail: 'Revisar productos seleccionados', href: 'carrito.html#carrito', keywords: 'carrito bolsa compra pedido checkout' },
+    { title: 'Pagos', detail: 'QR, transferencia y comprobantes', href: 'pagos.html', keywords: 'pagos pagar qr transferencia cuenta comprobante mercado pago' },
+    { title: 'Facturas y pedidos', detail: 'Consultar ordenes y comprobantes', href: 'facturas-pedidos.html', keywords: 'facturas pedidos ordenes consultar comprobantes historial' },
+    { title: 'Contacto', detail: 'WhatsApp, horarios y redes', href: 'contacto.html', keywords: 'contacto whatsapp telefono horario redes instagram tiktok facebook' },
+    { title: 'Administrativo', detail: 'Panel interno BLYXU', href: 'administrativo.html', keywords: 'admin administrativo inventario dashboard productos pedidos' }
+];
+
+function getLiteGlobalSearchResults(query) {
+    const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    return LITE_GLOBAL_SEARCH_PAGES.filter(item => {
+        if (!terms.length) return true;
+        const blob = normalizeSearchText(`${item.title} ${item.detail} ${item.keywords}`);
+        return terms.every(term => blob.includes(term));
+    });
 }
 
+function ensureLiteGlobalSearchModal() {
+    let modal = document.getElementById('global-search-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'global-search-modal';
+    modal.className = 'global-search-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="global-search-dialog" role="dialog" aria-modal="true" aria-labelledby="global-search-title">
+            <div class="global-search-head">
+                <input class="global-search-input" id="global-search-input" type="search" placeholder="Buscar catalogo, pagos, pedidos, contacto..." autocomplete="off">
+                <button class="global-search-close" type="button" aria-label="Cerrar busqueda">&times;</button>
+            </div>
+            <div class="global-search-results" id="global-search-results" aria-live="polite"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('.global-search-close')) closeGlobalSearch();
+    });
+    modal.querySelector('#global-search-input')?.addEventListener('input', renderLiteGlobalSearchResults);
+    modal.querySelector('#global-search-input')?.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeGlobalSearch();
+        if (event.key === 'Enter') {
+            const first = modal.querySelector('.global-search-item');
+            if (first) {
+                event.preventDefault();
+                first.click();
+            }
+        }
+    });
+
+    return modal;
+}
+
+function renderLiteGlobalSearchResults() {
+    const input = document.getElementById('global-search-input');
+    const results = document.getElementById('global-search-results');
+    if (!input || !results) return;
+    const matches = getLiteGlobalSearchResults(input.value).slice(0, 10);
+    results.innerHTML = matches.length ? `
+        <div class="global-search-group-title">BLYXU</div>
+        ${matches.map(item => `
+            <a class="global-search-item" href="${escapeHtml(item.href)}">
+                <span class="global-search-icon">#</span>
+                <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
+                <em>Ir</em>
+            </a>
+        `).join('')}
+    ` : '<div class="global-search-empty">Sin resultados. Prueba con catalogo, pedidos, pagos o contacto.</div>';
+}
+
+function closeGlobalSearch() {
+    const modal = document.getElementById('global-search-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('global-search-open');
+}
+
+function openGlobalSearch() {
+    const modal = ensureLiteGlobalSearchModal();
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('global-search-open');
+    renderLiteGlobalSearchResults();
+    setTimeout(() => {
+        const input = document.getElementById('global-search-input');
+        input?.focus({ preventScroll: true });
+        input?.select?.();
+    }, 40);
+}
+
+function openCatalogSearch() {
+    openGlobalSearch();
+}
+
+window.openGlobalSearch = openGlobalSearch;
+window.closeGlobalSearch = closeGlobalSearch;
 window.openCatalogSearch = openCatalogSearch;
 
 function renderFloatingWhatsApp() {

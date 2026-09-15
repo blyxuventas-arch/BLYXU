@@ -430,6 +430,34 @@ function initNavbar() {
         links.forEach(link => link.classList.toggle('active', link === activeLink));
     }
 
+    function goHome(event) {
+        event?.preventDefault();
+        hideBrandLoader();
+        document.body.classList.remove('mp-loading-active');
+        document.getElementById('wholesale-overlay')?.classList.remove('open');
+        document.getElementById('catalogo-mayorista')?.classList.remove('open');
+        document.getElementById('catalogo-mayorista')?.setAttribute('aria-hidden', 'true');
+        document.getElementById('cart-overlay')?.classList.remove('open');
+        document.getElementById('cart-sidebar')?.classList.remove('open');
+        document.body.style.overflow = '';
+        setCatalogCartMode('retail');
+        activeFilter = 'todos';
+        syncActiveCategoryControls(activeFilter);
+        if (window.history?.replaceState) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+        document.getElementById('inicio')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const homeLink = links.find(link => link.getAttribute('href') === '#inicio');
+        if (homeLink) setActiveLink(homeLink);
+        toggle?.classList.remove('open');
+        navLinks?.classList.remove('open');
+        toggle?.setAttribute('aria-expanded', 'false');
+    }
+
+    document.querySelectorAll('[data-home-link], .nav-links a[href="#inicio"]').forEach(link => {
+        link.addEventListener('click', goHome);
+    });
+
     window.addEventListener('scroll', () => {
         if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 50);
 
@@ -696,6 +724,32 @@ function normalizeImageUrl(value) {
     if (firstUrl.startsWith('//')) return `https:${firstUrl}`;
 
     return firstUrl;
+}
+
+function getImageFallbackUrl(source) {
+    const src = String(source || '');
+    const driveMatch =
+        src.match(/[?&]id=([^&#]+)/) ||
+        src.match(/drive\.google\.com\/file\/d\/([^/]+)/) ||
+        src.match(/lh3\.googleusercontent\.com\/d\/([^/?&#]+)/);
+
+    if (driveMatch?.[1] && !src.includes('lh3.googleusercontent.com')) {
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveMatch[1])}=w1000`;
+    }
+
+    return 'hero_necklace.png';
+}
+
+function handleCatalogImageError(img) {
+    if (!img) return;
+    const fallback = getImageFallbackUrl(img.currentSrc || img.src);
+    if (img.src === fallback || img.dataset.fallbackTried === 'true') {
+        img.onerror = null;
+        img.src = 'hero_necklace.png';
+        return;
+    }
+    img.dataset.fallbackTried = 'true';
+    img.src = fallback;
 }
 
 function normalizeGoogleProduct(product) {
@@ -1233,7 +1287,7 @@ function renderInventorySpotlightProducts(products) {
         return `
             <article class="hero-carousel-slide product-glass-card ${index === 0 ? 'active' : ''}" data-detail-url="${escapeHtml(details.detailUrl)}">
                 <div class="product-glass-media ${toneClass}">
-                    <img src="${escapeHtml(details.image)}" alt="${escapeHtml(details.name)}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('is-fallback')">
+                    <img src="${escapeHtml(details.image || 'hero_necklace.png')}" alt="${escapeHtml(details.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
                     <span class="product-glass-badge">${escapeHtml(details.category)}</span>
                     ${stockBadge}
                 </div>
@@ -1457,7 +1511,7 @@ function renderInventorySpotlight() {
         const price = getProductPrice(p, 'retail');
         const priceText = shouldShowProductPrices('retail') ? formatMoney(price) : 'Precio por consultar';
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
-                    <img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.parentElement.style.display='none'">
+                    <img src="${escapeHtml(img || 'hero_necklace.png')}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
                     ${stockBadge}
                     <div class="marquee-item-info">
                         <strong>${escapeHtml(name)}</strong>
@@ -2449,7 +2503,7 @@ function renderProducts(products, options = {}) {
         return `
         <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}">
             <div class="product-card-img" onclick="window.location.href='${detailUrl}'">
-                ${img ? `<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">` :
+                ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
@@ -2603,7 +2657,11 @@ function getCartOrderLabel(mode = activeCartMode) {
 
 function shouldRegisterCartOrder(mode = activeCartMode) {
     const normalizedMode = normalizeCartMode(mode);
-    return normalizedMode === 'wholesale' || shouldShowProductPrices('retail');
+    return normalizedMode === 'wholesale' || cart.some(item => !cartItemShowsPrice(item)) || shouldShowProductPrices('retail');
+}
+
+function isCartConsultationMode(items = cart) {
+    return normalizeCartMode(activeCartMode) === 'retail' && items.some(item => !cartItemShowsPrice(item));
 }
 
 function cartItemShowsPrice(item) {
@@ -2893,16 +2951,20 @@ function saveCart(mode = activeCartMode) {
 let currentCartSectionPaymentMethod = 'mp';
 
 function setCartPaymentMethod(method) {
-    currentCartSectionPaymentMethod = method;
+    const isConsultationMode = isCartConsultationMode();
+    currentCartSectionPaymentMethod = isConsultationMode && method === 'mp' ? 'ws' : method;
     const mpTab = document.getElementById('tab-payment-mp');
     const wsTab = document.getElementById('tab-payment-ws');
     const mpBadges = document.getElementById('cart-sec-mp-badges');
     const emailField = document.getElementById('cart-sec-field-email');
     const btnCheckout = document.getElementById('btn-cart-sec-checkout');
     const btnText = document.getElementById('btn-cart-sec-checkout-text');
+    const resolvedMethod = currentCartSectionPaymentMethod;
 
     if (mpTab && wsTab) {
-        if (method === 'mp') {
+        mpTab.disabled = isConsultationMode;
+        mpTab.title = isConsultationMode ? 'Mercado Pago se habilita cuando los precios minoristas estan visibles.' : '';
+        if (resolvedMethod === 'mp') {
             mpTab.classList.add('active');
             wsTab.classList.remove('active');
             if (btnCheckout) btnCheckout.classList.remove('btn-ws-mode');
@@ -2915,6 +2977,7 @@ function setCartPaymentMethod(method) {
             if (btnCheckout) btnCheckout.classList.add('btn-ws-mode');
             if (btnText) btnText.textContent = 'Finalizar Pedido por WhatsApp 💬';
             if (mpBadges) mpBadges.style.display = 'none';
+            if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
         }
     }
 }
@@ -3058,14 +3121,19 @@ function updateCartUI() {
     }
 
     // Configure Standalone Section Payment Method & Button text
-    if (isWholesale) {
+    if (isWholesale || hasHiddenPrices) {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'none';
+        const paymentTabs = mpTab?.closest('.cart-payment-tabs');
+        if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr';
         setCartPaymentMethod('ws');
         if (secCheckoutBtnText) secCheckoutBtnText.textContent = 'Confirmar y Registrar Pedido Mayorista ✦';
+        if (secCheckoutBtnText && hasHiddenPrices) secCheckoutBtnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
     } else {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'flex';
+        const paymentTabs = mpTab?.closest('.cart-payment-tabs');
+        if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr 1fr';
         if (currentCartSectionPaymentMethod === 'mp') {
             setCartPaymentMethod('mp');
         } else {
@@ -3125,7 +3193,7 @@ function updateCartUI() {
             if (errorBox) errorBox.style.display = 'none';
             window.wsClienteTemp = { nombre: n, telefono: t, email: email, direccion: d, ciudad: c, nota: nota };
 
-            if (!isWholesale && currentCartSectionPaymentMethod === 'mp') {
+            if (!isWholesale && !hasHiddenPrices && currentCartSectionPaymentMethod === 'mp') {
                 newSecBtn.disabled = true;
                 const origText = newSecBtn.innerHTML;
                 newSecBtn.innerHTML = '<span>Generando pago seguro... ✦</span>';
@@ -3164,7 +3232,9 @@ function updateCartUI() {
             const formContainer = document.getElementById('cart-wholesale-form');
             if (formContainer) formContainer.style.display = 'none';
             if (checkoutBtn) {
-                checkoutBtn.textContent = shouldRegisterCartOrder() ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp';
+                checkoutBtn.textContent = isCartConsultationMode()
+                    ? 'Registrar consulta por WhatsApp'
+                    : (shouldRegisterCartOrder() ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp');
                 checkoutBtn.style.display = 'block';
             }
         } else {
@@ -3250,7 +3320,7 @@ function openCart() {
         return;
     }
 
-    // Si estamos en cualquier otra página, ir directamente a index.html#carrito-seccion
+    // Si estamos en cualquier otra página, ir directamente a ./#carrito-seccion
     window.location.href = 'carrito.html';
 }
 function closeCart() {
@@ -3397,25 +3467,157 @@ function setWholesalePriceFilter(priceFilter) {
     renderWholesaleCatalogProducts();
 }
 
-function openCatalogSearch() {
-    const input = document.getElementById('catalog-search') || document.getElementById('wholesale-catalog-search');
-    const target = document.getElementById('coleccion') || document.getElementById('catalogo-mayorista');
+const GLOBAL_SEARCH_PAGES = [
+    { title: 'Inicio', detail: 'Banner principal y novedades', href: 'index.html', keywords: 'inicio home principal novedades banner' },
+    { title: 'Catalogo', detail: 'Productos minoristas, categorias y filtros', href: 'index.html#coleccion', keywords: 'catalogo coleccion productos comprar accesorios joyeria' },
+    { title: 'Mayorista', detail: 'Acceso y catalogo por mayor', href: 'mayorista.html', keywords: 'mayorista por mayor wholesale precios acceso clave' },
+    { title: 'Carrito', detail: 'Revisar productos seleccionados', href: 'carrito.html#carrito', keywords: 'carrito bolsa compra pedido checkout' },
+    { title: 'Pagos', detail: 'QR, transferencia y comprobantes', href: 'pagos.html', keywords: 'pagos pagar qr transferencia cuenta comprobante mercado pago' },
+    { title: 'Facturas y pedidos', detail: 'Consultar ordenes y comprobantes', href: 'facturas-pedidos.html', keywords: 'facturas pedidos ordenes consultar comprobantes historial' },
+    { title: 'Contacto', detail: 'WhatsApp, horarios y redes', href: 'contacto.html', keywords: 'contacto whatsapp telefono horario redes instagram tiktok facebook' },
+    { title: 'Administrativo', detail: 'Panel interno BLYXU', href: 'administrativo.html', keywords: 'admin administrativo inventario dashboard productos pedidos' }
+];
 
-    if (!input) {
-        window.location.href = 'index.html#coleccion';
-        return;
-    }
-
-    if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    setTimeout(() => {
-        input.focus({ preventScroll: true });
-        input.select?.();
-    }, 360);
+function getGlobalPageResults(query) {
+    const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    return GLOBAL_SEARCH_PAGES.filter(item => {
+        if (!terms.length) return true;
+        const blob = normalizeSearchText(`${item.title} ${item.detail} ${item.keywords}`);
+        return terms.every(term => blob.includes(term));
+    });
 }
 
+function getGlobalProductResults(query) {
+    const q = normalizeSearchText(query);
+    if (!q || !Array.isArray(allProducts) || !allProducts.length) return [];
+    const mode = document.body?.dataset.catalogMode === 'wholesale' ? 'wholesale' : 'retail';
+    const products = getCartModeProducts(mode);
+    const seen = new Set();
+    return applySmartProductSearch(products, q)
+        .filter(product => {
+            const key = getProductGroupKey(product);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .slice(0, 8)
+        .map(product => {
+            const productIndex = allProducts.indexOf(product);
+            const price = getProductPrice(product, mode);
+            const category = product.Categoria || product.categoria || 'Producto';
+            return {
+                title: product.Nombre || product.nombre || product.Producto || 'Producto',
+                detail: `${category}${product.SKU ? ' · ' + product.SKU : ''}`,
+                href: `producto.html?id=${productIndex >= 0 ? productIndex : 0}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`,
+                image: normalizeImageUrl(getProductImageSet(product)[0] || product.Imagen || product['Imagen Principal'] || product.imagen || ''),
+                meta: price ? `$${Number(price).toLocaleString('es-CO')}` : 'Ver'
+            };
+        });
+}
+
+function ensureGlobalSearchModal() {
+    let modal = document.getElementById('global-search-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'global-search-modal';
+    modal.className = 'global-search-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="global-search-dialog" role="dialog" aria-modal="true" aria-labelledby="global-search-title">
+            <div class="global-search-head">
+                <input class="global-search-input" id="global-search-input" type="search" placeholder="Buscar producto, referencia, color..." autocomplete="off">
+                <button class="global-search-close" type="button" aria-label="Cerrar busqueda">&times;</button>
+            </div>
+            <div class="global-search-results" id="global-search-results" aria-live="polite"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', event => {
+        if (event.target === modal || event.target.closest('.global-search-close')) closeGlobalSearch();
+    });
+    modal.querySelector('#global-search-input')?.addEventListener('input', renderGlobalSearchResults);
+    modal.querySelector('#global-search-input')?.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeGlobalSearch();
+        if (event.key === 'Enter') {
+            const first = modal.querySelector('.global-search-item');
+            if (first) {
+                event.preventDefault();
+                first.click();
+            }
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modal.classList.contains('open')) closeGlobalSearch();
+    });
+
+    return modal;
+}
+
+function closeGlobalSearch() {
+    const modal = document.getElementById('global-search-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('global-search-open');
+}
+
+function renderGlobalSearchResults() {
+    const input = document.getElementById('global-search-input');
+    const results = document.getElementById('global-search-results');
+    if (!input || !results) return;
+
+    const query = input.value.trim();
+    const productResults = getGlobalProductResults(query);
+    const pageResults = [];
+    const pageHtml = pageResults.length ? `
+        <div class="global-search-group-title">Secciones</div>
+        ${pageResults.map(item => `
+            <a class="global-search-item" href="${escapeHtml(item.href)}">
+                <span class="global-search-icon">#</span>
+                <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
+                <em>Ir</em>
+            </a>
+        `).join('')}
+    ` : '';
+    const productHtml = productResults.length ? `
+        ${productResults.map(item => `
+            <a class="global-search-item" href="${escapeHtml(item.href)}">
+                <span class="global-search-thumb">${item.image ? `<img src="${escapeHtml(item.image)}" alt="" onerror="handleCatalogImageError(this)">` : 'B'}</span>
+                <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
+                <em>${escapeHtml(item.meta)}</em>
+            </a>
+        `).join('')}
+    ` : '';
+
+    results.innerHTML = pageHtml || productHtml
+        ? pageHtml + productHtml
+        : '<div class="global-search-empty">Busca por nombre, referencia, color o producto.</div>';
+}
+
+function openGlobalSearch() {
+    const modal = ensureGlobalSearchModal();
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('global-search-open');
+    renderGlobalSearchResults();
+    if (!allProducts.length && typeof loadProducts === 'function') {
+        loadProducts({ renderCatalog: false }).then(renderGlobalSearchResults).catch(() => {});
+    }
+    setTimeout(() => {
+        const input = document.getElementById('global-search-input');
+        input?.focus({ preventScroll: true });
+        input?.select?.();
+    }, 40);
+}
+
+function openCatalogSearch() {
+    openGlobalSearch();
+}
+
+window.openGlobalSearch = openGlobalSearch;
+window.closeGlobalSearch = closeGlobalSearch;
 window.openCatalogSearch = openCatalogSearch;
 
 function initCatalogSearch() {
@@ -3562,6 +3764,7 @@ function initWholesaleAccess() {
     }
 
     function closeWholesale(goHome = false) {
+        hideBrandLoader();
         if (overlay) {
             overlay.classList.remove('open');
             overlay.setAttribute('aria-hidden', 'true');
@@ -3693,6 +3896,13 @@ function showBrandLoader() {
             resolve();
         }, 1450);
     });
+}
+
+function hideBrandLoader() {
+    const loader = document.getElementById('brand-loader');
+    if (!loader) return;
+    loader.classList.remove('open');
+    loader.setAttribute('aria-hidden', 'true');
 }
 
 function openWhatsAppMessage(message) {
@@ -3838,7 +4048,9 @@ function initCustomCursor() {
 
     document.addEventListener('mouseover', event => {
         const target = event.target;
-        cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .marquee-item')));
+        const isTextField = Boolean(target?.closest?.('input, textarea, [contenteditable="true"], .global-search-input, .smart-search input'));
+        cursor.classList.toggle('is-text-field', isTextField);
+        cursor.classList.toggle('is-hovering', !isTextField && Boolean(target?.closest?.('a, button, select, [role="button"], .nav-icon, .product-card, .marquee-item')));
     });
 
     move();
@@ -3847,12 +4059,14 @@ function initCustomCursor() {
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
     const name = product?.Nombre || product?.nombre || product?.Producto || 'Producto BLYXU';
     const category = product?.Categoria || product?.categoria || '';
+    const imageUrl = normalizeImageUrl(getProductImageSet(product)[0] || product?.Imagen || product?.['Imagen Principal'] || '');
     const sku = product?.SKU || product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '';
 
     let msg = '*Consulta de precio BLYXU*\n\n';
     msg += `Hola, quiero consultar el precio de:\n*${name}*\n`;
     if (category) msg += `Categoría: ${category}\n`;
     if (sku) msg += `SKU / Ref: ${sku}\n`;
+    if (imageUrl) msg += `Imagen: ${imageUrl}\n`;
     if (pageUrl) msg += `\nLink: ${pageUrl}`;
 
     openWhatsAppMessage(msg);
@@ -3868,7 +4082,7 @@ function getDemoProducts() {
         { Nombre:'Set Aurora Boreal', Categoria:'Sets', Precio:129900, Stock:5, Color:'morado,plata', Imagen:'', Descripcion:'Set completo collar + aretes' },
         { Nombre:'Dije Corazon Amethyst', Categoria:'Dijes', Precio:28900, Stock:40, Color:'morado', Imagen:'', Descripcion:'Dije corazon con piedra natural' },
         { Nombre:'Tobillera Luna Creciente', Categoria:'Tobilleras', Precio:22900, Stock:18, Color:'plata', Imagen:'', Descripcion:'Tobillera delicada con luna' },
-        { Nombre:'Collar Cadena Royal', Categoria:'Collares', Precio:67900, Stock:12, Color:'dorado,morado', Imagen:'', Descripcion:'Collar cadena gruesa premium' },
+        { Nombre:'Collar Cadena Royal', Categoria:'Collares', Precio:67900, Stock:12, Color:'dorado,morado', Imagen:'', Descripcion:'Collar cadena gruesa con acabado destacado' },
     ];
 }
 
@@ -4644,6 +4858,16 @@ function initCustomerAuth() {
 async function checkoutWithMercadoPago(cliente, options = {}) {
     const checkoutItems = Array.isArray(options.items) && options.items.length ? options.items : cart;
     if (!checkoutItems.length) return;
+    if (checkoutItems.some(item => !cartItemShowsPrice(item))) {
+        setCartPaymentMethod('ws');
+        const secErrorBox = document.getElementById('cart-section-form-error');
+        if (secErrorBox) {
+            secErrorBox.textContent = 'Mercado Pago solo esta disponible cuando los precios minoristas estan visibles. Finaliza esta consulta por WhatsApp.';
+            secErrorBox.style.display = 'block';
+            secErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
     const shouldClearCart = options.clearCart !== false;
     const pricingSummary = getCartPricingSummary(checkoutItems);
     const total = pricingSummary.total;
@@ -4788,6 +5012,7 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
+    const isConsultation = normalizedType === 'Detal' && isCartConsultationMode();
     const pricingSummary = getCartPricingSummary(cart);
     const promotion = pricingSummary.promotion;
     const productos = cart.map(item => ({
@@ -4796,11 +5021,12 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         nombre: item.name,
         opcion: item.variantLabel || '',
         cantidad: item.qty,
-        precioOriginal: item.price,
-        precio: promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price,
-        subtotal: (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price) * item.qty,
-        descuentoCliente: promotion.percent || '',
-        promoCliente: promotion.label || '',
+        precioOriginal: isConsultation ? 0 : item.price,
+        precio: isConsultation ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price),
+        subtotal: isConsultation ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price) * item.qty,
+        precioEstado: isConsultation ? 'Por consultar' : '',
+        descuentoCliente: isConsultation ? '' : (promotion.percent || ''),
+        promoCliente: isConsultation ? '' : (promotion.label || ''),
         sku: item.sku || '',
         img: item.img || '',
         imagen: item.img || '',
@@ -4820,10 +5046,15 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         'Ciudad': cliente.ciudad,
         'Productos JSON': JSON.stringify(productos),
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
-        'Subtotal': pricingSummary.total,
-        'Estado Pedido': 'Pendiente',
-        'Metodo Contacto': `Sistema ${orderLabel}`,
-        'Nota Cliente': [cliente.nota || '', promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''].filter(Boolean).join(' | ')
+        'Subtotal': isConsultation ? 0 : pricingSummary.total,
+        'Estado Pedido': isConsultation ? 'Consulta pendiente' : 'Pendiente',
+        'Metodo Contacto': isConsultation ? 'Consulta General WhatsApp' : `Sistema ${orderLabel}`,
+        'Stock Descontado': isConsultation ? 'NO' : '',
+        'Nota Cliente': [
+            cliente.nota || '',
+            isConsultation ? 'Precios ocultos: consulta general por WhatsApp' : '',
+            !isConsultation && promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''
+        ].filter(Boolean).join(' | ')
     };
 
     try {
@@ -4860,8 +5091,10 @@ function askRetailQuestion() {
 
 function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', cliente = null, savedOrder = null, total = 0, note = '' }) {
     const hasHiddenPrices = cart.some(item => !cartItemShowsPrice(item));
-    const orderLabel = customerType === 'Mayor' ? 'Mayorista' : 'Detal';
-    let msg = isRegisteredOrder ? `*Pedido ${orderLabel} BLYXU*\n\n` : '*Consulta BLYXU*\n\n';
+    const orderLabel = hasHiddenPrices ? 'Consulta General' : (customerType === 'Mayor' ? 'Mayorista' : 'Detal');
+    let msg = hasHiddenPrices
+        ? '*Consulta General BLYXU*\n\n'
+        : (isRegisteredOrder ? `*Pedido ${orderLabel} BLYXU*\n\n` : '*Consulta BLYXU*\n\n');
 
     if (savedOrder && savedOrder['ID Pedido']) {
         msg += `*ID Pedido:* ${savedOrder['ID Pedido']}\n`;
@@ -4898,9 +5131,10 @@ async function checkout(skipPrompt = false) {
     if (!cart.length) return;
     await syncRetailPriceVisibility();
     const total = getCartPricingSummary(cart).total;
+    const isConsultation = isCartConsultationMode();
     const isRegisteredOrder = shouldRegisterCartOrder();
     const customerType = getCartCustomerType();
-    const orderLabel = getCartOrderLabel();
+    const orderLabel = isConsultation ? 'Consulta' : getCartOrderLabel();
     
     const cliente = isRegisteredOrder ? window.wsClienteTemp : null;
     if (isRegisteredOrder && !cliente) {
@@ -4986,8 +5220,8 @@ async function checkout(skipPrompt = false) {
                     <div class="cart-success-icon">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <h4>Gracias por tu pedido</h4>
-                    <p>Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.</p>
+                    <h4>${isConsultation ? 'Consulta registrada' : 'Gracias por tu pedido'}</h4>
+                    <p>${isConsultation ? 'Tu consulta quedo registrada correctamente. Te llevamos a WhatsApp para terminar con un asesor.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.`}</p>
                     <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
                     <div class="cart-success-actions">
                         <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
@@ -4995,7 +5229,7 @@ async function checkout(skipPrompt = false) {
                         </button>
                         <a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5Z"></path><path d="M9.2 8.8c.2 2.8 2.3 5 5.1 5.5"></path></svg>
-                            Dudas por WhatsApp
+                            ${isConsultation ? 'Continuar en WhatsApp' : 'Dudas por WhatsApp'}
                         </a>
                         <button class="btn-checkout" onclick="dismissWholesaleOrderNotice()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar</button>
                     </div>
@@ -5003,6 +5237,7 @@ async function checkout(skipPrompt = false) {
             `;
             if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
+        if (isConsultation) openWhatsAppMessage(msg);
     } else {
         closeCart();
         openWhatsAppMessage(msg);
@@ -5017,6 +5252,18 @@ async function checkout(skipPrompt = false) {
 document.addEventListener('DOMContentLoaded', () => {
     cleanBrowserUrl();
     window.addEventListener('hashchange', cleanBrowserUrl);
+    hideBrandLoader();
+    window.addEventListener('pageshow', () => {
+        hideBrandLoader();
+        document.body.classList.remove('mp-loading-active');
+    });
+    window.addEventListener('pagehide', () => {
+        hideBrandLoader();
+    });
+    window.addEventListener('beforeunload', hideBrandLoader);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') hideBrandLoader();
+    });
     if (document.body?.dataset.catalogMode === 'wholesale') {
         activeCatalogMode = 'wholesale';
         setCartMode('wholesale');
@@ -5025,11 +5272,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initNavbar();
     initReveal();
+    initCustomCursor();
     renderInventorySpotlightLoading();
     initCatalogSearch();
     initFooterPageSearch();
     initWholesaleAccess();
-    initCustomCursor();
     initGlassSelects();
     initCustomerAuth();
     const isProductDetailPage = Boolean(document.getElementById('product-detail'));

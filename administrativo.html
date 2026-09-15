@@ -277,6 +277,53 @@
         }
         .dashboard-empty { padding:18px; border:1px dashed var(--line); border-radius:12px; color:var(--soft); text-align:center; }
         .dashboard-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+        .dashboard-filter-bar {
+            display:grid;
+            grid-template-columns:repeat(5,minmax(140px,1fr)) auto;
+            gap:10px;
+            align-items:end;
+            padding:14px;
+            border:1px solid var(--line);
+            border-radius:14px;
+            background:rgba(255,255,255,.028);
+        }
+        .dashboard-filter-bar label { display:grid; gap:6px; color:var(--soft); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.8px; }
+        .dashboard-mini-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+        .dashboard-chart-list,.dashboard-bars,.dashboard-activity-list { display:grid; gap:10px; }
+        .dashboard-list-item,.dashboard-bar-row,.dashboard-chart-row {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:12px;
+            align-items:center;
+            padding:10px 12px;
+            border:1px solid rgba(255,255,255,.07);
+            border-radius:10px;
+            background:rgba(255,255,255,.03);
+        }
+        .dashboard-list-item strong,.dashboard-chart-row strong { display:block; color:#fff; font-size:12px; }
+        .dashboard-list-item span,.dashboard-chart-row span { color:var(--muted); font-size:11px; font-weight:700; }
+        .dashboard-list-item em,.dashboard-chart-row em { color:#f4c441; font-style:normal; font-size:12px; font-weight:950; }
+        .dashboard-bar-row { grid-template-columns:120px minmax(120px,1fr) 92px; }
+        .dashboard-bar-track {
+            height:10px;
+            overflow:hidden;
+            border-radius:999px;
+            background:rgba(255,255,255,.08);
+        }
+        .dashboard-bar-fill {
+            height:100%;
+            min-width:4px;
+            border-radius:inherit;
+            background:linear-gradient(90deg,var(--gold),var(--cyan));
+        }
+        .dashboard-chart-row { grid-template-columns:minmax(0,1fr) minmax(110px,34%) 58px; }
+        .dashboard-chart-fill {
+            height:8px;
+            border-radius:999px;
+            background:linear-gradient(90deg,#10b981,#22d3ee);
+        }
+        .dashboard-chip-row { display:flex; gap:8px; flex-wrap:wrap; }
+        .dashboard-chip { padding:6px 9px; border:1px solid var(--line); border-radius:999px; color:#fff; background:rgba(255,255,255,.04); font-size:10px; font-weight:900; }
 
         #view-products .grid-split.product-admin-grid {
             display:grid;
@@ -379,6 +426,61 @@
         }
         .product-subdivider::after { content:""; height:1px; flex:1; background:var(--line); }
         .important-code-field { color:#d8b4fe; font-weight:900; }
+        .product-id-field { gap:8px; }
+        .product-id-label-row {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+        }
+        .product-id-label-row > label { margin:0; }
+        .barcode-mode-toggle {
+            min-height:30px;
+            display:inline-flex!important;
+            align-items:center;
+            gap:7px;
+            padding:5px 9px;
+            border:1px solid var(--line);
+            border-radius:999px;
+            background:rgba(255,255,255,.04);
+            color:var(--muted)!important;
+            font-size:10px!important;
+            font-weight:850!important;
+            text-transform:none!important;
+            letter-spacing:0!important;
+            cursor:pointer;
+            white-space:nowrap;
+        }
+        .barcode-mode-toggle input {
+            appearance:none;
+            width:32px;
+            height:18px;
+            margin:0;
+            border:1px solid rgba(255,255,255,.16);
+            border-radius:999px;
+            background:rgba(255,255,255,.1);
+            position:relative;
+        }
+        .barcode-mode-toggle input::after {
+            content:"";
+            position:absolute;
+            top:2px;
+            left:2px;
+            width:12px;
+            height:12px;
+            border-radius:50%;
+            background:#d8d1c2;
+            transition:transform .18s ease;
+        }
+        .barcode-mode-toggle input:checked { background:rgba(152,184,166,.35); border-color:rgba(152,184,166,.48); }
+        .barcode-mode-toggle input:checked::after { transform:translateX(14px); background:#fff; }
+        .product-barcode-compact {
+            display:none;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:8px;
+            align-items:center;
+        }
+        .product-barcode-compact.is-visible { display:grid; }
         .highlight-select { color:#ffe48a; font-weight:950; border-color:rgba(244,196,65,.28); }
         .measurement-panel { display:none; grid-column:1/-1; }
         .measurement-panel.is-visible { display:block; }
@@ -430,6 +532,42 @@
         .angle-gallery-empty { grid-column:1/-1; padding:10px; color:var(--soft); text-align:center; border:1px dashed var(--line); border-radius:10px; }
         .gallery-url-helper > div { display:grid; grid-template-columns:1fr auto; gap:10px; }
         .variants-stack { display:grid; gap:14px; margin-top:16px; }
+        .variant-image-field { grid-column:1/-1; }
+        .variant-image-picker {
+            min-height:158px;
+            display:grid;
+            grid-template-columns:138px minmax(0,1fr);
+            gap:14px;
+            align-items:stretch;
+            padding:12px;
+            border:1px dashed rgba(244,196,65,.26);
+            border-radius:14px;
+            background:linear-gradient(135deg,rgba(244,196,65,.06),rgba(34,211,238,.04));
+        }
+        .variant-image-preview-box {
+            aspect-ratio:1/1;
+            min-height:132px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:12px;
+            background:rgba(4,2,10,.66);
+        }
+        .variant-image-preview-box img { width:100%; height:100%; object-fit:cover; display:none; }
+        .variant-image-preview-box:has(img[style*="block"]) .variant-image-empty { display:none; }
+        .variant-image-empty { color:rgba(255,255,255,.38); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.8px; text-align:center; }
+        .variant-image-controls { display:flex; flex-direction:column; justify-content:center; gap:9px; min-width:0; }
+        .variant-image-controls .var-imagen { min-height:42px; }
+        .variant-image-picker > .var-imagen {
+            align-self:center;
+            min-height:48px;
+            border-color:rgba(255,255,255,.1)!important;
+            border-radius:12px!important;
+            background:rgba(4,2,10,.52)!important;
+        }
+        .variant-image-picker.drag-over { border-color:rgba(34,211,238,.55); background:rgba(34,211,238,.08); }
         .product-form-actions { display:grid; grid-template-columns:minmax(220px,.8fr) minmax(220px,1fr); gap:12px; padding-top:18px; border-top:1px solid var(--line); }
         .product-form-actions > div { display:grid; grid-template-columns:1fr 1.2fr; gap:10px; }
         .product-preview-panel {
@@ -546,6 +684,45 @@
         #carousel-preview { min-height:170px; display:grid; place-items:center; overflow:hidden; }
         .carousel-preview-grid { display:grid; gap:8px; width:100%; height:100%; padding:10px; }
         .carousel-preview-grid img { width:100%; height:100%; object-fit:cover; border-radius:10px; }
+        .carousel-banner-manager {
+            padding:18px;
+            border:1px solid var(--line);
+            border-radius:14px;
+            background:rgba(255,255,255,.025);
+            margin-bottom:14px;
+        }
+        .carousel-uploaded-list {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+            gap:12px;
+            margin-top:14px;
+        }
+        .carousel-uploaded-item {
+            display:grid;
+            grid-template-columns:64px minmax(0,1fr);
+            gap:10px;
+            align-items:center;
+            padding:10px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.035);
+        }
+        .carousel-uploaded-item img {
+            width:64px;
+            height:48px;
+            object-fit:cover;
+            border-radius:8px;
+            background:#111;
+        }
+        .carousel-uploaded-item strong,
+        .carousel-uploaded-item span {
+            display:block;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .carousel-uploaded-item span { color:var(--muted); font-size:12px; margin-top:4px; }
+        .carousel-uploaded-empty { color:var(--muted); padding:12px 2px; }
         .modal {
             position:fixed;
             inset:0;
@@ -1253,16 +1430,20 @@
             .sub-sidebar { position:relative; height:auto; }
             #view-products .grid-split.product-admin-grid,.dashboard-main-grid,.dashboard-bottom-grid { grid-template-columns:1fr; }
             .product-preview-panel { position:relative; top:auto; }
-            .dashboard-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .dashboard-stat-grid,.dashboard-mini-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .dashboard-filter-bar { grid-template-columns:repeat(2,minmax(0,1fr)); }
         }
         @media(max-width:760px) {
             .dashboard-content-area,.dashboard-header { padding:16px; }
-            .product-form-intro,.product-flow-cards,.product-stepper,.admin-form-grid,.product-form-actions,.product-form-actions > div,.inventory-filter-row,.orders-search-row,.dashboard-stat-grid,.preview-summary-grid {
+            .product-form-intro,.product-flow-cards,.product-stepper,.admin-form-grid,.product-form-actions,.product-form-actions > div,.inventory-filter-row,.orders-search-row,.dashboard-stat-grid,.dashboard-mini-grid,.dashboard-filter-bar,.preview-summary-grid {
                 grid-template-columns:1fr;
             }
             .product-form-intro { margin-left:16px; margin-right:16px; }
             #product-form,.product-stepper,.admin-title-row { padding-left:16px; padding-right:16px; }
             .measurement-grid,.textile-size-row { grid-template-columns:1fr; }
+            .variant-image-picker { grid-template-columns:1fr; }
+            .product-barcode-compact { grid-template-columns:1fr; }
+            .dashboard-bar-row,.dashboard-chart-row { grid-template-columns:1fr; }
         }
     </style>
 </head>
@@ -1359,7 +1540,7 @@
                                 <div class="product-config-card identity-card">
                                     <div class="config-card-heading"><span class="config-card-index">01</span><div><h3>Producto y venta</h3><p>Un solo bloque para identificar el producto, poner precio y definir donde se publica.</p></div></div>
                                     <div class="admin-form-grid">
-                                        <div class="form-group"><label>ID Producto Madre</label><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automatico" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><small class="field-hint">Se genera solo para unir todas las variantes.</small></div>
+                                        <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> Escanear</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automatico" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Escanear</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small></div>
                                         <div class="form-group"><label>Nombre del producto</label><input type="text" class="form-control" id="prod-nombre" name="Nombre" placeholder="Ej: Collar luna dorado" required><small class="field-hint">Es el nombre visible para el cliente.</small></div>
                                         <div class="form-group"><label>Categoria</label><input type="text" class="form-control" id="prod-categoria" name="Categoria" list="admin-category-options" placeholder="Escribe o elige una categoria" required><datalist id="admin-category-options"><option value="Collares"></option><option value="Pulseras"></option><option value="Aretes"></option><option value="Anillos"></option><option value="Sets"></option><option value="Dijes"></option><option value="BANNER"></option></datalist><small class="field-hint">Ayuda a ordenar tienda e inventario.</small></div>
                                         <div class="form-group"><label>Catalogo</label><select class="form-control" id="prod-catalogo" name="Catalogo"><option value="Ambos">Minorista y Mayorista</option><option value="Minorista">Solo Minorista</option><option value="Mayorista">Solo Mayorista</option></select><small class="field-hint">Define en que catalogo se publica.</small></div>
@@ -1455,9 +1636,9 @@
                         <div class="admin-title-row"><div><span class="admin-kicker">Sistema</span><h2>Configuracion y banner</h2></div></div>
                         <div class="settings-tabs"><button class="settings-tab-btn active" data-settings-tab-target="carousel">Banner</button><button class="settings-tab-btn" data-settings-tab-target="contact">Contacto</button><button class="settings-tab-btn" data-settings-tab-target="promo">Promos</button><button class="settings-tab-btn" data-settings-tab-target="invoice">Factura</button><button class="settings-tab-btn" data-settings-tab-target="payments">Pagos</button></div>
                         <div class="settings-tab-content">
-                            <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><input class="form-control" id="carousel-image-url" placeholder="URL de imagen opcional"><input type="hidden" id="carousel-mode" value="append"><input class="form-control" id="carousel-title" placeholder="Titulo del banner"><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form></div>
+                            <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="carousel-title" placeholder="Titulo del banner"></div><div class="form-group"><label>Descripcion</label><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="contact" id="settings-tab-contact"><form id="contact-config-form"><div class="admin-form-grid"><input class="form-control" id="contact-config-days" placeholder="Dias"><input class="form-control" id="contact-config-hours" placeholder="Horario"><input class="form-control" id="contact-config-whatsapp" placeholder="WhatsApp"><input class="form-control" id="contact-config-facebook" placeholder="Facebook"><input class="form-control" id="contact-config-tiktok" placeholder="TikTok"><input class="form-control" id="contact-config-instagram" placeholder="Instagram"></div><button class="admin-btn" id="btn-save-contact-config">Guardar contacto</button></form><form id="whatsapp-config-form"><input class="form-control" id="whatsapp-config-commerce" placeholder="WhatsApp comercial"><button class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button></form></div>
-                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form"><div class="admin-form-grid"><input class="form-control" id="promo-config-title" placeholder="Titulo promo"><input class="form-control" id="promo-config-subtitle" placeholder="Subtitulo"><input class="form-control" id="promo-config-discount" placeholder="Descuento %"><input class="form-control" id="promo-config-end" placeholder="Fecha fin"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="home-ad-config-form"><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="Imagen anuncio"><input class="form-control" id="home-ad-config-title" placeholder="Titulo anuncio"><textarea class="form-control" id="home-ad-config-text" placeholder="Texto"></textarea><button class="admin-btn" id="btn-save-home-ad-config">Guardar anuncio</button></form><form id="customer-promo-form"><label><input type="checkbox" id="customer-promo-enabled"> Promo cliente</label><input class="form-control" id="customer-promo-discount" placeholder="%"><input class="form-control" id="customer-promo-title" placeholder="Titulo"><input class="form-control" id="customer-promo-expire" placeholder="Vence"><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
+                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form"><div class="admin-form-grid"><input class="form-control" id="promo-config-title" placeholder="Titulo promo"><input class="form-control" id="promo-config-subtitle" placeholder="Subtitulo"><input class="form-control" id="promo-config-discount" placeholder="Descuento %"><input class="form-control" id="promo-config-end" placeholder="Fecha fin"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form"><label><input type="checkbox" id="customer-promo-enabled"> Promo cliente</label><input class="form-control" id="customer-promo-discount" placeholder="%"><input class="form-control" id="customer-promo-title" placeholder="Titulo"><input class="form-control" id="customer-promo-expire" placeholder="Vence"><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir metodo</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
                         </div>
@@ -1486,6 +1667,6 @@
             });
         });
     </script>
-    <script src="admin-app.js"></script>
+    <script src="admin-app.js?v=search-banner2-20260914"></script>
 </body>
 </html>
