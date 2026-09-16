@@ -3557,8 +3557,8 @@ const GLOBAL_SEARCH_PAGES = [
 
 function getGlobalPageResults(query) {
     const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    if (!terms.length) return [];
     return GLOBAL_SEARCH_PAGES.filter(item => {
-        if (!terms.length) return true;
         const blob = normalizeSearchText(`${item.title} ${item.detail} ${item.keywords}`);
         return terms.every(term => blob.includes(term));
     });
@@ -3587,7 +3587,7 @@ function getGlobalProductResults(query) {
                 detail: `${category}${product.SKU ? ' · ' + product.SKU : ''}`,
                 href: `producto.html?id=${productIndex >= 0 ? productIndex : 0}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`,
                 image: normalizeImageUrl(getProductImageSet(product)[0] || product.Imagen || product['Imagen Principal'] || product.imagen || ''),
-                meta: price ? `$${Number(price).toLocaleString('es-CO')}` : 'Ver'
+                meta: price ? `$${Number(price).toLocaleString('es-CO')}` : 'Producto'
             };
         });
 }
@@ -3647,30 +3647,27 @@ function renderGlobalSearchResults() {
 
     const query = input.value.trim();
     const productResults = getGlobalProductResults(query);
-    const pageResults = getGlobalPageResults(query).slice(0, query ? 6 : 8);
-    const pageHtml = pageResults.length ? `
-        <div class="global-search-group-title">Secciones</div>
-        ${pageResults.map(item => `
+    const pageResults = getGlobalPageResults(query).slice(0, 5).map(item => ({
+        ...item,
+        image: '',
+        meta: 'Pagina'
+    }));
+    const generalResults = [...productResults, ...pageResults].slice(0, 10);
+
+    if (!query) {
+        results.innerHTML = '<div class="global-search-empty">Escribe para buscar productos, referencias, colores o paginas.</div>';
+        return;
+    }
+
+    results.innerHTML = generalResults.length
+        ? generalResults.map(item => `
             <a class="global-search-item" href="${escapeHtml(item.href)}">
-                <span class="global-search-icon">#</span>
-                <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
-                <em>Ir</em>
-            </a>
-        `).join('')}
-    ` : '';
-    const productHtml = productResults.length ? `
-        ${productResults.map(item => `
-            <a class="global-search-item" href="${escapeHtml(item.href)}">
-                <span class="global-search-thumb">${item.image ? `<img src="${escapeHtml(item.image)}" alt="" onerror="handleCatalogImageError(this)">` : 'B'}</span>
+                <span class="${item.image ? 'global-search-thumb' : 'global-search-icon'}">${item.image ? `<img src="${escapeHtml(item.image)}" alt="" onerror="handleCatalogImageError(this)">` : 'B'}</span>
                 <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
                 <em>${escapeHtml(item.meta)}</em>
             </a>
-        `).join('')}
-    ` : '';
-
-    results.innerHTML = pageHtml || productHtml
-        ? pageHtml + productHtml
-        : '<div class="global-search-empty">Busca por nombre, referencia, color o producto.</div>';
+        `).join('')
+        : '<div class="global-search-empty">Sin resultados. Prueba con otro nombre, referencia o color.</div>';
 }
 
 function openGlobalSearch() {
@@ -3745,15 +3742,16 @@ function initFooterPageSearch() {
     const updateResults = () => {
         const terms = normalizeSearchText(input.value).split(/\s+/).filter(Boolean);
         let visibleCount = 0;
+        results.classList.toggle('is-active', terms.length > 0);
 
         items.forEach(item => {
             const searchable = normalizeSearchText(`${item.textContent || ''} ${item.dataset.keywords || ''}`);
-            const isMatch = !terms.length || terms.every(term => searchable.includes(term));
+            const isMatch = terms.length > 0 && terms.every(term => searchable.includes(term));
             item.style.display = isMatch ? '' : 'none';
             if (isMatch) visibleCount++;
         });
 
-        if (empty) empty.style.display = visibleCount ? 'none' : 'flex';
+        if (empty) empty.style.display = terms.length && !visibleCount ? 'flex' : 'none';
     };
 
     input.addEventListener('input', updateResults);
@@ -4090,47 +4088,8 @@ function renderPromoWidget() {
 
 
 function initCustomCursor() {
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-    if (document.getElementById('blyxu-cursor')) return;
-
-    const cursor = document.createElement('div');
-    cursor.id = 'blyxu-cursor';
-    cursor.innerHTML = '<span class="cursor-dot"></span><span class="cursor-ring"></span>';
-    document.body.appendChild(cursor);
-
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight / 2;
-    let ringX = x;
-    let ringY = y;
-
-    function move() {
-        ringX += (x - ringX) * 0.2;
-        ringY += (y - ringY) * 0.2;
-        cursor.style.setProperty('--cursor-x', `${x}px`);
-        cursor.style.setProperty('--cursor-y', `${y}px`);
-        cursor.style.setProperty('--ring-x', `${ringX}px`);
-        cursor.style.setProperty('--ring-y', `${ringY}px`);
-        requestAnimationFrame(move);
-    }
-
-    window.addEventListener('mousemove', event => {
-        x = event.clientX;
-        y = event.clientY;
-        cursor.classList.add('is-visible');
-    }, { passive: true });
-
-    window.addEventListener('mouseout', event => {
-        if (!event.relatedTarget) cursor.classList.remove('is-visible');
-    });
-
-    document.addEventListener('mouseover', event => {
-        const target = event.target;
-        const isTextField = Boolean(target?.closest?.('input, textarea, [contenteditable="true"], .global-search-input, .smart-search input'));
-        cursor.classList.toggle('is-text-field', isTextField);
-        cursor.classList.toggle('is-hovering', !isTextField && Boolean(target?.closest?.('a, button, select, [role="button"], .nav-icon, .product-card, .marquee-item')));
-    });
-
-    move();
+    document.getElementById('blyxu-cursor')?.remove();
+    document.documentElement.classList.add('native-cursor');
 }
 
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {

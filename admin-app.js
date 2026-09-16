@@ -1953,6 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSettingsTabs();
     initOrdersAdminTabs();
     initChinaOrdersBuilder();
+    initAdminCostCalculator();
     initRetailPriceToggle();
     initContactConfigAdmin();
     initWhatsAppConfigAdmin();
@@ -5926,6 +5927,9 @@ const CHINA_ORDER_DB_VERSION = 1;
 const CHINA_ORDER_STORE_NAME = 'chinaOrders';
 const CHINA_ORDER_SAVED_RECORD_KEY = 'savedOrders';
 const CHINA_ORDER_DRAFT_RECORD_KEY = 'draft';
+const ADMIN_COST_CALCULATOR_KEY = 'blyxu_admin_cost_calculator_v1';
+const ADMIN_MARKET_RATES_CACHE_KEY = 'blyxu_admin_market_rates_cache_v1';
+const ADMIN_MARKET_RATES_URL = 'https://open.er-api.com/v6/latest/USD';
 let activeChinaOrderId = '';
 let chinaOrdersDbPromise = null;
 let savedChinaOrdersCache = [];
@@ -6004,6 +6008,314 @@ function parseChinaNumber(value) {
         ? raw.replace(',', '.')
         : raw.replace(/,/g, '');
     return parseFloat(normalized.replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function formatCostCny(value) {
+    return 'CNY ' + (Number(value) || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function convertAdminCostToCop(value, currency, rates) {
+    const amount = Math.max(0, parseChinaNumber(value));
+    const selectedCurrency = String(currency || 'COP').toUpperCase();
+    if (selectedCurrency === 'USD') return amount * Math.max(0, rates.usdRate || 0);
+    if (selectedCurrency === 'CNY') return amount * Math.max(0, rates.cnyRate || 0);
+    return amount;
+}
+
+function formatAdminCostAlt(copValue, rates) {
+    const cop = Math.max(0, Number(copValue) || 0);
+    const usdRate = Math.max(0, rates.usdRate || 0);
+    const cnyRate = Math.max(0, rates.cnyRate || 0);
+    const usd = usdRate ? cop / usdRate : 0;
+    const cny = cnyRate ? cop / cnyRate : 0;
+    return `${formatChinaUsd(usd)} / ${formatCostCny(cny)}`;
+}
+
+function readAdminCostCalculatorState() {
+    try {
+        const state = JSON.parse(localStorage.getItem(ADMIN_COST_CALCULATOR_KEY) || 'null');
+        return state && typeof state === 'object' ? state : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function writeAdminCostCalculatorState(state) {
+    try {
+        localStorage.setItem(ADMIN_COST_CALCULATOR_KEY, JSON.stringify(state));
+    } catch (error) {
+        console.warn('No se pudo guardar calculadora de costos:', error);
+    }
+}
+
+function setAdminMarketRateStatus(message, type = 'info') {
+    const el = document.getElementById('calc-market-status');
+    if (!el) return;
+    const color = type === 'error'
+        ? 'rgba(217,176,176,.88)'
+        : type === 'success'
+            ? 'rgba(186,208,194,.88)'
+            : 'rgba(244,242,238,.54)';
+    el.style.color = color;
+    el.innerHTML = `${escapeHtml(message)} Tasas por <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.`;
+}
+
+function readAdminMarketRatesCache() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(ADMIN_MARKET_RATES_CACHE_KEY) || 'null');
+        return cached && typeof cached === 'object' ? cached : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeAdminMarketRatesCache(payload) {
+    try {
+        localStorage.setItem(ADMIN_MARKET_RATES_CACHE_KEY, JSON.stringify(payload));
+    } catch (error) {
+        console.warn('No se pudo guardar cache de tasas:', error);
+    }
+}
+
+function isAdminMarketRatesCacheFresh(cached) {
+    if (!cached?.usdRate || !cached?.cnyRate) return false;
+    const now = Date.now();
+    if (cached.nextUpdateUnix && now < (Number(cached.nextUpdateUnix) * 1000)) return true;
+    return cached.savedAt && now - Number(cached.savedAt) < 6 * 60 * 60 * 1000;
+}
+
+function formatAdminMarketDate(value) {
+    const date = value ? new Date(value) : null;
+    if (!date || Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+async function fetchAdminMarketRates(options = {}) {
+    const cached = readAdminMarketRatesCache();
+    if (!options.force && isAdminMarketRatesCacheFresh(cached)) return cached;
+
+    const response = await fetch(ADMIN_MARKET_RATES_URL, { cache: 'no-store' });
+    if (!response.ok) throw new Error('No se pudo consultar la tasa de mercado');
+    const data = await response.json();
+    if (data?.result !== 'success' || !data?.rates?.COP || !data?.rates?.CNY) {
+        throw new Error('La respuesta de mercado no trae COP o CNY');
+    }
+
+    const usdRate = Number(data.rates.COP) || 0;
+    const usdToCny = Number(data.rates.CNY) || 0;
+    const cnyRate = usdToCny ? usdRate / usdToCny : 0;
+    if (!usdRate || !cnyRate) throw new Error('Tasa de mercado invalida');
+
+    const payload = {
+        usdRate,
+        cnyRate,
+        savedAt: Date.now(),
+        lastUpdateUtc: data.time_last_update_utc || '',
+        nextUpdateUnix: data.time_next_update_unix || 0
+    };
+    writeAdminMarketRatesCache(payload);
+    return payload;
+}
+
+function applyAdminMarketRatesToCalculator(rates, target = 'all') {
+    const usdInput = document.getElementById('calc-usd-rate');
+    const cnyInput = document.getElementById('calc-cny-rate');
+    if ((target === 'all' || target === 'USD') && usdInput) {
+        usdInput.value = String(Math.round(Number(rates.usdRate) || 0));
+    }
+    if ((target === 'all' || target === 'CNY') && cnyInput) {
+        cnyInput.value = String((Number(rates.cnyRate) || 0).toFixed(2));
+    }
+    calculateAdminCostCalculator({ save: true });
+}
+
+async function useAdminMarketRate(target = 'all') {
+    const label = target === 'USD' ? 'TRM USD' : target === 'CNY' ? 'Yuan' : 'tasas';
+    setAdminMarketRateStatus(`Actualizando ${label} de mercado...`);
+    try {
+        const rates = await fetchAdminMarketRates({ force: false });
+        applyAdminMarketRatesToCalculator(rates, target);
+        const updatedAt = formatAdminMarketDate(rates.lastUpdateUtc || rates.savedAt);
+        setAdminMarketRateStatus(`Tasa de mercado aplicada${updatedAt ? ` (${updatedAt})` : ''}. Puedes editarla manualmente si necesitas otro TRM.`, 'success');
+    } catch (error) {
+        console.warn('No se pudo actualizar tasa de mercado:', error);
+        const cached = readAdminMarketRatesCache();
+        if (cached?.usdRate && cached?.cnyRate) {
+            applyAdminMarketRatesToCalculator(cached, target);
+            setAdminMarketRateStatus('No se pudo actualizar en vivo; use la ultima tasa guardada.', 'error');
+            return;
+        }
+        setAdminMarketRateStatus('No se pudo consultar el mercado; conserva o escribe tu TRM manual.', 'error');
+    }
+}
+
+function getAdminCostCalculatorState() {
+    const usdRateFallback = document.getElementById('china-order-rate')?.value || '4000';
+    return {
+        quantity: document.getElementById('calc-quantity')?.value || '1',
+        currency: document.getElementById('calc-currency')?.value || 'USD',
+        unitCost: document.getElementById('calc-unit-cost')?.value || '',
+        usdRate: document.getElementById('calc-usd-rate')?.value || usdRateFallback,
+        cnyRate: document.getElementById('calc-cny-rate')?.value || '560',
+        shipping: document.getElementById('calc-shipping')?.value || '',
+        shippingCurrency: document.getElementById('calc-shipping-currency')?.value || 'COP',
+        taxPercent: document.getElementById('calc-tax-percent')?.value || '',
+        profitPercent: document.getElementById('calc-profit-percent')?.value || '50'
+    };
+}
+
+function setAdminCostText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function calculateAdminCostCalculator(options = {}) {
+    const state = getAdminCostCalculatorState();
+    const quantity = Math.max(1, parseChinaNumber(state.quantity || 1));
+    const rates = {
+        usdRate: Math.max(0, parseChinaNumber(state.usdRate || 0)),
+        cnyRate: Math.max(0, parseChinaNumber(state.cnyRate || 0))
+    };
+    const unitCostCop = convertAdminCostToCop(state.unitCost, state.currency, rates);
+    const shippingCop = convertAdminCostToCop(state.shipping, state.shippingCurrency, rates);
+    const productSubtotalCop = unitCostCop * quantity;
+    const baseCostCop = productSubtotalCop + shippingCop;
+    const taxPercent = Math.max(0, parseChinaNumber(state.taxPercent || 0));
+    const profitPercent = Math.max(0, parseChinaNumber(state.profitPercent || 0));
+    const taxCop = baseCostCop * (taxPercent / 100);
+    const totalCostCop = baseCostCop + taxCop;
+    const finalUnitCostCop = totalCostCop / quantity;
+    const saleUnitCop = finalUnitCostCop * (1 + (profitPercent / 100));
+    const saleTotalCop = saleUnitCop * quantity;
+    const profitCop = Math.max(0, saleTotalCop - totalCostCop);
+
+    setAdminCostText('calc-result-unit-cost', formatChinaCop(finalUnitCostCop));
+    setAdminCostText('calc-result-unit-cost-alt', formatAdminCostAlt(finalUnitCostCop, rates));
+    setAdminCostText('calc-result-total-cost', formatChinaCop(totalCostCop));
+    setAdminCostText('calc-result-total-cost-alt', formatAdminCostAlt(totalCostCop, rates));
+    setAdminCostText('calc-result-sale-unit', formatChinaCop(saleUnitCop));
+    setAdminCostText('calc-result-sale-unit-alt', formatAdminCostAlt(saleUnitCop, rates));
+    setAdminCostText('calc-result-profit', formatChinaCop(profitCop));
+    setAdminCostText(
+        'calc-result-breakdown',
+        `Base ${formatChinaCop(productSubtotalCop)} + envio ${formatChinaCop(shippingCop)} + impuesto ${formatChinaCop(taxCop)} | Venta total ${formatChinaCop(saleTotalCop)}`
+    );
+
+    if (options.save !== false) writeAdminCostCalculatorState(state);
+    return { state, rates, totalCostCop, finalUnitCostCop, saleUnitCop, saleTotalCop, profitCop, taxCop, shippingCop, productSubtotalCop };
+}
+
+function copyAdminCostCalculatorResult() {
+    const result = calculateAdminCostCalculator({ save: true });
+    const lines = [
+        'Calculadora BLYXU',
+        `Cantidad: ${result.state.quantity || 1}`,
+        `Costo unitario origen: ${result.state.unitCost || 0} ${result.state.currency}`,
+        `Tasa USD: ${formatChinaCop(result.rates.usdRate)} | Tasa Yuan: ${formatChinaCop(result.rates.cnyRate)}`,
+        `Costo unitario final: ${formatChinaCop(result.finalUnitCostCop)} (${formatAdminCostAlt(result.finalUnitCostCop, result.rates)})`,
+        `Costo total final: ${formatChinaCop(result.totalCostCop)} (${formatAdminCostAlt(result.totalCostCop, result.rates)})`,
+        `Precio sugerido unidad: ${formatChinaCop(result.saleUnitCop)} (${formatAdminCostAlt(result.saleUnitCop, result.rates)})`,
+        `Venta total sugerida: ${formatChinaCop(result.saleTotalCop)}`,
+        `Ganancia estimada: ${formatChinaCop(result.profitCop)}`
+    ].join('\n');
+
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(lines).then(() => {
+            if (typeof showToast === 'function') showToast('Resultado copiado', 'success');
+        }).catch(() => fallbackCopyChinaOrderSummary(lines));
+        return;
+    }
+    fallbackCopyChinaOrderSummary(lines);
+}
+
+function clearAdminCostCalculator() {
+    const usdRate = document.getElementById('china-order-rate')?.value || '4000';
+    const defaults = {
+        'calc-quantity': '1',
+        'calc-currency': 'USD',
+        'calc-unit-cost': '',
+        'calc-usd-rate': usdRate,
+        'calc-cny-rate': '560',
+        'calc-shipping': '',
+        'calc-shipping-currency': 'COP',
+        'calc-tax-percent': '',
+        'calc-profit-percent': '50'
+    };
+    Object.entries(defaults).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    });
+    calculateAdminCostCalculator({ save: true });
+}
+
+function initAdminCostCalculator() {
+    const drawer = document.getElementById('admin-cost-calculator');
+    const toggle = document.getElementById('cost-calculator-toggle');
+    if (!drawer || drawer.dataset.ready === 'true') return;
+    drawer.dataset.ready = 'true';
+
+    const saved = readAdminCostCalculatorState();
+    const usdRateFallback = document.getElementById('china-order-rate')?.value || '4000';
+    const values = {
+        'calc-quantity': saved.quantity || '1',
+        'calc-currency': saved.currency || 'USD',
+        'calc-unit-cost': saved.unitCost || '',
+        'calc-usd-rate': saved.usdRate || usdRateFallback,
+        'calc-cny-rate': saved.cnyRate || '560',
+        'calc-shipping': saved.shipping || '',
+        'calc-shipping-currency': saved.shippingCurrency || 'COP',
+        'calc-tax-percent': saved.taxPercent || '',
+        'calc-profit-percent': saved.profitPercent || '50'
+    };
+    Object.entries(values).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value;
+    });
+
+    const setOpen = open => {
+        drawer.classList.toggle('open', Boolean(open));
+        toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    toggle?.addEventListener('click', () => setOpen(!drawer.classList.contains('open')));
+    document.getElementById('cost-calculator-close')?.addEventListener('click', () => setOpen(false));
+    document.querySelectorAll('[data-cost-calc]').forEach(input => {
+        input.addEventListener('input', () => calculateAdminCostCalculator());
+        input.addEventListener('change', () => calculateAdminCostCalculator());
+    });
+    document.getElementById('calc-usd-rate')?.addEventListener('input', () => {
+        setAdminMarketRateStatus('TRM USD personalizado activo.');
+    });
+    document.getElementById('calc-cny-rate')?.addEventListener('input', () => {
+        setAdminMarketRateStatus('Tasa Yuan personalizada activa.');
+    });
+    document.getElementById('calc-copy-result')?.addEventListener('click', copyAdminCostCalculatorResult);
+    document.getElementById('calc-clear')?.addEventListener('click', clearAdminCostCalculator);
+    document.getElementById('calc-usd-market-rate')?.addEventListener('click', () => useAdminMarketRate('USD'));
+    document.getElementById('calc-cny-market-rate')?.addEventListener('click', () => useAdminMarketRate('CNY'));
+    document.getElementById('china-order-rate')?.addEventListener('change', event => {
+        const usdRateEl = document.getElementById('calc-usd-rate');
+        const savedState = readAdminCostCalculatorState();
+        if (usdRateEl && !savedState.usdRate) {
+            usdRateEl.value = event.target.value || '4000';
+            calculateAdminCostCalculator();
+        }
+    });
+
+    calculateAdminCostCalculator({ save: false });
+    const cachedRates = readAdminMarketRatesCache();
+    if (cachedRates?.savedAt) {
+        const cachedAt = formatAdminMarketDate(cachedRates.lastUpdateUtc || cachedRates.savedAt);
+        setAdminMarketRateStatus(`Ultima tasa de mercado guardada${cachedAt ? `: ${cachedAt}` : ''}. Puedes usar Mercado o escribir tu TRM manual.`);
+    }
 }
 
 function getChinaOrderRows() {

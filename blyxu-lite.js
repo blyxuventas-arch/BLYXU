@@ -191,13 +191,14 @@ function initFooterPageSearch() {
     const update = () => {
         const terms = normalizeSearchText(input.value).split(/\s+/).filter(Boolean);
         let visible = 0;
+        results.classList.toggle('is-active', terms.length > 0);
         items.forEach(item => {
             const text = normalizeSearchText(`${item.textContent || ''} ${item.dataset.keywords || ''}`);
-            const match = !terms.length || terms.every(term => text.includes(term));
+            const match = terms.length > 0 && terms.every(term => text.includes(term));
             item.style.display = match ? '' : 'none';
             if (match) visible++;
         });
-        if (empty) empty.style.display = visible ? 'none' : 'flex';
+        if (empty) empty.style.display = terms.length && !visible ? 'flex' : 'none';
     };
     input.addEventListener('input', update);
     input.addEventListener('keydown', event => {
@@ -212,45 +213,8 @@ function initFooterPageSearch() {
 }
 
 function initCustomCursor() {
-    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-    if (document.getElementById('blyxu-cursor')) return;
-
-    const cursor = document.createElement('div');
-    cursor.id = 'blyxu-cursor';
-    cursor.innerHTML = '<span class="cursor-dot"></span><span class="cursor-ring"></span>';
-    document.body.appendChild(cursor);
-
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight / 2;
-    let ringX = x;
-    let ringY = y;
-
-    function move() {
-        ringX += (x - ringX) * 0.2;
-        ringY += (y - ringY) * 0.2;
-        cursor.style.setProperty('--cursor-x', `${x}px`);
-        cursor.style.setProperty('--cursor-y', `${y}px`);
-        cursor.style.setProperty('--ring-x', `${ringX}px`);
-        cursor.style.setProperty('--ring-y', `${ringY}px`);
-        requestAnimationFrame(move);
-    }
-
-    window.addEventListener('mousemove', event => {
-        x = event.clientX;
-        y = event.clientY;
-        cursor.classList.add('is-visible');
-    }, { passive: true });
-
-    window.addEventListener('mouseout', event => {
-        if (!event.relatedTarget) cursor.classList.remove('is-visible');
-    });
-
-    document.addEventListener('mouseover', event => {
-        const target = event.target;
-        cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .marquee-item')));
-    });
-
-    move();
+    document.getElementById('blyxu-cursor')?.remove();
+    document.documentElement.classList.add('native-cursor');
 }
 
 function initParticles() {
@@ -328,8 +292,8 @@ const LITE_GLOBAL_SEARCH_PAGES = [
 
 function getLiteGlobalSearchResults(query) {
     const terms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    if (!terms.length) return [];
     return LITE_GLOBAL_SEARCH_PAGES.filter(item => {
-        if (!terms.length) return true;
         const blob = normalizeSearchText(`${item.title} ${item.detail} ${item.keywords}`);
         return terms.every(term => blob.includes(term));
     });
@@ -376,17 +340,23 @@ function renderLiteGlobalSearchResults() {
     const input = document.getElementById('global-search-input');
     const results = document.getElementById('global-search-results');
     if (!input || !results) return;
-    const matches = getLiteGlobalSearchResults(input.value).slice(0, 10);
-    results.innerHTML = matches.length ? `
-        <div class="global-search-group-title">BLYXU</div>
-        ${matches.map(item => `
+    const query = input.value.trim();
+    const matches = getLiteGlobalSearchResults(query).slice(0, 10);
+
+    if (!query) {
+        results.innerHTML = '<div class="global-search-empty">Escribe para buscar catalogo, pagos, pedidos o contacto.</div>';
+        return;
+    }
+
+    results.innerHTML = matches.length
+        ? matches.map(item => `
             <a class="global-search-item" href="${escapeHtml(item.href)}">
-                <span class="global-search-icon">#</span>
+                <span class="global-search-icon">B</span>
                 <span><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></span>
-                <em>Ir</em>
+                <em>Pagina</em>
             </a>
-        `).join('')}
-    ` : '<div class="global-search-empty">Sin resultados. Prueba con catalogo, pedidos, pagos o contacto.</div>';
+        `).join('')
+        : '<div class="global-search-empty">Sin resultados. Prueba con catalogo, pedidos, pagos o contacto.</div>';
 }
 
 function closeGlobalSearch() {

@@ -1075,6 +1075,165 @@
         .china-order-money.muted {
             color:rgba(255,255,255,.5);
         }
+        .cost-calculator-drawer {
+            position:fixed;
+            top:96px;
+            right:0;
+            z-index:65;
+            width:min(390px, calc(100vw - 54px));
+            max-height:calc(100vh - 118px);
+            display:flex;
+            transform:translateX(100%);
+            transition:transform .24s ease;
+        }
+        .cost-calculator-drawer.open {
+            transform:translateX(0);
+        }
+        .cost-calculator-tab {
+            position:absolute;
+            left:-46px;
+            top:22px;
+            width:46px;
+            min-height:118px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border:1px solid rgba(255,255,255,.1);
+            border-right:0;
+            border-radius:13px 0 0 13px;
+            background:rgba(17,17,20,.94);
+            color:#f7f5f0;
+            font-size:11px;
+            font-weight:820;
+            letter-spacing:.6px;
+            writing-mode:vertical-rl;
+            text-transform:uppercase;
+            box-shadow:0 18px 45px rgba(0,0,0,.38);
+        }
+        .cost-calculator-panel {
+            width:100%;
+            overflow:auto;
+            border:1px solid rgba(255,255,255,.1);
+            border-right:0;
+            border-radius:16px 0 0 16px;
+            background:rgba(17,17,20,.96);
+            box-shadow:0 24px 80px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.035);
+        }
+        .cost-calculator-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+            padding:18px;
+            border-bottom:1px solid rgba(255,255,255,.08);
+            background:rgba(255,255,255,.026);
+        }
+        .cost-calculator-head h3 {
+            margin:3px 0 5px;
+            font-size:19px;
+            color:#f7f5f0;
+        }
+        .cost-calculator-head p {
+            margin:0;
+            color:rgba(244,242,238,.58);
+            font-size:12px;
+            line-height:1.35;
+        }
+        .cost-calculator-close {
+            width:36px;
+            min-width:36px;
+            height:36px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:10px;
+            background:rgba(255,255,255,.035);
+            color:#fff;
+            font-weight:900;
+        }
+        .cost-calculator-body {
+            display:grid;
+            gap:13px;
+            padding:16px;
+        }
+        .cost-calculator-grid {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:10px;
+        }
+        .cost-calculator-grid .form-group.wide {
+            grid-column:1/-1;
+        }
+        .cost-rate-field {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:8px;
+        }
+        .cost-market-btn {
+            min-width:82px;
+            min-height:43px;
+            padding:8px 10px;
+            border:1px solid rgba(255,255,255,.11);
+            border-radius:10px;
+            background:rgba(255,255,255,.035);
+            color:rgba(244,242,238,.82);
+            font-size:11px;
+            font-weight:760;
+        }
+        .cost-market-btn:hover {
+            border-color:rgba(216,209,194,.24);
+            background:rgba(216,209,194,.07);
+            color:#fff;
+        }
+        .cost-market-note {
+            padding:10px 12px;
+            border:1px solid rgba(255,255,255,.075);
+            border-radius:12px;
+            background:rgba(255,255,255,.022);
+            color:rgba(244,242,238,.54);
+            font-size:11px;
+            line-height:1.35;
+        }
+        .cost-market-note a {
+            color:rgba(244,242,238,.72);
+            font-weight:760;
+            text-decoration:none;
+        }
+        .cost-result-grid {
+            display:grid;
+            gap:9px;
+        }
+        .cost-result-card {
+            padding:11px 12px;
+            border:1px solid rgba(255,255,255,.075);
+            border-radius:12px;
+            background:rgba(255,255,255,.026);
+        }
+        .cost-result-card span {
+            display:block;
+            color:rgba(216,209,194,.68);
+            font-size:10px;
+            font-weight:760;
+            letter-spacing:.7px;
+            text-transform:uppercase;
+        }
+        .cost-result-card strong {
+            display:block;
+            margin-top:4px;
+            color:#f7f5f0;
+            font-size:19px;
+            line-height:1.15;
+        }
+        .cost-result-card small {
+            display:block;
+            margin-top:4px;
+            color:rgba(244,242,238,.48);
+            font-size:11px;
+            font-weight:650;
+        }
+        .cost-calculator-actions {
+            display:flex;
+            gap:9px;
+            flex-wrap:wrap;
+        }
         .orders-tabs {
             justify-content:flex-end;
         }
@@ -1449,6 +1608,19 @@
             .product-form-intro,.product-flow-cards,.product-stepper,.admin-form-grid,.product-form-actions,.product-form-actions > div,.inventory-filter-row,.orders-search-row,.dashboard-stat-grid,.dashboard-mini-grid,.dashboard-filter-bar,.preview-summary-grid {
                 grid-template-columns:1fr;
             }
+            .cost-calculator-drawer {
+                top:72px;
+                max-height:calc(100vh - 86px);
+                width:calc(100vw - 46px);
+            }
+            .cost-calculator-grid {
+                grid-template-columns:1fr;
+            }
+            .cost-calculator-tab {
+                min-height:104px;
+                left:-42px;
+                width:42px;
+            }
             .product-form-intro { margin-left:16px; margin-right:16px; }
             #product-form,.product-stepper,.admin-title-row { padding-left:16px; padding-right:16px; }
             .measurement-grid,.textile-size-row { grid-template-columns:1fr; }
@@ -1479,6 +1651,102 @@
     </div>
 
     <div id="admin-main-content" style="display:none;" class="dashboard-layout">
+        <aside class="cost-calculator-drawer" id="admin-cost-calculator" aria-label="Calculadora de costos">
+            <button class="cost-calculator-tab" type="button" id="cost-calculator-toggle" aria-expanded="false">Costos</button>
+            <div class="cost-calculator-panel">
+                <div class="cost-calculator-head">
+                    <div>
+                        <span class="admin-kicker">Calculadora</span>
+                        <h3>Costo y ganancia</h3>
+                        <p>Convierte COP, USD y Yuan; suma envio, impuesto y calcula el precio con el porcentaje que quieres ganar.</p>
+                    </div>
+                    <button class="cost-calculator-close" type="button" id="cost-calculator-close" aria-label="Cerrar calculadora">x</button>
+                </div>
+                <div class="cost-calculator-body">
+                    <div class="cost-calculator-grid">
+                        <div class="form-group">
+                            <label>Cantidad</label>
+                            <input class="form-control" id="calc-quantity" data-cost-calc type="number" min="1" step="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Moneda costo</label>
+                            <select class="form-control" id="calc-currency" data-cost-calc>
+                                <option value="USD">USD</option>
+                                <option value="COP">COP</option>
+                                <option value="CNY">Yuan</option>
+                            </select>
+                        </div>
+                        <div class="form-group wide">
+                            <label>Costo unitario</label>
+                            <input class="form-control" id="calc-unit-cost" data-cost-calc inputmode="decimal" placeholder="Ej: 0,90">
+                        </div>
+                        <div class="form-group">
+                            <label>Tasa USD a COP</label>
+                            <div class="cost-rate-field">
+                                <input class="form-control" id="calc-usd-rate" data-cost-calc inputmode="decimal" value="4000">
+                                <button class="cost-market-btn" type="button" id="calc-usd-market-rate">Mercado</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tasa Yuan a COP</label>
+                            <div class="cost-rate-field">
+                                <input class="form-control" id="calc-cny-rate" data-cost-calc inputmode="decimal" value="560">
+                                <button class="cost-market-btn" type="button" id="calc-cny-market-rate">Mercado</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Envio total</label>
+                            <input class="form-control" id="calc-shipping" data-cost-calc inputmode="decimal" placeholder="Opcional">
+                        </div>
+                        <div class="form-group">
+                            <label>Moneda envio</label>
+                            <select class="form-control" id="calc-shipping-currency" data-cost-calc>
+                                <option value="COP">COP</option>
+                                <option value="USD">USD</option>
+                                <option value="CNY">Yuan</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Impuesto %</label>
+                            <input class="form-control" id="calc-tax-percent" data-cost-calc inputmode="decimal" placeholder="Ej: 19">
+                        </div>
+                        <div class="form-group">
+                            <label>Ganancia %</label>
+                            <input class="form-control" id="calc-profit-percent" data-cost-calc inputmode="decimal" value="50">
+                        </div>
+                    </div>
+                    <div class="cost-market-note" id="calc-market-status">
+                        Puedes escribir tu TRM personalizado o usar la tasa de mercado. Tasas por <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.
+                    </div>
+                    <div class="cost-result-grid">
+                        <div class="cost-result-card">
+                            <span>Costo unitario final</span>
+                            <strong id="calc-result-unit-cost">$0</strong>
+                            <small id="calc-result-unit-cost-alt">US$0.00 / CNY 0.00</small>
+                        </div>
+                        <div class="cost-result-card">
+                            <span>Costo total final</span>
+                            <strong id="calc-result-total-cost">$0</strong>
+                            <small id="calc-result-total-cost-alt">US$0.00 / CNY 0.00</small>
+                        </div>
+                        <div class="cost-result-card">
+                            <span>Precio sugerido unidad</span>
+                            <strong id="calc-result-sale-unit">$0</strong>
+                            <small id="calc-result-sale-unit-alt">US$0.00 / CNY 0.00</small>
+                        </div>
+                        <div class="cost-result-card">
+                            <span>Ganancia estimada total</span>
+                            <strong id="calc-result-profit">$0</strong>
+                            <small id="calc-result-breakdown">Sobre costo: 0%</small>
+                        </div>
+                    </div>
+                    <div class="cost-calculator-actions">
+                        <button class="admin-btn secondary" type="button" id="calc-copy-result">Copiar resultado</button>
+                        <button class="admin-btn secondary" type="button" id="calc-clear">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
         <aside class="sub-sidebar">
             <div class="sidebar-logo"><img src="Logo2.png" alt="BLYXU" style="width:100%;max-width:120px;display:block;margin:0 auto;"></div>
             <div class="sidebar-menu-wrapper" style="flex:1;">
