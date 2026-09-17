@@ -544,6 +544,16 @@ function isVisibleInventoryProduct(product) {
     return estado !== 'ELIMINADO' && !nombre.includes('[ELIMINADO]');
 }
 
+function isBannerInventoryProduct(product) {
+    const category = normalizeSearchText(getProductField(product || {}, PRODUCT_CATEGORY_FIELD_KEYS, ''));
+    const id = normalizeSearchText([
+        getInventoryMotherId(product),
+        getInventoryVariationId(product),
+        product?.SKU
+    ].join(' '));
+    return category === 'banner' || /\bbanner\b/.test(id);
+}
+
 function getInventoryMotherId(product) {
     return String(getProductField(product, [
         'ID Producto',
@@ -706,7 +716,9 @@ async function saveProductListToGoogleSheets(itemsList, options = {}) {
 function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
     const categoryFilter = normalizeSearchText(adminInventoryCategoryFilter);
-    const indexed = inventario.map((product, index) => ({ product, index }));
+    const indexed = inventario
+        .map((product, index) => ({ product, index }))
+        .filter(item => !isBannerInventoryProduct(item.product) && isVisibleInventoryProduct(item.product));
 
     function getMid(p) {
         var id = getInventoryMotherId(p) || getInventoryVariationId(p);
@@ -1452,6 +1464,100 @@ function updateProductImagePreviewBox(url) {
     }
 }
 
+function updateVariantImagePickerPreview(scope, url) {
+    const card = scope?.closest?.('.admin-panel') || scope;
+    if (!card) return;
+    const zone = card.matches?.('.var-drop-zone') ? card : card.querySelector('.var-drop-zone');
+    const placeholder = card.querySelector('.variant-image-placeholder');
+    const previewWrapper = card.querySelector('.variant-image-preview-wrapper');
+    const previewThumb = card.querySelector('.var-preview-thumb');
+    const trimmed = String(url || '').trim();
+
+    if (trimmed) {
+        if (previewThumb) previewThumb.src = trimmed;
+        if (previewWrapper) previewWrapper.style.display = 'flex';
+        if (placeholder) placeholder.style.display = 'none';
+        zone?.classList.add('has-image');
+    } else {
+        if (previewThumb) previewThumb.removeAttribute('src');
+        if (previewWrapper) previewWrapper.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        zone?.classList.remove('has-image');
+    }
+}
+
+function setupVariantImagePicker(card) {
+    const zone = card?.querySelector('.var-drop-zone');
+    const fileInput = card?.querySelector('.var-image-file');
+    const imageInput = card?.querySelector('.var-imagen');
+    const changeBtn = card?.querySelector('.var-image-change-btn');
+    const removeBtn = card?.querySelector('.var-image-remove-btn');
+    const saveBtn = card?.querySelector('.btn-save-individual-variant');
+    if (!zone || !fileInput || !imageInput) return;
+
+    const setUploadingState = (isUploading) => {
+        if (!saveBtn) return;
+        if (isUploading) {
+            saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar esta Variante';
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Subiendo imagen...';
+        } else {
+            saveBtn.disabled = false;
+            saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar esta Variante';
+            delete saveBtn.dataset.readyText;
+        }
+    };
+
+    const handleFileSelection = async (file) => {
+        if (!file || !file.type?.startsWith('image/')) {
+            showToast('Por favor, selecciona un archivo de imagen', 'warning');
+            return;
+        }
+
+        const localUrl = URL.createObjectURL(file);
+        updateVariantImagePickerPreview(card, localUrl);
+        setUploadingState(true);
+        showToast('Subiendo imagen de variante...');
+
+        try {
+            const uploadedUrl = await uploadCarouselImage(file);
+            imageInput.value = uploadedUrl;
+            imageInput.dispatchEvent(new Event('input'));
+            updateVariantImagePickerPreview(card, uploadedUrl);
+            showToast('Imagen de variante lista', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Error al subir imagen: ' + (err.message || err), 'error');
+        } finally {
+            URL.revokeObjectURL(localUrl);
+            fileInput.value = '';
+            setUploadingState(false);
+        }
+    };
+
+    zone.addEventListener('click', (event) => {
+        if (event.target.closest('.var-image-remove-btn') || event.target.closest('.var-image-change-btn')) return;
+        fileInput.click();
+    });
+    changeBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        fileInput.click();
+    });
+    removeBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        imageInput.value = '';
+        imageInput.dispatchEvent(new Event('input'));
+        updateVariantImagePickerPreview(card, '');
+    });
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (file) handleFileSelection(file);
+    });
+    imageInput.addEventListener('input', () => updateVariantImagePickerPreview(card, imageInput.value));
+    imageInput.addEventListener('change', () => updateVariantImagePickerPreview(card, imageInput.value));
+    updateVariantImagePickerPreview(card, imageInput.value);
+}
+
 function renderProductPreviewGallery(activeUrl = '') {
     const container = document.querySelector('#view-products .preview-container');
     if (!container) return;
@@ -1995,23 +2101,26 @@ document.addEventListener('DOMContentLoaded', () => {
             zone.classList.remove('drag-over');
             const file = e.dataTransfer.files[0];
             if (file && file.type.startsWith('image/')) {
-                const input = zone.querySelector('.var-imagen');
-                const imgPreview = zone.querySelector('.var-preview-thumb');
+                const card = zone.closest('.admin-panel');
+                const input = card?.querySelector('.var-imagen') || zone.querySelector('.var-imagen');
 
                 // Preview local
-                if (imgPreview) {
-                    const localUrl = URL.createObjectURL(file);
-                    imgPreview.src = localUrl;
-                    imgPreview.style.display = 'block';
-                }
+                const localUrl = URL.createObjectURL(file);
+                updateVariantImagePickerPreview(card || zone, localUrl);
 
                 try {
                     showToast('Subiendo variante...');
                     const url = await uploadCarouselImage(file);
-                    if (input) input.value = url;
+                    if (input) {
+                        input.value = url;
+                        input.dispatchEvent(new Event('input'));
+                    }
+                    updateVariantImagePickerPreview(card || zone, url);
                     showToast('Imagen de variante lista', 'success');
                 } catch (err) {
                     showToast('Error: ' + err.message, 'error');
+                } finally {
+                    URL.revokeObjectURL(localUrl);
                 }
             }
         }
@@ -2272,10 +2381,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="form-group variant-image-field">
                     <label>Imagen de variante</label>
-                    <div class="var-drop-zone variant-image-picker">
-                        <div class="variant-image-preview-box"><img class="var-preview-thumb" src="" alt=""><span class="variant-image-empty">Sin imagen</span></div>
-                        <input type="text" class="form-control var-imagen" placeholder="URL o Arrastra aquí..." style="margin:0; border:none; background:transparent; flex:1;">
+                    <input type="file" class="var-image-file" accept="image/*" style="display:none;">
+                    <div class="var-drop-zone drop-zone variant-image-picker">
+                        <div class="variant-image-placeholder">
+                            <div class="upload-icon">&#128247;</div>
+                            <strong>A&ntilde;adir o arrastrar imagen</strong>
+                            <span>Haz clic para seleccionar archivo o arrastra una imagen aqui</span>
+                        </div>
+                        <div class="variant-image-preview-wrapper" style="display:none;">
+                            <img class="var-preview-thumb" src="" alt="Vista previa">
+                            <div class="variant-image-actions">
+                                <button type="button" class="admin-btn var-image-change-btn">Cambiar</button>
+                                <button type="button" class="admin-btn secondary var-image-remove-btn">Quitar</button>
+                            </div>
+                        </div>
                     </div>
+                    <div class="image-url-row"><input type="text" class="form-control var-imagen" placeholder="O pega aqui la URL directa de la imagen (https://...)"><small class="field-hint">Esta sera la imagen visible de esta variante.</small></div>
                 </div>
             </div>
             <button type="button" class="admin-btn btn-save-individual-variant" style="background:linear-gradient(135deg, #6C5CE7, #9B2CFA); margin-top:10px;">Guardar esta Variante</button>
@@ -2326,21 +2447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         variantIdInput?.addEventListener('input', () => syncVariantBarcode());
         variantIdInput?.addEventListener('change', () => syncVariantBarcode());
         setVariantBarcodeMode(false);
-        const variantImageInput = card.querySelector('.var-imagen');
-        const variantPreviewThumb = card.querySelector('.var-preview-thumb');
-        const syncVariantImagePreview = () => {
-            const url = String(variantImageInput?.value || '').trim();
-            if (!variantPreviewThumb) return;
-            if (url) {
-                variantPreviewThumb.src = url;
-                variantPreviewThumb.style.display = 'block';
-            } else {
-                variantPreviewThumb.removeAttribute('src');
-                variantPreviewThumb.style.display = 'none';
-            }
-        };
-        variantImageInput?.addEventListener('input', syncVariantImagePreview);
-        variantImageInput?.addEventListener('change', syncVariantImagePreview);
+        setupVariantImagePicker(card);
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Evento de guardado para esta tarjeta específica
