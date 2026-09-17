@@ -1325,6 +1325,111 @@
             font-size: 11px;
             line-height: 1.35;
         }
+        .promo-admin-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .promo-admin-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+        }
+        .promo-admin-head h3 {
+            margin: 4px 0 4px;
+            color: #f7f5f0;
+            font-size: 18px;
+            letter-spacing: 0;
+        }
+        .promo-admin-head p {
+            margin: 0;
+            color: rgba(244,242,238,.52);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .promo-toggle-row {
+            flex: 0 0 auto;
+        }
+        .promo-admin-grid {
+            align-items: end;
+        }
+        .promo-admin-preview {
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 14px;
+            padding: 14px;
+            background: rgba(255,255,255,.025);
+        }
+        .promo-admin-preview.is-disabled {
+            opacity: .55;
+        }
+        .promo-admin-preview-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: min(100%, 720px);
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,.16);
+            background: linear-gradient(135deg, rgba(38,32,210,.82), rgba(126,39,208,.76));
+            color: #fff;
+        }
+        .promo-admin-preview-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 58px;
+            min-height: 40px;
+            padding: 0 10px;
+            border-radius: 10px;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.18);
+            font-size: 16px;
+            font-weight: 900;
+        }
+        .promo-admin-preview-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 150px;
+        }
+        .promo-admin-preview-copy strong {
+            font-size: 14px;
+            line-height: 1.15;
+        }
+        .promo-admin-preview-copy span {
+            color: rgba(255,255,255,.78);
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .promo-admin-preview-countdown {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+        }
+        .promo-admin-preview-countdown div {
+            width: 46px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(19,18,92,.54);
+            border: 1px solid rgba(255,255,255,.1);
+        }
+        .promo-admin-preview-countdown strong {
+            font-size: 15px;
+            line-height: 1;
+        }
+        .promo-admin-preview-countdown span {
+            margin-top: 4px;
+            color: rgba(255,255,255,.78);
+            font-size: 9px;
+            font-weight: 760;
+            line-height: 1;
+        }
 
         .spinner {
             width:22px;
@@ -1622,6 +1727,20 @@
             .variant-image-picker { grid-template-columns:1fr; }
             .product-barcode-compact { grid-template-columns:1fr; }
             .dashboard-bar-row,.dashboard-chart-row { grid-template-columns:1fr; }
+            .promo-admin-head,.retail-toggle-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .promo-admin-preview-card {
+                flex-wrap: wrap;
+                justify-content: center;
+                text-align: center;
+            }
+            .promo-admin-preview-countdown {
+                width: 100%;
+                justify-content: center;
+                margin-left: 0;
+            }
         }
     </style>
 </head>
@@ -1912,7 +2031,7 @@
                         <div class="settings-tab-content">
                             <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="carousel-title" placeholder="Titulo del banner"></div><div class="form-group"><label>Descripcion</label><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="contact" id="settings-tab-contact"><form id="contact-config-form"><div class="admin-form-grid"><input class="form-control" id="contact-config-days" placeholder="Dias"><input class="form-control" id="contact-config-hours" placeholder="Horario"><input class="form-control" id="contact-config-whatsapp" placeholder="WhatsApp"><input class="form-control" id="contact-config-facebook" placeholder="Facebook"><input class="form-control" id="contact-config-tiktok" placeholder="TikTok"><input class="form-control" id="contact-config-instagram" placeholder="Instagram"></div><button class="admin-btn" id="btn-save-contact-config">Guardar contacto</button></form><form id="whatsapp-config-form"><input class="form-control" id="whatsapp-config-commerce" placeholder="WhatsApp comercial"><button class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button></form></div>
-                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form"><div class="admin-form-grid"><input class="form-control" id="promo-config-title" placeholder="Titulo promo"><input class="form-control" id="promo-config-subtitle" placeholder="Subtitulo"><input class="form-control" id="promo-config-discount" placeholder="Descuento %"><input class="form-control" id="promo-config-end" placeholder="Fecha fin"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form"><label><input type="checkbox" id="customer-promo-enabled"> Promo cliente</label><input class="form-control" id="customer-promo-discount" placeholder="%"><input class="form-control" id="customer-promo-title" placeholder="Titulo"><input class="form-control" id="customer-promo-expire" placeholder="Vence"><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
+                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promocion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Titulo de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir metodo</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
                         </div>
@@ -1941,6 +2060,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=variant-image-inventory-20260916"></script>
+    <script src="admin-app.js?v=promo-admin-20260916"></script>
 </body>
 </html>

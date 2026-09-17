@@ -38,7 +38,18 @@ const CART_STORAGE_KEYS = {
     retail: 'blyxu_cart_retail',
     wholesale: 'blyxu_cart_wholesale'
 };
-const CATALOG_BATCH_SIZE = 12;
+const IS_MOBILE_VIEWPORT = typeof window !== 'undefined' && window.innerWidth <= 640;
+const CATALOG_BATCH_SIZE = IS_MOBILE_VIEWPORT ? 6 : 12;
+const IMAGE_WIDTHS = {
+    default: 640,
+    card: 420,
+    banner: 760,
+    spotlight: 520,
+    detail: 900,
+    thumb: 160,
+    cart: 140,
+    search: 96
+};
 let activeCatalogMode = getInitialCartMode();
 let activeCartMode = activeCatalogMode;
 let cart = loadCart(activeCartMode);
@@ -59,6 +70,7 @@ let homeCategoryCarouselTimer = null;
 let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
 let googleIdentityLoadPromise = null;
+let homeRenderToken = 0;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 
 function cleanBrowserUrl() {
@@ -669,6 +681,34 @@ function writeCache(key, data) {
     }
 }
 
+function yieldToBrowser() {
+    return new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => setTimeout(resolve, 0));
+        } else {
+            setTimeout(resolve, 0);
+        }
+    });
+}
+
+async function renderHomeSectionsStaggered(options = {}) {
+    const { renderCatalog = true } = options;
+    const token = ++homeRenderToken;
+    renderBanners(bannerProducts);
+    await yieldToBrowser();
+    if (token !== homeRenderToken) return;
+    renderHomeCategories();
+    await yieldToBrowser();
+    if (token !== homeRenderToken) return;
+    renderInventorySpotlight();
+    await yieldToBrowser();
+    if (token !== homeRenderToken) return;
+    renderHomeAdBanner();
+    await yieldToBrowser();
+    if (token !== homeRenderToken) return;
+    if (renderCatalog) renderCatalogProducts();
+}
+
 function isCacheFresh(key, ttlMs) {
     const cached = readCache(key);
     return Boolean(cached?.savedAt && Date.now() - cached.savedAt < ttlMs);
@@ -677,6 +717,56 @@ function isCacheFresh(key, ttlMs) {
 function setProductsLoading(isLoading) {
     const loading = document.getElementById('loading-products');
     if (loading) loading.style.display = isLoading ? 'flex' : 'none';
+}
+
+function renderIndexInstantShell() {
+    if (document.body?.dataset.page || !document.getElementById('inicio')) return;
+
+    const loading = document.getElementById('loading-products');
+    if (loading) loading.style.display = 'none';
+
+    const categoryTrack = document.getElementById('home-category-track');
+    if (categoryTrack && categoryTrack.children.length <= 1) {
+        const categories = ['Catalogo', 'Collares', 'Pulseras', 'Aretes', 'Anillos'];
+        categoryTrack.classList.remove('is-centered');
+        categoryTrack.innerHTML = categories.map((category, index) => `
+            <button class="home-category-pill ${index === 0 ? 'active' : ''}" type="button" data-instant-category="${escapeHtml(category)}">
+                <span>${escapeHtml(category)}</span>
+            </button>
+        `).join('');
+        categoryTrack.querySelectorAll('[data-instant-category]').forEach(button => {
+            button.addEventListener('click', () => {
+                document.getElementById('coleccion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    }
+
+    const marquee = document.getElementById('image-marquee-container');
+    if (marquee && !marquee.children.length) {
+        marquee.innerHTML = Array.from({ length: IS_MOBILE_VIEWPORT ? 4 : 8 }).map(() => `
+            <div class="marquee-item is-loading-card" aria-hidden="true">
+                <span class="skeleton-block skeleton-img"></span>
+                <div class="marquee-item-info">
+                    <span class="skeleton-block skeleton-line"></span>
+                    <span class="skeleton-block skeleton-line short"></span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    const grid = document.getElementById('products-grid');
+    if (grid && !grid.children.length) {
+        grid.innerHTML = Array.from({ length: CATALOG_BATCH_SIZE }).map(() => `
+            <div class="product-card reveal visible is-loading-card" aria-hidden="true">
+                <div class="product-card-img"><span class="skeleton-block skeleton-img"></span></div>
+                <div class="product-card-info">
+                    <span class="skeleton-block skeleton-line"></span>
+                    <span class="skeleton-block skeleton-line short"></span>
+                    <span class="skeleton-block skeleton-price"></span>
+                </div>
+            </div>
+        `).join('');
+    }
 }
 
 function hydrateProductsFromCache(cached = readCache(PRODUCTS_CACHE_KEY)) {
@@ -730,15 +820,53 @@ function parseGallery(value) {
     }
 }
 
-function normalizeImageUrl(value) {
+function getImageTargetWidth(kindOrWidth = 'default') {
+    if (typeof kindOrWidth === 'number') return Math.max(80, Math.min(kindOrWidth, 1600));
+    const key = String(kindOrWidth || 'default');
+    const base = IMAGE_WIDTHS[key] || IMAGE_WIDTHS.default;
+    if (key === 'banner' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1400;
+    if (key === 'detail' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1100;
+    return base;
+}
+
+function resizeGoogleImageUrl(url, kindOrWidth = 'default') {
+    const src = String(url || '').trim();
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return src;
+    const width = getImageTargetWidth(kindOrWidth);
+
+    if (/drive\.google\.com\/thumbnail/i.test(src)) {
+        try {
+            const parsed = new URL(src);
+            parsed.searchParams.set('sz', `w${width}`);
+            return parsed.toString();
+        } catch (_) {
+            return src.replace(/([?&]sz=)w\d+/i, `$1w${width}`);
+        }
+    }
+
+    if (/lh3\.googleusercontent\.com\/d\//i.test(src)) {
+        if (/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i.test(src)) {
+            return src.replace(/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i, `=w${width}`);
+        }
+        const queryIndex = src.search(/[?#]/);
+        if (queryIndex >= 0) {
+            return `${src.slice(0, queryIndex)}=w${width}${src.slice(queryIndex)}`;
+        }
+        return `${src}=w${width}`;
+    }
+
+    return src;
+}
+
+function normalizeImageUrl(value, imageSize = 'default') {
     if (!value) return '';
 
     if (Array.isArray(value)) {
-        return normalizeImageUrl(value[0]);
+        return normalizeImageUrl(value[0], imageSize);
     }
 
     if (typeof value === 'object') {
-        return normalizeImageUrl(value.url || value.src || value.imagen || value.image || '');
+        return normalizeImageUrl(value.url || value.src || value.imagen || value.image || '', imageSize);
     }
 
     const raw = String(value).split('\n')[0].trim();
@@ -746,17 +874,18 @@ function normalizeImageUrl(value) {
 
     const firstUrl = raw.includes(',http') ? raw.split(',http')[0].trim() : raw;
     const driveMatch = firstUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/) || firstUrl.match(/[?&]id=([^&]+)/);
+    const targetWidth = getImageTargetWidth(imageSize);
 
     if (firstUrl.includes('drive.google.com') && driveMatch && driveMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w1000`;
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w${targetWidth}`;
     }
 
     if (firstUrl.startsWith('//')) return `https:${firstUrl}`;
 
-    return firstUrl;
+    return resizeGoogleImageUrl(firstUrl, imageSize);
 }
 
-function getImageFallbackUrl(source) {
+function getImageFallbackUrl(source, imageSize = 'default') {
     const src = String(source || '');
     const driveMatch =
         src.match(/[?&]id=([^&#]+)/) ||
@@ -764,7 +893,7 @@ function getImageFallbackUrl(source) {
         src.match(/lh3\.googleusercontent\.com\/d\/([^/?&#]+)/);
 
     if (driveMatch?.[1] && !src.includes('lh3.googleusercontent.com')) {
-        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveMatch[1])}=w1000`;
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveMatch[1])}=w${getImageTargetWidth(imageSize)}`;
     }
 
     return 'hero_necklace.png';
@@ -784,7 +913,7 @@ function handleCatalogImageError(img) {
 
 function handleBannerImageError(img) {
     if (!img) return;
-    const fallback = getImageFallbackUrl(img.currentSrc || img.src);
+    const fallback = getImageFallbackUrl(img.currentSrc || img.src, 'banner');
     if (fallback && fallback !== 'hero_necklace.png' && img.dataset.fallbackTried !== 'true') {
         img.dataset.fallbackTried = 'true';
         img.src = fallback;
@@ -838,12 +967,12 @@ function getPublicProductCategoryLoose(product) {
     return getProductFieldLoose(product, ['Categoria', 'Categor\u00eda', 'Categoría', 'categoria'], product?.Categoria || product?.categoria || '');
 }
 
-function getPublicProductImage(product) {
+function getPublicProductImage(product, imageSize = 'default') {
     return normalizeImageUrl(getProductFieldLoose(
         product,
         ['Imagen Principal', 'Imagen_Principal', 'imagenPrincipal', 'Imagen', 'imagen', 'Foto', 'foto', 'url', 'image', 'directUrl', 'src'],
         product?.Imagen || product?.['Imagen Principal'] || product?.imagen || product?.Foto || product?.url || product?.image || ''
-    ));
+    ), imageSize);
 }
 
 function isPublicBannerProduct(product) {
@@ -1142,7 +1271,7 @@ function applyPromotionsToProducts() {
 
 // -- LOAD PRODUCTS FROM GOOGLE SHEETS --
 async function loadProducts(options = {}) {
-    const { renderCatalog = true, useCache = true } = options;
+    const { renderCatalog = true, useCache = true, showLoading = true } = options;
     const productCache = readCache(PRODUCTS_CACHE_KEY);
     const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache(productCache);
     const productCacheIsFresh = usedProductCache && cacheHasActiveBanner(productCache) && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
@@ -1153,16 +1282,12 @@ async function loadProducts(options = {}) {
     if (usedProductCache) {
         applyPromotionsToProducts();
         if (renderCatalog) {
-            renderBanners(bannerProducts);
-            renderHomeCategories();
-            renderInventorySpotlight();
-            renderHomeAdBanner();
-            renderCatalogProducts();
+            renderHomeSectionsStaggered({ renderCatalog });
         }
     }
 
     if (!productsLoadPromise && !productCacheIsFresh) {
-        productsLoadPromise = fetchProducts({ showLoading: !usedProductCache && renderCatalog });
+        productsLoadPromise = fetchProducts({ showLoading: showLoading && !usedProductCache && renderCatalog });
     }
     if (!configLoadPromise && !configCacheIsFresh) {
         configLoadPromise = fetchSiteConfig();
@@ -1174,11 +1299,7 @@ async function loadProducts(options = {}) {
             Promise.all(backgroundLoads).then(() => {
                 applyPromotionsToProducts();
                 if (renderCatalog) {
-                    renderBanners(bannerProducts);
-                    renderHomeCategories();
-                    renderInventorySpotlight();
-                    renderHomeAdBanner();
-                    renderCatalogProducts();
+                    renderHomeSectionsStaggered({ renderCatalog });
                 }
                 renderFloatingWhatsApp();
                 renderFooterSocialLinks();
@@ -1188,16 +1309,26 @@ async function loadProducts(options = {}) {
         return allProducts;
     }
 
-    const requiredLoads = [productsLoadPromise, configLoadPromise].filter(Boolean);
     if (renderCatalog) {
-        await Promise.all(requiredLoads);
+        if (productsLoadPromise) {
+            await productsLoadPromise;
+        }
         applyPromotionsToProducts();
-        renderBanners(bannerProducts);
-        renderHomeCategories();
-        renderInventorySpotlight();
-        renderHomeAdBanner();
-        renderCatalogProducts();
+        await renderHomeSectionsStaggered({ renderCatalog });
+
+        if (configLoadPromise && !configCacheIsFresh) {
+            configLoadPromise.then(() => {
+                applyPromotionsToProducts();
+                renderHomeAdBanner();
+                renderFooterSocialLinks();
+                renderPromoWidget();
+                if (!IS_MOBILE_VIEWPORT) {
+                    setTimeout(() => renderCatalogProducts(), 120);
+                }
+            }).catch(() => {});
+        }
     } else {
+        const requiredLoads = [productsLoadPromise, configLoadPromise].filter(Boolean);
         await Promise.all(requiredLoads);
         applyPromotionsToProducts();
     }
@@ -1218,14 +1349,14 @@ function getInventorySpotlightCandidates() {
     });
 }
 
-function getProductImageSet(product) {
+function getProductImageSet(product, imageSize = 'default') {
     const images = [
         product.Imagen,
         product.imagen,
         product.Foto,
         ...(Array.isArray(product.Galeria) ? product.Galeria : [])
     ]
-        .map(normalizeImageUrl)
+        .map(src => normalizeImageUrl(src, imageSize))
         .filter(Boolean);
 
     return [...new Set(images)].slice(0, 8);
@@ -1291,7 +1422,7 @@ function getSpotlightProductDetails(product, index = 0) {
     const price = getProductPrice(product, 'retail');
     const showPrice = shouldShowProductPrices('retail');
     const detailUrl = productIndex >= 0 ? `producto.html?id=${productIndex}` : '#coleccion';
-    const images = getProductImageSet(product);
+    const images = getProductImageSet(product, 'spotlight');
     const image = images[0] || 'hero_necklace.png';
 
     return { productIndex, name, category, description, tags, price, showPrice, detailUrl, image, number: index + 1 };
@@ -1534,7 +1665,7 @@ function renderHomeAdBanner() {
         return;
     }
 
-    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', ''));
+    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', ''), 'banner');
     const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
     const title = getSiteConfigValue('Home_Ad_Title', 'Brilla con tus favoritos');
     const message = getSiteConfigValue('Home_Ad_Message', 'Descubre piezas seleccionadas, promociones y anuncios especiales de BLYXU.');
@@ -1546,6 +1677,8 @@ function renderHomeAdBanner() {
     if (img) {
         if (image) {
             img.style.display = '';
+            img.loading = 'lazy';
+            img.decoding = 'async';
             img.src = image;
             img.onerror = () => { img.style.display = 'none'; };
         } else {
@@ -1568,7 +1701,7 @@ function renderInventorySpotlight() {
     const marqueeSection = document.getElementById('image-carousel');
     if (!marqueeContainer) return;
 
-    const candidates = getNewestProductsForMarquee(allProducts, 15);
+    const candidates = getNewestProductsForMarquee(allProducts, IS_MOBILE_VIEWPORT ? 8 : 15);
 
     if (!candidates.length) {
         if (marqueeSection) marqueeSection.style.display = 'none';
@@ -1578,7 +1711,7 @@ function renderInventorySpotlight() {
 
     // Generate HTML for the images
     const imagesHtml = candidates.map(p => {
-        const img = getProductImageSet(p)[0];
+        const img = getProductImageSet(p, 'card')[0];
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
         const stockBadge = getProductBadgeMarkup(p);
         const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
@@ -1594,8 +1727,8 @@ function renderInventorySpotlight() {
                 </div>`;
     }).join('');
 
-    // Duplicate for seamless infinite scrolling
-    marqueeContainer.innerHTML = imagesHtml + imagesHtml;
+    // Duplicate for seamless infinite scrolling on larger screens.
+    marqueeContainer.innerHTML = IS_MOBILE_VIEWPORT ? imagesHtml : imagesHtml + imagesHtml;
     
     inventorySpotlightRendered = true;
 }
@@ -1848,10 +1981,10 @@ function renderBanners(banners) {
         const rawDesc = String(b.Descripcion || b.Color || '').trim();
         const isPlaceholder = !rawDesc || rawDesc.toLowerCase().includes('nueva imagen');
         const descHtml = isPlaceholder ? '' : `<p class="main-banner-desc">${escapeHtml(rawDesc)}</p>`;
-        const imageUrl = getPublicProductImage(b);
+        const imageUrl = getPublicProductImage(b, 'banner');
         const imageHtml = imageUrl
-            ? `<img src="${escapeHtml(imageUrl)}" alt="Banner BLYXU" style="filter: brightness(0.55);" onerror="handleBannerImageError(this)">`
-            : '';
+            ? `<img src="${escapeHtml(imageUrl)}" alt="Banner BLYXU" style="filter: brightness(0.55);" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'fetchpriority="low"'} referrerpolicy="no-referrer" onerror="handleBannerImageError(this)">`
+            : `<img class="main-banner-fallback-media" src="Logo2.png" alt="BLYXU" loading="eager" decoding="sync">`;
 
         return `
         <div class="main-banner-slide ${i===0?'active':''} ${imageUrl ? '' : 'is-placeholder'}">
@@ -2566,7 +2699,7 @@ function renderProducts(products, options = {}) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
         const price = getProductPrice(p, mode);
         const oldPrice = getProductDisplayOldPrice(p, mode, price);
-        const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '');
+        const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '', 'card');
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
         const colors = (p.Color || p.color || '').split(',').map(c => c.trim()).filter(Boolean);
@@ -2807,7 +2940,7 @@ function getCartVariantLabel(product, siblings = []) {
 function getCartItemFromProduct(product, mode = activeCartMode, qty = 1) {
     const name = product.Nombre || product.nombre || product.Producto || 'Producto';
     const price = getProductPrice(product, mode);
-    const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
+    const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '', 'cart');
     const idVariacion = getProductVariationId(product) || name;
     const sku = product.SKU || product.sku || '';
     const stock = getProductStock(product);
@@ -2971,7 +3104,7 @@ function openCartItemPreview(idx) {
     const variants = getCartVariantOptions(item);
     const currentProductIndex = getCartProductIndex(item);
     const detailUrl = product ? getCartProductDetailUrl(product, mode) : '#';
-    const image = item.img || normalizeImageUrl(product?.Imagen || product?.imagen || '');
+    const image = item.img || normalizeImageUrl(product?.Imagen || product?.imagen || '', 'cart');
     const priceText = cartItemShowsPrice(item) ? formatMoney(item.price) : 'Precio por consultar';
 
     const variantGrid = variants.length ? `
@@ -2980,7 +3113,7 @@ function openCartItemPreview(idx) {
             <div class="cart-preview-variant-grid">
                 ${variants.map(variant => {
                     const variantProductIndex = allProducts.indexOf(variant);
-                    const variantImage = normalizeImageUrl(variant.Imagen || variant.imagen || (variant.Galeria && variant.Galeria[0]) || '');
+                    const variantImage = normalizeImageUrl(variant.Imagen || variant.imagen || (variant.Galeria && variant.Galeria[0]) || '', 'thumb');
                     const isActive = variantProductIndex === currentProductIndex;
                     const disabled = getProductStock(variant) <= 0 && !isActive;
                     return `
@@ -3586,7 +3719,7 @@ function getGlobalProductResults(query) {
                 title: product.Nombre || product.nombre || product.Producto || 'Producto',
                 detail: `${category}${product.SKU ? ' · ' + product.SKU : ''}`,
                 href: `producto.html?id=${productIndex >= 0 ? productIndex : 0}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`,
-                image: normalizeImageUrl(getProductImageSet(product)[0] || product.Imagen || product['Imagen Principal'] || product.imagen || ''),
+                image: normalizeImageUrl(getProductImageSet(product, 'search')[0] || product.Imagen || product['Imagen Principal'] || product.imagen || '', 'search'),
                 meta: price ? `$${Number(price).toLocaleString('es-CO')}` : 'Producto'
             };
         });
@@ -3807,9 +3940,8 @@ function initWholesaleAccess() {
     const backBtn = document.getElementById('wholesale-back-btn');
     const triggers = document.querySelectorAll('a[href="#mayorista"], a[href="mayorista.html"]');
 
-    initWholesaleParticles(); // Iniciar partículas
-
     let isModalHistoryPushed = false;
+    let wholesaleParticlesStarted = false;
 
     function openWholesale(e) {
         e?.preventDefault();
@@ -3824,6 +3956,10 @@ function initWholesaleAccess() {
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
+            if (!wholesaleParticlesStarted) {
+                wholesaleParticlesStarted = true;
+                initWholesaleParticles();
+            }
             if (input) setTimeout(() => input.focus(), 80);
 
             if (window.history && window.history.pushState) {
@@ -4021,10 +4157,33 @@ function renderPromoWidget() {
         return;
     }
 
-    const title = getSiteConfigValue('Promo_Title', '-20%');
+    const title = getSiteConfigValue('Promo_Title', 'Oferta BLYXU');
     const message = getSiteConfigValue('Promo_Message', 'Aprovecha nuestros descuentos especiales.');
     const promoDate = getSiteConfigValue('Promo_Date', '');
-    const numberText = title.replace(/[^0-9%]/g, '');
+    const promoDiscount = getSiteConfigValue('Promo_Discount', '');
+    const numberText = String(promoDiscount || title).replace(/[^\d]/g, '');
+    const discountText = numberText ? `-${numberText}%` : 'Promo';
+
+    const getTimeParts = (diff) => {
+        const safeDiff = Math.max(0, diff);
+        const d = Math.floor(safeDiff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((safeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((safeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((safeDiff % (1000 * 60)) / 1000);
+        return [
+            [String(d).padStart(2, '0'), 'Days'],
+            [String(h).padStart(2, '0'), 'Hrs'],
+            [String(m).padStart(2, '0'), 'Mins'],
+            [String(s).padStart(2, '0'), 'Secs']
+        ];
+    };
+
+    const renderTimeBoxes = (parts) => parts.map(([value, label]) => `
+        <span class="inline-promo-timebox">
+            <strong>${escapeHtml(value)}</strong>
+            <small>${escapeHtml(label)}</small>
+        </span>
+    `).join('');
 
     // Eliminar globo antiguo si existiera
     document.getElementById('floating-promo')?.remove();
@@ -4036,16 +4195,14 @@ function renderPromoWidget() {
     injectContainers.forEach((container, idx) => {
         container.innerHTML = `
             <div class="inline-promo-banner" id="inline-promo-${idx}">
-                <div class="inline-promo-icon">
-                    <span class="inline-promo-number">${numberText || '%'}</span>
-                </div>
+                <span class="inline-promo-badge">${escapeHtml(discountText)}</span>
                 <div class="inline-promo-content">
-                    <h4 class="inline-promo-title">${title}</h4>
-                    <p class="inline-promo-msg">${message}</p>
+                    <h4 class="inline-promo-title">${escapeHtml(title)}</h4>
+                    <p class="inline-promo-msg">${escapeHtml(message)}</p>
                 </div>
-                <div class="inline-promo-timer-wrap" style="${promoDate ? '' : 'display:none;'}">
+                <div class="inline-promo-countdown" id="inline-promo-timer-${idx}" style="${promoDate ? '' : 'display:none;'}">
                     <span class="inline-promo-timer-icon">⏳</span>
-                    <span class="inline-promo-timer" id="inline-promo-timer-${idx}">--:--:--</span>
+                    ${renderTimeBoxes(getTimeParts(0))}
                 </div>
             </div>
         `;
@@ -4056,28 +4213,26 @@ function renderPromoWidget() {
         if (isNaN(targetDate)) return;
 
         const updateTimer = () => {
-            const now = new Date().getTime();
-            const diff = targetDate - now;
+            const diff = targetDate - Date.now();
 
             if (diff <= 0) {
                 injectContainers.forEach((c, idx) => {
                     const el = document.getElementById(`inline-promo-timer-${idx}`);
+                    if (el && diff <= 0) {
+                        el.innerHTML = '<span class="inline-promo-ended">Promo terminada</span>';
+                        return;
+                    }
                     if (el) el.textContent = '¡Promoción Terminada!';
                 });
                 clearInterval(window.blyxuPromoInterval);
                 return;
             }
 
-            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-            
-            const timeStr = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+            const timeBoxes = renderTimeBoxes(getTimeParts(diff));
             
             injectContainers.forEach((c, idx) => {
                 const el = document.getElementById(`inline-promo-timer-${idx}`);
-                if (el) el.textContent = timeStr;
+                if (el) el.innerHTML = timeBoxes;
             });
         };
         
@@ -4095,7 +4250,7 @@ function initCustomCursor() {
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
     const name = product?.Nombre || product?.nombre || product?.Producto || 'Producto BLYXU';
     const category = product?.Categoria || product?.categoria || '';
-    const imageUrl = normalizeImageUrl(getProductImageSet(product)[0] || product?.Imagen || product?.['Imagen Principal'] || '');
+    const imageUrl = normalizeImageUrl(getProductImageSet(product, 'card')[0] || product?.Imagen || product?.['Imagen Principal'] || '', 'card');
     const sku = product?.SKU || product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || '';
 
     let msg = '*Consulta de precio BLYXU*\n\n';
@@ -4260,7 +4415,7 @@ function getProductIdentity(product, productIndex = -1) {
         idProducto: product?.idProducto || product?.['ID Producto'] || product?.Referencia || product?.referencia || product?.SKU || '',
         idVariacion: product?.idVariacion || product?.['ID Variación'] || product?.['ID Variacion'] || product?.SKU || productIndex,
         nombre: product?.Nombre || product?.nombre || product?.['Nombre del Producto'] || product?.Producto || 'Producto BLYXU',
-        imagen: normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || ''),
+        imagen: normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || '', 'thumb'),
         precio: getProductPrice(product || {}, activeCatalogMode)
     };
 }
@@ -4483,7 +4638,7 @@ function renderCustomerProfile() {
 }
 
 function getCustomerOrderItemImage(item) {
-    const directImage = normalizeImageUrl(item?.imagen || item?.img || item?.Imagen || item?.image || item?.foto || '');
+    const directImage = normalizeImageUrl(item?.imagen || item?.img || item?.Imagen || item?.image || item?.foto || '', 'thumb');
     if (directImage) return directImage;
 
     const itemSku = String(item?.sku || item?.SKU || item?.idVariacion || item?.id || '').trim();
@@ -4495,7 +4650,7 @@ function getCustomerOrderItemImage(item) {
             (itemName && normalizeSearchText(identity.nombre) === itemName);
     });
 
-    return match ? normalizeImageUrl(match.Imagen || match.imagen || match.Foto || (match.Galeria && match.Galeria[0]) || '') : '';
+    return match ? normalizeImageUrl(match.Imagen || match.imagen || match.Foto || (match.Galeria && match.Galeria[0]) || '', 'thumb') : '';
 }
 
 function setCustomerDashboardTab(tab = 'orders') {
@@ -5321,6 +5476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
     const isCartPage = document.body?.dataset.page === 'carrito';
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
+    const isHomePage = !isProductDetailPage && !isContactPage && !isPaymentsPage && !isOrdersLookupPage && !isCartPage && !isWholesalePage;
     
     const hasWholesaleAccess = localStorage.getItem('blyxu_wholesale_access') === '1' || sessionStorage.getItem('blyxu_wholesale_access') === '1';
     
@@ -5360,6 +5516,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    if (isHomePage && !readCache(PRODUCTS_CACHE_KEY)?.data?.products?.length) {
+        renderIndexInstantShell();
+    }
+
     if (isContactPage || isPaymentsPage || isOrdersLookupPage) {
         fetchSiteConfig().then(() => {
             if (isContactPage) renderContactPage();
@@ -5367,7 +5527,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPromoWidget();
         });
     } else {
-        loadProducts({ renderCatalog: !isProductDetailPage && !isCartPage }).then(() => {
+        loadProducts({ renderCatalog: !isProductDetailPage && !isCartPage, showLoading: !isHomePage }).then(() => {
             renderFloatingWhatsApp();
             renderFooterSocialLinks();
             renderPromoWidget();

@@ -2826,6 +2826,7 @@ function initInvoiceConfigAdmin() {
 const PROMO_CONFIG_FIELDS = [
     ['Promo_Enabled', 'promo-config-enabled'],
     ['Promo_Title', 'promo-config-title'],
+    ['Promo_Discount', 'promo-config-discount'],
     ['Promo_Date', 'promo-config-date'],
     ['Promo_Message', 'promo-config-message']
 ];
@@ -2844,7 +2845,74 @@ function fillPromoConfigForm(config) {
             }
         }
     });
+    renderPromoAdminPreview();
     updateLivePreview();
+}
+
+function getPromoAdminValues() {
+    return {
+        enabled: document.getElementById('promo-config-enabled')?.checked === true,
+        title: document.getElementById('promo-config-title')?.value?.trim() || 'Oferta BLYXU',
+        discount: document.getElementById('promo-config-discount')?.value?.trim() || '',
+        message: document.getElementById('promo-config-message')?.value?.trim() || 'Aprovecha nuestros descuentos especiales.',
+        date: document.getElementById('promo-config-date')?.value?.trim() || ''
+    };
+}
+
+function formatPromoCountdownParts(dateValue) {
+    const target = new Date(dateValue).getTime();
+    if (!dateValue || Number.isNaN(target)) {
+        return [
+            ['--', 'Days'],
+            ['--', 'Hrs'],
+            ['--', 'Mins'],
+            ['--', 'Secs']
+        ];
+    }
+    const diff = Math.max(0, target - Date.now());
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return [
+        [String(days).padStart(2, '0'), 'Days'],
+        [String(hours).padStart(2, '0'), 'Hrs'],
+        [String(mins).padStart(2, '0'), 'Mins'],
+        [String(secs).padStart(2, '0'), 'Secs']
+    ];
+}
+
+function renderPromoAdminPreview() {
+    const preview = document.getElementById('promo-admin-preview');
+    if (!preview) return;
+    const values = getPromoAdminValues();
+    const discountText = values.discount ? `-${String(values.discount).replace(/[^\d]/g, '') || values.discount}%` : 'Promo';
+    preview.classList.toggle('is-disabled', !values.enabled);
+    preview.innerHTML = `
+        <div class="promo-admin-preview-card">
+            <div class="promo-admin-preview-badge">${escapeHtml(discountText)}</div>
+            <div class="promo-admin-preview-copy">
+                <strong>${escapeHtml(values.title)}</strong>
+                <span>${escapeHtml(values.message)}</span>
+            </div>
+            <div class="promo-admin-preview-countdown">
+                ${formatPromoCountdownParts(values.date).map(([value, label]) => `
+                    <div><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+let promoAdminPreviewFrame = null;
+
+function schedulePromoAdminPreview() {
+    if (promoAdminPreviewFrame) cancelAnimationFrame(promoAdminPreviewFrame);
+    promoAdminPreviewFrame = requestAnimationFrame(() => {
+        renderPromoAdminPreview();
+        updateLivePreview();
+        promoAdminPreviewFrame = null;
+    });
 }
 
 function initPromoConfigAdmin() {
@@ -2856,8 +2924,8 @@ function initPromoConfigAdmin() {
     PROMO_CONFIG_FIELDS.forEach(([, id]) => {
         const input = document.getElementById(id);
         if (!input) return;
-        input.addEventListener('input', updateLivePreview);
-        input.addEventListener('change', updateLivePreview);
+        input.addEventListener('input', schedulePromoAdminPreview);
+        input.addEventListener('change', schedulePromoAdminPreview);
     });
 
     form.addEventListener('submit', async e => {
@@ -2885,6 +2953,7 @@ function initPromoConfigAdmin() {
                 return saveSiteConfig(key, value);
             }));
             window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
+            renderPromoAdminPreview();
             updateLivePreview();
             showToast('Banner promocional guardado correctamente');
         } catch (error) {

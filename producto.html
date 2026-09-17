@@ -12,7 +12,8 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="stylesheet" href="blyxu-style.css?v=general-search-clean-20260915">
+    <link rel="preload" href="blyxu-style.css?v=mobile-perf-20260916" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-perf-20260916"></noscript>
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -811,7 +812,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=general-search-clean-20260915"></script>
+    <script src="blyxu-app.js?v=mobile-image-size-20260916"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -994,7 +995,7 @@
                 const seen = new Set();
 
                 function addImage(src, label, productIndex) {
-                    const normalizedSrc = normalizeImageUrl(src);
+                    const normalizedSrc = normalizeImageUrl(src, 'detail');
                     if (!normalizedSrc || seen.has(normalizedSrc)) return;
                     seen.add(normalizedSrc);
                     items.push({
@@ -1032,7 +1033,7 @@
                 }
 
                 gallery?.classList.remove('has-single-image');
-                const activeImage = activeSrc ? normalizeImageUrl(activeSrc) : images[0]?.src;
+                const activeImage = activeSrc ? normalizeImageUrl(activeSrc, 'detail') : images[0]?.src;
                 images.forEach((item, index) => {
                     const thumb = document.createElement('button');
                     thumb.type = 'button';
@@ -1041,7 +1042,9 @@
                     thumb.dataset.productIndex = String(item.productIndex);
 
                     const thumbImg = document.createElement('img');
-                    thumbImg.src = item.src;
+                    thumbImg.src = normalizeImageUrl(item.src, 'thumb');
+                    thumbImg.loading = 'lazy';
+                    thumbImg.decoding = 'async';
                     thumbImg.alt = item.label || name;
                     thumbImg.onerror = () => { thumb.style.display = 'none'; };
                     thumb.appendChild(thumbImg);
@@ -1101,7 +1104,7 @@
                     const dimensionLabel = getVariantFieldValue(sib, variantDimension);
                     const labelParts = getVisibleVariantParts(sib);
                     const label = dimensionLabel || labelParts.join(' - ') || `Opción ${index + 1}`;
-                    const variantImg = getProductImageSet(sib)[0] || 'Logo2.png';
+                    const variantImg = getProductImageSet(sib, 'thumb')[0] || 'Logo2.png';
 
                     const imgWrap = document.createElement('div');
                     imgWrap.className = 'detail-variant-img-wrap';
@@ -1154,7 +1157,7 @@
                 const name = getProductDisplayName(product);
                 const price = getProductPrice(product, detailCatalogMode);
                 const oldPrice = getProductDisplayOldPrice(product, detailCatalogMode, price);
-                const img = normalizeImageUrl(preferredImage || product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '');
+                const img = normalizeImageUrl(preferredImage || product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '', 'detail');
                 const cat = getDisplayValue(product.Categoria, product.categoria);
                 const desc = getDisplayValue(product.Descripcion, product.descripcion, 'Sin descripcion disponible.');
                 const stock = getProductStock(product);
