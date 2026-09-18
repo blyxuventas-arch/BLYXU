@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BLYXU | Administrador</title>
     <link rel="icon" href="Logo2.png">
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com">
+    <link rel="dns-prefetch" href="//script.google.com">
     <style>
         :root {
             --bg:#07030f;
@@ -30,6 +33,8 @@
         body {
             margin:0;
             min-height:100vh;
+            font-size:13px;
+            zoom:0.8;
             background:
                 radial-gradient(circle at 20% -10%, rgba(168,85,247,.18), transparent 30%),
                 radial-gradient(circle at 88% 10%, rgba(34,211,238,.11), transparent 26%),
@@ -54,8 +59,9 @@
             padding:24px;
             background:rgba(4,2,10,.92);
             z-index:10000;
+            transition:opacity .18s ease;
         }
-        #admin-particles { position:absolute; inset:0; width:100%; height:100%; opacity:.55; }
+        #admin-particles { position:absolute; inset:0; width:100%; height:100%; opacity:.32; }
         .wholesale-panel {
             position:relative;
             width:min(420px,100%);
@@ -93,6 +99,55 @@
             transition:width .32s ease;
         }
         .loader-text { margin-top:9px; color:var(--soft); font-size:10px; font-weight:900; letter-spacing:1px; display:none; }
+
+        /* Tamaño equilibrado y compacto exclusivo para el inicio de sesión de admin */
+        #admin-login-screen #login-box {
+            width: min(370px, 90vw);
+            padding: 28px 24px 24px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08);
+        }
+        #admin-login-screen .wholesale-logo {
+            width: 110px;
+            margin-bottom: 12px;
+        }
+        #admin-login-screen .wholesale-kicker {
+            font-size: 9.5px;
+            letter-spacing: 1.4px;
+        }
+        #admin-login-screen h2 {
+            font-size: 22px !important;
+            margin: 4px 0 14px;
+        }
+        #admin-login-screen .wholesale-form {
+            gap: 10px;
+        }
+        #admin-login-screen input#admin-password {
+            min-height: 42px;
+            padding: 9px 13px;
+            font-size: 13px;
+            border-radius: 9px;
+        }
+        #admin-login-screen .admin-btn {
+            min-height: 42px;
+            padding: 9px 13px;
+            font-size: 13px;
+            font-weight: 750;
+            border-radius: 9px;
+            letter-spacing: .3px;
+        }
+        #admin-login-screen .wholesale-error {
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        #admin-login-screen .loader-container {
+            height: 6px;
+            margin-top: 14px;
+        }
+        #admin-login-screen .loader-text {
+            font-size: 9.5px;
+            margin-top: 8px;
+        }
 
         .dashboard-layout {
             min-height:100vh;
@@ -156,7 +211,7 @@
             background:rgba(9,4,20,.78);
             backdrop-filter:blur(16px);
         }
-        .dashboard-header h1 { margin:0; font-size:25px; font-weight:950; letter-spacing:0; }
+        .dashboard-header h1 { margin:0; font-size:17px; font-weight:950; letter-spacing:0; }
         .dashboard-badge,.admin-mode-pill {
             display:inline-flex;
             align-items:center;
@@ -239,7 +294,7 @@
             line-height:1.35;
         }
 
-        .admin-dashboard-shell { display:grid; gap:18px; }
+        .admin-dashboard-shell { display:grid; gap:12px; }
         .admin-dashboard-hero {
             display:flex;
             align-items:center;
@@ -250,7 +305,7 @@
             border-radius:16px;
             background:linear-gradient(135deg,rgba(244,196,65,.11),rgba(34,211,238,.055));
         }
-        .admin-dashboard-hero h2 { margin:4px 0 6px; font-size:25px; }
+        .admin-dashboard-hero h2 { margin:4px 0 6px; font-size:17px; }
         .admin-dashboard-hero p { margin:0; color:var(--muted); }
         .admin-dashboard-actions { display:flex; gap:10px; flex-wrap:wrap; }
         .dashboard-stat-grid {
@@ -265,12 +320,13 @@
             background:rgba(255,255,255,.035);
         }
         .dashboard-stat-card span,.dashboard-card-head span { color:var(--soft); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:1px; }
-        .dashboard-stat-card strong { display:block; margin:8px 0 4px; font-size:25px; }
+        .dashboard-stat-card strong { display:block; margin:8px 0 4px; font-size:19px; }
         .dashboard-stat-card small { color:var(--muted); font-weight:700; }
-        .dashboard-main-grid,.dashboard-bottom-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:14px; }
-        .dashboard-card { padding:18px; }
-        .dashboard-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
-        .dashboard-card-head h3 { margin:3px 0 0; font-size:16px; }
+        .dashboard-main-grid { display:grid; grid-template-columns:.8fr 1fr 1fr; gap:12px; align-items:start; }
+        .dashboard-bottom-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:12px; align-items:start; }
+        .dashboard-card { padding:14px; }
+        .dashboard-card-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+        .dashboard-card-head h3 { margin:3px 0 0; font-size:13px; }
         .dashboard-link-btn,.dashboard-shortcuts button {
             border:1px solid var(--line);
             border-radius:10px;
@@ -330,6 +386,204 @@
         .dashboard-chip-row { display:flex; gap:8px; flex-wrap:wrap; }
         .dashboard-chip { padding:6px 9px; border:1px solid var(--line); border-radius:999px; color:#fff; background:rgba(255,255,255,.04); font-size:10px; font-weight:900; }
 
+        /* ═══ Canvas Chart Containers ═══ */
+        .dashboard-canvas-wrap {
+            position:relative;
+            width:100%;
+            padding:12px 0 4px;
+        }
+        .dashboard-canvas-wrap canvas {
+            width:100% !important;
+            height:220px !important;
+            display:block;
+        }
+        .dashboard-chart-legend {
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px 16px;
+            padding:10px 0 0;
+        }
+        .dashboard-chart-legend-item {
+            display:flex;
+            align-items:center;
+            gap:6px;
+            font-size:11px;
+            font-weight:700;
+            color:var(--muted);
+        }
+        .dashboard-chart-legend-dot {
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            flex-shrink:0;
+        }
+
+        /* ═══ Collapsible Section Toggle ═══ */
+        .dashboard-toggle-btn {
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            padding:6px 12px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:8px;
+            background:rgba(255,255,255,.04);
+            color:var(--muted);
+            font-size:10px;
+            font-weight:900;
+            letter-spacing:.5px;
+            text-transform:uppercase;
+            cursor:pointer;
+            transition:all .22s ease;
+        }
+        .dashboard-toggle-btn:hover {
+            border-color:rgba(244,196,65,.3);
+            background:rgba(244,196,65,.08);
+            color:#ffe48a;
+        }
+        .dashboard-toggle-btn svg {
+            width:14px;
+            height:14px;
+            transition:transform .28s cubic-bezier(.4,0,.2,1);
+        }
+        .dashboard-toggle-btn.collapsed svg {
+            transform:rotate(-90deg);
+        }
+        .dashboard-collapsible {
+            display:grid;
+            grid-template-rows:1fr;
+            transition:grid-template-rows .32s cubic-bezier(.4,0,.2,1), opacity .24s ease;
+            opacity:1;
+        }
+        .dashboard-collapsible > div {
+            overflow:hidden;
+        }
+        .dashboard-collapsible.collapsed {
+            grid-template-rows:0fr;
+            opacity:0;
+        }
+        .dashboard-items-count {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:22px;
+            height:22px;
+            padding:0 6px;
+            border-radius:999px;
+            background:rgba(244,196,65,.14);
+            color:var(--gold);
+            font-size:10px;
+            font-weight:950;
+        }
+
+        /* ═══ Enhanced Recent Orders ═══ */
+        .dashboard-order-card {
+            display:grid;
+            grid-template-columns:auto minmax(0,1fr) auto;
+            gap:12px;
+            align-items:center;
+            padding:12px 14px;
+            border:1px solid rgba(255,255,255,.07);
+            border-radius:12px;
+            background:rgba(255,255,255,.025);
+            transition:all .22s ease;
+            cursor:default;
+        }
+        .dashboard-order-card:hover {
+            border-color:rgba(244,196,65,.18);
+            background:rgba(244,196,65,.04);
+            transform:translateY(-1px);
+        }
+        .dashboard-order-status-dot {
+            width:8px;
+            height:8px;
+            border-radius:50%;
+            flex-shrink:0;
+        }
+        .dashboard-order-status-dot.pending { background:#f59e0b; box-shadow:0 0 8px rgba(245,158,11,.4); }
+        .dashboard-order-status-dot.paid { background:#10b981; box-shadow:0 0 8px rgba(16,185,129,.4); }
+        .dashboard-order-status-dot.invoiced { background:#22d3ee; box-shadow:0 0 8px rgba(34,211,238,.4); }
+        .dashboard-order-status-dot.cancelled { background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,.4); }
+        .dashboard-order-info { min-width:0; }
+        .dashboard-order-info strong {
+            display:block;
+            font-size:12px;
+            color:#fff;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        .dashboard-order-info .order-meta {
+            display:flex;
+            align-items:center;
+            gap:6px;
+            margin-top:3px;
+        }
+        .dashboard-order-info .order-meta span {
+            font-size:10.5px;
+            font-weight:700;
+            color:var(--muted);
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+        }
+        .dashboard-order-info .order-status-pill {
+            display:inline-flex;
+            padding:2px 7px;
+            border-radius:999px;
+            font-size:9px;
+            font-weight:950;
+            text-transform:uppercase;
+            letter-spacing:.3px;
+            flex-shrink:0;
+        }
+        .order-status-pill.pending { background:rgba(245,158,11,.14); color:#fbbf24; }
+        .order-status-pill.paid { background:rgba(16,185,129,.14); color:#34d399; }
+        .order-status-pill.invoiced { background:rgba(34,211,238,.14); color:#67e8f9; }
+        .order-status-pill.cancelled { background:rgba(239,68,68,.14); color:#fca5a5; }
+        .dashboard-order-amount {
+            font-size:13px;
+            font-weight:950;
+            color:var(--gold);
+            white-space:nowrap;
+        }
+
+        /* ═══ Enhanced stock bajo cards ═══ */
+        .dashboard-stock-card {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:12px;
+            align-items:center;
+            padding:10px 14px;
+            border:1px solid rgba(255,255,255,.07);
+            border-radius:10px;
+            background:rgba(255,255,255,.025);
+            transition:all .22s ease;
+        }
+        .dashboard-stock-card:hover {
+            border-color:rgba(239,68,68,.2);
+            background:rgba(239,68,68,.04);
+        }
+        .dashboard-stock-card .stock-badge {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:36px;
+            height:26px;
+            padding:0 8px;
+            border-radius:8px;
+            font-size:11px;
+            font-weight:950;
+        }
+        .stock-badge.critical { background:rgba(239,68,68,.16); color:#fca5a5; }
+        .stock-badge.warning { background:rgba(245,158,11,.14); color:#fbbf24; }
+
+        /* ═══ Charts grid override ═══ */
+        .dashboard-charts-grid {
+            display:grid;
+            grid-template-columns:1.3fr .7fr;
+            gap:14px;
+        }
+
         #view-products .grid-split.product-admin-grid,
         #edit-product-modal .grid-split.product-admin-grid {
             display:grid;
@@ -346,7 +600,7 @@
             padding:24px 28px 18px;
             border-bottom:1px solid var(--line);
         }
-        .admin-title-row h2 { margin:4px 0 0; font-size:25px; font-weight:950; }
+        .admin-title-row h2 { margin:4px 0 0; font-size:17px; font-weight:950; }
         .product-form-intro {
             display:grid;
             grid-template-columns:minmax(220px,.9fr) minmax(260px,1.1fr);
@@ -416,8 +670,8 @@
         .product-config-card.variant-card { border-color:rgba(34,211,238,.18); }
         .product-config-card.media-card { border-color:rgba(236,72,153,.2); }
         .config-card-heading { display:flex; align-items:flex-start; gap:12px; margin-bottom:18px; }
-        .config-card-heading h3 { margin:0; font-size:16px; font-weight:950; }
-        .config-card-heading p { margin:4px 0 0; color:var(--muted); font-size:12px; line-height:1.4; }
+        .config-card-heading h3 { margin:0; font-size:14px; font-weight:950; }
+        .config-card-heading p { margin:4px 0 0; color:var(--muted); font-size:11px; line-height:1.4; }
         .product-subdivider {
             grid-column:1/-1;
             display:flex;
@@ -668,8 +922,8 @@
             background:rgba(11,7,22,.75);
         }
         .preview-heading { padding:22px 24px 14px; border-bottom:1px solid var(--line); }
-        .preview-heading h2 { margin:3px 0; font-size:19px; }
-        .preview-heading p { margin:0; color:var(--muted); font-size:12px; }
+        .preview-heading h2 { margin:3px 0; font-size:15px; }
+        .preview-heading p { margin:0; color:var(--muted); font-size:11px; }
         .preview-container {
             min-height:520px;
             display:grid;
@@ -737,7 +991,7 @@
         .preview-stock-alert { align-items:center; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
         .preview-stock-alert.is-low { color:#f8df80; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.24); }
         .preview-stock-alert.is-out { color:#fecaca; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.24); }
-        .preview-title { margin:0; color:#fff; font-size:clamp(26px,2.8vw,38px); line-height:1.15; font-weight:800; letter-spacing:0; text-transform:uppercase; }
+        .preview-title { margin:0; color:#fff; font-size:clamp(18px,2vw,28px); line-height:1.15; font-weight:800; letter-spacing:0; text-transform:uppercase; }
         .preview-color-strip { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; min-height:14px; }
         .preview-color-dot {
             width:14px;
@@ -747,7 +1001,7 @@
             background:var(--swatch,#888);
             box-shadow:inset 0 0 0 1px rgba(0,0,0,.22);
         }
-        .preview-price { margin:0; color:#fff; font-size:clamp(30px,3.2vw,40px); line-height:1; font-weight:800; }
+        .preview-price { margin:0; color:#fff; font-size:clamp(22px,2.4vw,32px); line-height:1; font-weight:800; }
         .preview-price .old { margin-left:8px; color:rgba(255,255,255,.45); font-size:16px; text-decoration:line-through; font-weight:650; }
         .preview-actions { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; margin-top:4px; }
         .preview-buy-btn,
@@ -828,7 +1082,7 @@
 
         .table-wrapper { overflow:auto; }
         table { width:100%; border-collapse:collapse; }
-        th,td { padding:12px; border-bottom:1px solid var(--line); text-align:left; color:rgba(255,255,255,.78); font-size:13px; }
+        th,td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:left; color:rgba(255,255,255,.78); font-size:12px; }
         th { color:var(--gold); font-size:10px; text-transform:uppercase; letter-spacing:.9px; }
         .inventory-filter-row,.orders-search-row {
             display:grid;
@@ -985,7 +1239,7 @@
         }
         .edit-modal-header h2 {
             margin:0;
-            font-size:18px;
+            font-size:15px;
             line-height:1.15;
         }
         .edit-modal-nav {
@@ -1052,6 +1306,676 @@
             box-shadow:0 20px 50px rgba(0,0,0,.45);
         }
         .hidden-print,.print-container { display:none; }
+
+        /* ==========================================================================
+           EDITOR DE FACTURAS ULTRA-PREMIUM (ESTÉTICA MODAL, INPUTS Y TABLA)
+           ========================================================================== */
+        #invoice-editor-modal.modal {
+            padding: 16px;
+            backdrop-filter: blur(10px);
+            background: rgba(4, 2, 9, 0.82);
+        }
+        #invoice-editor-modal .inv-modal-card {
+            width: min(940px, 96vw);
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+            background: #0d0718;
+            border: 1px solid rgba(168, 85, 247, 0.28);
+            border-radius: 20px;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .inv-modal-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 24px;
+            background: linear-gradient(180deg, rgba(22, 11, 40, 0.98), rgba(14, 7, 26, 0.98));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+        }
+        .inv-kicker-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 999px;
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #d8b4fe;
+            margin-bottom: 4px;
+        }
+        .inv-kicker-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #a855f7;
+            box-shadow: 0 0 8px #a855f7;
+        }
+        .inv-modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+        .inv-header-subtitle {
+            margin: 2px 0 0;
+            font-size: 12px;
+            color: rgba(248, 244, 255, 0.55);
+        }
+        .inv-close-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.7);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .inv-close-btn:hover {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+        }
+        .inv-modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-height: 0;
+        }
+        .inv-modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .inv-modal-body::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .inv-modal-body::-webkit-scrollbar-thumb {
+            background: rgba(168, 85, 247, 0.3);
+            border-radius: 4px;
+        }
+        .inv-form-section {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .inv-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-size: 11.5px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #f4c441;
+        }
+        .inv-section-title svg {
+            color: #f4c441;
+            flex-shrink: 0;
+        }
+        .inv-form-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .inv-form-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .inv-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .inv-input-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(248, 244, 255, 0.65);
+            letter-spacing: 0.3px;
+        }
+        .inv-input-group .form-control {
+            width: 100%;
+            min-height: 38px;
+            background: rgba(255, 255, 255, 0.045);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 9px;
+            color: #ffffff;
+            font-size: 13px;
+            padding: 8px 12px;
+            transition: all 0.2s;
+        }
+        .inv-input-group .form-control:focus {
+            outline: none;
+            border-color: rgba(168, 85, 247, 0.65);
+            background: rgba(255, 255, 255, 0.075);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+        }
+        .inv-search-container {
+            position: relative;
+            margin-bottom: 12px;
+        }
+        .inv-search-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .inv-search-input-wrap svg {
+            position: absolute;
+            left: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+        }
+        .inv-search-input-wrap .form-control {
+            padding-left: 36px;
+            min-height: 42px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 10px;
+            font-size: 13.5px;
+        }
+        .inv-search-input-wrap .form-control:focus {
+            border-color: #a855f7;
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+        }
+        #inv-search-results {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 50;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #150c26;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            display: none;
+        }
+        #inv-search-results.active {
+            display: block;
+        }
+        .inv-search-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .inv-search-item:hover {
+            background: rgba(168, 85, 247, 0.14);
+        }
+        .inv-search-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .inv-search-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .inv-search-item-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .inv-search-item-sub {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11.5px;
+            margin-top: 3px;
+        }
+        .inv-manual-row {
+            padding-top: 10px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.08);
+        }
+        .inv-manual-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(248, 244, 255, 0.5);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .inv-manual-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .inv-manual-inputs .form-control {
+            min-height: 38px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 12.5px;
+        }
+        .inv-manual-add-btn {
+            min-height: 38px;
+            padding: 0 14px;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            border-radius: 8px;
+        }
+        .inv-table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .inv-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .inv-items-table th {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.035);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+            color: rgba(248, 244, 255, 0.7);
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            text-align: left;
+        }
+        .inv-items-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+            color: #ffffff;
+        }
+        .inv-items-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .inv-item-name-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.055) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            padding: 7px 10px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s !important;
+        }
+        .inv-item-name-input:focus {
+            outline: none !important;
+            border-color: rgba(168, 85, 247, 0.7) !important;
+            background: rgba(255, 255, 255, 0.09) !important;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2) !important;
+        }
+        .inv-item-ref-input {
+            width: 130px !important;
+            background: rgba(255, 255, 255, 0.035) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            border-radius: 6px !important;
+            color: #c084fc !important;
+            padding: 4px 8px !important;
+            font-size: 11px !important;
+            font-family: monospace !important;
+            margin-top: 4px !important;
+            display: inline-block !important;
+        }
+        .inv-item-ref-input:focus {
+            outline: none !important;
+            border-color: rgba(168, 85, 247, 0.6) !important;
+        }
+        .inv-qty-input {
+            width: 60px !important;
+            background: rgba(255, 255, 255, 0.055) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            padding: 7px 6px !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+        }
+        .inv-qty-input:focus {
+            outline: none !important;
+            border-color: #a855f7 !important;
+            box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.2) !important;
+        }
+        .inv-item-price-input {
+            width: 105px !important;
+            background: rgba(255, 255, 255, 0.055) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 8px !important;
+            color: #34d399 !important;
+            padding: 7px 8px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            text-align: right !important;
+            font-variant-numeric: tabular-nums !important;
+        }
+        .inv-item-price-input:focus {
+            outline: none !important;
+            border-color: #10b981 !important;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+        }
+        .inv-remove-item-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            display: inline-grid;
+            place-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+        }
+        .inv-remove-item-btn:hover {
+            background: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+            transform: scale(1.05);
+        }
+        .inv-summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .inv-summary-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+        .inv-summary-card.total {
+            background: linear-gradient(135deg, rgba(244, 196, 65, 0.12), rgba(168, 85, 247, 0.08));
+            border-color: rgba(244, 196, 65, 0.35);
+        }
+        .inv-summary-card.balance {
+            border-color: rgba(244, 196, 65, 0.3);
+        }
+        .inv-card-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            color: rgba(248, 244, 255, 0.6);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .inv-card-value {
+            font-size: 18px;
+            font-weight: 900;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+        .inv-summary-card.total .inv-card-value {
+            color: #f4c441;
+            font-size: 21px;
+        }
+        .inv-modal-footer {
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: linear-gradient(0deg, rgba(16, 8, 30, 0.98), rgba(12, 6, 22, 0.95));
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+        }
+        .inv-footer-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 768px) {
+            .inv-form-grid-3, .inv-form-grid-4, .inv-summary-cards {
+                grid-template-columns: 1fr 1fr;
+            }
+            .inv-manual-inputs {
+                flex-direction: column;
+            }
+            .inv-manual-inputs .form-control {
+                max-width: none !important;
+                width: 100%;
+            }
+        }
+        @media (max-width: 520px) {
+            .inv-form-grid-3, .inv-form-grid-4, .inv-summary-cards {
+                grid-template-columns: 1fr;
+            }
+            .inv-footer-right {
+                width: 100%;
+                justify-content: stretch;
+            }
+            .inv-footer-right .admin-btn {
+                flex: 1;
+            }
+        }
+
+        /* PRINT MODE MINIMALISTA PARA DESKTOP/FALLBACK */
+        #invoice-print-container {
+            display: none;
+        }
+        @media print {
+            @page { size: A4 portrait; margin: 8mm; }
+            body.invoice-print-mode {
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.invoice-print-mode > :not(#invoice-print-container) {
+                display: none !important;
+            }
+            body.invoice-print-mode #invoice-print-container {
+                display: block !important;
+                background: #ffffff !important;
+                color: #111827 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                max-width: none !important;
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            }
+            body.invoice-print-mode #invoice-print-container * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body.invoice-print-mode .admin-inv-top-banner {
+                background: #ffffff !important;
+                padding: 0 0 16px 0 !important;
+                border-bottom: 2px solid #000000 !important;
+                color: #000000 !important;
+                display: flex !important;
+                justify-content: space-between !important;
+                gap: 20px !important;
+                align-items: flex-start !important;
+                margin-bottom: 20px !important;
+                page-break-inside: avoid;
+            }
+            body.invoice-print-mode .admin-inv-brand-wrapper {
+                display: flex !important;
+                align-items: center !important;
+                gap: 14px !important;
+            }
+            body.invoice-print-mode .admin-inv-brand-wrapper img {
+                height: 52px !important;
+                width: auto !important;
+                object-fit: contain !important;
+            }
+            body.invoice-print-mode .admin-inv-brand-wrapper h1 {
+                margin: 0 !important;
+                font-size: 20px !important;
+                font-weight: 900 !important;
+                color: #000000 !important;
+                text-transform: uppercase !important;
+            }
+            body.invoice-print-mode .admin-inv-brand-wrapper p {
+                margin: 4px 0 0 !important;
+                font-size: 11px !important;
+                color: #52525b !important;
+            }
+            body.invoice-print-mode .admin-inv-badge-box {
+                background: #ffffff !important;
+                border: 1.5px solid #000000 !important;
+                border-radius: 6px !important;
+                padding: 10px 16px !important;
+                text-align: right !important;
+            }
+            body.invoice-print-mode .admin-inv-badge-box h2 {
+                margin: 0 !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                letter-spacing: 1.5px !important;
+                color: #000000 !important;
+                text-transform: uppercase !important;
+            }
+            body.invoice-print-mode .admin-inv-badge-box .inv-num {
+                font-size: 18px !important;
+                font-weight: 900 !important;
+                color: #000000 !important;
+                margin: 2px 0 !important;
+                font-family: monospace, monospace !important;
+            }
+            body.invoice-print-mode .admin-inv-badge-box .inv-date {
+                font-size: 11.5px !important;
+                color: #52525b !important;
+                font-weight: 600 !important;
+            }
+            body.invoice-print-mode .invoice-details {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 16px !important;
+                margin-bottom: 20px !important;
+                page-break-inside: avoid;
+            }
+            body.invoice-print-mode .invoice-details-box {
+                background: #ffffff !important;
+                border: 1px solid #d4d4d8 !important;
+                border-radius: 6px !important;
+                padding: 12px 16px !important;
+            }
+            body.invoice-print-mode .invoice-details-box.inv-box-cliente,
+            body.invoice-print-mode .invoice-details-box.inv-box-emisor {
+                border-left: 3px solid #000000 !important;
+            }
+            body.invoice-print-mode .invoice-details-box .box-header-title {
+                margin: 0 0 8px !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                letter-spacing: 1px !important;
+                color: #000000 !important;
+                text-transform: uppercase !important;
+                border-bottom: 1px solid #e4e4e7 !important;
+                padding-bottom: 4px !important;
+            }
+            body.invoice-print-mode .invoice-details-box p {
+                margin: 3px 0 !important;
+                font-size: 12px !important;
+                color: #3f3f46 !important;
+            }
+            body.invoice-print-mode .invoice-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-bottom: 20px !important;
+                border-top: 1.5px solid #000000 !important;
+                border-bottom: 1.5px solid #000000 !important;
+            }
+            body.invoice-print-mode .invoice-table th {
+                background: #fafafa !important;
+                color: #000000 !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 0.8px !important;
+                padding: 8px 10px !important;
+                border-bottom: 1.5px solid #000000 !important;
+            }
+            body.invoice-print-mode .invoice-table td {
+                padding: 9px 10px !important;
+                border-bottom: 1px solid #e4e4e7 !important;
+                font-size: 12.5px !important;
+                color: #18181b !important;
+            }
+            body.invoice-print-mode .invoice-table tr { page-break-inside: avoid; }
+            body.invoice-print-mode .invoice-bottom-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 300px !important;
+                gap: 16px !important;
+                margin-top: 14px !important;
+                page-break-inside: avoid;
+            }
+            body.invoice-print-mode .invoice-notes-box {
+                background: #ffffff !important;
+                border: 1px solid #d4d4d8 !important;
+                border-left: 3px solid #000000 !important;
+                border-radius: 6px !important;
+                padding: 10px 14px !important;
+                font-size: 11.5px !important;
+                color: #3f3f46 !important;
+            }
+            body.invoice-print-mode .invoice-total-box {
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 14px 18px !important;
+                border-radius: 6px !important;
+                border: 1.5px solid #000000 !important;
+            }
+            body.invoice-print-mode .invoice-total-box .total-row-item {
+                display: flex !important;
+                align-items: baseline !important;
+                justify-content: space-between !important;
+            }
+            body.invoice-print-mode .invoice-total-box .total-amount {
+                font-size: 22px !important;
+                font-weight: 900 !important;
+                color: #000000 !important;
+                font-family: monospace, monospace !important;
+            }
+            body.invoice-print-mode .invoice-footer-line {
+                height: 1px !important;
+                background: #000000 !important;
+                margin: 20px 0 10px !important;
+            }
+            body.invoice-print-mode .invoice-footer {
+                text-align: center !important;
+                font-size: 11px !important;
+                color: #52525b !important;
+                page-break-inside: avoid;
+            }
+        }
 
         /* Refinamiento de las vistas operativas */
         .sub-sidebar {
@@ -2346,7 +3270,7 @@
             </form>
             <div class="wholesale-error" id="login-error" style="display:none;">Clave incorrecta</div>
             <div class="loader-container" id="login-loader"><div class="loader-bar" id="login-loader-bar"></div></div>
-            <div class="loader-text" id="login-loader-text">SINCRONIZANDO DB...</div>
+            <div class="loader-text" id="login-loader-text">ABRIENDO PANEL...</div>
         </div>
     </div>
 
@@ -2489,13 +3413,19 @@
                             <article class="dashboard-stat-card"><span>Stock total</span><strong id="dash-total-stock">0</strong><small>Unidades disponibles</small></article>
                         </div>
                         <div class="dashboard-main-grid">
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Actividad</span><h3>Resumen operativo</h3></div></div><div class="dashboard-bars" id="dash-status-bars"><div class="dashboard-empty">Cargando resumen...</div></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Reciente</span><h3>Ultimos pedidos</h3></div></div><div class="dashboard-activity-list" id="dash-recent-orders"><div class="dashboard-empty">Sin pedidos cargados</div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Actividad</span><h3>Resumen operativo</h3></div><button class="dashboard-toggle-btn" data-target="dash-status-bars-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div><div class="dashboard-collapsible" id="dash-status-bars-wrap"><div><div class="dashboard-bars" id="dash-status-bars"><div class="dashboard-empty">Cargando resumen...</div></div></div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Rendimiento</span><h3>Pedidos cerrados</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-closed-orders-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-closed-legend"></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Reciente</span><h3>Ultimos pedidos</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-orders-count">0</span><button class="dashboard-toggle-btn" data-target="dash-recent-orders-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-recent-orders-wrap"><div><div class="dashboard-activity-list" id="dash-recent-orders"><div class="dashboard-empty">Sin pedidos cargados</div></div></div></div></section>
+                        </div>
+                        <div class="dashboard-charts-grid">
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Ventas</span><h3>Facturacion por dia</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-sales-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-sales-legend"></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Catalogo</span><h3>Top categorias</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-category-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-category-legend"></div></section>
                         </div>
                         <div class="dashboard-bottom-grid">
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Inventario</span><h3>Stock bajo</h3></div></div><div class="dashboard-activity-list" id="dash-low-stock"><div class="dashboard-empty">Sin inventario cargado</div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Inventario</span><h3>Stock bajo</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-stock-count">0</span><button class="dashboard-toggle-btn" data-target="dash-low-stock-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-low-stock-wrap"><div><div class="dashboard-activity-list" id="dash-low-stock"><div class="dashboard-empty">Sin inventario cargado</div></div></div></div></section>
                             <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Accesos</span><h3>Gestion rapida</h3></div></div><div class="dashboard-shortcuts"><button onclick="switchDashboardView('products','Gestion de Productos')">Productos</button><button onclick="switchDashboardView('orders','Pedidos y Facturacion')">Facturas</button><button onclick="switchDashboardView('settings','Ajustes y Banner')">Banner</button><button onclick="switchDashboardView('china-orders','Pedidos a China')">China</button></div></section>
                         </div>
+
                     </div>
                 </div>
 
@@ -2654,8 +3584,280 @@
 
     <div id="edit-product-modal" class="modal"><div class="modal-card"><div class="edit-modal-header"><h2>Editar producto</h2><div class="edit-modal-nav"><button type="button" class="admin-btn secondary" id="edit-modal-prev-product">Anterior</button><select class="form-control" id="edit-modal-product-jump" aria-label="Editar otro producto"></select><button type="button" class="admin-btn secondary" id="edit-modal-next-product">Siguiente</button></div><button class="admin-btn secondary" onclick="cerrarModalEdicion()">Cerrar</button></div><div id="edit-modal-content-area"></div></div></div>
     <div id="confirm-modal" class="modal"><div class="modal-card" style="max-width:420px;"><h2 id="modal-title">Confirmar</h2><p id="modal-body">¿Estas seguro?</p><div style="display:flex;gap:10px;justify-content:flex-end;"><button class="admin-btn secondary" id="modal-cancel-btn">Cancelar</button><button class="admin-btn" id="modal-confirm-btn">Aceptar</button></div></div></div>
-    <div id="invoice-editor-modal" class="modal"><div class="modal-card"><div style="display:flex;justify-content:space-between;gap:12px;"><h2 id="inv-editor-title">Nueva Factura</h2><button class="admin-btn secondary" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')">Cerrar</button></div><input type="hidden" id="inv-original-id"><div class="admin-form-grid"><input class="form-control" id="inv-edit-id" placeholder="Factura"><input class="form-control" id="inv-edit-nombre" placeholder="Cliente"><input class="form-control" id="inv-edit-tel" placeholder="Telefono"><input class="form-control" id="inv-edit-fecha" type="date"><input class="form-control" id="inv-edit-dir" placeholder="Direccion"><input class="form-control" id="inv-edit-ciudad" placeholder="Ciudad"><select class="form-control" id="inv-edit-estado"><option>Finalizada</option><option>Pendiente</option><option>Abonada</option></select><select class="form-control" id="inv-edit-tipo"><option value="Detal">Detal</option><option value="Mayorista">Mayorista</option></select><input class="form-control" id="inv-edit-metodo" placeholder="Metodo"><input class="form-control" id="inv-edit-abono" placeholder="Abono"><textarea class="form-control admin-form-wide" id="inv-edit-nota" placeholder="Nota"></textarea></div><div style="margin-top:14px;"><input class="form-control" id="inv-product-search" placeholder="Buscar producto"><div id="inv-search-results"></div><div class="admin-form-grid" style="margin-top:10px;"><input class="form-control" id="inv-custom-name" placeholder="Producto manual"><input class="form-control" id="inv-custom-sku" placeholder="SKU"><input class="form-control" id="inv-custom-price" placeholder="Precio"></div></div><table style="margin-top:14px;"><tbody id="inv-edit-items"></tbody></table><div style="display:flex;gap:14px;flex-wrap:wrap;margin:12px 0;"><strong>Total: <span id="inv-edit-total">$0</span></strong><span id="inv-paid-before">$0</span><span id="inv-balance-before">$0</span><span id="inv-balance-after">$0</span></div><button class="admin-btn" id="btn-save-invoice">Guardar factura</button></div></div>
-    <div id="invoice-print-container" class="print-container"><div id="inv-id"></div><div id="inv-date"></div><div id="inv-cliente-nombre"></div><div id="inv-cliente-tel"></div><div id="inv-cliente-dir"></div><div id="inv-cliente-ciudad"></div><div id="inv-cliente-tipo"></div><div id="inv-status-text"></div><div id="inv-print-metodo"></div><img id="inv-company-logo" alt=""><div id="inv-company-name"></div><div id="inv-emisor-nombre"></div><div id="inv-company-nit"></div><div id="inv-company-contact"></div><div id="inv-company-email"></div><div id="inv-print-notes"></div><table><tbody id="inv-items"></tbody></table><div id="inv-total"></div><div id="inv-paid-total"></div><div id="inv-balance-total"></div><div id="inv-total-items-count"></div><div id="inv-print-status"></div></div>
+    <div id="invoice-editor-modal" class="modal">
+        <div class="modal-card inv-modal-card">
+            <!-- Modal Header -->
+            <div class="inv-modal-header">
+                <div class="inv-header-left">
+                    <div class="inv-kicker-badge">
+                        <span class="inv-kicker-dot"></span>
+                        <span>Comprobante Comercial BLYXU</span>
+                    </div>
+                    <h2 id="inv-editor-title">Editar Factura</h2>
+                    <p class="inv-header-subtitle">Modifica datos del cliente, estado de pago, ítems y precios en tiempo real</p>
+                </div>
+                <button type="button" class="inv-close-btn" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')" title="Cerrar modal">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <input type="hidden" id="inv-original-id">
+
+            <!-- Modal Scrollable Content -->
+            <div class="inv-modal-body">
+                <!-- SECCIÓN 1: DATOS GENERALES Y CLIENTE -->
+                <div class="inv-form-section">
+                    <div class="inv-section-title">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <span>Información del Cliente y Despacho</span>
+                    </div>
+                    <div class="inv-form-grid-3">
+                        <div class="inv-input-group">
+                            <label for="inv-edit-id">Nº de Factura</label>
+                            <input class="form-control" id="inv-edit-id" placeholder="FAC-...">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-nombre">Nombre del Cliente</label>
+                            <input class="form-control" id="inv-edit-nombre" placeholder="Nombre completo">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-tel">Teléfono / WhatsApp</label>
+                            <input class="form-control" id="inv-edit-tel" placeholder="Ej: 311 234 5678">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-fecha">Fecha de Emisión</label>
+                            <input class="form-control" id="inv-edit-fecha" type="date">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-dir">Dirección de Entrega</label>
+                            <input class="form-control" id="inv-edit-dir" placeholder="Calle / Carrera / Apto">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-ciudad">Ciudad / Municipio</label>
+                            <input class="form-control" id="inv-edit-ciudad" placeholder="Ej: Bogotá D.C.">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 2: ESTADO Y PAGOS -->
+                <div class="inv-form-section">
+                    <div class="inv-section-title">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                        <span>Estado Comercial y Condiciones de Pago</span>
+                    </div>
+                    <div class="inv-form-grid-4">
+                        <div class="inv-input-group">
+                            <label for="inv-edit-estado">Estado de Factura</label>
+                            <select class="form-control" id="inv-edit-estado">
+                                <option value="Finalizada">Finalizada</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Abonada">Abonada</option>
+                            </select>
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-tipo">Tipo de Cliente</label>
+                            <select class="form-control" id="inv-edit-tipo">
+                                <option value="Detal">Detal</option>
+                                <option value="Mayorista">Mayorista</option>
+                            </select>
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-metodo">Método de Pago</label>
+                            <input class="form-control" id="inv-edit-metodo" placeholder="Transferencia / Efectivo / Nequi">
+                        </div>
+                        <div class="inv-input-group">
+                            <label for="inv-edit-abono">Abono / Anticipo ($)</label>
+                            <input class="form-control" id="inv-edit-abono" placeholder="$0" oninput="updateInvoicePaymentSummary()">
+                        </div>
+                    </div>
+                    <div class="inv-input-group" style="margin-top:10px;">
+                        <label for="inv-edit-nota">Observaciones y Notas de la Factura</label>
+                        <textarea class="form-control" id="inv-edit-nota" placeholder="Instrucciones de entrega, notas sobre la garantía o acuerdos de pago..." rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 3: AGREGAR PRODUCTOS -->
+                <div class="inv-form-section inv-add-section">
+                    <div class="inv-section-title">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <span>Añadir Productos al Detalle</span>
+                    </div>
+                    <!-- Buscador Inteligente -->
+                    <div class="inv-search-container">
+                        <div class="inv-search-input-wrap">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input class="form-control" id="inv-product-search" placeholder="Buscar producto en inventario por nombre, SKU o categoría..." autocomplete="off">
+                        </div>
+                        <div id="inv-search-results"></div>
+                    </div>
+
+                    <!-- Fila Producto Manual -->
+                    <div class="inv-manual-row">
+                        <div class="inv-manual-title">O agrega un ítem personalizado manualmente:</div>
+                        <div class="inv-manual-inputs">
+                            <input class="form-control" id="inv-custom-name" placeholder="Nombre o descripción del producto" onkeydown="if(event.key==='Enter')agregarItemManualFactura()">
+                            <input class="form-control" id="inv-custom-sku" placeholder="Ref / SKU" style="max-width:130px;" onkeydown="if(event.key==='Enter')agregarItemManualFactura()">
+                            <input class="form-control" id="inv-custom-price" type="number" placeholder="Precio ($)" style="max-width:130px;" onkeydown="if(event.key==='Enter')agregarItemManualFactura()">
+                            <button type="button" class="admin-btn secondary inv-manual-add-btn" onclick="agregarItemManualFactura()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <span>Añadir</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 4: TABLA DE PRODUCTOS EN LA FACTURA -->
+                <div class="inv-form-section inv-table-section">
+                    <div class="inv-section-title">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        <span>Detalle de Productos Facturados</span>
+                    </div>
+                    <div class="inv-table-wrapper">
+                        <table class="inv-items-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:46%;">Producto & Referencia</th>
+                                    <th style="width:14%; text-align:center;">Cantidad</th>
+                                    <th style="width:18%; text-align:right;">Precio Unit.</th>
+                                    <th style="width:16%; text-align:right;">Subtotal</th>
+                                    <th style="width:6%; text-align:center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="inv-edit-items"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN 5: RESUMEN FINANCIERO -->
+                <div class="inv-summary-cards">
+                    <div class="inv-summary-card total">
+                        <div class="inv-card-label">TOTAL FACTURA</div>
+                        <div class="inv-card-value" id="inv-edit-total">$0</div>
+                    </div>
+                    <div class="inv-summary-card">
+                        <div class="inv-card-label">ABONADO PREVIO</div>
+                        <div class="inv-card-value" id="inv-paid-before">$0</div>
+                    </div>
+                    <div class="inv-summary-card">
+                        <div class="inv-card-label">SALDO INICIAL</div>
+                        <div class="inv-card-value" id="inv-balance-before">$0</div>
+                    </div>
+                    <div class="inv-summary-card balance" id="inv-card-balance-box">
+                        <div class="inv-card-label">SALDO PENDIENTE</div>
+                        <div class="inv-card-value" id="inv-balance-after">$0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer / Actions -->
+            <div class="inv-modal-footer">
+                <div class="inv-footer-left">
+                    <button type="button" class="admin-btn secondary" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')">Cerrar</button>
+                </div>
+                <div class="inv-footer-right">
+                    <button type="button" class="admin-btn secondary" onclick="sendInvoiceWhatsAppEditor()" title="Enviar factura por WhatsApp">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12.012 2c-5.506 0-9.989 4.478-9.99 9.984 0 1.758.459 3.474 1.33 4.982L2 22l5.176-1.348c1.45.791 3.097 1.207 4.832 1.208h.004c5.505 0 9.987-4.478 9.988-9.985 0-2.667-1.038-5.174-2.924-7.06A9.923 9.923 0 0 0 12.012 2zm5.666 14.155c-.234.66-1.164 1.213-1.61 1.264-.42.047-.962.217-3.237-.723-2.73-1.127-4.48-3.9-4.617-4.084-.136-.184-1.11-1.48-1.11-2.822 0-1.343.702-2.003.953-2.274.252-.27.548-.338.732-.338.183 0 .366.002.525.01.17.007.397-.064.62.47.234.56.797 1.946.866 2.086.069.14.115.303.023.486-.092.183-.138.297-.275.457-.137.16-.289.358-.413.481-.137.137-.28.287-.12.562.16.275.71 1.173 1.526 1.9 1.05.937 1.936 1.228 2.21 1.365.275.137.435.115.596-.068.16-.184.686-.8.869-1.075.183-.275.366-.229.617-.137.251.092 1.597.753 1.871.89.275.137.458.206.526.32.069.115.069.664-.165 1.324z"/></svg>
+                        <span>WhatsApp</span>
+                    </button>
+                    <button type="button" class="admin-btn secondary" onclick="imprimirFacturaEditor()" title="Generar e imprimir el PDF minimalista">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        <span>Imprimir / PDF</span>
+                    </button>
+                    <button type="button" class="admin-btn" id="btn-save-invoice" onclick="guardarFacturaDB()">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        <span>Guardar Factura</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE IMPRESIÓN/PDF SEMÁNTICO Y MINIMALISTA -->
+    <div id="invoice-print-container" class="print-container">
+        <div class="admin-inv-top-banner">
+            <div class="admin-inv-brand-wrapper">
+                <img id="inv-company-logo" src="blyxu-invoice-logo.png" alt="BLYXU">
+                <div>
+                    <h1 id="inv-company-name">BLYXU Joyería & Accesorios</h1>
+                    <p>
+                        <span id="inv-company-contact">WhatsApp: +57 311 2368622</span> &bull;
+                        <span id="inv-company-email">contacto@blyxu.online</span> &bull;
+                        <span>www.blyxu.online</span>
+                    </p>
+                </div>
+            </div>
+            <div class="admin-inv-badge-box">
+                <h2>FACTURA DE VENTA</h2>
+                <div class="inv-num" id="inv-id">FAC-000</div>
+                <div class="inv-date">Fecha: <strong id="inv-date">--/--/----</strong></div>
+                <div class="inv-status-chip">
+                    <span class="status-dot"></span> <span id="inv-status-text">FINALIZADA</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-details">
+            <div class="invoice-details-box inv-box-cliente">
+                <div class="box-header-title">FACTURAR A / CLIENTE</div>
+                <strong class="cliente-nombre-title" id="inv-cliente-nombre">Cliente</strong>
+                <p><strong>Teléfono / WhatsApp:</strong> <span id="inv-cliente-tel">-</span></p>
+                <p><strong>Dirección:</strong> <span id="inv-cliente-dir">-</span></p>
+                <p><strong>Ciudad:</strong> <span id="inv-cliente-ciudad">-</span></p>
+                <p><strong>Tipo de Cliente:</strong> <span id="inv-cliente-tipo">Detal</span></p>
+            </div>
+            <div class="invoice-details-box inv-box-emisor">
+                <div class="box-header-title">DATOS DEL EMISOR</div>
+                <strong class="emisor-nombre-title" id="inv-emisor-nombre">BLYXU Joyería & Accesorios</strong>
+                <p><strong>NIT / DOC:</strong> <span id="inv-company-nit">000.000.000-0</span></p>
+                <p><strong>Método de Pago:</strong> <span id="inv-print-metodo">Digital / Directo</span></p>
+                <p><strong>Tienda Online:</strong> <span>www.blyxu.online</span></p>
+            </div>
+        </div>
+
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th style="width:10%; text-align:center;">CANT.</th>
+                    <th style="width:52%;">DESCRIPCIÓN / PRODUCTO</th>
+                    <th style="width:19%; text-align:right;">P. UNITARIO</th>
+                    <th style="width:19%; text-align:right;">SUBTOTAL</th>
+                </tr>
+            </thead>
+            <tbody id="inv-items"></tbody>
+        </table>
+
+        <div class="invoice-bottom-grid">
+            <div class="invoice-notes-box">
+                <div class="notes-title">OBSERVACIONES & NOTAS</div>
+                <p id="inv-print-notes">Gracias por preferir BLYXU Joyería.</p>
+            </div>
+            <div class="invoice-total-container">
+                <div class="invoice-total-box">
+                    <div class="total-row-item">
+                        <span class="total-label">TOTAL FACTURA</span>
+                        <span class="total-amount" id="inv-total">$0</span>
+                    </div>
+                    <div class="payment-row-item">
+                        <span>ABONADO</span>
+                        <strong id="inv-paid-total">$0</strong>
+                    </div>
+                    <div class="payment-row-item balance">
+                        <span>SALDO PENDIENTE</span>
+                        <strong id="inv-balance-total">$0</strong>
+                    </div>
+                    <div class="total-sub-info">
+                        <span>Moneda: COP ($)</span> &bull; <span id="inv-total-items-count">0 Ítems</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-footer-line"></div>
+        <div class="invoice-footer">
+            <p class="thank-you">Gracias por elegir BLYXU Joyería & Accesorios</p>
+            <p class="footer-subtext">Comprobante expedido digitalmente por BLYXU &bull; Tienda Web: www.blyxu.online &bull; Calidad y Autenticidad Certificada</p>
+        </div>
+    </div>
     <div id="china-photo-modal" class="modal china-photo-modal"><div class="china-photo-modal-backdrop" style="position:absolute;inset:0;"></div><div class="modal-card" style="position:relative;z-index:1;"><button class="admin-btn secondary china-photo-modal-close">Cerrar</button><img src="" alt="" style="max-width:100%;border-radius:12px;"></div></div>
     <div id="toast"></div>
     <script>
@@ -2671,6 +3873,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=promo-admin-20260916"></script>
+    <script src="admin-app.js?v=admin-fast-load-20260918"></script>
 </body>
 </html>

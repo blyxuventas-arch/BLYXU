@@ -2383,6 +2383,11 @@ function initAdminCustomCursor() {
 function initAdminParticles() {
     const canvas = document.getElementById('admin-particles');
     if (!canvas) return;
+    if (window.matchMedia('(max-width: 760px), (prefers-reduced-motion: reduce)').matches) {
+        canvas.remove();
+        window.stopAdminParticles = function () {};
+        return;
+    }
     
     canvas.style.position = 'absolute';
     canvas.style.inset = '0';
@@ -2396,10 +2401,9 @@ function initAdminParticles() {
     let particles = [];
     let animationId = null;
     let running = true;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = false;
+    let lastDrawAt = 0;
     
-    const mouse = { x: -9999, y: -9999, active: false };
-
     function hexToRgba(hex, alpha) {
         const clean = String(hex || '#ffffff').replace('#', '');
         const value = parseInt(clean.length === 3
@@ -2412,25 +2416,6 @@ function initAdminParticles() {
     }
     
     const loginScreen = document.getElementById('admin-login-screen');
-    if(loginScreen) {
-        loginScreen.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
-            mouse.active = true;
-        });
-        loginScreen.addEventListener('mouseleave', () => { mouse.active = false; });
-        loginScreen.addEventListener('touchmove', (e) => {
-            if(e.touches.length > 0) {
-                const rect = canvas.getBoundingClientRect();
-                mouse.x = e.touches[0].clientX - rect.left;
-                mouse.y = e.touches[0].clientY - rect.top;
-                mouse.active = true;
-            }
-        });
-        loginScreen.addEventListener('touchend', () => { mouse.active = false; });
-    }
-
     function resize() {
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
@@ -2440,17 +2425,17 @@ function initAdminParticles() {
     function initNodes() {
         particles = [];
         const isMobile = window.innerWidth < 768;
-        const count = reduceMotion ? 0 : (isMobile ? 42 : 86);
+        const count = isMobile ? 0 : 34;
         const palette = ['#f4c441', '#a855f7', '#22d3ee', '#ffffff'];
         for (let i = 0; i < count; i++) {
             particles.push({
                 x: Math.random() * width,
                 y: Math.random() * height,
                 vx: (Math.random() - 0.5) * 0.45,
-                vy: 1.4 + Math.random() * (isMobile ? 2.2 : 3.4),
-                radius: Math.random() * 1.7 + 0.8,
-                length: 22 + Math.random() * 60,
-                alpha: 0.32 + Math.random() * 0.48,
+                vy: 1 + Math.random() * 1.6,
+                radius: Math.random() * 1.15 + 0.55,
+                length: 18 + Math.random() * 42,
+                alpha: 0.22 + Math.random() * 0.34,
                 color: palette[Math.floor(Math.random() * palette.length)]
             });
         }
@@ -2465,11 +2450,16 @@ function initAdminParticles() {
             return;
         }
 
+        const now = performance.now();
+        if (now - lastDrawAt < 33) {
+            animationId = requestAnimationFrame(draw);
+            return;
+        }
+        lastDrawAt = now;
+
         ctx.clearRect(0, 0, width, height);
         ctx.fillStyle = 'rgba(4, 1, 10, 0.22)';
         ctx.fillRect(0, 0, width, height);
-
-        const mouseConnectionDistance = 180;
 
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
@@ -2485,24 +2475,6 @@ function initAdminParticles() {
             if (p.x < -30) p.x = width + 30;
             if (p.x > width + 30) p.x = -30;
 
-            if (mouse.active) {
-                const dx = mouse.x - p.x;
-                const dy = mouse.y - p.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < mouseConnectionDistance) {
-                    p.x += dx * 0.006;
-
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(mouse.x, mouse.y);
-                    const opacity = 1 - (dist / mouseConnectionDistance);
-                    ctx.strokeStyle = `rgba(244, 196, 65, ${opacity * 0.26})`;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-
             const gradient = ctx.createLinearGradient(p.x, p.y - p.length, p.x, p.y);
             gradient.addColorStop(0, 'rgba(255,255,255,0)');
             gradient.addColorStop(1, hexToRgba(p.color, p.alpha));
@@ -2513,14 +2485,14 @@ function initAdminParticles() {
             ctx.strokeStyle = gradient;
             ctx.lineWidth = p.radius;
             ctx.lineCap = 'round';
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 4;
             ctx.shadowColor = p.color;
             ctx.stroke();
 
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fillStyle = hexToRgba(p.color, Math.min(0.9, p.alpha + 0.18));
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 3;
             ctx.shadowColor = p.color;
             ctx.fill();
             ctx.shadowBlur = 0;
@@ -2693,7 +2665,16 @@ function initSettingsTabs() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    initAdminParticles();
+    const startLoginEffects = () => {
+        if (document.getElementById('admin-login-screen')?.style.display !== 'none') {
+            initAdminParticles();
+        }
+    };
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(startLoginEffects, { timeout: 900 });
+    } else {
+        setTimeout(startLoginEffects, 450);
+    }
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     const settingsSidebarBtn = document.querySelector('.sidebar-btn[onclick*="settings"]');
     if (settingsSidebarBtn) {
@@ -2829,14 +2810,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 loader.style.display = 'block';
                 loaderText.style.display = 'block';
 
-                // Animate loader long enough for the secure-login sync to be visible.
                 let progress = 0;
                 const loaderStart = Date.now();
-                const loaderMinDuration = 5200;
+                const loaderMinDuration = 850;
                 const interval = setInterval(() => {
                     const elapsed = Date.now() - loaderStart;
                     const timeProgress = Math.min(96, (elapsed / loaderMinDuration) * 96);
-                    const pulse = Math.sin(elapsed / 240) * 1.8;
+                    const pulse = Math.sin(elapsed / 120) * 1.2;
                     progress = Math.max(progress, Math.min(96, timeProgress + pulse));
                     loaderBar.style.width = progress.toFixed(1) + '%';
 
@@ -2849,13 +2829,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 loginScreen.style.display = 'none';
                                 if (typeof window.stopAdminParticles === 'function') window.stopAdminParticles();
                                 mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
-                                cargarInventario(); // Load only after login
-                                cargarPedidos();
                                 renderAdminDashboard();
-                            }, 500);
-                        }, 700);
+                                Promise.allSettled([
+                                    cargarInventario(),
+                                    cargarPedidos()
+                                ]).then(() => renderAdminDashboard());
+                            }, 180);
+                        }, 120);
                     }
-                }, 120);
+                }, 55);
             } else {
                 loginError.style.display = 'block';
                 // Shake effect
@@ -6818,13 +6800,19 @@ function ensureDashboardEnhancements() {
         </div>
     `);
 
-    const bottomGrid = shell.querySelector('.dashboard-bottom-grid');
-    bottomGrid?.insertAdjacentHTML('beforebegin', `
-        <div class="dashboard-main-grid">
-            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Ventas</span><h3>Facturacion por dia</h3></div></div><div class="dashboard-chart-list" id="dash-sales-chart"></div></section>
-            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Catalogo</span><h3>Top categorias</h3></div></div><div class="dashboard-chart-list" id="dash-category-chart"></div></section>
-        </div>
-    `);
+    // Collapsible toggle buttons
+    shell.querySelectorAll('.dashboard-toggle-btn').forEach(btn => {
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            const isCollapsed = target.classList.toggle('collapsed');
+            btn.classList.toggle('collapsed', isCollapsed);
+            btn.querySelector('span').textContent = isCollapsed ? 'Mostrar' : 'Ocultar';
+        });
+    });
 
     ['dashboard-range-filter', 'dashboard-type-filter', 'dashboard-status-filter', 'dashboard-category-filter', 'dashboard-query-filter'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', renderAdminDashboard);
@@ -6892,23 +6880,30 @@ function renderAdminDashboard() {
     setDashboardText('dash-consult-orders', String(consultOrders.length));
     setDashboardText('dash-inventory-value', getDashboardMoney(inventoryValue));
 
+    // ═══ Enhanced Low Stock with badges ═══
     const lowStock = products
         .filter(product => getDashboardProductStock(product) <= 3)
         .sort((a, b) => getDashboardProductStock(a) - getDashboardProductStock(b))
         .slice(0, 8);
     const lowStockBox = document.getElementById('dash-low-stock');
     if (lowStockBox) {
-        lowStockBox.innerHTML = lowStock.length ? lowStock.map(product => `
-            <div class="dashboard-list-item">
+        lowStockBox.innerHTML = lowStock.length ? lowStock.map(product => {
+            const stock = getDashboardProductStock(product);
+            const badgeClass = stock <= 1 ? 'critical' : 'warning';
+            return `
+            <div class="dashboard-stock-card">
                 <div>
-                    <strong>${escapeHtml(product.Nombre || product['Nombre del Producto'] || 'Producto')}</strong>
-                    <span>${escapeHtml(getDashboardProductCategory(product) || 'Sin categoria')}</span>
+                    <strong style="display:block;font-size:12px;color:#fff">${escapeHtml(product.Nombre || product['Nombre del Producto'] || 'Producto')}</strong>
+                    <span style="font-size:10.5px;font-weight:700;color:rgba(248,244,255,.56)">${escapeHtml(getDashboardProductCategory(product) || 'Sin categoria')}</span>
                 </div>
-                <em>${getDashboardProductStock(product)} und.</em>
+                <span class="stock-badge ${badgeClass}">${stock} und.</span>
             </div>
-        `).join('') : '<div class="dashboard-empty">No hay productos con stock bajo</div>';
+        `;
+        }).join('') : '<div class="dashboard-empty">No hay productos con stock bajo</div>';
     }
+    setDashboardText('dash-stock-count', String(lowStock.length));
 
+    // ═══ Enhanced Recent Orders with status dots ═══
     const recentOrdersBox = document.getElementById('dash-recent-orders');
     if (recentOrdersBox) {
         const recent = [...filteredOrders]
@@ -6919,18 +6914,32 @@ function renderAdminDashboard() {
             const total = typeof parseAdminInvoiceMoney === 'function'
                 ? parseAdminInvoiceMoney(order?.Subtotal || order?.Total || 0)
                 : Number(order?.Subtotal || order?.Total || 0) || 0;
+            const statusRaw = String(order?.['Estado Pedido'] || order?.Estado || 'Pendiente').trim();
+            const statusLower = statusRaw.toLowerCase();
+            let statusClass = 'pending';
+            if (statusLower.includes('pag') || statusLower.includes('aprobad')) statusClass = 'paid';
+            else if (statusLower.includes('factur')) statusClass = 'invoiced';
+            else if (statusLower.includes('cancel') || statusLower.includes('rechaz')) statusClass = 'cancelled';
+            const clientName = escapeHtml(order?.['Nombre Cliente'] || order?.Nombre || 'Cliente');
+            const clientType = escapeHtml(order?.['Tipo Cliente'] || order?.tipoCliente || '');
             return `
-                <div class="dashboard-list-item">
-                    <div>
+                <div class="dashboard-order-card">
+                    <div class="dashboard-order-status-dot ${statusClass}"></div>
+                    <div class="dashboard-order-info">
                         <strong>${escapeHtml(id || 'Pedido')}</strong>
-                        <span>${escapeHtml(order?.['Nombre Cliente'] || order?.Nombre || 'Cliente')} · ${escapeHtml(order?.['Estado Pedido'] || order?.Estado || 'Pendiente')}</span>
+                        <div class="order-meta">
+                            <span>${clientName}${clientType ? ' · ' + clientType : ''}</span>
+                            <span class="order-status-pill ${statusClass}">${escapeHtml(statusRaw)}</span>
+                        </div>
                     </div>
-                    <em>${getDashboardMoney(total)}</em>
+                    <div class="dashboard-order-amount">${getDashboardMoney(total)}</div>
                 </div>
             `;
         }).join('') : '<div class="dashboard-empty">No hay pedidos cargados</div>';
+        setDashboardText('dash-orders-count', String(recent.length));
     }
 
+    // ═══ Status bars ═══
     const statusBars = document.getElementById('dash-status-bars');
     if (statusBars) {
         const statusCounts = countByDashboardValue(filteredOrders, getDashboardStatusValue);
@@ -6948,6 +6957,7 @@ function renderAdminDashboard() {
         `).join('');
     }
 
+    // ═══ Canvas: Sales Line/Area Chart ═══
     const salesByDay = {};
     filteredInvoices.forEach(invoice => {
         const date = getDashboardDateValue(invoice);
@@ -6957,22 +6967,205 @@ function renderAdminDashboard() {
             : Number(invoice?.Subtotal || invoice?.Total || 0) || 0;
         salesByDay[label] = (salesByDay[label] || 0) + value;
     });
-    renderDashboardChartRows('dash-sales-chart', Object.entries(salesByDay).slice(-10).map(([label, value]) => ({
-        label,
-        value,
-        detail: `${getDashboardPercent(value, totalSales)} del total`
-    })), { money: true });
+    const salesEntries = Object.entries(salesByDay).slice(-12);
+    drawDashboardAreaChart('dash-sales-canvas', 'dash-sales-legend', salesEntries, totalSales);
 
+    // ═══ Canvas: Category Donut Chart ═══
     const categoryCounts = countByDashboardValue(products, product => getDashboardProductCategory(product) || 'Sin categoria');
-    renderDashboardChartRows('dash-category-chart', Object.entries(categoryCounts)
+    const categoryEntries = Object.entries(categoryCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([label, value]) => ({
-            label,
-            value,
-            detail: `${getDashboardPercent(value, products.length)} del catalogo`
-        })));
+        .slice(0, 8);
+    drawDashboardDonutChart('dash-category-canvas', 'dash-category-legend', categoryEntries, products.length);
 }
+
+// ═══ Canvas Drawing: Area Chart ═══
+function drawDashboardAreaChart(canvasId, legendId, entries, total) {
+    const canvas = document.getElementById(canvasId);
+    const legendBox = document.getElementById(legendId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = rect.width || 400;
+    const h = 220;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    if (!entries.length) {
+        ctx.fillStyle = 'rgba(248,244,255,.3)';
+        ctx.font = '600 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos de ventas', w / 2, h / 2);
+        if (legendBox) legendBox.innerHTML = '';
+        return;
+    }
+
+    const values = entries.map(([, v]) => v);
+    const labels = entries.map(([l]) => l);
+    const maxVal = Math.max(...values, 1);
+    const padL = 62, padR = 16, padT = 24, padB = 38;
+    const chartW = w - padL - padR;
+    const chartH = h - padT - padB;
+
+    // Grid lines + Y-axis labels
+    const gridSteps = 4;
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = 'rgba(248,244,255,.36)';
+    ctx.font = '700 10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= gridSteps; i++) {
+        const y = padT + (chartH / gridSteps) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(w - padR, y);
+        ctx.stroke();
+        const val = maxVal - (maxVal / gridSteps) * i;
+        ctx.fillText(getDashboardMoney(Math.round(val)), padL - 8, y + 4);
+    }
+
+    // X-axis labels
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(248,244,255,.4)';
+    ctx.font = '700 9px Inter, sans-serif';
+    const step = entries.length > 1 ? chartW / (entries.length - 1) : 0;
+    const points = values.map((v, i) => ({
+        x: padL + step * i,
+        y: padT + chartH - (v / maxVal) * chartH
+    }));
+    labels.forEach((l, i) => {
+        ctx.fillText(l, points[i].x, h - padB + 16);
+    });
+
+    // Area gradient
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+    grad.addColorStop(0, 'rgba(244,196,65,.28)');
+    grad.addColorStop(1, 'rgba(244,196,65,.01)');
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, padT + chartH);
+    points.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(points[points.length - 1].x, padT + chartH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    const lineGrad = ctx.createLinearGradient(padL, 0, w - padR, 0);
+    lineGrad.addColorStop(0, '#f4c441');
+    lineGrad.addColorStop(1, '#22d3ee');
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cpx = (prev.x + curr.x) / 2;
+        ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
+    }
+    ctx.strokeStyle = lineGrad;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Dots
+    points.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = i === points.length - 1 ? '#22d3ee' : '#f4c441';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.5)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    });
+
+    if (legendBox) {
+        const totalFormatted = getDashboardMoney(total);
+        legendBox.innerHTML = `<div class="dashboard-chart-legend-item"><div class="dashboard-chart-legend-dot" style="background:linear-gradient(135deg,#f4c441,#22d3ee)"></div>Total: ${totalFormatted}</div><div class="dashboard-chart-legend-item"><div class="dashboard-chart-legend-dot" style="background:#22d3ee"></div>${entries.length} dias con ventas</div>`;
+    }
+}
+
+// ═══ Canvas Drawing: Donut Chart ═══
+function drawDashboardDonutChart(canvasId, legendId, entries, total) {
+    const canvas = document.getElementById(canvasId);
+    const legendBox = document.getElementById(legendId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const w = rect.width || 300;
+    const h = 220;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    if (!entries.length) {
+        ctx.fillStyle = 'rgba(248,244,255,.3)';
+        ctx.font = '600 13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos de categorias', w / 2, h / 2);
+        if (legendBox) legendBox.innerHTML = '';
+        return;
+    }
+
+    const donutColors = [
+        '#f4c441', '#a855f7', '#22d3ee', '#10b981',
+        '#ec4899', '#f59e0b', '#6366f1', '#ef4444'
+    ];
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const outerR = Math.min(cx, cy) - 12;
+    const innerR = outerR * 0.58;
+    const totalVal = entries.reduce((s, [, v]) => s + v, 0) || 1;
+
+    let startAngle = -Math.PI / 2;
+    entries.forEach(([label, value], i) => {
+        const sliceAngle = (value / totalVal) * Math.PI * 2;
+        const color = donutColors[i % donutColors.length];
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle, startAngle + sliceAngle);
+        ctx.arc(cx, cy, innerR, startAngle + sliceAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // Slice separator
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle, startAngle + sliceAngle);
+        ctx.arc(cx, cy, innerR, startAngle + sliceAngle, startAngle, true);
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(7,3,15,.6)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        startAngle += sliceAngle;
+    });
+
+    // Center text
+    ctx.fillStyle = '#fff';
+    ctx.font = '950 22px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(total), cx, cy - 8);
+    ctx.fillStyle = 'rgba(248,244,255,.5)';
+    ctx.font = '800 10px Inter, sans-serif';
+    ctx.fillText('PRODUCTOS', cx, cy + 12);
+
+    if (legendBox) {
+        legendBox.innerHTML = entries.map(([label, value], i) => {
+            const color = donutColors[i % donutColors.length];
+            const pct = getDashboardPercent(value, totalVal);
+            return `<div class="dashboard-chart-legend-item"><div class="dashboard-chart-legend-dot" style="background:${color}"></div>${escapeHtml(label)} (${pct})</div>`;
+        }).join('');
+    }
+}
+
 
 function switchDashboardView(viewId, title) {
     document.querySelectorAll('.dashboard-section').forEach(function (el) { el.classList.remove('active'); });
@@ -9495,7 +9688,7 @@ function renderItemsFactura() {
     let total = 0;
     
     if (window.invoiceItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">Busca y añade productos para comenzar</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:rgba(248,244,255,0.45); padding:28px 16px; font-size:13px;"><div style="font-size:20px; margin-bottom:6px;">📦</div>Busca productos arriba o agrega una línea manual para comenzar</td></tr>';
         document.getElementById('inv-edit-total').textContent = '$0';
         updateInvoicePaymentSummary();
         return;
@@ -9507,18 +9700,20 @@ function renderItemsFactura() {
         return `
             <tr>
                 <td data-label="Producto">
-                    <input type="text" class="inv-item-name-input" value="${escapeHtml(item.nombre)}" onchange="modificarNombreItemFactura(${i}, this.value)">
-                    <input type="text" class="inv-item-ref-input" value="${escapeHtml(item.sku || '')}" placeholder="Ref: S/N" onchange="modificarSkuItemFactura(${i}, this.value)">
+                    <input type="text" class="inv-item-name-input" value="${escapeHtml(item.nombre)}" placeholder="Descripción del producto" onchange="modificarNombreItemFactura(${i}, this.value)">
+                    <input type="text" class="inv-item-ref-input" value="${escapeHtml(item.sku || '')}" placeholder="Ref / SKU" onchange="modificarSkuItemFactura(${i}, this.value)">
                 </td>
                 <td data-label="Cantidad" style="text-align:center;">
                     <input type="number" class="inv-qty-input" value="${item.cantidad}" min="1" onchange="modificarCantidadFactura(${i}, this.value)">
                 </td>
                 <td data-label="Precio unitario" style="text-align:right;">
-                    <input type="number" class="inv-qty-input" style="width:90px;" value="${item.precio}" onchange="modificarPrecioFactura(${i}, this.value)">
+                    <input type="number" class="inv-item-price-input" value="${item.precio}" onchange="modificarPrecioFactura(${i}, this.value)">
                 </td>
-                <td data-label="Subtotal" style="text-align:right;">$${subtotal.toLocaleString('es-CO')}</td>
-                <td data-label="Accion" style="text-align:right;">
-                    <button class="action-btn inv-remove-item-btn" type="button" onclick="eliminarItemFactura(${i})">x</button>
+                <td data-label="Subtotal" style="text-align:right; font-weight:900; color:#f4c441; font-size:14px; font-variant-numeric:tabular-nums;">$${subtotal.toLocaleString('es-CO')}</td>
+                <td data-label="Acción" style="text-align:center;">
+                    <button class="inv-remove-item-btn" type="button" onclick="eliminarItemFactura(${i})" title="Eliminar ítem">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                 </td>
             </tr>
         `;
@@ -9544,8 +9739,14 @@ window.updateInvoicePaymentSummary = function() {
     if (document.getElementById('inv-balance-before')) {
         document.getElementById('inv-balance-before').textContent = formatAdminInvoiceMoney(balanceBefore);
     }
-    if (document.getElementById('inv-balance-after')) {
-        document.getElementById('inv-balance-after').textContent = formatAdminInvoiceMoney(balanceAfter);
+    const balanceAfterEl = document.getElementById('inv-balance-after');
+    if (balanceAfterEl) {
+        balanceAfterEl.textContent = formatAdminInvoiceMoney(balanceAfter);
+        balanceAfterEl.style.color = balanceAfter > 0 ? '#fbbf24' : '#34d399';
+    }
+    const balanceCard = document.getElementById('inv-card-balance-box');
+    if (balanceCard) {
+        balanceCard.style.borderColor = balanceAfter > 0 ? 'rgba(251, 191, 36, 0.4)' : 'rgba(52, 211, 153, 0.4)';
     }
 };
 
@@ -9560,53 +9761,62 @@ function getAdminInvoicePrintWindowStyles() {
         * { box-sizing: border-box; }
         html, body {
             margin: 0;
-            background: #f6f2ff;
-            color: #1e1b4b;
+            background: #ffffff;
+            color: #111827;
             font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
-        body { padding: 18px; }
+        body { padding: 24px; }
         .invoice-print-toolbar {
             position: sticky;
             top: 0;
             z-index: 20;
             display: flex;
             justify-content: flex-end;
-            max-width: 900px;
-            margin: 0 auto 14px;
+            gap: 12px;
+            max-width: 860px;
+            margin: 0 auto 16px;
             padding: 8px 0;
-            background: #f6f2ff;
+            background: #ffffff;
         }
         .invoice-print-button {
-            min-height: 44px;
-            border: 0;
-            border-radius: 12px;
-            padding: 0 18px;
-            background: linear-gradient(135deg, #ffe477, #d8ac16 55%, #f4c441);
-            color: #09030f;
+            min-height: 42px;
+            border: 1.5px solid #000000;
+            border-radius: 8px;
+            padding: 0 20px;
+            background: #000000;
+            color: #ffffff;
             font: inherit;
             font-size: 12px;
-            font-weight: 900;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .invoice-print-button:hover {
+            background: #27272a;
         }
         #invoice-print-container {
             display: block;
-            max-width: 900px;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 22px;
+            padding: 30px 34px;
             background: #ffffff;
-            box-shadow: 0 18px 50px rgba(40, 12, 72, 0.16);
+            border: 1.5px solid #000000;
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
         }
         .admin-inv-top-banner {
             background: #ffffff;
-            padding: 20px 24px;
-            border-radius: 14px;
-            border: 2px solid #7c3aed;
-            color: #1e0a38;
+            padding: 0 0 18px 0;
+            border-bottom: 2px solid #000000;
+            color: #000000;
             display: flex;
             justify-content: space-between;
-            gap: 18px;
-            align-items: center;
+            gap: 20px;
+            align-items: flex-start;
             margin-bottom: 20px;
         }
         .admin-inv-brand-wrapper {
@@ -9615,73 +9825,73 @@ function getAdminInvoicePrintWindowStyles() {
             gap: 16px;
         }
         .admin-inv-brand-wrapper img {
-            height: 58px;
+            height: 52px;
             width: auto;
             object-fit: contain;
-            padding: 4px 10px;
-            border-radius: 10px;
-            border: 1.5px solid #c4b5fd;
         }
         .admin-inv-brand-wrapper h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 900;
-            letter-spacing: 0;
-            color: #1e0a38;
+            letter-spacing: -0.5px;
+            color: #000000;
+            text-transform: uppercase;
         }
         .admin-inv-brand-wrapper p {
-            margin: 5px 0 0;
-            font-size: 12.5px;
-            color: #475569;
-            font-weight: 600;
+            margin: 4px 0 0;
+            font-size: 11.5px;
+            color: #52525b;
+            font-weight: 500;
+            line-height: 1.4;
         }
         .admin-inv-badge-box {
             background: #ffffff;
-            border: 1.5px solid #a78bfa;
-            border-radius: 12px;
-            padding: 12px 20px;
+            border: 1.5px solid #000000;
+            border-radius: 6px;
+            padding: 10px 18px;
             text-align: right;
             flex: 0 0 auto;
         }
         .admin-inv-badge-box h2 {
             margin: 0;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 900;
-            letter-spacing: 1px;
-            color: #6b21a8;
+            letter-spacing: 1.5px;
+            color: #000000;
             text-transform: uppercase;
         }
         .admin-inv-badge-box .inv-num {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
-            color: #7c3aed;
-            margin: 3px 0;
+            color: #000000;
+            margin: 2px 0;
             font-family: monospace, monospace;
+            letter-spacing: 0.5px;
         }
         .admin-inv-badge-box .inv-date {
-            font-size: 12.5px;
-            color: #334155;
+            font-size: 12px;
+            color: #52525b;
             font-weight: 600;
         }
         .admin-inv-badge-box .inv-status-chip {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            margin-top: 5px;
+            margin-top: 4px;
             background: #ffffff;
-            border: 1.5px solid #22c55e;
-            color: #16a34a;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 10px;
-            font-weight: 900;
+            border: 1px solid #000000;
+            color: #000000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0;
+            letter-spacing: 0.5px;
         }
         .admin-inv-badge-box .status-dot {
-            width: 6px;
-            height: 6px;
-            background: #22c55e;
+            width: 5px;
+            height: 5px;
+            background: #000000;
             border-radius: 50%;
         }
         .invoice-details {
@@ -9692,104 +9902,110 @@ function getAdminInvoicePrintWindowStyles() {
         }
         .invoice-details-box {
             background: #ffffff;
-            border: 1.5px solid #c4b5fd;
-            border-radius: 12px;
-            padding: 16px 18px;
+            border: 1px solid #d4d4d8;
+            border-radius: 6px;
+            padding: 14px 18px;
         }
-        .invoice-details-box.inv-box-cliente { border-left: 4px solid #7c3aed; }
-        .invoice-details-box.inv-box-emisor { border-left: 4px solid #a855f7; }
+        .invoice-details-box.inv-box-cliente {
+            border-left: 3px solid #000000;
+        }
+        .invoice-details-box.inv-box-emisor {
+            border-left: 3px solid #000000;
+        }
         .invoice-details-box .box-header-title {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin: 0 0 10px;
-            font-size: 11px;
+            margin: 0 0 8px;
+            font-size: 10.5px;
             font-weight: 900;
             letter-spacing: 1px;
-            color: #6b21a8;
+            color: #000000;
             text-transform: uppercase;
-            border-bottom: 1px solid #ddd6fe;
-            padding-bottom: 6px;
+            border-bottom: 1px solid #e4e4e7;
+            padding-bottom: 5px;
         }
         .invoice-details-box .cliente-nombre-title,
         .invoice-details-box .emisor-nombre-title {
-            font-size: 17px;
-            font-weight: 900;
-            color: #1e0a38;
+            font-size: 15.5px;
+            font-weight: 800;
+            color: #000000;
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
         .invoice-details-box p {
-            margin: 4px 0;
-            font-size: 13.5px;
-            color: #334155;
-            line-height: 1.5;
+            margin: 3px 0;
+            font-size: 12.5px;
+            color: #3f3f46;
+            line-height: 1.45;
             font-weight: 500;
         }
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            border: 1.5px solid #c4b5fd;
+            border-top: 1.5px solid #000000;
+            border-bottom: 1.5px solid #000000;
         }
         .invoice-table th {
-            background: #ffffff;
-            color: #6b21a8;
-            font-size: 11px;
+            background: #fafafa;
+            color: #000000;
+            font-size: 10.5px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 12px 14px;
-            border-bottom: 2px solid #7c3aed;
-            border-right: 1px solid #e9d5ff;
+            letter-spacing: 0.8px;
+            padding: 10px 12px;
+            border-bottom: 1.5px solid #000000;
+            border-right: 1px solid #f0f0f0;
         }
         .invoice-table td {
-            padding: 12px 14px;
-            border-bottom: 1px solid #e9d5ff;
-            border-right: 1px solid #f0e6ff;
-            font-size: 14px;
-            color: #1e1b4b;
+            padding: 11px 12px;
+            border-bottom: 1px solid #e4e4e7;
+            border-right: 1px solid #f4f4f5;
+            font-size: 13px;
+            color: #18181b;
             background: #ffffff;
-            font-weight: 600;
+            font-weight: 500;
         }
         .invoice-table th:last-child,
         .invoice-table td:last-child { border-right: none; }
         .invoice-bottom-grid {
             display: grid;
-            grid-template-columns: 1fr 340px;
+            grid-template-columns: 1fr 320px;
             gap: 16px;
             align-items: start;
             margin-top: 16px;
         }
         .invoice-notes-box {
             background: #ffffff;
-            border: 1.5px dashed #c4b5fd;
-            border-radius: 12px;
-            padding: 14px 16px;
-            font-size: 12.5px;
-            color: #334155;
+            border: 1px solid #d4d4d8;
+            border-left: 3px solid #000000;
+            border-radius: 6px;
+            padding: 12px 16px;
+            font-size: 12px;
+            color: #3f3f46;
             line-height: 1.5;
         }
         .invoice-notes-box .notes-title {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 900;
             letter-spacing: 1px;
-            color: #6b21a8;
-            margin-bottom: 5px;
+            color: #000000;
+            margin-bottom: 4px;
             text-transform: uppercase;
         }
         .invoice-total-container { display: flex; justify-content: flex-end; }
         .invoice-total-box {
             background: #ffffff;
-            color: #1e0a38;
-            padding: 18px 22px;
-            border-radius: 14px;
+            color: #000000;
+            padding: 16px 20px;
+            border-radius: 6px;
             width: 100%;
-            border: 2px solid #7c3aed;
+            border: 1.5px solid #000000;
         }
         .invoice-total-box .total-row-item {
             display: flex;
-            align-items: center;
+            align-items: baseline;
             justify-content: space-between;
             gap: 16px;
         }
@@ -9798,65 +10014,69 @@ function getAdminInvoicePrintWindowStyles() {
             align-items: center;
             justify-content: space-between;
             gap: 16px;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #ddd6fe;
-            font-size: 12px;
-            font-weight: 800;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #e4e4e7;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #52525b;
         }
         .invoice-total-box .payment-row-item.balance {
-            color: #6b21a8;
+            color: #000000;
+            font-weight: 900;
+            font-size: 12.5px;
         }
         .invoice-total-box .total-label {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 900;
             letter-spacing: 1px;
-            color: #6b21a8;
+            color: #000000;
             text-transform: uppercase;
         }
         .invoice-total-box .total-amount {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 900;
-            color: #1e0a38;
+            color: #000000;
             font-family: monospace, monospace;
         }
         .invoice-total-box .total-sub-info {
             margin-top: 8px;
             padding-top: 6px;
-            border-top: 1px solid #ddd6fe;
-            font-size: 11px;
-            color: #64748b;
+            border-top: 1px solid #e4e4e7;
+            font-size: 10.5px;
+            color: #71717a;
             text-align: right;
             font-weight: 600;
         }
         .invoice-footer-line {
-            height: 2px;
-            background: #7c3aed;
-            border-radius: 1px;
+            height: 1px;
+            background: #000000;
             margin: 22px 0 10px;
         }
         .invoice-footer {
             text-align: center;
-            font-size: 12px;
-            color: #475569;
+            font-size: 11.5px;
+            color: #52525b;
         }
         .invoice-footer .thank-you {
-            font-size: 14px;
-            font-weight: 900;
-            color: #1e0a38;
-            margin-bottom: 3px;
+            font-size: 13px;
+            font-weight: 800;
+            color: #000000;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .invoice-footer .footer-subtext {
             margin: 0;
-            font-size: 11.5px;
-            color: #64748b;
-            font-weight: 600;
+            font-size: 10.5px;
+            color: #71717a;
+            font-weight: 500;
         }
         @media (max-width: 640px) {
             body { padding: 0; background: #ffffff; }
             .invoice-print-toolbar { padding: 10px 12px; margin-bottom: 0; }
             .invoice-print-button { width: 100%; }
-            #invoice-print-container { padding: 14px; box-shadow: none; }
+            #invoice-print-container { padding: 14px; box-shadow: none; border: none; }
             .admin-inv-top-banner,
             .admin-inv-brand-wrapper {
                 align-items: flex-start;
@@ -9869,11 +10089,11 @@ function getAdminInvoicePrintWindowStyles() {
             .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
         }
         @media print {
-            @page { size: A4 portrait; margin: 0; }
-            html, body { background: #ffffff !important; }
+            @page { size: A4 portrait; margin: 8mm; }
+            html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; }
             body { padding: 0 !important; }
             .invoice-print-toolbar { display: none !important; }
-            #invoice-print-container { max-width: none; padding: 8mm 10mm; box-shadow: none; }
+            #invoice-print-container { max-width: none; padding: 0; border: none; box-shadow: none; }
             .admin-inv-top-banner,
             .invoice-details,
             .invoice-bottom-grid,
@@ -10007,14 +10227,14 @@ window.imprimirFacturaEditor = function() {
         return `
             <tr>
                 <td style="text-align:center;">
-                    <span style="background: #ffffff; color: #6b21a8; font-weight: 900; padding: 4px 10px; border-radius: 99px; font-size: 13px; display:inline-block; border: 1.5px solid #c4b5fd;">${cant}</span>
+                    <span style="background: #f4f4f5; color: #09090b; font-weight: 800; padding: 2px 8px; border-radius: 4px; font-size: 12px; display:inline-block; border: 1px solid #d4d4d8;">${cant}</span>
                 </td>
                 <td>
-                    <strong style="font-size:14.5px; color:#1e0a38; display:block; margin-bottom:2px; font-weight:800;">${escapeHtml(item.nombre)}</strong>
-                    <span style="display:inline-block; background:#ffffff; color:#6b21a8; font-size:11px; font-weight:700; padding:2px 8px; border-radius:5px; border: 1px solid #ddd6fe;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
+                    <strong style="font-size:14px; color:#09090b; display:block; margin-bottom:2px; font-weight:700;">${escapeHtml(item.nombre)}</strong>
+                    <span style="display:inline-block; background:#fafafa; color:#52525b; font-size:11px; font-weight:600; padding:1px 6px; border-radius:4px; border: 1px solid #e4e4e7; font-family: monospace;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
                 </td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 700; color:#334155; font-size: 14px;">$${precio.toLocaleString('es-CO')}</td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 900; color:#1e0a38; font-size: 14.5px;">$${sub.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 600; color:#3f3f46; font-size: 13.5px;">$${precio.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 800; color:#09090b; font-size: 14px;">$${sub.toLocaleString('es-CO')}</td>
             </tr>
         `;
     }).join('');
@@ -10040,14 +10260,16 @@ window.imprimirFacturaEditor = function() {
     const safeName = nombre.replace(/[^a-zA-Z0-9]/g, '_');
     document.title = `Factura_${pId}_${safeName}`;
 
-    if (isAdminInvoiceMobilePrint() && openAdminInvoicePrintWindow(document.title)) {
+    if (openAdminInvoicePrintWindow(document.title)) {
         document.title = origTitle;
         return;
     }
 
+    document.body.classList.add('invoice-print-mode');
     setTimeout(() => {
         window.print();
         setTimeout(() => {
+            document.body.classList.remove('invoice-print-mode');
             document.title = origTitle;
         }, 1200);
     }, 200);
@@ -10230,7 +10452,7 @@ window.guardarFacturaDB = async function() {
         console.error(err);
     } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Guardar Factura';
+        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg><span>Guardar Factura</span>`;
     }
 };
 
