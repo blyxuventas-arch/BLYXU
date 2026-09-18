@@ -51,6 +51,23 @@ let inventoryFetchToken = 0;
 const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
 const PRODUCT_BARCODE_FIELD_KEYS = ['Codigo Barras', 'Codigo de Barras', 'C\u00f3digo de Barras', 'Codigo_Barras', 'codigoBarras', 'barcode', 'Barcode'];
+const PRODUCT_COLOR_OPTIONS = [
+    { name: 'Dorado', hex: '#d4a017' },
+    { name: 'Plateado', hex: '#c0c0c0' },
+    { name: 'Negro', hex: '#222222' },
+    { name: 'Blanco', hex: '#ffffff', light: true },
+    { name: 'Perla', hex: '#f5ead2', light: true },
+    { name: 'Rosado', hex: '#f4a7b9' },
+    { name: 'Fucsia', hex: '#ec4899' },
+    { name: 'Rojo', hex: '#e53e3e' },
+    { name: 'Azul', hex: '#38a7df' },
+    { name: 'Turquesa', hex: '#45d3d0' },
+    { name: 'Verde', hex: '#22c55e' },
+    { name: 'Amarillo', hex: '#facc15' },
+    { name: 'Morado', hex: '#9b2cfa' },
+    { name: 'Cafe', hex: '#8b5e34' },
+    { name: 'Multicolor', hex: 'linear-gradient(135deg,#e53e3e,#facc15,#22c55e,#38a7df,#9b2cfa)' }
+];
 
 function formatAdminMoney(value) {
     return '$' + (parseFloat(value) || 0).toLocaleString('es-CO', { minimumFractionDigits: 0 });
@@ -133,13 +150,13 @@ function updateLivePreview() {
     const color = document.getElementById('prod-color')?.value?.trim() || '';
     const estilo = document.getElementById('prod-estilo')?.value?.trim() || '';
     const medida = typeof getProductSizeValue === 'function' ? getProductSizeValue() : (document.getElementById('prod-tamano')?.value || '');
+    if (typeof syncAllVariantAutoSizes === 'function') syncAllVariantAutoSizes();
     var idVar = document.getElementById('prod-id')?.value || '';
     var idProd = document.getElementById('prod-id-producto')?.value || '';
+    const activeVariantPreviewRow = getActiveVariantPreviewRow();
+    const previewImageUrl = activeVariantPreviewRow?.image || imagenUrl;
 
     var idBadge = document.getElementById('preview-id-badge');
-    if (!idBadge) {
-        idBadge = document.getElementById('preview-badge-el');
-    }
     if (idBadge && (idProd || idVar)) {
         var idText = idProd ? 'ID: ' + idProd : '';
         if (idVar && idVar !== idProd) idText += ' | VAR: ' + idVar;
@@ -193,20 +210,86 @@ function updateLivePreview() {
     } else {
         priceHtml = '$0';
     }
+    const previewUsesWholesalePrice = catalogo === 'Mayorista' && parsedMayorista > 0;
+    const previewBasePrice = previewUsesWholesalePrice ? parsedMayorista : (parsedPrecio || parsedMayorista);
+    const previewPromoApplies = discountPercent > 0 && (
+        previewUsesWholesalePrice
+            ? (promoScope === 'Ambos' || promoScope === 'Mayorista')
+            : (promoScope === 'Ambos' || promoScope === 'Minorista')
+    );
+    if (previewBasePrice > 0) {
+        if (previewPromoApplies) {
+            const promoPrice = Math.round(previewBasePrice * discountFactor);
+            priceHtml = `${formatAdminMoney(promoPrice)} <span class="old">${formatAdminMoney(previewBasePrice)}</span>`;
+        } else {
+            priceHtml = formatAdminMoney(previewBasePrice);
+        }
+    } else {
+        priceHtml = stock > 0 ? 'Precio por consultar' : 'Agotado por ahora';
+    }
     const priceEl = document.getElementById('preview-price-el');
     if (priceEl) priceEl.innerHTML = priceHtml;
+    const colorStrip = document.getElementById('preview-color-strip');
+    const colorLabel = splitProductColorValues(color).map(getColorDisplayName).join(', ');
+    if (colorStrip) {
+        colorStrip.innerHTML = getPreviewColorDotsHtml(color);
+        colorStrip.style.display = color ? 'flex' : 'none';
+    }
+    const colorText = document.getElementById('preview-color-text');
+    if (colorText) colorText.textContent = colorLabel || 'Varios';
+    const styleText = document.getElementById('preview-style-text');
+    const styleRow = document.getElementById('preview-style-row');
+    if (styleText) styleText.textContent = estilo || '';
+    if (styleRow) styleRow.style.display = estilo ? 'flex' : 'none';
+    const sizeRow = document.getElementById('preview-size-row');
+    const stockValue = document.getElementById('preview-stock-value');
+    if (stockValue) stockValue.textContent = stock > 0 ? 'Disponible' : 'Agotado por ahora';
+    const stockAlert = document.getElementById('preview-stock-alert');
+    if (stockAlert) {
+        stockAlert.className = 'preview-stock-alert';
+        if (stock <= 0) {
+            stockAlert.textContent = 'Agotado';
+            stockAlert.classList.add('is-out');
+            stockAlert.style.display = 'inline-flex';
+        } else if (stock <= 3) {
+            stockAlert.textContent = 'Bajo stock';
+            stockAlert.classList.add('is-low');
+            stockAlert.style.display = 'inline-flex';
+        } else {
+            stockAlert.style.display = 'none';
+        }
+    }
+    const measureLine = document.getElementById('preview-measure-line');
+    if (measureLine) {
+        measureLine.textContent = medida || '';
+        if (sizeRow) sizeRow.style.display = medida ? 'flex' : 'none';
+    }
+    const descEl = document.getElementById('preview-product-desc');
+    if (descEl) descEl.textContent = descripcion || 'Sin descripcion disponible.';
+    const buyBtn = document.getElementById('preview-buy-btn');
+    const consultBtn = document.getElementById('preview-consult-btn');
+    const cartNote = document.getElementById('preview-cart-note');
+    const hasVisiblePrice = previewBasePrice > 0;
+    if (buyBtn) {
+        buyBtn.disabled = stock <= 0;
+        buyBtn.textContent = stock <= 0
+            ? 'Agotado por ahora'
+            : (hasVisiblePrice ? 'Añadir al Carrito' : 'Añadir a consulta general');
+    }
+    if (consultBtn) consultBtn.style.display = !hasVisiblePrice && stock > 0 ? 'inline-flex' : 'none';
+    if (cartNote) cartNote.style.display = !hasVisiblePrice && stock > 0 ? 'block' : 'none';
 
     const imgEl = document.getElementById('preview-img-el');
     if (imgEl) {
         const currentSrc = imgEl.getAttribute('src');
-        if (currentSrc !== imagenUrl) {
+        if (currentSrc !== previewImageUrl) {
             // Evitar parpadeo: solo actualizar si el origen realmente cambió
             imgEl.style.transition = 'opacity 0.2s';
             imgEl.style.opacity = '0.4';
 
-            loadImageWithRetry(imagenUrl, 3, 700).then(() => {
+            loadImageWithRetry(previewImageUrl, 3, 700).then(() => {
                 const localPreviewSrc = imgEl.dataset.localPreviewSrc;
-                imgEl.src = imagenUrl;
+                imgEl.src = previewImageUrl;
                 imgEl.style.opacity = '1';
                 delete imgEl.dataset.localPreviewSrc;
                 if (localPreviewSrc) URL.revokeObjectURL(localPreviewSrc);
@@ -242,7 +325,7 @@ function updateLivePreview() {
         if (node) node.textContent = value;
     };
     const galleryCount = (document.getElementById('prod-imagen')?.value ? 1 : 0) + galleryUrls.length;
-    const variantParts = [color, estilo, medida].filter(Boolean);
+    const variantParts = [colorLabel, estilo, medida].filter(Boolean);
     const promoText = promoScope === 'FALSO'
         ? 'No aplica'
         : `${promoScope} -${discountPercent || 0}%`;
@@ -258,7 +341,9 @@ function updateLivePreview() {
     setPreviewDetail('preview-detail-promo', promoText);
     setPreviewDetail('preview-detail-desc', descripcion || 'La descripcion aparecera aqui mientras escribes.');
 
-    renderProductPreviewGallery(imagenUrl);
+    renderProductPreviewGallery(previewImageUrl);
+    renderProductPreviewOptions(previewImageUrl);
+    if (activeVariantPreviewRow) applyPreviewVariantRow(activeVariantPreviewRow);
 }
 
 function loadImageWithRetry(src, attempts = 2, delayMs = 500) {
@@ -397,6 +482,10 @@ function cleanMeasurementValue(value) {
 
 function formatProductPhysicalSizeLabel(data) {
     const unit = data.unit || 'cm';
+    if (unit === 'ml') {
+        const capacity = cleanMeasurementValue(data.capacity || data.width);
+        return capacity ? `Capacidad ${capacity} ml` : '';
+    }
     const radius = cleanMeasurementValue(data.radius);
     if (radius) return `Radio ${radius} ${unit}`;
 
@@ -418,12 +507,12 @@ function parseProductMeasurementText(value) {
         depth: '',
         radius: ''
     };
-    const unitMatch = text.match(/\b(cm|m3|m)\b/i);
+    const unitMatch = text.match(/\b(cm|m3|ml|m)\b/i);
     if (unitMatch) parsed.unit = unitMatch[1].toLowerCase();
-    Array.from(text.matchAll(/(ancho|largo|fondo|radio)\s*[:\-]?\s*([\d.,]+)/gi)).forEach(match => {
+    Array.from(text.matchAll(/(ancho|largo|fondo|radio|capacidad)\s*[:\-]?\s*([\d.,]+)/gi)).forEach(match => {
         const label = normalizeSearchText(match[1]);
         const measure = match[2];
-        if (label === 'ancho') parsed.width = measure;
+        if (label === 'ancho' || label === 'capacidad') parsed.width = measure;
         if (label === 'largo') parsed.length = measure;
         if (label === 'fondo') parsed.depth = measure;
         if (label === 'radio') parsed.radius = measure;
@@ -434,10 +523,13 @@ function parseProductMeasurementText(value) {
 function getProductMeasurementFormData() {
     const kind = getInputValue('prod-size-kind');
     const textileSize = cleanMeasurementValue(getInputValue('prod-textile-custom')) || getInputValue('prod-textile-size');
+    const unit = getInputValue('prod-measure-unit') || 'cm';
+    const capacity = cleanMeasurementValue(getInputValue('prod-measure-capacity'));
     return {
         kind,
-        unit: getInputValue('prod-measure-unit') || 'cm',
-        width: cleanMeasurementValue(getInputValue('prod-measure-width')),
+        unit,
+        capacity,
+        width: unit === 'ml' ? capacity : cleanMeasurementValue(getInputValue('prod-measure-width')),
         length: cleanMeasurementValue(getInputValue('prod-measure-length')),
         depth: cleanMeasurementValue(getInputValue('prod-measure-depth')),
         radius: cleanMeasurementValue(getInputValue('prod-measure-radius')),
@@ -448,7 +540,7 @@ function getProductMeasurementFormData() {
 function getProductSizeValue() {
     const data = getProductMeasurementFormData();
     if (data.kind === 'textil') return data.textileSize || getInputValue('prod-tamano');
-    if (data.kind === 'medidas') return formatProductPhysicalSizeLabel(data) || getInputValue('prod-tamano');
+    if (data.kind === 'medidas' || data.kind === 'liquido') return formatProductPhysicalSizeLabel(data) || getInputValue('prod-tamano');
     return getInputValue('prod-tamano');
 }
 
@@ -462,6 +554,7 @@ function buildProductMeasurementPayload(data = getProductMeasurementFormData()) 
         Largo: data.length,
         Fondo: data.depth,
         Radio: data.radius,
+        Capacidad: data.unit === 'ml' ? (data.capacity || data.width) : '',
         'Talla Textil': data.textileSize,
         TallaTextil: data.textileSize
     };
@@ -471,10 +564,16 @@ function updateProductMeasurementFields() {
     const data = getProductMeasurementFormData();
     const textilePanel = document.getElementById('prod-textile-size-fields');
     const physicalPanel = document.getElementById('prod-physical-size-fields');
+    if (data.kind === 'liquido' && data.unit !== 'ml') {
+        setInputValue('prod-measure-unit', 'ml');
+        data.unit = 'ml';
+    }
     if (textilePanel) textilePanel.classList.toggle('is-visible', data.kind === 'textil');
-    if (physicalPanel) physicalPanel.classList.toggle('is-visible', data.kind === 'medidas');
+    if (physicalPanel) physicalPanel.classList.toggle('is-visible', data.kind === 'medidas' || data.kind === 'liquido');
+    const measureGrid = document.getElementById('prod-measure-grid');
+    if (measureGrid) measureGrid.classList.toggle('is-capacity', data.unit === 'ml' || data.kind === 'liquido');
 
-    if (data.kind === 'textil' || data.kind === 'medidas') {
+    if (data.kind === 'textil' || data.kind === 'medidas' || data.kind === 'liquido') {
         setInputValue('prod-tamano', getProductSizeValue());
     }
     updateLivePreview();
@@ -486,6 +585,7 @@ function initProductMeasurementControls() {
         'prod-textile-size',
         'prod-textile-custom',
         'prod-measure-unit',
+        'prod-measure-capacity',
         'prod-measure-width',
         'prod-measure-length',
         'prod-measure-depth',
@@ -528,6 +628,7 @@ function normalizeGoogleProduct(product) {
         Largo: getProductField(product, ['Largo'], ''),
         Fondo: getProductField(product, ['Fondo'], ''),
         Radio: getProductField(product, ['Radio'], ''),
+        Capacidad: getProductField(product, ['Capacidad'], ''),
         TallaTextil: getProductField(product, ['Talla Textil', 'TallaTextil'], ''),
         Estilo: styleValue,
         SKU: getProductField(product, ['SKU'], ''),
@@ -829,7 +930,10 @@ function el(id) {
 
 function setInputValue(id, value = '') {
     const input = el(id);
-    if (input) input.value = value ?? '';
+    if (input) {
+        input.value = value ?? '';
+        syncColorPickerByInput(input);
+    }
 }
 
 function setMotherProductId(value = '') {
@@ -839,6 +943,167 @@ function setMotherProductId(value = '') {
 
 function getInputValue(id) {
     return el(id)?.value?.trim() || '';
+}
+
+function splitProductColorValues(value) {
+    return String(value || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
+function normalizeProductColorName(value) {
+    const clean = normalizeSearchText(value);
+    const option = PRODUCT_COLOR_OPTIONS.find(item => normalizeSearchText(item.name) === clean);
+    return option ? option.name : String(value || '').trim();
+}
+
+function getProductColorOption(value) {
+    const clean = normalizeSearchText(value);
+    return PRODUCT_COLOR_OPTIONS.find(item => normalizeSearchText(item.name) === clean) || null;
+}
+
+function isHexColorValue(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || '').trim());
+}
+
+function normalizeHexColor(value) {
+    const clean = String(value || '').trim();
+    return isHexColorValue(clean) ? clean.toUpperCase() : '';
+}
+
+function getAdminColorHex(value) {
+    const hex = normalizeHexColor(value);
+    if (hex) return hex;
+    const option = getProductColorOption(value);
+    if (option) return option.hex;
+    const clean = normalizeSearchText(value);
+    const aliases = {
+        gris: '#808080',
+        plata: '#c0c0c0',
+        plateada: '#c0c0c0',
+        dorada: '#d4a017',
+        oro: '#d4a017',
+        marron: '#8b5e34',
+        cafe: '#8b5e34',
+        celeste: '#38a7df',
+        transparente: '#f8fafc'
+    };
+    return aliases[clean] || '#888888';
+}
+
+function getColorDisplayName(value) {
+    const option = getProductColorOption(value);
+    if (option) return option.name;
+    const hex = normalizeHexColor(value);
+    return hex || String(value || '').trim();
+}
+
+function findColorPickerTarget(picker) {
+    if (!picker) return null;
+    const selector = picker.dataset.colorTarget || '';
+    if (!selector) return null;
+    return picker.closest('.form-group, .admin-panel, .var-edit-expanded, tr, body')?.querySelector(selector)
+        || document.querySelector(selector);
+}
+
+function syncColorPicker(picker) {
+    const target = findColorPickerTarget(picker);
+    if (!target) return;
+    const currentValues = splitProductColorValues(target.value).map(normalizeProductColorName);
+    const customOptions = currentValues
+        .filter(value => value && !getProductColorOption(value))
+        .map(value => ({ name: value, hex: getAdminColorHex(value), light: normalizeHexColor(value).toLowerCase() === '#ffffff' }));
+    const options = PRODUCT_COLOR_OPTIONS.concat(customOptions);
+    const selectedSet = new Set(currentValues.map(value => normalizeSearchText(value)));
+    const label = currentValues.length ? currentValues.map(getColorDisplayName).join(', ') : 'Sin color seleccionado';
+    const supportsEyeDropper = typeof window !== 'undefined' && 'EyeDropper' in window;
+
+    picker.innerHTML = options.map(option => {
+        const active = selectedSet.has(normalizeSearchText(option.name));
+        const classes = [
+            'color-swatch-option',
+            active ? 'is-selected' : '',
+            option.light ? 'is-light' : ''
+        ].filter(Boolean).join(' ');
+        return `<button type="button" class="${classes}" style="--swatch:${option.hex};" data-color-value="${escapeHtml(option.name)}" title="${escapeHtml(option.name)}" aria-label="${escapeHtml(option.name)}" aria-pressed="${active ? 'true' : 'false'}"></button>`;
+    }).join('') + `<span class="color-picker-value">${escapeHtml(label)}</span>`
+        + `<span class="color-picker-actions">`
+        + `<button type="button" class="color-custom-btn" title="A&ntilde;adir un color personalizado">+ Color</button>`
+        + `<button type="button" class="color-eye-btn" title="${supportsEyeDropper ? 'Tomar color con gotero' : 'Gotero no disponible en este navegador'}">Gotero</button>`
+        + `<input type="color" class="color-native-input" aria-label="Color personalizado">`
+        + `</span>`;
+
+    const applyCustomColor = color => {
+        const hex = normalizeHexColor(color);
+        if (!hex) return;
+        const multiple = picker.dataset.colorMultiple === 'true';
+        let next = splitProductColorValues(target.value).map(normalizeProductColorName);
+        const exists = next.some(item => normalizeSearchText(item) === normalizeSearchText(hex));
+        next = multiple
+            ? (exists ? next : next.concat(hex))
+            : [hex];
+        target.value = next.join(', ');
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        syncColorPicker(picker);
+    };
+
+    picker.querySelectorAll('.color-swatch-option').forEach(button => {
+        button.addEventListener('click', () => {
+            const multiple = picker.dataset.colorMultiple === 'true';
+            const value = button.dataset.colorValue || '';
+            let next = splitProductColorValues(target.value).map(normalizeProductColorName);
+            const clean = normalizeSearchText(value);
+            const exists = next.some(item => normalizeSearchText(item) === clean);
+            if (multiple) {
+                next = exists ? next.filter(item => normalizeSearchText(item) !== clean) : next.concat(value);
+            } else {
+                next = exists ? [] : [value];
+            }
+            target.value = next.join(', ');
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+            syncColorPicker(picker);
+        });
+    });
+
+    const colorInput = picker.querySelector('.color-native-input');
+    picker.querySelector('.color-custom-btn')?.addEventListener('click', () => colorInput?.click());
+    colorInput?.addEventListener('input', event => applyCustomColor(event.target.value));
+    picker.querySelector('.color-eye-btn')?.addEventListener('click', async () => {
+        if (!supportsEyeDropper) {
+            colorInput?.click();
+            return;
+        }
+        try {
+            const result = await new EyeDropper().open();
+            applyCustomColor(result?.sRGBHex);
+        } catch (error) {
+            if (error?.name !== 'AbortError') colorInput?.click();
+        }
+    });
+}
+
+function syncColorPickerByInput(input) {
+    if (!input?.id) return;
+    document
+        .querySelectorAll('.color-picker[data-color-target]')
+        .forEach(picker => {
+            if (picker.dataset.colorTarget === `#${input.id}`) syncColorPicker(picker);
+        });
+}
+
+function initColorPickers(root = document) {
+    root.querySelectorAll('.color-picker[data-color-target]').forEach(syncColorPicker);
+}
+
+function getColorSwatchesHtml(value) {
+    const colors = splitProductColorValues(value);
+    if (!colors.length) return '';
+    return `<span class="inventory-color-dots">${colors.map(color => (
+        `<span class="inventory-color-dot" style="--swatch:${getAdminColorHex(color)}" title="${escapeHtml(color)}"></span>`
+    )).join('')}</span>`;
 }
 
 function generateMotherProductId() {
@@ -1377,7 +1642,7 @@ function buildVariantPayloadFromCard(card) {
     if (!variantId) return null;
     const stock = Number(card.querySelector('.var-stock')?.value || 0);
     const imagen = card.querySelector('.var-imagen')?.value?.trim() || getInputValue('prod-imagen');
-    const tamano = card.querySelector('.var-tamano')?.value?.trim() || '';
+    const tamano = getVariantSizeValue(card);
     const color = card.querySelector('.var-color')?.value?.trim() || '';
     const estiloInput = card.querySelector('.var-estilo');
     const estilo = estiloInput ? cleanProductStyleValue(estiloInput.value) : getProductStyleValue();
@@ -1558,9 +1823,375 @@ function setupVariantImagePicker(card) {
     updateVariantImagePickerPreview(card, imageInput.value);
 }
 
+function getVariantAutoSizeValue() {
+    return (typeof getProductSizeValue === 'function' ? getProductSizeValue() : '') || getInputValue('prod-tamano') || '';
+}
+
+function syncVariantSizeField(card) {
+    if (!card) return '';
+    const mode = card.querySelector('.var-size-mode')?.value || 'auto';
+    const sizeInput = card.querySelector('.var-tamano');
+    const hint = card.querySelector('.var-size-hint');
+    const autoValue = getVariantAutoSizeValue();
+    if (!sizeInput) return autoValue;
+
+    if (mode === 'auto') {
+        sizeInput.value = autoValue;
+        sizeInput.readOnly = true;
+        sizeInput.placeholder = autoValue || 'Automatico del producto principal';
+        if (hint) hint.textContent = autoValue ? `Usando: ${autoValue}` : 'Toma automaticamente el tamano del producto principal.';
+        return autoValue;
+    }
+
+    sizeInput.readOnly = false;
+    sizeInput.placeholder = autoValue ? `Ej: ${autoValue}` : 'Escribe tamano, talla o capacidad';
+    if (hint) hint.textContent = 'Ajuste manual solo para esta variante.';
+    return sizeInput.value.trim() || autoValue;
+}
+
+function syncAllVariantAutoSizes() {
+    document.querySelectorAll('#variants-container .admin-panel').forEach(card => {
+        if ((card.querySelector('.var-size-mode')?.value || 'auto') === 'auto') syncVariantSizeField(card);
+    });
+}
+
+function getVariantSizeValue(card) {
+    if (!card) return getVariantAutoSizeValue();
+    return syncVariantSizeField(card);
+}
+
+function getVariantEditSizeValue(row) {
+    if (!row) return '';
+    const tamano = row.querySelector('.ve-tamano')?.value?.trim() || '';
+    const kind = normalizeSearchText(row.querySelector('.ve-size-kind')?.value || '');
+    const unit = kind === 'liquido' ? 'ml' : (row.querySelector('.ve-measure-unit')?.value || 'cm');
+    if (kind === 'textil') {
+        return row.querySelector('.ve-textile-size')?.value?.trim() || tamano;
+    }
+    if (kind === 'medidas' || kind === 'liquido') {
+        return formatProductPhysicalSizeLabel({
+            unit,
+            capacity: row.querySelector('.ve-measure-capacity')?.value || '',
+            width: unit === 'ml'
+                ? (row.querySelector('.ve-measure-capacity')?.value || row.querySelector('.ve-measure-width')?.value || '')
+                : (row.querySelector('.ve-measure-width')?.value || ''),
+            length: row.querySelector('.ve-measure-length')?.value || '',
+            depth: row.querySelector('.ve-measure-depth')?.value || '',
+            radius: row.querySelector('.ve-measure-radius')?.value || ''
+        }) || tamano;
+    }
+    return tamano;
+}
+
+function getVariantPreviewCardKey(card) {
+    if (!card) return '';
+    return card.dataset.previewKey || card.dataset.varid || card.id || card.querySelector('.ve-id, .var-id')?.value || '';
+}
+
+function setActiveVariantPreviewCard(card) {
+    const container = document.getElementById('variants-container');
+    const key = getVariantPreviewCardKey(card);
+    if (!container || !key) return;
+    container.dataset.activePreviewVariantKey = key;
+}
+
+function getActiveVariantPreviewKey() {
+    return document.getElementById('variants-container')?.dataset.activePreviewVariantKey || '';
+}
+
+function getActiveVariantPreviewCard() {
+    const focusedCard = document.activeElement?.closest?.('#variants-container .variant-edit-card, #variants-container .admin-panel');
+    if (focusedCard) return focusedCard;
+
+    const activeKey = getActiveVariantPreviewKey();
+    if (!activeKey) return null;
+    const cards = document.querySelectorAll('#variants-container .variant-edit-card, #variants-container .admin-panel');
+    for (const card of cards) {
+        if (getVariantPreviewCardKey(card) === activeKey) return card;
+    }
+    return null;
+}
+
+function getVariantEditorCardPreviewRow(card, index = 0, activeImage = '') {
+    if (!card) return null;
+    const baseImage = normalizeImageUrl(document.getElementById('prod-imagen')?.value || getAdminGalleryUrls()[0] || 'Logo2.png');
+    const isSavedVariantCard = card.classList.contains('variant-edit-card');
+    const key = getVariantPreviewCardKey(card);
+    const activeKey = getActiveVariantPreviewKey();
+
+    if (isSavedVariantCard) {
+        const row = card.querySelector('.var-edit-expanded');
+        if (!row) return null;
+        const variantId = row.querySelector('.ve-id')?.value?.trim() || card.dataset.varid || `Variante ${index + 2}`;
+        const color = row.querySelector('.ve-color')?.value || '';
+        const measure = getVariantEditSizeValue(row);
+        const style = cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || '');
+        const image = normalizeImageUrl(row.querySelector('.ve-imagen')?.value || baseImage);
+        const detail = [splitProductColorValues(color).map(getColorDisplayName).join(', '), style, measure].filter(Boolean).join(' / ');
+        return {
+            id: variantId,
+            key,
+            title: getInputValue('prod-nombre') || 'Nombre del Producto',
+            label: getInputValue('prod-nombre') || variantId,
+            detail,
+            color,
+            style,
+            measure,
+            price: row.querySelector('.ve-precio')?.value || getInputValue('prod-precio'),
+            wholesale: row.querySelector('.ve-precio-mayorista')?.value || getInputValue('prod-precio-mayorista'),
+            image,
+            stock: Number(row.querySelector('.ve-stock')?.value || 0),
+            active: key && key === activeKey || normalizeImageUrl(activeImage) === image
+        };
+    }
+
+    const color = card.querySelector('.var-color')?.value || '';
+    const measure = getVariantSizeValue(card);
+    const style = cleanProductStyleValue(card.querySelector('.var-estilo')?.value || '');
+    const image = normalizeImageUrl(card.querySelector('.var-imagen')?.value || baseImage);
+    const title = card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre') || `Variante ${index + 2}`;
+    return {
+        id: card.querySelector('.var-id')?.value || `Variante ${index + 2}`,
+        key,
+        title,
+        label: title || `Variante ${index + 2}`,
+        detail: [splitProductColorValues(color).map(getColorDisplayName).join(', '), style, measure].filter(Boolean).join(' / '),
+        color,
+        style,
+        measure,
+        price: card.querySelector('.var-precio')?.value || getInputValue('prod-precio'),
+        wholesale: card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista'),
+        image,
+        stock: Number(card.querySelector('.var-stock')?.value || 0),
+        active: key && key === activeKey || normalizeImageUrl(activeImage) === image
+    };
+}
+
+function getActiveVariantPreviewRow() {
+    const card = getActiveVariantPreviewCard();
+    return card ? getVariantEditorCardPreviewRow(card) : null;
+}
+
+function getPreviewPriceInfo(precioValue, mayoristaValue, stockValue, catalogo, promoScope, discountPercent) {
+    const parsedPrecio = parseAmount(precioValue);
+    const parsedMayorista = parseAmount(mayoristaValue);
+    const discountFactor = discountPercent ? 1 - (discountPercent / 100) : 1;
+    const usesWholesale = catalogo === 'Mayorista' && parsedMayorista > 0;
+    const basePrice = usesWholesale ? parsedMayorista : (parsedPrecio || parsedMayorista);
+    const promoApplies = discountPercent > 0 && (
+        usesWholesale
+            ? (promoScope === 'Ambos' || promoScope === 'Mayorista')
+            : (promoScope === 'Ambos' || promoScope === 'Minorista')
+    );
+
+    if (basePrice > 0) {
+        if (promoApplies) {
+            const promoPrice = Math.round(basePrice * discountFactor);
+            return { html: `${formatAdminMoney(promoPrice)} <span class="old">${formatAdminMoney(basePrice)}</span>`, basePrice };
+        }
+        return { html: formatAdminMoney(basePrice), basePrice };
+    }
+
+    return { html: Number(stockValue || 0) > 0 ? 'Precio por consultar' : 'Agotado por ahora', basePrice: 0 };
+}
+
+function applyPreviewVariantRow(row) {
+    if (!row) return;
+    const catalogo = getInputValue('prod-catalogo') || 'Ambos';
+    const promoScope = normalizePromotionValue(document.getElementById('prod-promocion')?.value || 'FALSO');
+    const discountPercent = promoScope !== 'FALSO' ? getAdminPromotionDiscountPercent() : 0;
+    const priceInfo = getPreviewPriceInfo(row.price, row.wholesale, row.stock, catalogo, promoScope, discountPercent);
+    const stock = Number(row.stock || 0);
+    const colorLabel = splitProductColorValues(row.color).map(getColorDisplayName).join(', ');
+
+    const setText = (id, value) => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = value;
+    };
+
+    setText('preview-title-el', row.title || row.label || 'Nombre del Producto');
+    setText('preview-color-text', colorLabel || 'Varios');
+    setText('preview-style-text', row.style || '');
+    setText('preview-measure-line', row.measure || '');
+    setText('preview-stock-value', stock > 0 ? 'Disponible' : 'Agotado por ahora');
+    setText('preview-detail-stock', `${stock} ${stock === 1 ? 'unidad' : 'unidades'}`);
+    setText('preview-detail-price', parseAmount(row.price) > 0 ? formatAdminMoney(parseAmount(row.price)) : '$0');
+    setText('preview-detail-wholesale', parseAmount(row.wholesale) > 0 ? formatAdminMoney(parseAmount(row.wholesale)) : 'Sin precio');
+    setText('preview-detail-variant', row.detail || 'Sin color / talla');
+    if (row.id) setText('preview-detail-id', getInputValue('prod-id-producto') || row.id);
+
+    const priceEl = document.getElementById('preview-price-el');
+    if (priceEl) priceEl.innerHTML = priceInfo.html;
+
+    const imgEl = document.getElementById('preview-img-el');
+    if (imgEl && row.image && normalizeImageUrl(imgEl.getAttribute('src')) !== normalizeImageUrl(row.image)) {
+        imgEl.src = row.image;
+        imgEl.style.opacity = '1';
+    }
+
+    const colorStrip = document.getElementById('preview-color-strip');
+    if (colorStrip) {
+        colorStrip.innerHTML = getPreviewColorDotsHtml(row.color);
+        colorStrip.style.display = row.color ? 'flex' : 'none';
+    }
+
+    const styleRow = document.getElementById('preview-style-row');
+    if (styleRow) styleRow.style.display = row.style ? 'flex' : 'none';
+    const sizeRow = document.getElementById('preview-size-row');
+    if (sizeRow) sizeRow.style.display = row.measure ? 'flex' : 'none';
+
+    const stockAlert = document.getElementById('preview-stock-alert');
+    if (stockAlert) {
+        stockAlert.className = 'preview-stock-alert';
+        if (stock <= 0) {
+            stockAlert.textContent = 'Agotado';
+            stockAlert.classList.add('is-out');
+            stockAlert.style.display = 'inline-flex';
+        } else if (stock <= 3) {
+            stockAlert.textContent = 'Bajo stock';
+            stockAlert.classList.add('is-low');
+            stockAlert.style.display = 'inline-flex';
+        } else {
+            stockAlert.style.display = 'none';
+        }
+    }
+
+    const buyBtn = document.getElementById('preview-buy-btn');
+    const consultBtn = document.getElementById('preview-consult-btn');
+    const cartNote = document.getElementById('preview-cart-note');
+    const hasVisiblePrice = priceInfo.basePrice > 0;
+    if (buyBtn) {
+        buyBtn.disabled = stock <= 0;
+        buyBtn.textContent = stock <= 0 ? 'Agotado por ahora' : (hasVisiblePrice ? 'Añadir al Carrito' : 'Añadir a consulta general');
+    }
+    if (consultBtn) consultBtn.style.display = !hasVisiblePrice && stock > 0 ? 'inline-flex' : 'none';
+    if (cartNote) cartNote.style.display = !hasVisiblePrice && stock > 0 ? 'block' : 'none';
+    syncActivePreviewOptionCard(row);
+}
+
+function syncActivePreviewOptionCard(row) {
+    if (!row) return;
+    const panel = document.getElementById('preview-variant-panel');
+    if (!panel || panel.style.display === 'none') return;
+
+    const cards = Array.from(panel.querySelectorAll('.preview-variant-card'));
+    if (!cards.length) return;
+
+    let card = row.key
+        ? cards.find(item => item.dataset.previewKey === row.key)
+        : null;
+    if (!card && row.image) {
+        card = cards.find(item => normalizeImageUrl(item.dataset.previewUrl) === normalizeImageUrl(row.image));
+    }
+    if (!card) card = panel.querySelector('.preview-variant-card.active') || cards[0];
+
+    cards.forEach(item => item.classList.toggle('active', item === card));
+    card.dataset.previewUrl = row.image || '';
+    if (row.key) card.dataset.previewKey = row.key;
+
+    const img = card.querySelector('img');
+    if (img) img.src = row.image || 'Logo2.png';
+
+    const strong = card.querySelector('.preview-variant-copy strong');
+    if (strong) strong.textContent = row.label || row.title || 'Variante';
+
+    const detail = card.querySelector('.preview-variant-copy > span:first-of-type');
+    if (detail) detail.textContent = row.detail || 'Sin atributos';
+
+    const dots = card.querySelector('.preview-variant-copy > span:nth-of-type(2)');
+    if (dots) dots.innerHTML = getPreviewColorDotsHtml(row.color);
+
+    const stock = card.querySelector('.preview-variant-stock');
+    if (stock) stock.textContent = `${Number(row.stock || 0)} und.`;
+}
+
+function getPreviewColorDotsHtml(value) {
+    const colors = splitProductColorValues(value);
+    if (!colors.length) return '';
+    return colors.map(color => (
+        `<span class="preview-color-dot" style="--swatch:${getAdminColorHex(color)}" title="${escapeHtml(getColorDisplayName(color))}"></span>`
+    )).join('');
+}
+
+function getPreviewVariantRows(activeImage = '') {
+    const baseImage = normalizeImageUrl(document.getElementById('prod-imagen')?.value || getAdminGalleryUrls()[0] || 'Logo2.png');
+    const baseColor = getInputValue('prod-color');
+    const baseMeasure = typeof getProductSizeValue === 'function' ? getProductSizeValue() : getInputValue('prod-tamano');
+    const baseStyle = getProductStyleValue();
+    const baseStock = Number(getInputValue('prod-stock-inicial') || 0);
+    const activeKey = getActiveVariantPreviewKey();
+    const rows = [{
+        id: getInputValue('prod-id'),
+        key: 'main-product',
+        title: getInputValue('prod-nombre') || 'Nombre del Producto',
+        label: getInputValue('prod-nombre') || 'Variante principal',
+        detail: [splitProductColorValues(baseColor).map(getColorDisplayName).join(', '), baseStyle, baseMeasure].filter(Boolean).join(' / '),
+        color: baseColor,
+        style: baseStyle,
+        measure: baseMeasure,
+        price: getInputValue('prod-precio'),
+        wholesale: getInputValue('prod-precio-mayorista'),
+        image: baseImage,
+        stock: baseStock,
+        active: !activeKey && (!normalizeImageUrl(activeImage) || normalizeImageUrl(activeImage) === baseImage)
+    }];
+
+    document.querySelectorAll('#variants-container .variant-edit-card, #variants-container .admin-panel').forEach((card, index) => {
+        const row = getVariantEditorCardPreviewRow(card, index, activeImage);
+        if (row) rows.push(row);
+    });
+
+    return rows.filter(row => row.detail || row.image || row.label);
+}
+
+function renderProductPreviewOptions(activeImage = '') {
+    const info = document.querySelector('#view-products .preview-product-info');
+    if (!info) return;
+
+    let panel = document.getElementById('preview-variant-panel');
+    const rows = getPreviewVariantRows(activeImage);
+    const shouldShow = rows.length > 1 || rows.some(row => row.color || row.detail);
+
+    if (!shouldShow) {
+        if (panel) {
+            panel.innerHTML = '';
+            panel.style.display = 'none';
+        }
+        return;
+    }
+
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'preview-variant-panel';
+        panel.className = 'preview-variant-panel';
+        const actions = document.getElementById('preview-actions');
+        if (actions) info.insertBefore(panel, actions);
+        else info.appendChild(panel);
+    }
+    panel.style.display = 'block';
+
+    const activeIndex = rows.findIndex(row => row.active);
+    panel.innerHTML = `
+        <span class="preview-panel-title">Opciones visibles</span>
+        <div class="preview-variant-list">
+            ${rows.map((row, index) => `
+                <button type="button" class="preview-variant-card ${(activeIndex === -1 ? index === 0 : row.active) ? 'active' : ''}" data-preview-index="${index}" data-preview-key="${escapeHtml(row.key || '')}" data-preview-url="${escapeHtml(row.image || '')}">
+                    <img src="${escapeHtml(row.image || 'Logo2.png')}" alt="" onerror="this.src='Logo2.png'">
+                    <span class="preview-variant-copy">
+                        <strong>${escapeHtml(row.label || `Variante ${index + 1}`)}</strong>
+                        <span>${escapeHtml(row.detail || 'Sin atributos')}</span>
+                        <span>${getPreviewColorDotsHtml(row.color)}</span>
+                    </span>
+                    <span class="preview-variant-stock">${Number(row.stock || 0)} und.</span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
 function renderProductPreviewGallery(activeUrl = '') {
-    const container = document.querySelector('#view-products .preview-container');
-    if (!container) return;
+    const galleryHost = document.querySelector('#view-products .preview-product-gallery');
+    if (!galleryHost) return;
 
     let gallery = document.getElementById('preview-angle-gallery');
     const urls = [
@@ -1571,8 +2202,13 @@ function renderProductPreviewGallery(activeUrl = '') {
         .filter(Boolean)
         .filter((url, index, list) => list.indexOf(url) === index);
 
+    galleryHost.classList.toggle('has-single-image', urls.length <= 1);
+
     if (urls.length <= 1) {
-        if (gallery) gallery.remove();
+        if (gallery) {
+            gallery.innerHTML = '';
+            gallery.style.display = 'none';
+        }
         return;
     }
 
@@ -1580,8 +2216,11 @@ function renderProductPreviewGallery(activeUrl = '') {
         gallery = document.createElement('div');
         gallery.id = 'preview-angle-gallery';
         gallery.className = 'preview-angle-gallery';
-        container.appendChild(gallery);
+        galleryHost.appendChild(gallery);
+    } else if (gallery.parentElement !== galleryHost) {
+        galleryHost.appendChild(gallery);
     }
+    gallery.style.display = 'flex';
 
     const active = normalizeImageUrl(activeUrl || urls[0]);
     gallery.innerHTML = urls.map((url, index) => `
@@ -1617,6 +2256,8 @@ function resetProductForm() {
     const form = el('product-form');
     if (form) form.reset();
     if (form) delete form.dataset.originalVariationId;
+    const variantsContainer = document.getElementById('variants-container');
+    if (variantsContainer) delete variantsContainer.dataset.activePreviewVariantKey;
     
     setMotherProductId(generateMotherProductId());
     const currentMotherId = getInputValue('prod-id-producto');
@@ -1633,11 +2274,13 @@ function resetProductForm() {
     renderProductGalleryManager();
     setInputValue('prod-catalogo', 'Ambos');
     setInputValue('prod-estado', 'Activo');
+    setInputValue('prod-color', '');
     setInputValue('prod-estilo', '');
     setInputValue('prod-size-kind', '');
     setInputValue('prod-textile-size', '');
     setInputValue('prod-textile-custom', '');
     setInputValue('prod-measure-unit', 'cm');
+    setInputValue('prod-measure-capacity', '');
     setInputValue('prod-measure-width', '');
     setInputValue('prod-measure-length', '');
     setInputValue('prod-measure-depth', '');
@@ -2074,6 +2717,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarouselImageAdmin();
     initProductImageUpload();
     initProductGalleryUpload();
+    initColorPickers();
     initProductMeasurementControls();
     initProductBarcodeField();
     resetProductForm(); // Initialize the form with auto-generated IDs
@@ -2131,7 +2775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'prod-nombre', 'prod-categoria', 'prod-catalogo', 'prod-precio', 'prod-precio-mayorista',
         'prod-descripcion', 'prod-imagen', 'prod-galeria', 'prod-estado', 'prod-promocion',
         'prod-stock-inicial', 'prod-color', 'prod-estilo', 'prod-tamano', 'prod-size-kind',
-        'prod-textile-size', 'prod-textile-custom', 'prod-measure-unit', 'prod-measure-width',
+        'prod-textile-size', 'prod-textile-custom', 'prod-measure-unit', 'prod-measure-capacity', 'prod-measure-width',
         'prod-measure-length', 'prod-measure-depth', 'prod-measure-radius', 'prod-id-producto',
         'prod-id', 'prod-sku'
     ];
@@ -2185,27 +2829,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 loader.style.display = 'block';
                 loaderText.style.display = 'block';
 
-                // Animate loader
+                // Animate loader long enough for the secure-login sync to be visible.
                 let progress = 0;
+                const loaderStart = Date.now();
+                const loaderMinDuration = 5200;
                 const interval = setInterval(() => {
-                    progress += Math.random() * 15;
-                    if (progress >= 100) {
-                        progress = 100;
+                    const elapsed = Date.now() - loaderStart;
+                    const timeProgress = Math.min(96, (elapsed / loaderMinDuration) * 96);
+                    const pulse = Math.sin(elapsed / 240) * 1.8;
+                    progress = Math.max(progress, Math.min(96, timeProgress + pulse));
+                    loaderBar.style.width = progress.toFixed(1) + '%';
+
+                    if (elapsed >= loaderMinDuration) {
                         clearInterval(interval);
+                        loaderBar.style.width = '100%';
                         setTimeout(() => {
                             loginScreen.style.opacity = '0';
                             setTimeout(() => {
                                 loginScreen.style.display = 'none';
                                 if (typeof window.stopAdminParticles === 'function') window.stopAdminParticles();
-                                mainContent.style.display = ''; // Permite que actúe el CSS grid (dashboard-layout)
+                                mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
                                 cargarInventario(); // Load only after login
                                 cargarPedidos();
                                 renderAdminDashboard();
                             }, 500);
-                        }, 400);
+                        }, 700);
                     }
-                    loaderBar.style.width = progress + '%';
-                }, 200);
+                }, 120);
             } else {
                 loginError.style.display = 'block';
                 // Shake effect
@@ -2278,7 +2928,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetProductForm();
                 btn.disabled = false;
                 btn.textContent = 'Guardar producto y variantes';
-                if (document.getElementById('edit-product-modal')?.style.display === 'flex') {
+                const editModal = document.getElementById('edit-product-modal');
+                if (editModal?.classList.contains('open') || editModal?.style.display === 'flex') {
                     cerrarModalEdicion();
                 }
                 setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
@@ -2293,6 +2944,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
+
+    const variantsContainer = document.getElementById('variants-container');
+    const handleVariantPreviewActivity = event => {
+        const card = event.target.closest?.('#variants-container .variant-edit-card, #variants-container .admin-panel');
+        if (card) setActiveVariantPreviewCard(card);
+    };
+    variantsContainer?.addEventListener('focusin', event => {
+        handleVariantPreviewActivity(event);
+        updateLivePreview();
+    });
+    variantsContainer?.addEventListener('input', event => {
+        handleVariantPreviewActivity(event);
+        updateLivePreview();
+    });
+    variantsContainer?.addEventListener('change', event => {
+        handleVariantPreviewActivity(event);
+        updateLivePreview();
+    });
+    document.getElementById('variants-container')?.addEventListener('click', event => {
+        handleVariantPreviewActivity(event);
+        const removeBtn = event.target.closest('.var-remove-card-btn');
+        if (!removeBtn) return;
+        const removedCard = removeBtn.closest('.admin-panel');
+        if (variantsContainer && removedCard && variantsContainer.dataset.activePreviewVariantKey === getVariantPreviewCardKey(removedCard)) {
+            delete variantsContainer.dataset.activePreviewVariantKey;
+        }
+        removedCard?.remove();
+        updateLivePreview();
+    });
 
     document.getElementById('btn-add-variant')?.addEventListener('click', () => {
         document.getElementById('btn-add-manual-variant')?.click();
@@ -2335,7 +3015,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--primary); font-weight:800;">🛠 Nueva Variante</h4>
-                <button type="button" class="admin-btn secondary" style="width:auto; padding:6px 12px; font-size:10px; border-radius:10px;" onclick="this.closest('.admin-panel').remove()">Cerrar / Quitar</button>
+                <button type="button" class="admin-btn secondary var-remove-card-btn" style="width:auto; padding:6px 12px; font-size:10px; border-radius:10px;">Cerrar / Quitar</button>
             </div>
             <div class="admin-form-grid">
                 <div class="form-group product-id-field">
@@ -2368,12 +3048,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="form-group">
                     <label>Tamaño / Medida</label>
-                    <input type="text" class="form-control var-tamano">
+                    <div class="variant-size-control" style="display:grid; gap:8px;">
+                        <select class="form-control var-size-mode">
+                            <option value="auto">Automatico</option>
+                            <option value="custom">Ajustar manual</option>
+                        </select>
+                        <input type="text" class="form-control var-tamano" value="${escapeHtml(getVariantAutoSizeValue())}" readonly>
+                        <small class="field-hint var-size-hint">Toma automaticamente el tamano del producto principal.</small>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label>Color</label>
-                    <input type="text" class="form-control var-color">
+                    <input type="hidden" class="var-color">
+                    <div class="color-picker" data-color-target=".var-color" aria-label="Seleccionar color de variante"></div>
                 </div>
                 <div class="form-group">
                     <label>Stock</label>
@@ -2403,6 +3091,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         container.appendChild(card);
+        initColorPickers(card);
         const variantIdInput = card.querySelector('.var-id');
         const variantBarcodeInput = card.querySelector('.var-barcode');
         const variantBarcodeMode = card.querySelector('.var-barcode-mode');
@@ -2447,7 +3136,14 @@ document.addEventListener('DOMContentLoaded', () => {
         variantIdInput?.addEventListener('input', () => syncVariantBarcode());
         variantIdInput?.addEventListener('change', () => syncVariantBarcode());
         setVariantBarcodeMode(false);
+        const variantSizeMode = card.querySelector('.var-size-mode');
+        variantSizeMode?.addEventListener('change', () => {
+            syncVariantSizeField(card);
+            updateLivePreview();
+        });
+        syncVariantSizeField(card);
         setupVariantImagePicker(card);
+        updateLivePreview();
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
         // Evento de guardado para esta tarjeta específica
@@ -2463,7 +3159,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const originalText = btn.textContent;
             btn.textContent = 'Guardando...';
             const measurementData = getProductMeasurementFormData();
-            const variantTamano = card.querySelector('.var-tamano')?.value || '';
+            const variantTamano = getVariantSizeValue(card);
             const variantMeasurementData = {
                 ...measurementData,
                 textileSize: measurementData.kind === 'textil' && variantTamano ? variantTamano : measurementData.textileSize
@@ -2488,7 +3184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Caracteristicas del producto': getInputValue('prod-descripcion'),
                     Tamano: variantTamano,
                     Talla: variantTamano,
-                    'Tamaño': card.querySelector('.var-tamano')?.value || '',
+                    'Tamaño': variantTamano,
                     ...buildProductMeasurementPayload(variantMeasurementData),
                     Color: card.querySelector('.var-color')?.value || '',
                     Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
@@ -2563,12 +3259,18 @@ document.addEventListener('DOMContentLoaded', () => {
             card.querySelector('.var-id').value = variantId;
             card.querySelector('.var-nombre').value = getInputValue('prod-nombre');
             card.querySelector('.var-estilo').value = combo.styleValue || getInputValue('prod-estilo');
-            card.querySelector('.var-tamano').value = combo.sizeValue || getInputValue('prod-tamano');
+            const sizeMode = card.querySelector('.var-size-mode');
+            const sizeInput = card.querySelector('.var-tamano');
+            if (sizeMode) sizeMode.value = primaryField === 'size' ? 'custom' : 'auto';
+            if (sizeInput) sizeInput.value = combo.sizeValue || getVariantAutoSizeValue();
+            syncVariantSizeField(card);
             card.querySelector('.var-color').value = combo.colorValue || getInputValue('prod-color');
+            initColorPickers(card);
         });
 
         const summary = document.getElementById('variation-generator-summary');
         if (summary) summary.textContent = `${combinations.length} variante(s) hijas listas: V01 en la variante inicial y ${Math.max(combinations.length - 1, 0)} tarjeta(s) adicional(es).`;
+        updateLivePreview();
         showToast(`${combinations.length} variacion(es) generadas`, 'success');
     });
 });
@@ -3757,16 +4459,35 @@ function initProductGalleryUpload() {
     galleryInput?.addEventListener('input', renderProductGalleryManager);
 
     document.querySelector('#view-products .preview-container')?.addEventListener('click', event => {
-        const thumb = event.target.closest('.preview-angle-thumb');
-        if (!thumb) return;
-        const src = thumb.dataset.previewUrl || '';
+        const trigger = event.target.closest('.preview-angle-thumb, .preview-variant-card');
+        if (!trigger) return;
+        const src = trigger.dataset.previewUrl || '';
         const imgEl = document.getElementById('preview-img-el');
         if (imgEl && src) {
             imgEl.src = src;
             imgEl.style.opacity = '1';
         }
-        document.querySelectorAll('.preview-angle-thumb').forEach(item => item.classList.remove('active'));
-        thumb.classList.add('active');
+        if (trigger.classList.contains('preview-angle-thumb')) {
+            document.querySelectorAll('.preview-angle-thumb').forEach(item => item.classList.remove('active'));
+            trigger.classList.add('active');
+        }
+        if (trigger.classList.contains('preview-variant-card')) {
+            document.querySelectorAll('.preview-variant-card').forEach(item => item.classList.remove('active'));
+            trigger.classList.add('active');
+            document.querySelectorAll('.preview-angle-thumb').forEach(item => item.classList.toggle('active', item.dataset.previewUrl === src));
+            const rows = getPreviewVariantRows(src);
+            const selectedIndex = Number(trigger.dataset.previewIndex || 0);
+            const selectedRow = rows[selectedIndex] || rows.find(row => normalizeImageUrl(row.image) === normalizeImageUrl(src));
+            const variantsContainer = document.getElementById('variants-container');
+            if (variantsContainer) {
+                if (selectedRow?.key && selectedRow.key !== 'main-product') {
+                    variantsContainer.dataset.activePreviewVariantKey = selectedRow.key;
+                } else {
+                    delete variantsContainer.dataset.activePreviewVariantKey;
+                }
+            }
+            applyPreviewVariantRow(selectedRow);
+        }
     });
 
     renderProductGalleryManager();
@@ -4677,6 +5398,14 @@ function getInventoryProductByKey(key) {
     return index === -1 ? null : inventario[index];
 }
 
+function getInventoryEditLabel(product, index) {
+    const name = product?.Nombre || product?.Producto || 'Producto sin nombre';
+    const variant = getInventoryVariationId(product);
+    const attrs = getVariantAttributesLabel(product);
+    const suffix = attrs && attrs !== '-' ? ' - ' + attrs : (variant ? ' - ' + variant : '');
+    return (index + 1) + '. ' + name + suffix;
+}
+
 function inventoryRowTemplate(p, index, itemMeta) {
     if (!itemMeta) itemMeta = {};
     const isChild = itemMeta.isChild;
@@ -4820,7 +5549,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         + '<td style="font-size:13px;color:rgba(255,255,255,0.85);font-weight:700;">$' + price.toLocaleString('es-CO') + '</td>'
         + '<td style="font-size:13px;color:#fbbf24;font-weight:700;">' + (wholesalePrice ? '$' + wholesalePrice.toLocaleString('es-CO') : '-') + '</td>'
         + '<td><span style="font-size:12px;font-weight:700;color:' + (stockVal > 0 ? '#10B981' : '#EF4444') + ';">' + stockVal + ' und.</span></td>'
-        + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(getVariantAttributesLabel(p)) + '</span></td>'
+        + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(getVariantAttributesLabel(p)) + getColorSwatchesHtml(p.Color || p.color) + '</span></td>'
         + '<td><button class="action-btn-edit-sm" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
         + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button></td>'
         + '</tr>';
@@ -5125,9 +5854,128 @@ function initInventoryPdfExport() {
     btn.addEventListener('click', downloadInventoryCatalogPdf);
 }
 
+function buildVariantEditorCardHtml(v, idProducto) {
+    var vid = getInventoryVariationId(v) || '-';
+    var safeVid = escapeHtml(vid);
+    var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
+    var vTamano = getProductField(v, ['Tamano', 'TamaÃƒÂ±o', 'TamaÃƒÆ’Ã‚Â±o', 'Talla'], '');
+    var vTipoMedida = normalizeSearchText(v.TipoMedida || v['Tipo Medida'] || '');
+    var vUnidadMedida = v.UnidadMedida || v['Unidad Medida'] || 'cm';
+    var vAncho = v.Ancho || '';
+    var vLargo = v.Largo || '';
+    var vFondo = v.Fondo || '';
+    var vRadio = v.Radio || '';
+    var vCapacidad = v.Capacidad || (vUnidadMedida === 'ml' ? vAncho : '');
+    var vTallaTextil = v.TallaTextil || v['Talla Textil'] || '';
+    var vColor = v.Color || '-';
+    var vStock = v.Stock || v.Cantidad || 0;
+    var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
+    var vSku = v.SKU || '-';
+    var vBarcode = getProductBarcode(v);
+    var vImage = normalizeImageUrl(v.Imagen || v['Imagen Principal'] || '') || 'Logo2.png';
+    var barcodeInputId = 've-barcode-' + cleanInventoryId(vid);
+    var html = '';
+
+    html += '<article class="variant-edit-card" data-varid="' + safeVid + '">';
+    html += '<div class="variant-edit-summary">';
+    html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="this.src=\'Logo2.png\'"></div>';
+    html += '<div><span>ID variante</span><strong>' + escapeHtml(vid) + '</strong></div>';
+    html += '<div><span>Atributos</span><b>' + escapeHtml(getVariantAttributesLabel(v) || 'Sin atributos') + '</b>' + getColorSwatchesHtml(vColor !== '-' ? vColor : '') + '</div>';
+    html += '<div><span>Stock</span><b style="color:' + (Number(vStock) > 0 ? '#10B981' : '#EF4444') + ';">' + escapeHtml(vStock) + '</b></div>';
+    html += '<div><span>Precio</span><b>$' + escapeHtml(vPrecio) + '</b></div>';
+    html += '<div><span>SKU</span><b>' + escapeHtml(vSku) + '</b></div>';
+    html += '<button type="button" class="admin-btn secondary variant-edit-toggle" aria-expanded="false" onclick="expandirVarianteEdicion(\'' + vid + '\')">Editar</button>';
+    html += '</div>';
+
+    html += '<div class="variant-edit-panel var-edit-expanded" id="var-expand-' + safeVid + '" data-original-varid="' + safeVid + '">';
+    html += '<section class="variant-edit-section"><h5><span>01</span> Identidad e imagen</h5><div class="variant-edit-grid">';
+    html += '<div><label>ID</label><input class="form-control ve-id" value="' + escapeHtml(vid) + '"></div>';
+    html += '<div><label>SKU</label><input class="form-control ve-sku" value="' + escapeHtml(v.SKU || '') + '"></div>';
+    html += '<div><label>Codigo barras</label><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;"><input class="form-control ve-barcode" id="' + barcodeInputId + '" value="' + escapeHtml(vBarcode) + '"><button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement(\'' + barcodeInputId + '\')" style="width:auto;min-height:40px;padding:8px 12px;font-size:10px;">Scan</button></div></div>';
+    html += '<div style="grid-column:1/-1;"><label>Imagen URL</label><input class="form-control ve-imagen" value="' + escapeHtml(v.Imagen || '') + '" placeholder="https://..."></div>';
+    html += '</div></section>';
+
+    html += '<section class="variant-edit-section"><h5><span>02</span> Atributos visibles</h5><div class="variant-edit-grid">';
+    html += '<div><label>Estilo</label><input class="form-control ve-estilo" value="' + escapeHtml(vEstilo) + '"></div>';
+    html += '<div><label>Tamano / medida</label><input class="form-control ve-tamano" value="' + escapeHtml(vTamano) + '"></div>';
+    html += '<div><label>Color</label><input type="hidden" class="ve-color" value="' + escapeHtml(vColor !== '-' ? vColor : '') + '"><div class="color-picker" data-color-target=".ve-color" aria-label="Seleccionar color de variante"></div></div>';
+    html += '</div></section>';
+
+    html += '<section class="variant-edit-section"><h5><span>03</span> Precios e inventario</h5><div class="variant-edit-grid">';
+    html += '<div><label>Stock</label><input type="number" class="form-control ve-stock" value="' + escapeHtml(vStock) + '"></div>';
+    html += '<div><label>Precio detal</label><input class="form-control ve-precio" value="' + escapeHtml(v.Precio || '') + '"></div>';
+    html += '<div><label>Precio mayorista</label><input class="form-control ve-precio-mayorista" value="' + escapeHtml(v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '"></div>';
+    html += '</div></section>';
+
+    html += '<section class="variant-edit-section"><h5><span>04</span> Medidas opcionales</h5><div class="variant-edit-grid four">';
+    html += '<div><label>Tipo tamano</label><select class="form-control ve-size-kind"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option><option value="liquido"' + (vTipoMedida === 'liquido' ? ' selected' : '') + '>Liquidos / ml</option></select></div>';
+    html += '<div><label>Unidad</label><select class="form-control ve-measure-unit"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option><option value="ml"' + (vUnidadMedida === 'ml' ? ' selected' : '') + '>ml</option></select></div>';
+    html += '<div><label>Capacidad ml</label><input class="form-control ve-measure-capacity" value="' + escapeHtml(vCapacidad) + '" placeholder="500"></div>';
+    html += '<div><label>Talla textil</label><input class="form-control ve-textile-size" value="' + escapeHtml(vTallaTextil) + '" placeholder="XS, S, M..."></div>';
+    html += '<div><label>Ancho</label><input class="form-control ve-measure-width" value="' + escapeHtml(vAncho) + '"></div>';
+    html += '<div><label>Largo</label><input class="form-control ve-measure-length" value="' + escapeHtml(vLargo) + '"></div>';
+    html += '<div><label>Fondo</label><input class="form-control ve-measure-depth" value="' + escapeHtml(vFondo) + '"></div>';
+    html += '<div><label>Radio</label><input class="form-control ve-measure-radius" value="' + escapeHtml(vRadio) + '"></div>';
+    html += '</div></section>';
+
+    html += '<div class="variant-edit-actions">';
+    html += '<button type="button" class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:9px 16px;font-size:11px;">Cerrar editor</button>';
+    html += '<button type="button" class="admin-btn" onclick="guardarVarianteEditada(\'' + vid + '\',\'' + idProducto + '\')" style="width:auto;padding:9px 18px;font-size:11px;">Guardar variante</button>';
+    html += '</div></div></article>';
+    return html;
+}
+
+function buildVariantEditorCardsHtml(variantes, idProducto) {
+    return '<div class="variant-editor-shell"><div class="variant-editor-head"><div><h4>Variantes de este ID (' + variantes.length + ')</h4><span>Ordenadas igual que el alta de producto: identidad, atributos, precios y medidas.</span></div></div>'
+        + variantes.map(function (variant) { return buildVariantEditorCardHtml(variant, idProducto); }).join('')
+        + '</div>';
+}
+
+function syncEditModalProductNavigator(activeIndex) {
+    var modal = document.getElementById('edit-product-modal');
+    var select = document.getElementById('edit-modal-product-jump');
+    var prevBtn = document.getElementById('edit-modal-prev-product');
+    var nextBtn = document.getElementById('edit-modal-next-product');
+    if (!modal || !select || !Array.isArray(inventario)) return;
+
+    modal.dataset.activeProductIndex = String(activeIndex);
+    var currentValue = String(activeIndex);
+    select.innerHTML = inventario.map(function (product, index) {
+        return '<option value="' + index + '">' + escapeHtml(getInventoryEditLabel(product, index)) + '</option>';
+    }).join('');
+    select.value = currentValue;
+    select.disabled = inventario.length < 2;
+    if (prevBtn) prevBtn.disabled = activeIndex <= 0;
+    if (nextBtn) nextBtn.disabled = activeIndex >= inventario.length - 1;
+}
+
+function initEditModalProductNavigator() {
+    var select = document.getElementById('edit-modal-product-jump');
+    var prevBtn = document.getElementById('edit-modal-prev-product');
+    var nextBtn = document.getElementById('edit-modal-next-product');
+    if (!select || select.dataset.ready === 'true') return;
+    select.dataset.ready = 'true';
+
+    select.addEventListener('change', function () {
+        var nextIndex = Number(select.value);
+        if (Number.isInteger(nextIndex) && inventario[nextIndex]) editarProducto(nextIndex);
+    });
+
+    prevBtn?.addEventListener('click', function () {
+        var current = Number(document.getElementById('edit-product-modal')?.dataset.activeProductIndex || 0);
+        if (inventario[current - 1]) editarProducto(current - 1);
+    });
+
+    nextBtn?.addEventListener('click', function () {
+        var current = Number(document.getElementById('edit-product-modal')?.dataset.activeProductIndex || 0);
+        if (inventario[current + 1]) editarProducto(current + 1);
+    });
+}
+
 function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     var container = document.getElementById('variants-container');
     if (!container) return;
+    delete container.dataset.activePreviewVariantKey;
     container.innerHTML = '';
     if (!idProducto) return;
 
@@ -5143,6 +5991,10 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     }
 
     var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">🔸 VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
+    container.innerHTML = buildVariantEditorCardsHtml(variantes, idProducto);
+    initColorPickers(container);
+    return;
+
     tableHtml += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:11px;">';
     tableHtml += '<thead><tr style="color:rgba(255,255,255,0.25);font-size:9px;text-transform:uppercase;letter-spacing:1px;font-weight:700;">';
     tableHtml += '<th style="padding:4px 8px;text-align:left;">ID Var</th><th style="padding:4px 8px;text-align:left;">Color</th><th style="padding:4px 8px;text-align:left;">Stock</th><th style="padding:4px 8px;text-align:left;">Precio</th><th style="padding:4px 8px;text-align:left;">SKU</th><th style="padding:4px 8px;text-align:center;">Acción</th>';
@@ -5159,6 +6011,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         var vLargo = v.Largo || '';
         var vFondo = v.Fondo || '';
         var vRadio = v.Radio || '';
+        var vCapacidad = v.Capacidad || (vUnidadMedida === 'ml' ? vAncho : '');
         var vTallaTextil = v.TallaTextil || v['Talla Textil'] || '';
         var vColor = v.Color || '-';
         var vStock = v.Stock || v.Cantidad || 0;
@@ -5181,15 +6034,16 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">ID</label><input class="form-control ve-id" value="' + vid + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Estilo</label><input class="form-control ve-estilo" value="' + escapeHtml(vEstilo) + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tamano</label><input class="form-control ve-tamano" value="' + escapeHtml(vTamano) + '" style="padding:6px 10px;font-size:11px;"></div>';
-        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Color</label><input class="form-control ve-color" value="' + (vColor !== '-' ? vColor : '') + '" style="padding:6px 10px;font-size:11px;"></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Color</label><input type="hidden" class="ve-color" value="' + escapeHtml(vColor !== '-' ? vColor : '') + '"><div class="color-picker" data-color-target=".ve-color" aria-label="Seleccionar color de variante"></div></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Stock</label><input type="number" class="form-control ve-stock" value="' + vStock + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio</label><input class="form-control ve-precio" value="' + (v.Precio || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Precio Mayor</label><input class="form-control ve-precio-mayorista" value="' + (v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">SKU</label><input class="form-control ve-sku" value="' + (v.SKU || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Codigo barras</label><div style="display:flex;gap:6px;"><input class="form-control ve-barcode" id="' + barcodeInputId + '" value="' + escapeHtml(vBarcode) + '" style="padding:6px 10px;font-size:11px;"><button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement(\'' + barcodeInputId + '\')" style="width:auto;min-height:30px;padding:5px 9px;font-size:9px;">Scan</button></div></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Imagen URL</label><input class="form-control ve-imagen" value="' + (v.Imagen || '') + '" style="padding:6px 10px;font-size:11px;"></div>';
-        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tipo tama&ntilde;o</label><select class="form-control ve-size-kind" style="padding:6px 10px;font-size:11px;"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option></select></div>';
-        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Unidad</label><select class="form-control ve-measure-unit" style="padding:6px 10px;font-size:11px;"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option></select></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Tipo tama&ntilde;o</label><select class="form-control ve-size-kind" style="padding:6px 10px;font-size:11px;"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option><option value="liquido"' + (vTipoMedida === 'liquido' ? ' selected' : '') + '>Liquidos / ml</option></select></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Unidad</label><select class="form-control ve-measure-unit" style="padding:6px 10px;font-size:11px;"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option><option value="ml"' + (vUnidadMedida === 'ml' ? ' selected' : '') + '>ml</option></select></div>';
+        tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Capacidad ml</label><input class="form-control ve-measure-capacity" value="' + escapeHtml(vCapacidad) + '" placeholder="500" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Talla textil</label><input class="form-control ve-textile-size" value="' + escapeHtml(vTallaTextil) + '" placeholder="XS, S, M..." style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Ancho</label><input class="form-control ve-measure-width" value="' + escapeHtml(vAncho) + '" style="padding:6px 10px;font-size:11px;"></div>';
         tableHtml += '<div><label style="font-size:9px;color:rgba(255,255,255,0.4);display:block;margin-bottom:2px;">Largo</label><input class="form-control ve-measure-length" value="' + escapeHtml(vLargo) + '" style="padding:6px 10px;font-size:11px;"></div>';
@@ -5203,23 +6057,66 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
 
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+    initColorPickers(container);
+}
+
+function getVariantEditPanel(vid) {
+    var direct = document.getElementById('var-expand-' + vid);
+    if (direct) return direct;
+    var panels = document.querySelectorAll('.var-edit-expanded');
+    for (var i = 0; i < panels.length; i++) {
+        if (panels[i].dataset.originalVarid === vid) return panels[i];
+    }
+    return null;
 }
 
 window.expandirVarianteEdicion = function (vid) {
-    var row = document.getElementById('var-expand-' + vid);
-    if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    var row = getVariantEditPanel(vid);
+    if (!row) return;
+    var card = row.closest('.variant-edit-card');
+    var isOpen = !row.classList.contains('is-open');
+    row.style.display = '';
+    row.classList.toggle('is-open', isOpen);
+    card?.classList.toggle('is-editing', isOpen);
+    if (isOpen && card) {
+        setActiveVariantPreviewCard(card);
+        updateLivePreview();
+    }
+    var button = card?.querySelector('.variant-edit-toggle');
+    if (button) {
+        button.textContent = isOpen ? 'Ocultar' : 'Editar';
+        button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+    if (isOpen) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };
 window.cerrarVarianteEdicion = function (vid) {
-    var row = document.getElementById('var-expand-' + vid);
-    if (row) row.style.display = 'none';
+    var row = getVariantEditPanel(vid);
+    if (!row) return;
+    var card = row.closest('.variant-edit-card');
+    var container = document.getElementById('variants-container');
+    if (container && card && container.dataset.activePreviewVariantKey === getVariantPreviewCardKey(card)) {
+        delete container.dataset.activePreviewVariantKey;
+    }
+    row.classList.remove('is-open');
+    row.style.display = '';
+    card?.classList.remove('is-editing');
+    var button = card?.querySelector('.variant-edit-toggle');
+    if (button) {
+        button.textContent = 'Editar';
+        button.setAttribute('aria-expanded', 'false');
+    }
+    updateLivePreview();
 };
 
 function getVariantEditMeasurementPayload(row, tamano = '') {
     const kind = row.querySelector('.ve-size-kind')?.value || '';
+    const unit = kind === 'liquido' ? 'ml' : (row.querySelector('.ve-measure-unit')?.value || 'cm');
+    const capacity = cleanMeasurementValue(row.querySelector('.ve-measure-capacity')?.value || '');
     const data = {
         kind,
-        unit: row.querySelector('.ve-measure-unit')?.value || 'cm',
-        width: cleanMeasurementValue(row.querySelector('.ve-measure-width')?.value || ''),
+        unit,
+        capacity,
+        width: unit === 'ml' ? capacity : cleanMeasurementValue(row.querySelector('.ve-measure-width')?.value || ''),
         length: cleanMeasurementValue(row.querySelector('.ve-measure-length')?.value || ''),
         depth: cleanMeasurementValue(row.querySelector('.ve-measure-depth')?.value || ''),
         radius: cleanMeasurementValue(row.querySelector('.ve-measure-radius')?.value || ''),
@@ -5354,7 +6251,7 @@ function editarProducto(index) {
     if (elStock) elStock.value = stockVal;
     document.getElementById('prod-imagen').value = p.Imagen || '';
     updateProductImagePreviewBox(p.Imagen || '');
-    document.getElementById('prod-color').value = p.Color || '';
+    setInputValue('prod-color', p.Color || '');
     var stockInicialVal = [p.Stock_Inicial, p['Stock Inicial'], p.Stock, p.Cantidad, ''].find(v => v !== undefined && String(v).trim() !== '');
     if (stockInicialVal === undefined) stockInicialVal = '';
     setInputValue('prod-stock-inicial', stockInicialVal);
@@ -5367,16 +6264,19 @@ function editarProducto(index) {
     var editLargo = p.Largo || legacyMeasures.length || '';
     var editFondo = p.Fondo || legacyMeasures.depth || '';
     var editRadio = p.Radio || legacyMeasures.radius || '';
+    var editCapacidad = p.Capacidad || (normalizeSearchText(p.UnidadMedida || p['Unidad Medida'] || legacyMeasures.unit || '') === 'ml' ? editAncho : '');
     var hasPhysicalMeasure = [editAncho, editLargo, editFondo, editRadio].some(function (value) {
         return value !== undefined && String(value).trim() !== '';
     });
     if (!storedSizeKind && storedTextileSize) storedSizeKind = 'textil';
+    if (!storedSizeKind && normalizeSearchText(p.UnidadMedida || p['Unidad Medida'] || legacyMeasures.unit || '') === 'ml') storedSizeKind = 'liquido';
     if (!storedSizeKind && hasPhysicalMeasure) storedSizeKind = 'medidas';
     if (!storedTextileSize && storedSizeKind === 'textil') storedTextileSize = p.Tamano || p['Tamano'] || '';
     setInputValue('prod-size-kind', storedSizeKind);
     setInputValue('prod-textile-size', storedTextileSize);
     setInputValue('prod-textile-custom', '');
     setInputValue('prod-measure-unit', p.UnidadMedida || p['Unidad Medida'] || legacyMeasures.unit || 'cm');
+    setInputValue('prod-measure-capacity', editCapacidad);
     setInputValue('prod-measure-width', editAncho);
     setInputValue('prod-measure-length', editLargo);
     setInputValue('prod-measure-depth', editFondo);
@@ -5462,13 +6362,14 @@ function editarProducto(index) {
     var modal = document.getElementById('edit-product-modal');
     var contentArea = document.getElementById('edit-modal-content-area');
     var viewProducts = document.getElementById('view-products');
-    var gridSplit = viewProducts?.querySelector('.grid-split');
+    var gridSplit = contentArea?.querySelector('.grid-split') || viewProducts?.querySelector('.grid-split');
 
     if (modal && contentArea && gridSplit) {
-        contentArea.appendChild(gridSplit);
-        modal.style.display = 'flex';
-        // Desplazarse arriba del modal
-        modal.scrollTo({ top: 0, behavior: 'smooth' });
+        if (gridSplit.parentElement !== contentArea) contentArea.appendChild(gridSplit);
+        modal.style.display = '';
+        modal.classList.add('open');
+        syncEditModalProductNavigator(index);
+        modal.querySelector('.modal-card')?.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
         // Fallback al comportamiento original si no hay modal
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5480,7 +6381,10 @@ function editarProducto(index) {
 
 window.cerrarModalEdicion = function () {
     var modal = document.getElementById('edit-product-modal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.classList.remove('open');
+        modal.style.display = '';
+    }
     var contentArea = document.getElementById('edit-modal-content-area');
     var viewProducts = document.getElementById('view-products');
     if (contentArea && viewProducts && contentArea.firstElementChild) {
@@ -5490,6 +6394,7 @@ window.cerrarModalEdicion = function () {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
+    initEditModalProductNavigator();
     document.getElementById('edit-product-modal')?.addEventListener('click', function (e) {
         if (e.target === this) {
             cerrarModalEdicion();

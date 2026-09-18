@@ -213,8 +213,48 @@ function initFooterPageSearch() {
 }
 
 function initCustomCursor() {
-    document.getElementById('blyxu-cursor')?.remove();
-    document.documentElement.classList.add('native-cursor');
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    document.documentElement.classList.remove('native-cursor');
+    let cursor = document.getElementById('blyxu-cursor');
+    if (!cursor) {
+        cursor = document.createElement('div');
+        cursor.id = 'blyxu-cursor';
+        cursor.innerHTML = '<span class="cursor-dot"></span><span class="cursor-ring"></span>';
+        document.body.appendChild(cursor);
+    }
+
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    let ringX = x;
+    let ringY = y;
+
+    function move() {
+        ringX += (x - ringX) * 0.2;
+        ringY += (y - ringY) * 0.2;
+        cursor.style.setProperty('--cursor-x', `${x}px`);
+        cursor.style.setProperty('--cursor-y', `${y}px`);
+        cursor.style.setProperty('--ring-x', `${ringX}px`);
+        cursor.style.setProperty('--ring-y', `${ringY}px`);
+        requestAnimationFrame(move);
+    }
+
+    window.addEventListener('mousemove', event => {
+        x = event.clientX;
+        y = event.clientY;
+        cursor.classList.add('is-visible');
+    }, { passive: true });
+
+    window.addEventListener('mouseout', event => {
+        if (!event.relatedTarget) cursor.classList.remove('is-visible');
+    });
+
+    document.addEventListener('mouseover', event => {
+        const target = event.target;
+        cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .global-search-item')));
+    });
+
+    move();
 }
 
 function initParticles() {

@@ -12,8 +12,8 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="preload" href="blyxu-style.css?v=mobile-perf-20260916" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-perf-20260916"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=cursor-quick-20260918" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=cursor-quick-20260918"></noscript>
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -392,19 +392,52 @@
             font-weight: 800;
             color: #ffffff;
         }
+        .detail-variant-color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.86);
+            background: var(--variant-color, #888);
+            box-shadow: 0 5px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+            display: block;
+            margin: 7px auto 1px;
+        }
+        .detail-variant-chip.color-only .detail-variant-label {
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0 0 0 0);
+            clip-path: inset(50%);
+            white-space: nowrap;
+            margin: 0;
+        }
 
         /* Actions CTA */
         .product-detail-luxury .product-info-actions {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
             gap: 10px;
-            margin-top: 4px;
+            margin-top: -2px;
+        }
+
+        .product-detail-luxury .product-info-actions.has-consult-actions,
+        .product-detail-luxury .product-info-actions.has-online-payment {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: -2px;
         }
 
         .product-detail-luxury .btn-buy-now {
-            min-height: 52px;
-            padding: 12px 20px;
-            border-radius: 12px !important;
+            width: fit-content !important;
+            min-width: 0;
+            min-height: 44px;
+            padding: 11px 28px;
+            border-radius: 999px !important;
             background: #ffffff !important;
             color: #0a0a0c !important;
             font-size: 14px;
@@ -426,6 +459,14 @@
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
         }
 
+        .product-detail-luxury .btn-pay-now {
+            width: fit-content !important;
+            min-width: 0;
+            min-height: 44px;
+            padding: 11px 24px;
+            border-radius: 999px !important;
+        }
+
         .product-detail-luxury .btn-buy-now:disabled {
             opacity: 0.4 !important;
             background: rgba(255, 255, 255, 0.12) !important;
@@ -436,9 +477,11 @@
         }
 
         .btn-save-favorite-detail {
-            min-height: 52px;
-            padding: 0 18px;
-            border-radius: 12px !important;
+            width: 44px;
+            height: 44px;
+            min-height: 44px;
+            padding: 0;
+            border-radius: 999px !important;
             background: rgba(255, 255, 255, 0.05) !important;
             border: 1px solid rgba(255, 255, 255, 0.12) !important;
             color: #ffffff !important;
@@ -449,9 +492,10 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
             transition: all 0.2s ease;
+            flex: 0 0 auto;
         }
+        .btn-save-favorite-detail span { display: none; }
 
         .btn-save-favorite-detail:hover {
             background: rgba(255, 255, 255, 0.1) !important;
@@ -467,9 +511,10 @@
         }
 
         .product-detail-luxury .btn-consult-direct {
-            min-height: 48px;
-            padding: 12px 18px;
-            border-radius: 12px !important;
+            width: fit-content !important;
+            min-height: 42px;
+            padding: 10px 22px;
+            border-radius: 999px !important;
             background: rgba(37, 211, 102, 0.08) !important;
             border: 1px solid rgba(37, 211, 102, 0.28) !important;
             color: #25d366 !important;
@@ -481,7 +526,6 @@
             justify-content: center;
             gap: 8px;
             transition: all 0.2s ease;
-            grid-column: 1 / -1;
         }
 
         .product-detail-luxury .btn-consult-direct:hover {
@@ -492,7 +536,7 @@
         }
 
         .product-detail-luxury .cart-consult-note {
-            grid-column: 1 / -1;
+            flex-basis: 100%;
             margin: 0;
             padding: 10px 14px;
             border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -507,12 +551,12 @@
         .product-perks {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 12px 16px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            justify-content: center;
+            gap: 14px 18px;
+            padding: 2px 4px 0;
+            border-radius: 0;
+            background: transparent;
+            border: 0;
             flex-wrap: wrap;
         }
 
@@ -537,6 +581,23 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+        }
+        .product-title-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: start;
+        }
+        .product-detail-luxury .product-header-row { order: 1; }
+        .product-detail-luxury .product-title-row { order: 2; }
+        .product-detail-luxury .product-info-price { order: 3; }
+        .product-detail-luxury #product-variations { order: 4; }
+        .product-detail-luxury .product-info-actions { order: 5; }
+        .product-detail-luxury .product-perks { order: 6; }
+        .product-detail-luxury .product-details-block { order: 7; }
+        .product-info-actions .btn-save-favorite-detail,
+        #spec-color-row {
+            display: none !important;
         }
 
         .detail-desc-card {
@@ -600,13 +661,14 @@
         }
 
         .detail-measurements {
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.025);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            font-size: 12.5px;
-            line-height: 1.5;
-            color: rgba(255, 255, 255, 0.7);
+            margin: -2px 0 14px !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            background: transparent !important;
+            font-size: 12px;
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.64);
         }
 
         @media (max-width: 900px) {
@@ -633,14 +695,10 @@
                 overflow-x: auto;
             }
             .product-detail-luxury .product-info-actions {
-                grid-template-columns: 1fr;
-            }
-            .btn-save-favorite-detail {
-                width: 100%;
+                justify-content: center;
             }
             .product-perks {
-                flex-direction: column;
-                align-items: flex-start;
+                justify-content: center;
                 gap: 8px;
             }
         }
@@ -703,7 +761,13 @@
             </div>
 
             <!-- 2. Product Title -->
-            <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
+            <div class="product-title-row">
+                <h1 class="product-info-name" id="detail-name">Nombre del Producto</h1>
+                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail" type="button" aria-label="Guardar favorito">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span>Guardar favorito</span>
+                </button>
+            </div>
             
             <!-- 3. Price & Badges -->
             <div class="product-info-price">
@@ -718,7 +782,7 @@
             <!-- 5. Actions (CTA: Add to cart, Favorite, WhatsApp) -->
             <div class="product-info-actions">
                 <button class="btn-buy-now" id="btn-add-to-cart-detail">Añadir al Carrito</button>
-                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail" type="button" aria-label="Guardar favorito">
+                <button class="btn-save-favorite-detail" id="btn-save-favorite-detail-hidden" type="button" aria-label="Guardar favorito">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                     <span>Guardar favorito</span>
                 </button>
@@ -812,7 +876,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=mobile-image-size-20260916"></script>
+    <script src="blyxu-app.js?v=cursor-quick-20260918"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1082,7 +1146,7 @@
                 const activeSib = siblings.find(sib => allProducts.indexOf(sib) === productId) || product;
                 const activeDimLabel = getVariantFieldValue(activeSib, variantDimension);
                 const activeParts = getVisibleVariantParts(activeSib);
-                const activeLabel = activeDimLabel || activeParts.join(' - ') || '';
+                const activeLabel = variantDimension === 'color' ? '' : (activeDimLabel || activeParts.join(' - ') || '');
 
                 variationContainer.innerHTML = `
                     <div class="variant-header-row">
@@ -1105,6 +1169,12 @@
                     const labelParts = getVisibleVariantParts(sib);
                     const label = dimensionLabel || labelParts.join(' - ') || `Opción ${index + 1}`;
                     const variantImg = getProductImageSet(sib, 'thumb')[0] || 'Logo2.png';
+                    const colorValue = getVariantFieldValue(sib, 'color');
+                    const showColorOnly = variantDimension === 'color' && colorValue;
+                    if (showColorOnly) {
+                        chip.classList.add('color-only');
+                        chip.style.setProperty('--variant-color', getColorHex(colorValue));
+                    }
 
                     const imgWrap = document.createElement('div');
                     imgWrap.className = 'detail-variant-img-wrap';
@@ -1123,6 +1193,13 @@
                     }
 
                     chip.appendChild(imgWrap);
+
+                    if (showColorOnly) {
+                        const colorDot = document.createElement('span');
+                        colorDot.className = 'detail-variant-color-dot';
+                        colorDot.title = colorValue;
+                        chip.appendChild(colorDot);
+                    }
 
                     const text = document.createElement('span');
                     text.className = 'detail-variant-label';

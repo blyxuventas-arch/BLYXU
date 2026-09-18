@@ -86,7 +86,12 @@
             background:rgba(255,255,255,.08);
             display:none;
         }
-        .loader-bar { height:100%; width:0; background:linear-gradient(90deg,var(--gold),var(--purple)); }
+        .loader-bar {
+            height:100%;
+            width:0;
+            background:linear-gradient(90deg,var(--gold),var(--purple));
+            transition:width .32s ease;
+        }
         .loader-text { margin-top:9px; color:var(--soft); font-size:10px; font-weight:900; letter-spacing:1px; display:none; }
 
         .dashboard-layout {
@@ -325,9 +330,10 @@
         .dashboard-chip-row { display:flex; gap:8px; flex-wrap:wrap; }
         .dashboard-chip { padding:6px 9px; border:1px solid var(--line); border-radius:999px; color:#fff; background:rgba(255,255,255,.04); font-size:10px; font-weight:900; }
 
-        #view-products .grid-split.product-admin-grid {
+        #view-products .grid-split.product-admin-grid,
+        #edit-product-modal .grid-split.product-admin-grid {
             display:grid;
-            grid-template-columns:minmax(560px,760px) minmax(320px,1fr);
+            grid-template-columns:minmax(540px,700px) minmax(520px,1fr);
             gap:26px;
             align-items:start;
         }
@@ -482,10 +488,99 @@
         }
         .product-barcode-compact.is-visible { display:grid; }
         .highlight-select { color:#ffe48a; font-weight:950; border-color:rgba(244,196,65,.28); }
+        .color-picker {
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            align-items:center;
+            min-height:46px;
+            padding:8px;
+            border:1px solid rgba(255,255,255,.09);
+            border-radius:11px;
+            background:rgba(4,2,10,.62);
+        }
+        .color-swatch-option {
+            width:32px;
+            height:32px;
+            flex:0 0 32px;
+            border:2px solid rgba(255,255,255,.16);
+            border-radius:999px;
+            background:var(--swatch,#888);
+            box-shadow:inset 0 0 0 1px rgba(0,0,0,.24);
+            position:relative;
+        }
+        .color-swatch-option.is-light { box-shadow:inset 0 0 0 1px rgba(0,0,0,.35); }
+        .color-swatch-option.is-selected {
+            border-color:#fff;
+            box-shadow:0 0 0 3px rgba(244,196,65,.18), inset 0 0 0 1px rgba(0,0,0,.28);
+            transform:translateY(-1px);
+        }
+        .color-swatch-option.is-selected::after {
+            content:"";
+            position:absolute;
+            inset:9px;
+            border-right:2px solid #fff;
+            border-bottom:2px solid #fff;
+            transform:rotate(45deg) translate(-1px,-2px);
+            filter:drop-shadow(0 1px 2px rgba(0,0,0,.75));
+        }
+        .color-picker-value {
+            flex:1 1 120px;
+            color:var(--muted);
+            font-size:11px;
+            font-weight:800;
+            min-width:120px;
+        }
+        .color-picker-actions {
+            display:inline-flex;
+            align-items:center;
+            gap:6px;
+            flex-wrap:wrap;
+        }
+        .color-custom-btn,
+        .color-eye-btn {
+            min-height:32px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            padding:6px 9px;
+            border:1px solid rgba(255,255,255,.12);
+            border-radius:9px;
+            background:rgba(255,255,255,.055);
+            color:#fff;
+            font-size:10px;
+            font-weight:900;
+        }
+        .color-custom-btn:hover,
+        .color-eye-btn:hover {
+            border-color:rgba(244,196,65,.34);
+            background:rgba(244,196,65,.09);
+        }
+        .color-eye-btn::before {
+            content:"";
+            width:13px;
+            height:13px;
+            border:2px solid currentColor;
+            border-radius:50% 50% 50% 0;
+            transform:rotate(-45deg);
+            opacity:.85;
+        }
+        .color-native-input {
+            width:1px;
+            height:1px;
+            opacity:0;
+            position:absolute;
+            pointer-events:none;
+        }
         .measurement-panel { display:none; grid-column:1/-1; }
         .measurement-panel.is-visible { display:block; }
         .textile-size-row,.measurement-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
         .measurement-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+        .measure-capacity-field { display:none; }
+        .measurement-grid.is-capacity { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .measurement-grid.is-capacity .measure-capacity-field { display:block; }
+        .measurement-grid.is-capacity .measure-dimension-field { display:none; }
         .drop-zone {
             border:1.5px dashed rgba(244,196,65,.28);
             border-radius:14px;
@@ -577,28 +672,112 @@
         .preview-heading p { margin:0; color:var(--muted); font-size:12px; }
         .preview-container {
             min-height:520px;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
+            display:grid;
+            gap:16px;
             padding:24px;
             background:linear-gradient(180deg,rgba(255,255,255,.025),transparent);
         }
-        .preview-card {
-            width:min(330px,100%);
-            overflow:hidden;
-            border:1px solid rgba(244,196,65,.22);
-            border-radius:16px;
-            background:#0b0714;
+        .admin-detail-preview {
+            width:100%;
+            display:grid;
+            grid-template-columns:minmax(280px,1.05fr) minmax(320px,.95fr);
+            gap:clamp(18px,3vw,34px);
+            align-items:start;
         }
-        .preview-img-wrapper { position:relative; aspect-ratio:1/1; background:linear-gradient(135deg,#120621,#05020a); }
-        .preview-img { width:100%; height:100%; object-fit:cover; display:block; }
-        .preview-badge { position:absolute; top:10px; right:10px; padding:5px 8px; border-radius:999px; color:#fff; font-size:10px; font-weight:950; }
-        .preview-body { padding:18px; }
-        .preview-title { font-size:17px; font-weight:950; }
-        .preview-price { margin:9px 0 14px; color:#d8b4fe; font-size:22px; font-weight:950; }
-        .preview-btn { min-height:40px; display:grid; place-items:center; border-radius:10px; background:rgba(255,255,255,.06); color:#fff; font-size:12px; font-weight:950; }
+        .preview-product-gallery {
+            position:sticky;
+            top:112px;
+            display:grid;
+            grid-template-columns:62px minmax(0,1fr);
+            gap:12px;
+            align-items:start;
+        }
+        .preview-product-gallery.has-single-image { grid-template-columns:1fr; }
+        .preview-main-img {
+            position:relative;
+            grid-column:2;
+            grid-row:1;
+            aspect-ratio:1/1;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:20px;
+            background:rgba(16,16,19,.85);
+            box-shadow:0 24px 60px rgba(0,0,0,.45);
+        }
+        .preview-product-gallery.has-single-image .preview-main-img { grid-column:1; }
+        .preview-img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .6s ease, opacity .2s ease; }
+        .preview-main-img:hover .preview-img { transform:scale(1.025); }
+        .preview-badge { position:absolute; top:12px; left:12px; padding:5px 10px; border-radius:999px; color:#fff; font-size:10px; font-weight:950; letter-spacing:1px; text-transform:uppercase; }
+        .preview-product-info {
+            min-height:100%;
+            display:flex;
+            flex-direction:column;
+            gap:18px;
+            padding:clamp(22px,3vw,34px);
+            border:1px solid rgba(255,255,255,.09);
+            border-radius:22px;
+            background:rgba(18,18,22,.82);
+            box-shadow:0 28px 70px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .preview-header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+        .preview-category {
+            display:inline-flex;
+            align-items:center;
+            max-width:100%;
+            padding:5px 12px;
+            border:1px solid rgba(255,255,255,.09);
+            border-radius:999px;
+            background:rgba(255,255,255,.05);
+            color:rgba(216,209,194,.9);
+            font-size:11px;
+            font-weight:700;
+            letter-spacing:1.5px;
+            text-transform:uppercase;
+        }
+        .preview-stock-alert { align-items:center; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+        .preview-stock-alert.is-low { color:#f8df80; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.24); }
+        .preview-stock-alert.is-out { color:#fecaca; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.24); }
+        .preview-title { margin:0; color:#fff; font-size:clamp(26px,2.8vw,38px); line-height:1.15; font-weight:800; letter-spacing:0; text-transform:uppercase; }
+        .preview-color-strip { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; min-height:14px; }
+        .preview-color-dot {
+            width:14px;
+            height:14px;
+            border:2px solid transparent;
+            border-radius:999px;
+            background:var(--swatch,#888);
+            box-shadow:inset 0 0 0 1px rgba(0,0,0,.22);
+        }
+        .preview-price { margin:0; color:#fff; font-size:clamp(30px,3.2vw,40px); line-height:1; font-weight:800; }
+        .preview-price .old { margin-left:8px; color:rgba(255,255,255,.45); font-size:16px; text-decoration:line-through; font-weight:650; }
+        .preview-actions { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; margin-top:4px; }
+        .preview-buy-btn,
+        .preview-favorite-btn,
+        .preview-consult-btn {
+            min-height:52px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            border-radius:12px;
+            font-size:13px;
+            font-weight:950;
+            text-align:center;
+        }
+        .preview-buy-btn { border:0; background:#fff; color:#09030f; }
+        .preview-favorite-btn { min-width:180px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:#fff; }
+        .preview-consult-btn { grid-column:1/-1; border:1px solid rgba(34,197,94,.28); background:rgba(34,197,94,.08); color:#22c55e; }
+        .preview-cart-note { grid-column:1/-1; margin:0; padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:rgba(255,255,255,.035); color:var(--muted); font-size:12px; }
+        .preview-perks { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:12px 16px; border:1px solid rgba(255,255,255,.06); border-radius:14px; background:rgba(255,255,255,.025); }
+        .preview-perks span { color:rgba(255,255,255,.65); font-size:11.5px; font-weight:600; }
+        .preview-details-block { display:grid; gap:16px; padding-top:18px; border-top:1px solid rgba(255,255,255,.07); }
+        .preview-desc-card span,
+        .preview-specs span { display:block; margin-bottom:8px; color:var(--soft); font-size:10px; font-weight:950; letter-spacing:1px; text-transform:uppercase; }
+        .preview-desc-card p { margin:0; color:rgba(255,255,255,.74); font-size:13px; line-height:1.5; }
+        .preview-specs { display:grid; gap:8px; }
+        .preview-specs > div { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; padding:11px 12px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(255,255,255,.035); }
+        .preview-specs strong { color:#fff; font-size:13px; text-align:right; }
         .product-preview-summary {
-            width:min(330px,100%);
+            width:100%;
             margin-top:14px;
             padding:15px;
             border:1px solid var(--line);
@@ -613,11 +792,39 @@
         .preview-summary-grid span { display:block; margin-bottom:4px; color:var(--soft); font-size:9px; font-weight:950; text-transform:uppercase; }
         .preview-summary-grid strong { display:block; font-size:11px; line-height:1.25; word-break:break-word; }
         #preview-detail-desc { margin:12px 0 0; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; line-height:1.45; }
-        .preview-angle-gallery { width:min(330px,100%); display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:12px; }
-        .preview-angle-thumb { overflow:hidden; border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,.28); color:var(--muted); padding:0; }
-        .preview-angle-thumb.active { border-color:rgba(244,196,65,.56); }
-        .preview-angle-thumb img { width:100%; height:52px; object-fit:cover; display:block; }
+        .preview-angle-gallery { grid-column:1; grid-row:1; width:100%; display:flex; flex-direction:column; gap:10px; max-height:min(58vh,520px); overflow-y:auto; padding-right:2px; }
+        .preview-angle-thumb { width:62px; overflow:hidden; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:rgba(18,18,22,.6); color:var(--muted); opacity:.55; padding:4px; transition:all .2s ease; }
+        .preview-angle-thumb.active,
+        .preview-angle-thumb:hover { opacity:1; border-color:rgba(255,255,255,.85); background:rgba(255,255,255,.06); transform:translateY(-1px); }
+        .preview-angle-thumb img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; border-radius:8px; }
         .preview-angle-thumb span { display:block; padding:5px 4px; font-size:9px; font-weight:850; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .preview-variant-panel {
+            margin:4px 0 14px;
+        }
+        .preview-panel-title { display:block; margin-bottom:9px; color:var(--gold); font-size:9px; font-weight:950; letter-spacing:1px; text-transform:uppercase; }
+        .preview-variant-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:10px; }
+        .preview-variant-card {
+            min-width:0;
+            display:flex;
+            flex-direction:column;
+            gap:0;
+            padding:6px;
+            border:1.5px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.035);
+            color:rgba(255,255,255,.65);
+            text-align:center;
+            cursor:pointer;
+            transition:all .2s cubic-bezier(.2,0,0,1);
+        }
+        .preview-variant-card:hover,
+        .preview-variant-card.active { border-color:#fff; background:rgba(255,255,255,.08); color:#fff; box-shadow:0 0 0 1px rgba(255,255,255,.48),0 8px 24px rgba(0,0,0,.35); transform:translateY(-2px); }
+        .preview-variant-card img { width:100%; aspect-ratio:1/1; border-radius:8px; object-fit:cover; background:#09030f; transition:transform .25s ease; }
+        .preview-variant-card:hover img { transform:scale(1.05); }
+        .preview-variant-copy strong { display:block; margin-top:6px; font-size:10.5px; line-height:1.2; letter-spacing:.4px; text-transform:uppercase; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .preview-variant-copy span { display:block; margin-top:4px; color:inherit; font-size:9px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .preview-variant-copy .preview-color-dot { display:inline-block; margin:5px 3px 0; vertical-align:middle; }
+        .preview-variant-stock { display:none; }
 
         .table-wrapper { overflow:auto; }
         table { width:100%; border-collapse:collapse; }
@@ -749,6 +956,88 @@
             background:#10081c;
             padding:22px;
         }
+        #edit-product-modal {
+            align-items:stretch;
+            justify-content:center;
+            padding:10px;
+        }
+        #edit-product-modal .modal-card {
+            width:calc(100vw - 20px);
+            max-width:none;
+            max-height:calc(100vh - 20px);
+            padding:0;
+            overflow:auto;
+            border-radius:14px;
+            background:#0f0f12;
+        }
+        .edit-modal-header {
+            position:sticky;
+            top:0;
+            z-index:8;
+            display:grid;
+            grid-template-columns:minmax(180px,.45fr) minmax(320px,1fr) auto;
+            align-items:center;
+            gap:14px;
+            padding:14px 18px;
+            border-bottom:1px solid var(--line);
+            background:rgba(15,15,18,.96);
+            backdrop-filter:blur(14px);
+        }
+        .edit-modal-header h2 {
+            margin:0;
+            font-size:18px;
+            line-height:1.15;
+        }
+        .edit-modal-nav {
+            display:grid;
+            grid-template-columns:auto minmax(240px,1fr) auto;
+            gap:8px;
+            align-items:center;
+        }
+        .edit-modal-nav .form-control {
+            min-height:38px;
+            font-size:12px;
+        }
+        .edit-modal-nav .admin-btn {
+            min-height:38px;
+            width:auto;
+            padding:8px 12px;
+            font-size:11px;
+            white-space:nowrap;
+        }
+        #edit-modal-content-area {
+            min-height:0;
+        }
+        #edit-product-modal .grid-split.product-admin-grid {
+            grid-template-columns:minmax(620px,.92fr) minmax(660px,1.08fr);
+            gap:20px;
+            padding:0;
+        }
+        #edit-product-modal .product-form-intro {
+            margin:18px 20px 0;
+        }
+        #edit-product-modal .product-stepper {
+            padding-left:20px;
+            padding-right:20px;
+        }
+        #edit-product-modal #product-form {
+            padding:16px 20px 22px;
+        }
+        #edit-product-modal .product-preview-panel {
+            top:0;
+            max-height:none;
+            align-self:start;
+        }
+        #edit-product-modal .preview-container {
+            padding:22px;
+        }
+        #edit-product-modal .admin-detail-preview {
+            grid-template-columns:minmax(300px,.95fr) minmax(360px,1.05fr);
+            gap:22px;
+        }
+        #edit-product-modal .preview-product-info {
+            padding:24px;
+        }
         #toast {
             position:fixed;
             right:18px;
@@ -852,6 +1141,21 @@
             vertical-align:middle;
             border-bottom:1px solid rgba(255,255,255,.06);
         }
+        .inventory-color-dots {
+            display:inline-flex;
+            align-items:center;
+            gap:5px;
+            margin-left:6px;
+            vertical-align:middle;
+        }
+        .inventory-color-dot {
+            width:14px;
+            height:14px;
+            border:1px solid rgba(255,255,255,.34);
+            border-radius:999px;
+            background:var(--swatch,#888);
+            box-shadow:inset 0 0 0 1px rgba(0,0,0,.24);
+        }
         .mother-row {
             background:rgba(255,255,255,.018);
         }
@@ -896,6 +1200,146 @@
             color:#f8df80;
             border-color:rgba(244,196,65,.2);
             background:rgba(244,196,65,.07);
+        }
+        .variant-editor-shell {
+            display:grid;
+            gap:16px;
+            margin-top:18px;
+        }
+        .variant-editor-head {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            padding:0 2px 2px;
+        }
+        .variant-editor-head h4 {
+            margin:0;
+            color:var(--gold);
+            font-size:10px;
+            font-weight:950;
+            letter-spacing:1px;
+            text-transform:uppercase;
+        }
+        .variant-editor-head span {
+            color:var(--muted);
+            font-size:11px;
+            font-weight:760;
+        }
+        .variant-edit-card {
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:15px;
+            background:rgba(255,255,255,.025);
+            overflow:hidden;
+        }
+        .variant-edit-card.is-editing {
+            border-color:rgba(216,209,194,.28);
+            background:rgba(255,255,255,.036);
+        }
+        .variant-edit-summary {
+            display:grid;
+            grid-template-columns:64px minmax(150px,1.1fr) minmax(190px,1.5fr) repeat(3,minmax(76px,.5fr)) auto;
+            gap:12px;
+            align-items:center;
+            padding:14px;
+        }
+        .variant-edit-thumb {
+            width:64px;
+            height:64px;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.09);
+            border-radius:12px;
+            background:#09090b;
+        }
+        .variant-edit-thumb img {
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:block;
+        }
+        .variant-edit-summary strong {
+            display:block;
+            color:#f8df80;
+            font-size:12px;
+            line-height:1.25;
+            word-break:break-word;
+        }
+        .variant-edit-summary span {
+            display:block;
+            color:rgba(255,255,255,.56);
+            font-size:10px;
+            line-height:1.35;
+        }
+        .variant-edit-summary b {
+            color:#fff;
+            font-size:12px;
+        }
+        .variant-edit-summary .stock-positive { display:inline-flex; width:max-content; }
+        .variant-edit-panel {
+            display:none;
+            padding:18px;
+            border-top:1px solid rgba(255,255,255,.075);
+            background:rgba(0,0,0,.12);
+        }
+        .variant-edit-panel.is-open { display:block; }
+        .variant-edit-section {
+            padding:18px;
+            border:1px solid rgba(255,255,255,.075);
+            border-radius:12px;
+            background:rgba(255,255,255,.024);
+            margin-bottom:14px;
+        }
+        .variant-edit-section h5 {
+            margin:0 0 12px;
+            color:rgba(216,209,194,.82);
+            font-size:10px;
+            font-weight:900;
+            letter-spacing:1px;
+            text-transform:uppercase;
+        }
+        .variant-edit-section h5 span {
+            display:inline-grid;
+            place-items:center;
+            width:26px;
+            height:24px;
+            margin-right:7px;
+            border-radius:8px;
+            background:rgba(216,209,194,.08);
+            color:#d8d1c2;
+        }
+        .variant-edit-grid {
+            display:grid;
+            grid-template-columns:repeat(3,minmax(180px,1fr));
+            gap:14px;
+        }
+        .variant-edit-grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .variant-edit-grid.four { grid-template-columns:repeat(4,minmax(150px,1fr)); }
+        .variant-edit-actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            flex-wrap:wrap;
+            padding-top:4px;
+        }
+        .variant-edit-panel label {
+            display:block;
+            margin-bottom:6px;
+            color:rgba(216,209,194,.72);
+            font-size:10px;
+            font-weight:850;
+            letter-spacing:.6px;
+            text-transform:uppercase;
+        }
+        .variant-edit-panel .form-control {
+            min-height:43px;
+            padding:10px 12px;
+            font-size:13px;
+        }
+        .variant-edit-toggle {
+            width:auto;
+            min-height:38px;
+            padding:8px 14px;
+            font-size:11px;
         }
         .stock-positive,
         .stock-negative {
@@ -1633,6 +2077,26 @@
             border-radius:10px;
             font-size:13px;
         }
+        select,
+        select.form-control {
+            color-scheme: dark;
+            background-color:#17151b!important;
+            color:#f7f5f0!important;
+        }
+        select option,
+        select optgroup,
+        .form-control option,
+        .form-control optgroup {
+            background:#17151b!important;
+            color:#f7f5f0!important;
+        }
+        select option:checked,
+        select option:hover,
+        .form-control option:checked,
+        .form-control option:hover {
+            background:#5a5650!important;
+            color:#ffffff!important;
+        }
         .form-control:focus {
             border-color:rgba(216,209,194,.32)!important;
             box-shadow:0 0 0 3px rgba(216,209,194,.07);
@@ -1695,13 +2159,77 @@
             background:rgba(255,255,255,.015);
         }
 
+        /* Preview del producto: replica compacta de producto.html dentro del admin */
+        #view-products .preview-product-info .preview-title,
+        #edit-product-modal .preview-product-info .preview-title {
+            font-size:clamp(26px,2.8vw,38px);
+            font-weight:800;
+            line-height:1.15;
+            letter-spacing:0;
+            color:#fff;
+        }
+        #view-products .preview-product-info .preview-price,
+        #edit-product-modal .preview-product-info .preview-price {
+            color:#fff!important;
+            font-size:clamp(30px,3.2vw,40px);
+            font-weight:800;
+            line-height:1;
+        }
+        #view-products .preview-product-info .preview-buy-btn,
+        #edit-product-modal .preview-product-info .preview-buy-btn {
+            background:#fff!important;
+            color:#0a0a0c!important;
+            border:0!important;
+        }
+        #view-products .preview-product-info .preview-buy-btn:disabled,
+        #edit-product-modal .preview-product-info .preview-buy-btn:disabled {
+            opacity:.42;
+            background:rgba(255,255,255,.12)!important;
+            color:rgba(255,255,255,.46)!important;
+            cursor:not-allowed;
+        }
+        #view-products .preview-product-info .preview-favorite-btn,
+        #edit-product-modal .preview-product-info .preview-favorite-btn {
+            background:rgba(255,255,255,.05)!important;
+            border-color:rgba(255,255,255,.12)!important;
+            color:#fff!important;
+        }
+        #view-products .preview-product-info .preview-consult-btn,
+        #edit-product-modal .preview-product-info .preview-consult-btn {
+            background:rgba(37,211,102,.08)!important;
+            border-color:rgba(37,211,102,.28)!important;
+            color:#25d366!important;
+        }
+
         @media(max-width:1180px) {
             .dashboard-layout { grid-template-columns:1fr; }
             .sub-sidebar { position:relative; height:auto; }
-            #view-products .grid-split.product-admin-grid,.dashboard-main-grid,.dashboard-bottom-grid { grid-template-columns:1fr; }
+            #view-products .grid-split.product-admin-grid,
+            .dashboard-main-grid,.dashboard-bottom-grid { grid-template-columns:1fr; }
+            #edit-product-modal .grid-split.product-admin-grid {
+                grid-template-columns:1fr;
+                gap:16px;
+            }
+            #edit-product-modal .admin-detail-preview {
+                grid-template-columns:minmax(280px,.9fr) minmax(340px,1.1fr);
+            }
             .product-preview-panel { position:relative; top:auto; }
+            .admin-detail-preview { grid-template-columns:1fr; }
+            .preview-product-gallery { position:relative; top:auto; max-width:720px; }
             .dashboard-stat-grid,.dashboard-mini-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
             .dashboard-filter-bar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .variant-edit-summary {
+                grid-template-columns:64px minmax(150px,1fr) minmax(160px,1.2fr) auto;
+            }
+            .variant-edit-summary > div:nth-child(4),
+            .variant-edit-summary > div:nth-child(5),
+            .variant-edit-summary > div:nth-child(6) {
+                grid-column:auto;
+            }
+            .variant-edit-grid,
+            .variant-edit-grid.four {
+                grid-template-columns:repeat(2,minmax(0,1fr));
+            }
         }
         @media(max-width:760px) {
             .dashboard-content-area,.dashboard-header { padding:16px; }
@@ -1723,9 +2251,67 @@
             }
             .product-form-intro { margin-left:16px; margin-right:16px; }
             #product-form,.product-stepper,.admin-title-row { padding-left:16px; padding-right:16px; }
+            #edit-product-modal { padding:10px; }
+            #edit-product-modal .modal-card { max-height:calc(100vh - 20px); }
+            .edit-modal-header {
+                grid-template-columns:1fr auto;
+                padding:13px 14px;
+            }
+            .edit-modal-nav {
+                grid-column:1/-1;
+                grid-template-columns:1fr 1fr;
+            }
+            .edit-modal-nav select {
+                grid-column:1/-1;
+            }
+            #edit-product-modal .product-form-intro { margin:14px 14px 0; }
+            #edit-product-modal .product-stepper,
+            #edit-product-modal #product-form { padding-left:14px; padding-right:14px; }
+            #edit-product-modal .preview-container { padding:14px; }
+            #edit-product-modal .admin-detail-preview {
+                grid-template-columns:1fr;
+            }
+            #edit-product-modal .preview-product-gallery {
+                position:relative;
+                top:auto;
+                max-width:none;
+            }
+            #edit-product-modal .preview-actions {
+                grid-template-columns:1fr;
+            }
+            #edit-product-modal .preview-favorite-btn {
+                min-width:0;
+            }
+            .variant-editor-head { align-items:flex-start; }
+            .variant-edit-summary {
+                grid-template-columns:52px minmax(0,1fr) auto;
+                align-items:start;
+            }
+            .variant-edit-thumb {
+                width:52px;
+                height:52px;
+            }
+            .variant-edit-summary > div:nth-child(3),
+            .variant-edit-summary > div:nth-child(4),
+            .variant-edit-summary > div:nth-child(5),
+            .variant-edit-summary > div:nth-child(6) {
+                grid-column:2/-1;
+            }
+            .variant-edit-toggle { grid-column:3; grid-row:1; }
+            .variant-edit-grid,
+            .variant-edit-grid.four,
+            .variant-edit-grid.two {
+                grid-template-columns:1fr;
+            }
             .measurement-grid,.textile-size-row { grid-template-columns:1fr; }
             .variant-image-picker { grid-template-columns:1fr; }
             .product-barcode-compact { grid-template-columns:1fr; }
+            .preview-container { padding:16px; }
+            .preview-product-gallery { grid-template-columns:1fr; }
+            .preview-main-img { grid-column:1; }
+            .preview-angle-gallery { grid-column:1; grid-row:auto; flex-direction:row; overflow-x:auto; max-height:none; }
+            .preview-actions { grid-template-columns:1fr; }
+            .preview-favorite-btn { min-width:0; }
             .dashboard-bar-row,.dashboard-chart-row { grid-template-columns:1fr; }
             .promo-admin-head,.retail-toggle-card {
                 flex-direction: column;
@@ -1950,12 +2536,12 @@
                                     <div class="admin-form-grid">
                                         <div class="form-group"><label>ID Variante / Hijo</label><input type="text" class="form-control important-code-field" id="prod-id" name="id" placeholder="Ej: PROD-001-V01"><small class="field-hint">Referencia especifica de esta variante.</small></div>
                                         <div class="form-group"><label>Stock</label><input type="number" class="form-control" id="prod-stock-inicial" name="Cantidad" min="0" value="12" required><input type="hidden" id="prod-stock" value="12"><small class="field-hint">Si queda en 0 se marca como agotado.</small></div>
-                                        <div class="form-group"><label>Color</label><input type="text" class="form-control" id="prod-color" name="Color" placeholder="Dorado"></div>
+                                        <div class="form-group"><label>Color</label><input type="hidden" id="prod-color" name="Color"><div class="color-picker" id="prod-color-picker" data-color-target="#prod-color" data-color-multiple="true" aria-label="Seleccionar color del producto"></div></div>
                                         <div class="form-group"><label>Estilo</label><input type="text" class="form-control" id="prod-estilo" name="Estilo" placeholder="Ej: flor, corazon, minimalista"></div>
                                         <div class="form-group"><label>Tamaño / medida</label><input type="text" class="form-control" id="prod-tamano" name="Tamaño"></div>
-                                        <div class="form-group"><label>Tipo de tamaño</label><select class="form-control" id="prod-size-kind" name="Tipo Medida"><option value="">Normal</option><option value="textil">Textil</option><option value="medidas">Medidas</option></select></div>
+                                        <div class="form-group"><label>Tipo de tamaño</label><select class="form-control" id="prod-size-kind" name="Tipo Medida"><option value="">Normal</option><option value="textil">Textil</option><option value="medidas">Medidas</option><option value="liquido">Liquidos / ml</option></select></div>
                                         <div class="measurement-panel" id="prod-textile-size-fields"><div class="textile-size-row"><div class="form-group"><label>Talla textil</label><select class="form-control" id="prod-textile-size" name="Talla Textil"><option value="">Seleccionar</option><option value="XS">XS</option><option value="S">S</option><option value="M">M</option><option value="L">L</option><option value="XL">XL</option><option value="2XL">2XL</option><option value="3XL">3XL</option></select></div><div class="form-group"><label>Otra talla</label><input type="text" class="form-control" id="prod-textile-custom" placeholder="Ej: 4XL, talla unica"></div></div></div>
-                                        <div class="measurement-panel" id="prod-physical-size-fields"><div class="measurement-grid"><div class="form-group"><label>Unidad</label><select class="form-control" id="prod-measure-unit" name="Unidad Medida"><option value="cm">cm</option><option value="m">m</option><option value="m3">m3</option></select></div><div class="form-group"><label>Ancho</label><input type="number" class="form-control" id="prod-measure-width" name="Ancho" min="0" step="0.01"></div><div class="form-group"><label>Largo</label><input type="number" class="form-control" id="prod-measure-length" name="Largo" min="0" step="0.01"></div><div class="form-group"><label>Fondo</label><input type="number" class="form-control" id="prod-measure-depth" name="Fondo" min="0" step="0.01"></div><div class="form-group"><label>Radio</label><input type="number" class="form-control" id="prod-measure-radius" name="Radio" min="0" step="0.01"></div></div></div>
+                                        <div class="measurement-panel" id="prod-physical-size-fields"><div class="measurement-grid" id="prod-measure-grid"><div class="form-group"><label>Unidad</label><select class="form-control" id="prod-measure-unit" name="Unidad Medida"><option value="cm">cm</option><option value="m">m</option><option value="m3">m3</option><option value="ml">ml</option></select></div><div class="form-group measure-capacity-field"><label>Capacidad</label><input type="number" class="form-control" id="prod-measure-capacity" min="0" step="1" placeholder="Ej: 500"></div><div class="form-group measure-dimension-field"><label>Ancho</label><input type="number" class="form-control" id="prod-measure-width" name="Ancho" min="0" step="0.01"></div><div class="form-group measure-dimension-field"><label>Largo</label><input type="number" class="form-control" id="prod-measure-length" name="Largo" min="0" step="0.01"></div><div class="form-group measure-dimension-field"><label>Fondo</label><input type="number" class="form-control" id="prod-measure-depth" name="Fondo" min="0" step="0.01"></div><div class="form-group measure-dimension-field"><label>Radio</label><input type="number" class="form-control" id="prod-measure-radius" name="Radio" min="0" step="0.01"></div></div></div>
                                         <div class="form-group"><label>Estado</label><select class="form-control" id="prod-estado" name="Estado"><option value="Activo">Activo</option><option value="Disponible">Disponible</option><option value="Agotado">Agotado</option><option value="Inactivo">Inactivo</option></select></div>
                                         <div class="form-group admin-form-wide"><label>SKU / referencia interna</label><input type="text" class="form-control important-code-field" id="prod-sku" name="SKU" placeholder="Opcional"></div>
                                     </div>
@@ -1985,7 +2571,7 @@
                                 </div>
 
                                 <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
-                                <div id="variation-options-panel" class="product-config-card" style="display:none;"><h3>Variantes hijas</h3><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="admin-btn" id="btn-add-manual-variant">Agregar variante manual</button><button type="button" class="admin-btn secondary" id="btn-show-variation-generator">Generar variantes</button></div><div id="variation-generator-fields" style="display:none;"><div class="admin-form-grid"><div class="form-group"><label>Variable principal</label><select class="form-control" id="variation-primary-field"><option value="style">Estilo</option><option value="color">Color</option><option value="size">Tamaño</option><option value="auto">Automatico</option></select></div><div class="form-group"><label>Opcion 1: Estilo</label><input type="text" class="form-control" id="variation-styles" placeholder="corazon, estrella, inicial"></div><div class="form-group"><label>Opcion 2: Tamaño</label><input type="text" class="form-control" id="variation-sizes" placeholder="S, M, L o 45 cm, 50 cm"></div><div class="form-group"><label>Opcion 3: Color</label><input type="text" class="form-control" id="variation-colors" placeholder="dorado, plateado, rosado"></div></div><p id="variation-generator-summary" class="field-hint">Genera tarjetas editables para cada combinacion antes de guardar.</p><button type="button" class="admin-btn" id="btn-generate-variations">Generar variaciones</button></div></div>
+                                <div id="variation-options-panel" class="product-config-card" style="display:none;"><h3>Variantes hijas</h3><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="admin-btn" id="btn-add-manual-variant">Agregar variante manual</button><button type="button" class="admin-btn secondary" id="btn-show-variation-generator">Generar variantes</button></div><div id="variation-generator-fields" style="display:none;"><div class="admin-form-grid"><div class="form-group"><label>Variable principal</label><select class="form-control" id="variation-primary-field"><option value="style">Estilo</option><option value="color">Color</option><option value="size">Tamaño</option><option value="auto">Automatico</option></select></div><div class="form-group"><label>Opcion 1: Estilo</label><input type="text" class="form-control" id="variation-styles" placeholder="corazon, estrella, inicial"></div><div class="form-group"><label>Opcion 2: Tamaño</label><input type="text" class="form-control" id="variation-sizes" placeholder="S, M, L o 45 cm, 50 cm"></div><div class="form-group"><label>Opcion 3: Color</label><input type="hidden" id="variation-colors"><div class="color-picker" data-color-target="#variation-colors" data-color-multiple="true" aria-label="Seleccionar colores para variantes"></div></div></div><p id="variation-generator-summary" class="field-hint">Genera tarjetas editables para cada combinacion antes de guardar.</p><button type="button" class="admin-btn" id="btn-generate-variations">Generar variaciones</button></div></div>
                                 <div id="variants-container" class="variants-stack"></div>
                                 <div class="product-form-actions"><div><button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button><button type="button" class="admin-btn" id="btn-add-variant">Añadir variantes</button></div><button type="submit" class="admin-btn" id="btn-save">Guardar producto y variantes</button></div>
                             </form>
@@ -1994,7 +2580,32 @@
                         <div class="admin-panel product-preview-panel">
                             <div class="preview-heading"><span class="admin-kicker">Tienda</span><h2>Vista previa</h2><p>Asi se vera en la tienda y asi se guardara.</p></div>
                             <div class="preview-container">
-                                <div class="preview-card"><div class="preview-img-wrapper"><img id="preview-img-el" src="hero_necklace.png" class="preview-img" alt="Preview" onerror="this.style.opacity='0'"><div id="preview-badge-el" class="preview-badge" style="display:none;"></div></div><div class="preview-body"><div id="preview-cat-el" style="font-size:10px;color:var(--pink);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:900;">CATEGORIA</div><div id="preview-title-el" class="preview-title">Nombre del Producto</div><div id="preview-price-el" class="preview-price">$0</div><div class="preview-btn">Añadir al Carrito</div></div></div>
+                                <div class="admin-detail-preview" id="admin-detail-preview">
+                                    <section class="preview-product-gallery">
+                                        <div class="preview-main-img">
+                                            <img id="preview-img-el" src="hero_necklace.png" class="preview-img" alt="Preview" onerror="this.style.opacity='0'">
+                                            <div id="preview-badge-el" class="preview-badge" style="display:none;"></div>
+                                        </div>
+                                        <div id="preview-angle-gallery" class="preview-angle-gallery"></div>
+                                    </section>
+                                    <section class="preview-product-info">
+                                        <div class="preview-header-row"><div id="preview-cat-el" class="preview-category">Categoria</div><div id="preview-stock-alert" class="preview-stock-alert" style="display:none;"></div></div>
+                                        <h3 id="preview-title-el" class="preview-title">Nombre del Producto</h3>
+                                        <div id="preview-price-el" class="preview-price">$0</div>
+                                        <div id="preview-variant-panel" class="preview-variant-panel" style="display:none;"></div>
+                                        <div class="preview-actions" id="preview-actions"><button class="preview-buy-btn" type="button" id="preview-buy-btn">Añadir al Carrito</button><button class="preview-favorite-btn" type="button" aria-label="Guardar favorito">♡ <span>Guardar favorito</span></button><button class="preview-consult-btn" type="button" id="preview-consult-btn" style="display:none;">Consultar este producto por WhatsApp</button><p class="preview-cart-note" id="preview-cart-note" style="display:none;">Añadir al carrito sirve para hacer una consulta general de varios productos.</p></div>
+                                        <div class="preview-perks"><span>Envios a todo el pais</span><span>Garantia de calidad</span><span>Atencion inmediata</span></div>
+                                        <div class="preview-details-block">
+                                            <div class="preview-desc-card"><span>Descripcion</span><p id="preview-product-desc">La descripcion aparecera aqui mientras escribes.</p></div>
+                                            <div class="preview-specs">
+                                                <div><span>Disponibilidad</span><strong id="preview-stock-value">Disponible</strong></div>
+                                                <div><span>Colores</span><strong id="preview-color-text">Varios</strong><div id="preview-color-strip" class="preview-color-strip"></div></div>
+                                                <div id="preview-size-row" style="display:none;"><span>Tamaño</span><strong id="preview-measure-line"></strong></div>
+                                                <div id="preview-style-row" style="display:none;"><span>Estilo</span><strong id="preview-style-text"></strong></div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
                                 <div class="product-preview-summary"><div class="preview-summary-head"><span>Resumen antes de guardar</span><strong id="preview-detail-state">Activo</strong></div><div class="preview-summary-grid"><div><span>ID madre</span><strong id="preview-detail-id">Automatico</strong></div><div><span>Catalogo</span><strong id="preview-detail-catalog">Ambos</strong></div><div><span>Stock</span><strong id="preview-detail-stock">12 unidades</strong></div><div><span>Precio detal</span><strong id="preview-detail-price">$0</strong></div><div><span>Mayorista</span><strong id="preview-detail-wholesale">Sin precio</strong></div><div><span>Variante</span><strong id="preview-detail-variant">Sin color / talla</strong></div><div><span>Galeria</span><strong id="preview-detail-gallery">Sin imagen</strong></div><div><span>Promocion</span><strong id="preview-detail-promo">No aplica</strong></div></div><p id="preview-detail-desc">La descripcion aparecera aqui mientras escribes.</p></div>
                             </div>
                         </div>
@@ -2041,7 +2652,7 @@
         </main>
     </div>
 
-    <div id="edit-product-modal" class="modal"><div class="modal-card"><div style="display:flex;justify-content:space-between;gap:12px;"><h2>Editar producto</h2><button class="admin-btn secondary" onclick="cerrarModalEdicion()">Cerrar</button></div><div id="edit-modal-content-area"></div></div></div>
+    <div id="edit-product-modal" class="modal"><div class="modal-card"><div class="edit-modal-header"><h2>Editar producto</h2><div class="edit-modal-nav"><button type="button" class="admin-btn secondary" id="edit-modal-prev-product">Anterior</button><select class="form-control" id="edit-modal-product-jump" aria-label="Editar otro producto"></select><button type="button" class="admin-btn secondary" id="edit-modal-next-product">Siguiente</button></div><button class="admin-btn secondary" onclick="cerrarModalEdicion()">Cerrar</button></div><div id="edit-modal-content-area"></div></div></div>
     <div id="confirm-modal" class="modal"><div class="modal-card" style="max-width:420px;"><h2 id="modal-title">Confirmar</h2><p id="modal-body">¿Estas seguro?</p><div style="display:flex;gap:10px;justify-content:flex-end;"><button class="admin-btn secondary" id="modal-cancel-btn">Cancelar</button><button class="admin-btn" id="modal-confirm-btn">Aceptar</button></div></div></div>
     <div id="invoice-editor-modal" class="modal"><div class="modal-card"><div style="display:flex;justify-content:space-between;gap:12px;"><h2 id="inv-editor-title">Nueva Factura</h2><button class="admin-btn secondary" onclick="document.getElementById('invoice-editor-modal').classList.remove('open')">Cerrar</button></div><input type="hidden" id="inv-original-id"><div class="admin-form-grid"><input class="form-control" id="inv-edit-id" placeholder="Factura"><input class="form-control" id="inv-edit-nombre" placeholder="Cliente"><input class="form-control" id="inv-edit-tel" placeholder="Telefono"><input class="form-control" id="inv-edit-fecha" type="date"><input class="form-control" id="inv-edit-dir" placeholder="Direccion"><input class="form-control" id="inv-edit-ciudad" placeholder="Ciudad"><select class="form-control" id="inv-edit-estado"><option>Finalizada</option><option>Pendiente</option><option>Abonada</option></select><select class="form-control" id="inv-edit-tipo"><option value="Detal">Detal</option><option value="Mayorista">Mayorista</option></select><input class="form-control" id="inv-edit-metodo" placeholder="Metodo"><input class="form-control" id="inv-edit-abono" placeholder="Abono"><textarea class="form-control admin-form-wide" id="inv-edit-nota" placeholder="Nota"></textarea></div><div style="margin-top:14px;"><input class="form-control" id="inv-product-search" placeholder="Buscar producto"><div id="inv-search-results"></div><div class="admin-form-grid" style="margin-top:10px;"><input class="form-control" id="inv-custom-name" placeholder="Producto manual"><input class="form-control" id="inv-custom-sku" placeholder="SKU"><input class="form-control" id="inv-custom-price" placeholder="Precio"></div></div><table style="margin-top:14px;"><tbody id="inv-edit-items"></tbody></table><div style="display:flex;gap:14px;flex-wrap:wrap;margin:12px 0;"><strong>Total: <span id="inv-edit-total">$0</span></strong><span id="inv-paid-before">$0</span><span id="inv-balance-before">$0</span><span id="inv-balance-after">$0</span></div><button class="admin-btn" id="btn-save-invoice">Guardar factura</button></div></div>
     <div id="invoice-print-container" class="print-container"><div id="inv-id"></div><div id="inv-date"></div><div id="inv-cliente-nombre"></div><div id="inv-cliente-tel"></div><div id="inv-cliente-dir"></div><div id="inv-cliente-ciudad"></div><div id="inv-cliente-tipo"></div><div id="inv-status-text"></div><div id="inv-print-metodo"></div><img id="inv-company-logo" alt=""><div id="inv-company-name"></div><div id="inv-emisor-nombre"></div><div id="inv-company-nit"></div><div id="inv-company-contact"></div><div id="inv-company-email"></div><div id="inv-print-notes"></div><table><tbody id="inv-items"></tbody></table><div id="inv-total"></div><div id="inv-paid-total"></div><div id="inv-balance-total"></div><div id="inv-total-items-count"></div><div id="inv-print-status"></div></div>

@@ -72,6 +72,11 @@ let inventorySpotlightRendered = false;
 let googleIdentityLoadPromise = null;
 let homeRenderToken = 0;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
+let pendingWholesaleEntryCelebration = false;
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 function cleanBrowserUrl() {
     try {
@@ -277,8 +282,6 @@ function initWholesaleParticlesLegacy() {
 function initWholesaleParticles() {
     const canvas = document.getElementById('wholesale-particles');
     if (!canvas) return;
-    canvas.remove();
-    return;
 
     canvas.style.position = 'absolute';
     canvas.style.inset = '0';
@@ -327,7 +330,7 @@ function initWholesaleParticles() {
         drops = [];
         if (reduceMotion) return;
         const isMobile = window.innerWidth < 768;
-        const count = isMobile ? 42 : 86;
+        const count = isMobile ? 28 : 54;
         const palette = ['#f4c441', '#a855f7', '#22d3ee', '#ffffff'];
 
         for (let i = 0; i < count; i++) {
@@ -353,7 +356,7 @@ function initWholesaleParticles() {
     function draw() {
         const isHidden = overlay && (overlay.getAttribute('aria-hidden') === 'true' || overlay.style.display === 'none') && !overlay.classList.contains('open');
         if (isHidden) {
-            animationId = requestAnimationFrame(draw);
+            animationId = null;
             return;
         }
 
@@ -421,8 +424,13 @@ function initWholesaleParticles() {
         draw();
     }
 
+    window.startWholesaleParticles = function () {
+        if (!reduceMotion && !animationId) draw();
+    };
+
     window.stopWholesaleParticles = function () {
         if (animationId) cancelAnimationFrame(animationId);
+        animationId = null;
         window.removeEventListener('resize', resize);
     };
 }
@@ -1045,6 +1053,24 @@ function getProductDisplayOldPrice(product, mode = activeCatalogMode, currentPri
     return oldPrice > currentPrice ? oldPrice : 0;
 }
 
+function getProductCardPriceInfo(product, mode = activeCatalogMode) {
+    const basePrice = getProductPrice(product, mode);
+    const discountPercentage = isProductPromotionEnabled(product, mode) ? getPromotionDiscountPercent() : 0;
+    const promoPrice = discountPercentage > 0 && basePrice > 0
+        ? Math.max(0, Math.round(basePrice * (1 - discountPercentage / 100)))
+        : basePrice;
+    const storedOldPrice = getProductDisplayOldPrice(product, mode, promoPrice);
+    const oldPrice = Math.max(storedOldPrice, discountPercentage > 0 ? basePrice : 0);
+
+    return {
+        price: promoPrice,
+        oldPrice: oldPrice > promoPrice ? oldPrice : 0,
+        discountPercentage: oldPrice > promoPrice && oldPrice > 0
+            ? Math.round(((oldPrice - promoPrice) / oldPrice) * 100)
+            : 0
+    };
+}
+
 function getProductPromotionBadgeMarkup(product, mode = activeCatalogMode) {
     const discountPercentage = getPromotionDiscountPercent();
     if (!discountPercentage || !isProductPromotionEnabled(product, mode)) return '';
@@ -1416,10 +1442,10 @@ function getSpotlightProductDetails(product, index = 0) {
     const productIndex = allProducts.indexOf(product);
     const name = product.Nombre || product.nombre || product.Producto || 'Producto BLYXU';
     const category = product.Categoria || product.categoria || 'Destacado';
-    const description = product.Descripcion || product.descripcion || product.Color || 'Pieza disponible en el inventario BLYXU.';
-    const colors = String(product.Color || product.color || '').split(',').map(color => color.trim()).filter(Boolean);
-    const tags = [category, ...colors].filter(Boolean).slice(0, 4);
-    const price = getProductPrice(product, 'retail');
+    const description = product.Descripcion || product.descripcion || 'Pieza disponible en el inventario BLYXU.';
+    const variantSummary = getVariantSummary(product);
+    const tags = [category, variantSummary].filter(Boolean).slice(0, 3);
+    const price = getProductCardPriceInfo(product, 'retail').price;
     const showPrice = shouldShowProductPrices('retail');
     const detailUrl = productIndex >= 0 ? `producto.html?id=${productIndex}` : '#coleccion';
     const images = getProductImageSet(product, 'spotlight');
@@ -1715,7 +1741,7 @@ function renderInventorySpotlight() {
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
         const stockBadge = getProductBadgeMarkup(p);
         const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
-        const price = getProductPrice(p, 'retail');
+        const price = getProductCardPriceInfo(p, 'retail').price;
         const priceText = shouldShowProductPrices('retail') ? formatMoney(price) : 'Precio por consultar';
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
                     <img src="${escapeHtml(img || 'hero_necklace.png')}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
@@ -2530,15 +2556,16 @@ function getProductMeasurementData(product) {
     let length = String(product?.Largo || product?.largo || '').trim();
     let depth = String(product?.Fondo || product?.fondo || '').trim();
     let radius = String(product?.Radio || product?.radio || '').trim();
+    let capacity = String(product?.Capacidad || product?.capacidad || '').trim();
     const sizeText = String(product?.Tamano || product?.['Tamaño'] || product?.['TamaÃ±o'] || product?.tamaño || product?.Talla || '').trim();
     let textileSize = String(product?.TallaTextil || product?.['Talla Textil'] || '').trim();
     let kind = normalizeSearchText(product?.TipoMedida || product?.['Tipo Medida'] || '');
     let unit = String(product?.UnidadMedida || product?.['Unidad Medida'] || '').trim();
 
-    if (![width, length, depth, radius].some(Boolean)) {
-        const unitMatch = sizeText.match(/\b(cm|m3|m)\b/i);
+    if (![width, length, depth, radius, capacity].some(Boolean)) {
+        const unitMatch = sizeText.match(/\b(cm|m3|ml|m)\b/i);
         if (unitMatch) unit = unit || unitMatch[1].toLowerCase();
-        const measureMatches = Array.from(sizeText.matchAll(/(ancho|largo|fondo|radio)\s*[:\-]?\s*([\d.,]+)/gi));
+        const measureMatches = Array.from(sizeText.matchAll(/(ancho|largo|fondo|radio|capacidad)\s*[:\-]?\s*([\d.,]+)/gi));
         measureMatches.forEach(match => {
             const label = normalizeSearchText(match[1]);
             const value = match[2];
@@ -2546,11 +2573,13 @@ function getProductMeasurementData(product) {
             if (label === 'largo') length = value;
             if (label === 'fondo') depth = value;
             if (label === 'radio') radius = value;
+            if (label === 'capacidad') capacity = value;
         });
     }
 
     if (!textileSize && kind === 'textil') textileSize = sizeText;
     if (!kind && textileSize) kind = 'textil';
+    if ((!kind || kind === 'medidas') && (unit === 'ml' || capacity)) kind = 'liquido';
     if (!kind && [width, length, depth, radius].some(Boolean)) kind = 'medidas';
 
     return {
@@ -2560,13 +2589,15 @@ function getProductMeasurementData(product) {
         length,
         depth,
         radius,
+        capacity,
         textileSize
     };
 }
 
 function hasPhysicalProductMeasurements(product) {
     const data = getProductMeasurementData(product);
-    return data.kind === 'medidas' && [data.width, data.length, data.depth, data.radius].some(Boolean);
+    return (data.kind === 'medidas' && [data.width, data.length, data.depth, data.radius].some(Boolean))
+        || (data.kind === 'liquido' && (data.capacity || data.width));
 }
 
 function getProductMeasurementMarkup(product) {
@@ -2586,14 +2617,16 @@ function getProductMeasurementMarkup(product) {
 
     if (!hasPhysicalProductMeasurements(product)) return '';
 
-    const dimensionItems = data.radius
+    const dimensionItems = data.kind === 'liquido'
+        ? [{ label: 'Capacidad', value: data.capacity || data.width }]
+        : data.radius
         ? [{ label: 'Radio', value: data.radius }]
         : [
             { label: 'Ancho', value: data.width },
             { label: 'Largo', value: data.length },
             { label: 'Fondo', value: data.depth }
         ].filter(item => item.value);
-    const maxDimension = Math.max(...dimensionItems.map(item => parseCatalogAmount(item.value)), 1);
+    const maxDimension = Math.max(30, ...dimensionItems.map(item => parseCatalogAmount(item.value)), 1);
 
     return `
         <div class="product-card-measure product-card-specs" aria-label="Medidas del producto">
@@ -2632,8 +2665,7 @@ function getVariantSummary(product) {
 
     const parts = [
         product.Estilo || product.estilo,
-        hasPhysicalProductMeasurements(product) ? '' : (product.Tamano || product.tamano || product.Talla),
-        product.Color || product.color
+        hasPhysicalProductMeasurements(product) ? '' : (product.Tamano || product.tamano || product.Talla)
     ]
         .map(value => String(value || '').trim())
         .filter(value => value && !isCatalogOnlyValue(value) && !isReferenceValue(value));
@@ -2697,8 +2729,9 @@ function renderProducts(products, options = {}) {
 
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
-        const price = getProductPrice(p, mode);
-        const oldPrice = getProductDisplayOldPrice(p, mode, price);
+        const priceInfo = getProductCardPriceInfo(p, mode);
+        const price = priceInfo.price;
+        const oldPrice = priceInfo.oldPrice;
         const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '', 'card');
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
@@ -2728,10 +2761,13 @@ function renderProducts(products, options = {}) {
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
-                ${colors.length ? `<div class="product-card-colors">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" title="${c}"></span>`).join('')}</div>` : ''}
+                ${colors.length ? `<div class="product-card-colors" aria-label="Colores disponibles">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" aria-hidden="true"></span>`).join('')}</div>` : ''}
                 ${showPrices ? `<div class="product-card-price ${oldPrice > price ? 'discount-active' : ''}">
-                    ${formatMoney(price)}
-                    ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span>` : ''}
+                    <span class="product-price-icon" aria-hidden="true">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg>
+                    </span>
+                    <span class="product-price-current">${formatMoney(price)}</span>
+                    ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span><span class="product-price-discount">-${priceInfo.discountPercentage}%</span>` : ''}
                 </div>` : stock > 0 ? `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>` :
                 `<button class="product-card-price price-hidden price-consult-btn" type="button" disabled>Agotado por ahora</button>`}
             </div>
@@ -2784,9 +2820,38 @@ function loadMoreCatalogBatch(trigger) {
 }
 
 function getColorHex(name) {
-    const map = { blanco:'#fff', negro:'#222', rojo:'#e53e3e', azul:'#3b82f6', verde:'#22c55e',
-        morado:'#9b2cfa', rosa:'#ec4899', dorado:'#d4a017', plata:'#c0c0c0', plateado:'#c0c0c0' };
-    return map[name.toLowerCase()] || '#888';
+    const raw = String(name || '').trim();
+    if (/^#[0-9a-f]{6}$/i.test(raw)) return raw;
+    const clean = String(name || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+    const map = {
+        blanco:'#fff',
+        negro:'#222',
+        rojo:'#e53e3e',
+        azul:'#38a7df',
+        celeste:'#38a7df',
+        verde:'#22c55e',
+        morado:'#9b2cfa',
+        rosa:'#f4a7b9',
+        rosado:'#f4a7b9',
+        fucsia:'#ec4899',
+        dorado:'#d4a017',
+        dorada:'#d4a017',
+        oro:'#d4a017',
+        plata:'#c0c0c0',
+        plateado:'#c0c0c0',
+        plateada:'#c0c0c0',
+        turquesa:'#45d3d0',
+        amarillo:'#facc15',
+        perla:'#f5ead2',
+        cafe:'#8b5e34',
+        marron:'#8b5e34',
+        multicolor:'linear-gradient(135deg,#e53e3e,#facc15,#22c55e,#38a7df,#9b2cfa)'
+    };
+    return map[clean] || '#888';
 }
 
 // -- CART --
@@ -2939,7 +3004,9 @@ function getCartVariantLabel(product, siblings = []) {
 
 function getCartItemFromProduct(product, mode = activeCartMode, qty = 1) {
     const name = product.Nombre || product.nombre || product.Producto || 'Producto';
-    const price = getProductPrice(product, mode);
+    const basePrice = getProductPrice(product, mode);
+    const priceInfo = getProductCardPriceInfo(product, mode);
+    const price = priceInfo.price;
     const img = normalizeImageUrl(product.Imagen || product.imagen || (product.Galeria && product.Galeria[0]) || '', 'cart');
     const idVariacion = getProductVariationId(product) || name;
     const sku = product.SKU || product.sku || '';
@@ -2954,6 +3021,8 @@ function getCartItemFromProduct(product, mode = activeCartMode, qty = 1) {
         name,
         variantLabel,
         price,
+        originalPrice: priceInfo.oldPrice || basePrice,
+        productDiscount: priceInfo.discountPercentage,
         priceVisible,
         img,
         qty: Math.max(1, Math.min(qty || 1, stock || 999)),
@@ -3930,6 +3999,18 @@ function launchWholesaleConfetti() {
     });
 }
 
+function queueWholesaleEntryCelebration() {
+    pendingWholesaleEntryCelebration = true;
+}
+
+function flushWholesaleEntryCelebration() {
+    if (!pendingWholesaleEntryCelebration) return;
+    pendingWholesaleEntryCelebration = false;
+    setTimeout(() => {
+        if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
+    }, 180);
+}
+
 // -- WHOLESALE --
 function initWholesaleAccess() {
     const overlay = document.getElementById('wholesale-overlay');
@@ -3939,18 +4020,36 @@ function initWholesaleAccess() {
     const closeBtn = document.getElementById('wholesale-close');
     const backBtn = document.getElementById('wholesale-back-btn');
     const triggers = document.querySelectorAll('a[href="#mayorista"], a[href="mayorista.html"]');
+    const panel = overlay?.querySelector('.wholesale-panel');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    const submitText = submitBtn?.textContent || '';
 
     let isModalHistoryPushed = false;
     let wholesaleParticlesStarted = false;
+    let isUnlocking = false;
+
+    function setUnlockingState(unlocking) {
+        isUnlocking = unlocking;
+        panel?.classList.toggle('is-unlocking', unlocking);
+        if (input) input.disabled = unlocking;
+        if (submitBtn) {
+            submitBtn.disabled = unlocking;
+            submitBtn.textContent = unlocking ? 'Abriendo catalogo...' : submitText;
+        }
+        if (closeBtn) closeBtn.disabled = unlocking;
+        if (backBtn) backBtn.disabled = unlocking;
+    }
 
     function openWholesale(e) {
         e?.preventDefault();
+        if (isUnlocking) return;
         if (!overlay) {
             window.location.href = 'index.html#mayorista';
             return;
         }
         error?.classList.remove('show');
         if (input) input.value = '';
+        setUnlockingState(false);
 
         if (!overlay.classList.contains('open')) {
             overlay.classList.add('open');
@@ -3959,6 +4058,8 @@ function initWholesaleAccess() {
             if (!wholesaleParticlesStarted) {
                 wholesaleParticlesStarted = true;
                 initWholesaleParticles();
+            } else if (typeof window.startWholesaleParticles === 'function') {
+                window.startWholesaleParticles();
             }
             if (input) setTimeout(() => input.focus(), 80);
 
@@ -3975,6 +4076,7 @@ function initWholesaleAccess() {
     }
 
     function closeWholesale(goHome = false) {
+        if (isUnlocking && goHome) return;
         hideBrandLoader();
         if (overlay) {
             overlay.classList.remove('open');
@@ -4049,6 +4151,7 @@ function initWholesaleAccess() {
 
     if (overlay) {
         overlay.addEventListener('click', e => {
+            if (isUnlocking) return;
             if (e.target === overlay) closeWholesale(true);
         });
     }
@@ -4056,37 +4159,36 @@ function initWholesaleAccess() {
     if (form) {
         form.addEventListener('submit', async e => {
             e.preventDefault();
+            if (isUnlocking) return;
             if (input.value.trim() !== '53') {
                 error?.classList.add('show');
                 input.select();
                 return;
             }
 
-            closeWholesale(false);
+            setUnlockingState(true);
+            await delay(850);
             sessionStorage.setItem('blyxu_wholesale_access', '1');
             sessionStorage.setItem('blyxu_just_logged_in', '1');
 
             if (window.location.pathname.includes('mayorista.html')) {
-                if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
-                loadProducts({ renderCatalog: true });
-            } else {
-                const loader = document.getElementById('brand-loader');
-                if (loader) {
-                    loader.classList.remove('open');
-                    void loader.offsetWidth;
-                    loader.classList.add('open');
-                    loader.setAttribute('aria-hidden', 'false');
+                closeWholesale(false);
+                setUnlockingState(false);
+                queueWholesaleEntryCelebration();
+                if (!allProducts.length && !productsLoadPromise) {
+                    loadProducts({ renderCatalog: true }).then(flushWholesaleEntryCelebration).catch(() => {});
+                } else {
+                    flushWholesaleEntryCelebration();
                 }
-
-                setTimeout(() => {
-                    window.location.href = 'mayorista.html';
-                }, 400);
+            } else {
+                hideBrandLoader();
+                window.location.href = 'mayorista.html';
             }
         });
     }
 
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
-    if ((isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') !== '1') || window.location.hash === '#mayorista') {
+    if ((isWholesalePage && !hasWholesaleAuth() && sessionStorage.getItem('blyxu_just_logged_in') !== '1') || window.location.hash === '#mayorista') {
         setTimeout(() => openWholesale(), 50);
     }
 }
@@ -4243,8 +4345,48 @@ function renderPromoWidget() {
 
 
 function initCustomCursor() {
-    document.getElementById('blyxu-cursor')?.remove();
-    document.documentElement.classList.add('native-cursor');
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    document.documentElement.classList.remove('native-cursor');
+    let cursor = document.getElementById('blyxu-cursor');
+    if (!cursor) {
+        cursor = document.createElement('div');
+        cursor.id = 'blyxu-cursor';
+        cursor.innerHTML = '<span class="cursor-dot"></span><span class="cursor-ring"></span>';
+        document.body.appendChild(cursor);
+    }
+
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    let ringX = x;
+    let ringY = y;
+
+    function move() {
+        ringX += (x - ringX) * 0.2;
+        ringY += (y - ringY) * 0.2;
+        cursor.style.setProperty('--cursor-x', `${x}px`);
+        cursor.style.setProperty('--cursor-y', `${y}px`);
+        cursor.style.setProperty('--ring-x', `${ringX}px`);
+        cursor.style.setProperty('--ring-y', `${ringY}px`);
+        requestAnimationFrame(move);
+    }
+
+    window.addEventListener('mousemove', event => {
+        x = event.clientX;
+        y = event.clientY;
+        cursor.classList.add('is-visible');
+    }, { passive: true });
+
+    window.addEventListener('mouseout', event => {
+        if (!event.relatedTarget) cursor.classList.remove('is-visible');
+    });
+
+    document.addEventListener('mouseover', event => {
+        const target = event.target;
+        cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .global-search-item')));
+    });
+
+    move();
 }
 
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
@@ -5494,20 +5636,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (isWholesalePage && sessionStorage.getItem('blyxu_just_logged_in') === '1') {
         sessionStorage.removeItem('blyxu_just_logged_in');
-        
-        const loader = document.getElementById('brand-loader');
-        if (loader) {
-            loader.classList.add('open');
-            loader.setAttribute('aria-hidden', 'false');
-            
-            setTimeout(() => {
-                loader.classList.remove('open');
-                loader.setAttribute('aria-hidden', 'true');
-                if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
-            }, 600);
-        } else {
-            if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
-        }
+        hideBrandLoader();
+        queueWholesaleEntryCelebration();
     } else {
         const loader = document.getElementById('brand-loader');
         if (loader) {
@@ -5532,6 +5662,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFooterSocialLinks();
             renderPromoWidget();
             if (isCartPage) updateCartUI();
+            if (isWholesalePage) flushWholesaleEntryCelebration();
         });
     }
     updateCartUI();
