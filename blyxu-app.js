@@ -2919,7 +2919,7 @@ function setCatalogCartMode(mode) {
 }
 
 function getCartModeLabel(mode = activeCartMode) {
-    return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Cat&aacute;logo';
+    return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Catalogo';
 }
 
 function getCartCustomerType(mode = activeCartMode) {
@@ -3227,11 +3227,42 @@ function saveCart(mode = activeCartMode) {
     localStorage.setItem(CART_STORAGE_KEYS[normalizeCartMode(mode)], JSON.stringify(cart));
 }
 
-let currentCartSectionPaymentMethod = 'mp';
+const CART_PAYMENT_METHOD_STORAGE_KEY = 'blyxuCartPaymentMethod';
+let currentCartSectionPaymentMethod = (() => {
+    try {
+        const storedMethod = localStorage.getItem(CART_PAYMENT_METHOD_STORAGE_KEY);
+        return storedMethod === 'mp' || storedMethod === 'ws' ? storedMethod : '';
+    } catch (error) {
+        return '';
+    }
+})();
+
+function updateCartPaymentFormState(resolvedMethod = currentCartSectionPaymentMethod) {
+    const paymentCard = document.getElementById('cart-payment-card');
+    const paymentForm = document.getElementById('cart-section-payment-form');
+    const hasMethod = resolvedMethod === 'mp' || resolvedMethod === 'ws';
+    if (paymentCard) {
+        paymentCard.classList.toggle('has-payment-method', hasMethod);
+        paymentCard.classList.toggle('is-awaiting-method', !hasMethod);
+        paymentCard.dataset.paymentMethod = hasMethod ? resolvedMethod : '';
+    }
+    if (paymentForm) {
+        paymentForm.classList.toggle('is-awaiting-method', !hasMethod);
+        paymentForm.setAttribute('aria-hidden', hasMethod ? 'false' : 'true');
+    }
+}
 
 function setCartPaymentMethod(method) {
     const isConsultationMode = isCartConsultationMode();
-    currentCartSectionPaymentMethod = isConsultationMode && method === 'mp' ? 'ws' : method;
+    const requestedMethod = method === 'mp' || method === 'ws' ? method : '';
+    currentCartSectionPaymentMethod = isConsultationMode && requestedMethod === 'mp' ? 'ws' : requestedMethod;
+    try {
+        if (currentCartSectionPaymentMethod) {
+            localStorage.setItem(CART_PAYMENT_METHOD_STORAGE_KEY, currentCartSectionPaymentMethod);
+        } else {
+            localStorage.removeItem(CART_PAYMENT_METHOD_STORAGE_KEY);
+        }
+    } catch (error) {}
     const mpTab = document.getElementById('tab-payment-mp');
     const wsTab = document.getElementById('tab-payment-ws');
     const mpBadges = document.getElementById('cart-sec-mp-badges');
@@ -3246,19 +3277,34 @@ function setCartPaymentMethod(method) {
         if (resolvedMethod === 'mp') {
             mpTab.classList.add('active');
             wsTab.classList.remove('active');
+            mpTab.setAttribute('aria-pressed', 'true');
+            wsTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.remove('btn-ws-mode');
             if (btnText) btnText.textContent = 'Check Out con Mercado Pago ✦';
             if (mpBadges) mpBadges.style.display = 'flex';
             if (emailField) emailField.style.display = 'flex';
-        } else {
+        } else if (resolvedMethod === 'ws') {
             wsTab.classList.add('active');
             mpTab.classList.remove('active');
+            wsTab.setAttribute('aria-pressed', 'true');
+            mpTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.add('btn-ws-mode');
             if (btnText) btnText.textContent = 'Finalizar Pedido por WhatsApp 💬';
             if (mpBadges) mpBadges.style.display = 'none';
+            if (emailField) emailField.style.display = 'flex';
             if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
+        } else {
+            mpTab.classList.remove('active');
+            wsTab.classList.remove('active');
+            mpTab.setAttribute('aria-pressed', 'false');
+            wsTab.setAttribute('aria-pressed', 'false');
+            if (btnCheckout) btnCheckout.classList.remove('btn-ws-mode');
+            if (btnText) btnText.textContent = 'Selecciona un metodo para continuar';
+            if (mpBadges) mpBadges.style.display = 'none';
+            if (emailField) emailField.style.display = 'flex';
         }
     }
+    updateCartPaymentFormState(resolvedMethod);
 }
 window.setCartPaymentMethod = setCartPaymentMethod;
 
@@ -3306,7 +3352,7 @@ function updateCartUI() {
     if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
     if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
     if (secCountLabel) secCountLabel.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}`;
-    if (secModeBadge) secModeBadge.textContent = `Catálogo ${getCartModeLabel()}`;
+    if (secModeBadge) secModeBadge.textContent = getCartModeLabel();
 
     // Update Standalone Section Summary Totals
     const formattedSubtotal = hasHiddenPrices ? 'Por consultar' : formatMoney(pricingSummary.subtotal);
@@ -3415,8 +3461,10 @@ function updateCartUI() {
         if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr 1fr';
         if (currentCartSectionPaymentMethod === 'mp') {
             setCartPaymentMethod('mp');
-        } else {
+        } else if (currentCartSectionPaymentMethod === 'ws') {
             setCartPaymentMethod('ws');
+        } else {
+            setCartPaymentMethod('');
         }
     }
 
@@ -3426,7 +3474,7 @@ function updateCartUI() {
         secCheckoutBtn.parentNode.replaceChild(newSecBtn, secCheckoutBtn);
         
         // Remove error states on input
-        ['cart-sec-nombre', 'cart-sec-telefono'].forEach(id => {
+        ['cart-sec-nombre', 'cart-sec-telefono', 'cart-sec-email', 'cart-sec-direccion', 'cart-sec-ciudad', 'cart-sec-nota'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', e => {
                 e.currentTarget.closest('.cart-input-field')?.classList.remove('is-invalid');
                 const err = document.getElementById('cart-section-form-error');
@@ -3437,6 +3485,12 @@ function updateCartUI() {
         newSecBtn.addEventListener('click', () => {
             if (!cart.length) {
                 alert('Tu carrito está vacío. Agrega productos para continuar.');
+                return;
+            }
+
+            if (currentCartSectionPaymentMethod !== 'mp' && currentCartSectionPaymentMethod !== 'ws') {
+                setCartPaymentMethod('');
+                document.querySelector('.cart-payment-methods-select')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
 
@@ -3455,17 +3509,30 @@ function updateCartUI() {
             const c = cityInput ? cityInput.value.trim() : '';
             const nota = notesInput ? notesInput.value.trim() : '';
 
-            [nameInput, phoneInput].forEach(inp => inp?.closest('.cart-input-field')?.classList.remove('is-invalid'));
+            const requiredCheckoutFields = [
+                { input: nameInput, value: n, label: 'Nombre completo' },
+                { input: phoneInput, value: t, label: 'Celular / WhatsApp' },
+                { input: emailInput, value: email, label: 'Correo electronico' },
+                { input: addressInput, value: d, label: 'Direccion de entrega' },
+                { input: cityInput, value: c, label: 'Ciudad' },
+                { input: notesInput, value: nota, label: 'Nota adicional' }
+            ];
+            requiredCheckoutFields.forEach(field => field.input?.closest('.cart-input-field')?.classList.remove('is-invalid'));
+            const missingFields = requiredCheckoutFields.filter(field => !field.value);
+            const invalidEmail = emailInput && email && !emailInput.checkValidity();
 
-            if (!n || !t) {
-                if (!n) nameInput?.closest('.cart-input-field')?.classList.add('is-invalid');
-                if (!t) phoneInput?.closest('.cart-input-field')?.classList.add('is-invalid');
+            if (missingFields.length || invalidEmail) {
+                missingFields.forEach(field => field.input?.closest('.cart-input-field')?.classList.add('is-invalid'));
+                if (invalidEmail) emailInput?.closest('.cart-input-field')?.classList.add('is-invalid');
                 if (errorBox) {
-                    errorBox.textContent = 'Por favor completa tu Nombre completo y Celular / WhatsApp para proceder.';
+                    const missingLabels = missingFields.map(field => field.label).join(', ');
+                    errorBox.textContent = invalidEmail && !missingFields.length
+                        ? 'Por favor escribe un correo electronico valido para continuar.'
+                        : 'Por favor completa todos los campos obligatorios: ' + missingLabels + '.';
                     errorBox.style.display = 'block';
                     errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-                (n ? phoneInput : nameInput)?.focus();
+                (missingFields[0]?.input || emailInput)?.focus();
                 return;
             }
 

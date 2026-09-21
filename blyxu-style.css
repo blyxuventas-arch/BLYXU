@@ -9817,21 +9817,135 @@ p, span, a, li, button, input, textarea, select, label, th, td {
 }
 
 /* Payment method tabs */
+.cart-payment-method-helper {
+    margin: -3px 0 12px;
+    color: rgba(255,255,255,.42);
+    font-size: 11.5px;
+    line-height: 1.35;
+}
+.cart-payment-tabs {
+    gap: 10px !important;
+}
 .cart-payment-tab {
+    min-height: 92px;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 16px 15px !important;
     border-color: rgba(255,255,255,.1) !important;
     background: rgba(255,255,255,.04) !important;
     color: rgba(255,255,255,.55) !important;
+    text-align: left;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    transform: translateY(0);
+    transition: transform .24s ease, border-color .24s ease, background .24s ease, box-shadow .24s ease, color .24s ease !important;
+}
+.cart-payment-tab::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    opacity: 0;
+    background: radial-gradient(circle at 18% 0%, rgba(255,255,255,.18), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.1), rgba(255,255,255,.02));
+    transition: opacity .24s ease;
+}
+.cart-payment-tab svg {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    flex: 0 0 auto;
+}
+.cart-payment-tab span {
+    display: grid;
+    gap: 4px;
+}
+.cart-payment-tab strong {
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.1;
+}
+.cart-payment-tab small {
+    color: rgba(255,255,255,.4);
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1.2;
 }
 .cart-payment-tab:hover {
     background: rgba(255,255,255,.1) !important;
     color: #fff !important;
     border-color: rgba(255,255,255,.25) !important;
+    transform: translateY(-2px);
+}
+.cart-payment-tab:hover::before {
+    opacity: 1;
 }
 .cart-payment-tab.active {
-    background: rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.12) !important;
     border-color: rgba(255,255,255,.55) !important;
     color: #fff !important;
-    box-shadow: 0 0 0 1px rgba(255,255,255,.2) !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,.32), 0 0 0 1px rgba(255,255,255,.2) !important;
+    transform: translateY(-3px);
+}
+.cart-payment-tab.active::before {
+    opacity: 1;
+}
+.cart-payment-tab.active::after {
+    content: "";
+    position: absolute;
+    right: 13px;
+    top: 13px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 5px rgba(255,255,255,.1);
+}
+.cart-payment-tab.active small {
+    color: rgba(255,255,255,.66);
+}
+.cart-payment-form {
+    position: relative;
+    overflow: hidden;
+    transition: max-height .35s ease, opacity .25s ease, padding .25s ease, border-color .25s ease, background .25s ease;
+}
+.cart-payment-form.is-awaiting-method {
+    min-height: 86px;
+    padding: 16px;
+    border: 1px dashed rgba(255,255,255,.14);
+    border-radius: 16px;
+    background: rgba(255,255,255,.025);
+    pointer-events: none;
+}
+.cart-payment-form.is-awaiting-method > * {
+    opacity: 0;
+    visibility: hidden;
+    max-height: 0;
+    margin: 0 !important;
+    overflow: hidden;
+}
+.cart-payment-form.is-awaiting-method::before {
+    content: "Selecciona Mercado Pago o WhatsApp Directo para continuar.";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    color: rgba(255,255,255,.56);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.35;
+    text-align: center;
+}
+@media (max-width: 520px) {
+    .cart-payment-tabs {
+        grid-template-columns: 1fr !important;
+    }
+    .cart-payment-tab {
+        min-height: 76px;
+    }
 }
 
 /* Form inputs */
@@ -10122,6 +10236,387 @@ summary {
     padding: 22px !important;
 }
 
+/* Cuenta BLYXU y cursores visibles */
+html,
+body,
+html *,
+body * {
+    cursor: auto !important;
+}
+
+a,
+button,
+[role="button"],
+label,
+select,
+summary,
+.nav-icon,
+.nav-icon-btn,
+.nav-logo,
+.product-card,
+.marquee-item,
+.global-search-item,
+.footer-search-results a,
+.customer-auth-tabs button,
+.customer-auth-close {
+    cursor: pointer !important;
+}
+
+input,
+textarea,
+.global-search-input,
+.footer-search input,
+.smart-search input,
+.customer-auth-form input,
+[contenteditable="true"] {
+    cursor: text !important;
+    caret-color: #f5f5f5 !important;
+}
+
+#blyxu-cursor,
+.customer-auth-open #blyxu-cursor {
+    display: none !important;
+}
+
+.global-search-input:focus,
+.footer-search input:focus,
+.customer-auth-form input:focus {
+    caret-color: #f5f5f5 !important;
+}
+
+.customer-auth-modal {
+    background:
+        radial-gradient(circle at 18% 16%, rgba(255,255,255,.055), transparent 28%),
+        radial-gradient(circle at 82% 46%, rgba(255,255,255,.04), transparent 32%),
+        rgba(4, 4, 7, .86) !important;
+    backdrop-filter: blur(22px) saturate(.9) !important;
+}
+
+.customer-auth-dialog {
+    width: min(520px, calc(100vw - 32px)) !important;
+    max-height: min(88vh, 780px) !important;
+    padding: 30px !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+    border-radius: 20px !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.045), transparent 26%),
+        linear-gradient(145deg, rgba(22,22,25,.98), rgba(8,8,10,.98)) !important;
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.68),
+        0 0 0 1px rgba(255,255,255,.035),
+        inset 0 1px 0 rgba(255,255,255,.06) !important;
+    scrollbar-color: rgba(255,255,255,.34) transparent !important;
+    scrollbar-width: thin !important;
+}
+
+.customer-auth-dialog::-webkit-scrollbar {
+    width: 8px;
+}
+
+.customer-auth-dialog::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.customer-auth-dialog::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgba(255,255,255,.28);
+    background-clip: padding-box;
+}
+
+.customer-auth-dialog::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,.055), transparent 30%),
+        radial-gradient(circle at 100% 8%, rgba(255,255,255,.04), transparent 26%);
+}
+
+.customer-auth-close {
+    top: 16px !important;
+    right: 16px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-color: rgba(255,255,255,.14) !important;
+    background: rgba(255,255,255,.06) !important;
+    color: rgba(255,255,255,.9) !important;
+    transition: background .2s ease, transform .2s ease !important;
+}
+
+.customer-auth-close:hover {
+    background: rgba(255,255,255,.12) !important;
+    transform: rotate(90deg) !important;
+}
+
+.customer-auth-brand {
+    min-height: 44px !important;
+    gap: 14px !important;
+    margin-bottom: 22px !important;
+    padding-right: 46px !important;
+    letter-spacing: .2px !important;
+}
+
+.customer-auth-brand img {
+    height: 38px !important;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.38)) !important;
+}
+
+.customer-auth-brand span {
+    display: grid !important;
+    gap: 2px !important;
+    font-size: 16px !important;
+}
+
+.customer-auth-brand span::after {
+    content: "Acceso, pedidos y favoritos";
+    color: rgba(255,255,255,.48);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.customer-auth-tabs {
+    gap: 6px !important;
+    margin-bottom: 20px !important;
+    padding: 6px !important;
+    border-color: rgba(255,255,255,.11) !important;
+    border-radius: 15px !important;
+    background: rgba(255,255,255,.045) !important;
+}
+
+.customer-auth-tabs button {
+    min-height: 44px !important;
+    border-radius: 11px !important;
+    color: rgba(255,255,255,.58) !important;
+    transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .2s ease !important;
+}
+
+.customer-auth-tabs button:hover {
+    color: #fff !important;
+    background: rgba(255,255,255,.06) !important;
+}
+
+.customer-auth-tabs button.active {
+    background: rgba(245,245,245,.92) !important;
+    color: #09090b !important;
+    box-shadow: 0 10px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.7) !important;
+}
+
+.customer-google-box {
+    margin-bottom: 12px !important;
+}
+
+.customer-auth-divider {
+    margin: 10px 0 14px !important;
+    color: rgba(255,255,255,.72) !important;
+}
+
+.customer-auth-divider::before,
+.customer-auth-divider::after {
+    border-color: rgba(255,255,255,.08) !important;
+}
+
+.customer-auth-view h2 {
+    margin-bottom: 18px !important;
+    color: #fff !important;
+    font-size: 28px !important;
+    line-height: 1.05 !important;
+    letter-spacing: 0 !important;
+}
+
+.customer-auth-form {
+    gap: 14px !important;
+}
+
+.customer-auth-form label {
+    gap: 8px !important;
+    color: rgba(255,255,255,.78) !important;
+    font-size: 12px !important;
+    letter-spacing: .1px !important;
+}
+
+.customer-auth-form input {
+    min-height: 52px !important;
+    padding: 13px 15px !important;
+    border-color: rgba(255,255,255,.13) !important;
+    border-radius: 13px !important;
+    background: rgba(255,255,255,.055) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+.customer-auth-form input:focus {
+    border-color: rgba(255,255,255,.42) !important;
+    background: rgba(255,255,255,.075) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06), inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+
+.customer-auth-form input::selection,
+.global-search-input::selection,
+.footer-search input::selection {
+    background: rgba(255,255,255,.24) !important;
+    color: #fff !important;
+}
+
+.customer-auth-row {
+    gap: 12px !important;
+}
+
+.customer-auth-form button,
+.customer-auth-secondary {
+    min-height: 54px !important;
+    border-radius: 14px !important;
+    background: rgba(245,245,245,.94) !important;
+    color: #08080a !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    box-shadow: 0 14px 32px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.68) !important;
+    transition: transform .2s ease, box-shadow .2s ease, filter .2s ease !important;
+}
+
+.customer-auth-form button:hover:not(:disabled),
+.customer-auth-secondary:hover:not(:disabled) {
+    transform: translateY(-2px) !important;
+    filter: brightness(1.03) !important;
+    box-shadow: 0 18px 40px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.76) !important;
+}
+
+.customer-auth-message {
+    border: 1px solid rgba(255,255,255,.1) !important;
+    background: rgba(255,255,255,.06) !important;
+}
+
+@media (max-width: 560px) {
+    .customer-auth-dialog {
+        padding: 24px 18px !important;
+    }
+
+    .customer-auth-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Login mayorista: nebulosa minimal gris/morado */
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open {
+    background:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,.08), transparent 22%),
+        radial-gradient(circle at 76% 18%, rgba(109,92,132,.22), transparent 30%),
+        radial-gradient(circle at 62% 72%, rgba(58,48,72,.32), transparent 34%),
+        linear-gradient(135deg, #050506 0%, #111014 48%, #07070a 100%) !important;
+    overflow: hidden !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before,
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: -24% !important;
+    display: block !important;
+    pointer-events: none !important;
+    opacity: 1 !important;
+    filter: blur(26px) saturate(.75) !important;
+    mix-blend-mode: screen !important;
+    animation: wholesaleNebulaDrift 18s ease-in-out infinite alternate !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before {
+    background:
+        radial-gradient(ellipse at 24% 34%, rgba(210,210,218,.18), transparent 28%),
+        radial-gradient(ellipse at 64% 24%, rgba(92,78,116,.42), transparent 32%),
+        radial-gradient(ellipse at 52% 68%, rgba(180,180,190,.1), transparent 30%) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
+    opacity: .78 !important;
+    animation-duration: 24s !important;
+    animation-direction: alternate-reverse !important;
+    background:
+        radial-gradient(ellipse at 78% 62%, rgba(118,104,145,.28), transparent 34%),
+        radial-gradient(ellipse at 34% 82%, rgba(255,255,255,.08), transparent 30%),
+        linear-gradient(115deg, transparent 20%, rgba(255,255,255,.045), transparent 68%) !important;
+}
+
+@keyframes wholesaleNebulaDrift {
+    0% {
+        transform: translate3d(-2%, -1%, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(2%, 1.5%, 0) scale(1.05);
+    }
+    100% {
+        transform: translate3d(4%, -2%, 0) scale(1.1);
+    }
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-particles-canvas {
+    opacity: .2 !important;
+    mix-blend-mode: screen !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-panel {
+    width: min(440px, calc(100vw - 34px)) !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    border-radius: 22px !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.055), transparent 26%),
+        rgba(12,12,15,.82) !important;
+    box-shadow:
+        0 34px 100px rgba(0,0,0,.62),
+        inset 0 1px 0 rgba(255,255,255,.07) !important;
+    backdrop-filter: blur(26px) saturate(.85) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-panel::before {
+    color: rgba(255,255,255,.08) !important;
+    text-shadow: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-kicker {
+    color: rgba(255,255,255,.58) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-panel h2 {
+    color: rgba(255,255,255,.94) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-form input {
+    border-color: rgba(255,255,255,.14) !important;
+    background: rgba(255,255,255,.055) !important;
+    color: #fff !important;
+    caret-color: #f5f5f5 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-form input:focus {
+    border-color: rgba(255,255,255,.42) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-form button {
+    background: rgba(245,245,245,.94) !important;
+    color: #08080a !important;
+    box-shadow: 0 16px 38px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-form button::before {
+    display: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-back-home,
+body[data-catalog-mode="wholesale"] .wholesale-close {
+    border-color: rgba(255,255,255,.13) !important;
+    background: rgba(255,255,255,.055) !important;
+    color: rgba(255,255,255,.72) !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-back-home:hover,
+body[data-catalog-mode="wholesale"] .wholesale-close:hover {
+    background: rgba(255,255,255,.1) !important;
+    color: #fff !important;
+}
+
 /* El logo animado del hero se dibuja y luego se retira */
 .main-banner-slide.active .blyxu-svg-title {
     animation: none !important;
@@ -10321,4 +10816,351 @@ summary {
     .product-card-price .product-price-discount {
         font-size: 10px !important;
     }
+}
+
+/* Contact page scale parity */
+.contact-page {
+    padding: 120px 0 88px !important;
+}
+
+.contact-hero-luxury,
+.contact-grid-luxury.contact-simple-grid {
+    width: 90% !important;
+    margin-inline: auto !important;
+}
+
+.contact-hero-luxury {
+    min-height: clamp(560px, 62vh, 720px) !important;
+}
+
+.contact-hero-content {
+    max-width: 780px;
+    margin-inline: auto;
+    padding: clamp(52px, 6vw, 76px) 24px !important;
+}
+
+.contact-hero h1 {
+    font-size: clamp(48px, 7vw, 90px) !important;
+}
+
+.contact-hero p {
+    margin-inline: auto;
+    font-size: 19px !important;
+}
+
+.contact-hero-btn,
+.contact-request-form button {
+    min-height: 56px !important;
+    padding-inline: 38px !important;
+    font-size: 14px !important;
+}
+
+.contact-grid-luxury.contact-simple-grid {
+    gap: clamp(20px, 2.6vw, 34px) !important;
+    margin-top: clamp(30px, 4vw, 46px) !important;
+}
+
+.contact-grid-luxury.contact-simple-grid .contact-card {
+    min-height: 300px !important;
+    padding: clamp(32px, 3vw, 44px) !important;
+}
+
+.contact-grid-luxury.contact-simple-grid .contact-card h2 {
+    font-size: clamp(28px, 3vw, 40px) !important;
+}
+
+.contact-grid-luxury.contact-simple-grid .contact-schedule-card h2 {
+    font-size: clamp(25px, 2.4vw, 34px) !important;
+}
+
+.contact-grid-luxury.contact-simple-grid .contact-phone-card h2 {
+    font-size: clamp(25px, 2.4vw, 36px) !important;
+}
+
+.contact-grid-luxury.contact-simple-grid .contact-card p {
+    font-size: 15px !important;
+}
+
+@media (max-width: 980px) {
+    .contact-hero-luxury {
+        min-height: 480px !important;
+    }
+
+    .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 250px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .contact-page {
+        padding: 104px 0 56px !important;
+    }
+
+    .contact-hero-luxury,
+    .contact-grid-luxury.contact-simple-grid {
+        width: 92% !important;
+    }
+
+    .contact-hero-luxury {
+        min-height: 430px !important;
+    }
+
+    .contact-hero h1 {
+        font-size: clamp(38px, 12vw, 58px) !important;
+    }
+
+    .contact-hero p {
+        font-size: 16px !important;
+    }
+
+    .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 230px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .contact-page {
+        padding-top: 96px !important;
+    }
+
+    .contact-hero-luxury {
+        min-height: 390px !important;
+    }
+
+    .contact-hero-content {
+        padding: 38px 18px !important;
+    }
+
+    .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 0 !important;
+        padding: 24px !important;
+    }
+}
+
+/* Contacto con escala tipo index */
+body[data-page="contact"] .contact-page {
+    padding: 118px 0 86px !important;
+}
+
+body[data-page="contact"] .contact-hero-luxury,
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+    width: min(1520px, calc(100% - 96px)) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+}
+
+body[data-page="contact"] .contact-hero-luxury {
+    min-height: clamp(600px, 68vh, 760px) !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 22px !important;
+    overflow: hidden !important;
+    border-color: rgba(255,255,255,.12) !important;
+    background: #06060a !important;
+    box-shadow: 0 34px 100px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+body[data-page="contact"] .contact-hero-bg {
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.72), rgba(4,4,8,.2), rgba(0,0,0,.72)),
+        radial-gradient(circle at 50% 30%, rgba(255,255,255,.1), transparent 35%),
+        radial-gradient(circle at 78% 15%, rgba(255,255,255,.055), transparent 28%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 32px),
+        linear-gradient(180deg, rgba(17,13,20,.2), rgba(4,4,7,.94)) !important;
+}
+
+body[data-page="contact"] .contact-hero-bg::after {
+    inset: 10% 10% 12% !important;
+    border-radius: 999px 999px 0 0 !important;
+    opacity: .72 !important;
+}
+
+body[data-page="contact"] .contact-hero-content {
+    max-width: 1000px !important;
+    padding: clamp(76px, 8vw, 112px) 34px !important;
+}
+
+body[data-page="contact"] .contact-hero-content > div {
+    margin-bottom: 22px !important;
+}
+
+body[data-page="contact"] .contact-hero-content > div svg {
+    width: 56px !important;
+    height: 56px !important;
+}
+
+body[data-page="contact"] .contact-hero h1 {
+    margin: 0 0 22px !important;
+    font-size: clamp(68px, 8vw, 116px) !important;
+    line-height: .95 !important;
+    letter-spacing: 0 !important;
+}
+
+body[data-page="contact"] .contact-hero p {
+    max-width: 840px !important;
+    margin-inline: auto !important;
+    font-size: clamp(20px, 1.65vw, 25px) !important;
+    line-height: 1.5 !important;
+    color: rgba(255,255,255,.74) !important;
+}
+
+body[data-page="contact"] .contact-hero-btn {
+    min-height: 60px !important;
+    margin-top: 34px !important;
+    padding-inline: 46px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.94) !important;
+    color: #0a0a0c !important;
+    font-size: 14px !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,.35) !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 28px !important;
+    margin-top: 32px !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card {
+    min-height: 340px !important;
+    padding: clamp(36px, 3vw, 48px) !important;
+    border-radius: 20px !important;
+    background: rgba(18,18,22,.9) !important;
+    border-color: rgba(255,255,255,.1) !important;
+    box-shadow: 0 24px 70px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+
+body[data-page="contact"] .contact-card-icon {
+    width: 48px !important;
+    height: 48px !important;
+}
+
+body[data-page="contact"] .contact-card-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+body[data-page="contact"] .contact-card-label {
+    font-size: 12px !important;
+    color: rgba(216,209,194,.78) !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card h2 {
+    font-size: clamp(34px, 3vw, 48px) !important;
+    line-height: 1.02 !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-schedule-card h2,
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-phone-card h2 {
+    font-size: clamp(30px, 2.5vw, 42px) !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card p {
+    font-size: 17px !important;
+}
+
+body[data-page="contact"] .contact-action,
+body[data-page="contact"] .contact-social-link {
+    min-height: 52px !important;
+    font-size: 13px !important;
+}
+
+@media (max-width: 1100px) {
+    body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 260px !important;
+    }
+}
+
+@media (max-width: 760px) {
+    body[data-page="contact"] .contact-page {
+        padding: 96px 0 60px !important;
+    }
+
+    body[data-page="contact"] .contact-hero-luxury,
+    body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+        width: calc(100% - 30px) !important;
+    }
+
+    body[data-page="contact"] .contact-hero-luxury {
+        min-height: 520px !important;
+        border-radius: 18px !important;
+    }
+
+    body[data-page="contact"] .contact-hero-content {
+        padding: 56px 20px !important;
+    }
+
+    body[data-page="contact"] .contact-hero h1 {
+        font-size: clamp(48px, 14vw, 72px) !important;
+    }
+
+    body[data-page="contact"] .contact-hero p {
+        font-size: 16px !important;
+    }
+
+    body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 0 !important;
+        padding: 28px 24px !important;
+    }
+}
+
+/* Mayorista login final: nebulosa sin lluvia */
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open {
+    isolation: isolate !important;
+    background:
+        radial-gradient(circle at 20% 18%, rgba(255,255,255,.075), transparent 24%),
+        radial-gradient(circle at 82% 24%, rgba(112,96,138,.24), transparent 34%),
+        radial-gradient(circle at 54% 76%, rgba(74,62,92,.32), transparent 38%),
+        linear-gradient(135deg, #050506 0%, #111014 48%, #07070a 100%) !important;
+    overflow: hidden !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open .wholesale-particles-canvas {
+    display: none !important;
+    opacity: 0 !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before,
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: -24% !important;
+    z-index: 0 !important;
+    display: block !important;
+    pointer-events: none !important;
+    filter: blur(28px) saturate(.78) !important;
+    mix-blend-mode: screen !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before {
+    opacity: .92 !important;
+    background:
+        radial-gradient(ellipse at 22% 36%, rgba(230,230,236,.15), transparent 30%),
+        radial-gradient(ellipse at 63% 22%, rgba(96,82,122,.42), transparent 34%),
+        radial-gradient(ellipse at 58% 74%, rgba(175,175,186,.09), transparent 32%) !important;
+    animation: wholesaleNebulaDriftFinal 18s ease-in-out infinite alternate !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
+    opacity: .72 !important;
+    background:
+        radial-gradient(ellipse at 78% 62%, rgba(118,104,145,.3), transparent 36%),
+        radial-gradient(ellipse at 35% 84%, rgba(255,255,255,.075), transparent 31%),
+        linear-gradient(115deg, transparent 18%, rgba(255,255,255,.04), transparent 68%) !important;
+    animation: wholesaleNebulaDriftFinal 24s ease-in-out infinite alternate-reverse !important;
+}
+
+body[data-catalog-mode="wholesale"] .wholesale-panel {
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+@keyframes wholesaleNebulaDriftFinal {
+    0% { transform: translate3d(-2%, -1%, 0) scale(1); }
+    50% { transform: translate3d(2%, 1.5%, 0) scale(1.05); }
+    100% { transform: translate3d(4%, -2%, 0) scale(1.1); }
 }

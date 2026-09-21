@@ -5119,6 +5119,11 @@ function initInventoryActions() {
             return;
         }
 
+        if (action === 'qr') {
+            openInventoryQrTicket(key);
+            return;
+        }
+
         if (action === 'delete') {
             eliminarProductoPorClave(key);
             return;
@@ -5380,6 +5385,292 @@ function getInventoryProductByKey(key) {
     return index === -1 ? null : inventario[index];
 }
 
+function getInventoryQrReference(product) {
+    return normalizeBarcodeValue(
+        getProductBarcode(product) ||
+        product?.SKU ||
+        getInventoryVariationId(product) ||
+        getInventoryMotherId(product) ||
+        product?.Nombre ||
+        ''
+    );
+}
+
+function getInventoryQrImageUrl(reference, size = 440) {
+    const cleanReference = String(reference || '').trim();
+    const dimension = Math.max(180, Math.min(800, Number(size) || 440));
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${dimension}x${dimension}&margin=12&ecc=H&data=${encodeURIComponent(cleanReference)}`;
+}
+
+function encodeInventoryWholesalePrice(value) {
+    const map = {
+        '1': 'L',
+        '2': 'Z',
+        '3': 'E',
+        '4': 'A',
+        '5': 'S',
+        '6': 'G',
+        '7': 'F',
+        '8': 'B',
+        '9': 'P',
+        '0': 'Q'
+    };
+    const digits = String(Math.round(Number(value) || 0)).replace(/\D/g, '').replace(/^0+/, '');
+    if (!digits) return '';
+    return digits.slice(0, 2).split('').map(digit => map[digit] || '').join('');
+}
+
+function getInventoryQrTicketData(product) {
+    const reference = getInventoryQrReference(product);
+    const retailPrice = parseAdminInvoiceMoney(product?.Precio || 0);
+    const wholesalePrice = parseAdminInvoiceMoney(product?.Precio_Mayorista || product?.['Precio Mayor'] || product?.['Precio Mayorista'] || 0);
+    return {
+        reference,
+        name: product?.Nombre || product?.Producto || 'Producto BLYXU',
+        sku: String(product?.SKU || '').trim(),
+        variationId: getInventoryVariationId(product),
+        motherId: getInventoryMotherId(product),
+        category: product?.Categoria || '-',
+        stock: Number(product?.Stock || product?.Cantidad || 0) || 0,
+        price: retailPrice,
+        wholesalePrice,
+        wholesaleCode: encodeInventoryWholesalePrice(wholesalePrice),
+        imageUrl: getInventoryQrImageUrl(reference)
+    };
+}
+
+function setInventoryQrText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+function getInventoryQrTicketOptions() {
+    const modal = document.getElementById('inventory-qr-modal');
+    const defaults = {
+        name: true,
+        reference: true,
+        sku: true,
+        category: true,
+        stock: true,
+        price: true,
+        pm: true
+    };
+    if (!modal) return defaults;
+
+    modal.querySelectorAll('[data-qr-option]').forEach(input => {
+        defaults[input.dataset.qrOption] = input.checked;
+    });
+    return defaults;
+}
+
+window.updateInventoryQrPreviewOptions = function() {
+    const modal = document.getElementById('inventory-qr-modal');
+    if (!modal) return;
+    const options = getInventoryQrTicketOptions();
+    modal.querySelectorAll('[data-qr-element]').forEach(element => {
+        const key = element.dataset.qrElement;
+        element.hidden = options[key] === false;
+    });
+};
+
+window.openInventoryQrTicket = function(key) {
+    const product = getInventoryProductByKey(key);
+    const modal = document.getElementById('inventory-qr-modal');
+    if (!product || !modal) {
+        showToast('No se encontro el producto para generar QR', 'error');
+        return;
+    }
+
+    const ticket = getInventoryQrTicketData(product);
+    if (!ticket.reference) {
+        showToast('Este producto no tiene referencia, SKU o codigo para generar QR', 'warning');
+        return;
+    }
+
+    modal.dataset.productKey = key;
+    modal.dataset.reference = ticket.reference;
+    const qrImg = document.getElementById('inventory-qr-image');
+    if (qrImg) {
+        qrImg.src = ticket.imageUrl;
+        qrImg.alt = `QR ${ticket.reference}`;
+    }
+
+    setInventoryQrText('inventory-qr-ref', ticket.reference);
+    setInventoryQrText('inventory-qr-name', ticket.name);
+    setInventoryQrText('inventory-qr-category', ticket.category || '-');
+    setInventoryQrText('inventory-qr-sku', ticket.sku || ticket.variationId || '-');
+    setInventoryQrText('inventory-qr-stock', `${ticket.stock} und.`);
+    setInventoryQrText('inventory-qr-price', formatAdminMoney(ticket.price));
+    setInventoryQrText('inventory-qr-pm', ticket.wholesaleCode ? `PM: ${ticket.wholesaleCode}` : 'PM: -');
+
+    modal.classList.add('open');
+    updateInventoryQrPreviewOptions();
+};
+
+window.closeInventoryQrTicket = function() {
+    document.getElementById('inventory-qr-modal')?.classList.remove('open');
+};
+
+window.openInventoryQrImage = function() {
+    const reference = document.getElementById('inventory-qr-modal')?.dataset.reference || '';
+    if (!reference) return;
+    window.open(getInventoryQrImageUrl(reference, 800), '_blank', 'noopener');
+};
+
+window.copyInventoryQrReference = function() {
+    const reference = document.getElementById('inventory-qr-modal')?.dataset.reference || '';
+    if (!reference) return;
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(reference)
+            .then(() => showToast('Referencia copiada', 'success'))
+            .catch(() => showToast('No se pudo copiar la referencia', 'error'));
+        return;
+    }
+    showToast('Copia manualmente la referencia del ticket', 'info');
+};
+
+window.printInventoryQrTicket = function() {
+    const modal = document.getElementById('inventory-qr-modal');
+    const product = getInventoryProductByKey(modal?.dataset.productKey || '');
+    if (!product) {
+        showToast('No se encontro el producto para imprimir', 'error');
+        return;
+    }
+
+    const ticket = getInventoryQrTicketData(product);
+    const options = getInventoryQrTicketOptions();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        showToast('El navegador bloqueo la ventana de impresion', 'warning');
+        return;
+    }
+
+    const qrUrl = getInventoryQrImageUrl(ticket.reference, 520);
+    const metaItems = [
+        options.sku ? `<div><span>SKU / ID</span>${escapeHtml(ticket.sku || ticket.variationId || '-')}</div>` : '',
+        options.category ? `<div><span>Categoria</span>${escapeHtml(ticket.category || '-')}</div>` : '',
+        options.stock ? `<div><span>Stock</span>${ticket.stock} und.</div>` : '',
+        options.price ? `<div><span>Precio</span>${escapeHtml(formatAdminMoney(ticket.price))}</div>` : '',
+        options.pm ? `<div><span>PM</span>PM: ${escapeHtml(ticket.wholesaleCode || '-')}</div>` : ''
+    ].filter(Boolean).join('');
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Ticket QR ${escapeHtml(ticket.reference)}</title>
+            <style>
+                * { box-sizing: border-box; }
+                html, body {
+                    margin: 0;
+                    background: #f4f4f5;
+                    color: #111;
+                    font-family: Arial, Helvetica, sans-serif;
+                }
+                body { padding: 18px; }
+                .toolbar {
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 14px;
+                }
+                .toolbar button {
+                    min-height: 40px;
+                    border: 0;
+                    border-radius: 8px;
+                    padding: 0 16px;
+                    background: #111;
+                    color: #fff;
+                    font-weight: 800;
+                    cursor: pointer;
+                }
+                .ticket {
+                    width: 58mm;
+                    min-height: 82mm;
+                    margin: 0 auto;
+                    padding: 5mm;
+                    background: #fff;
+                    border: 1px solid #111;
+                    text-align: center;
+                }
+                .brand {
+                    font-size: 16px;
+                    font-weight: 900;
+                    letter-spacing: 1.8px;
+                    margin-bottom: 2mm;
+                }
+                .name {
+                    font-size: 11px;
+                    line-height: 1.25;
+                    font-weight: 800;
+                    min-height: 9mm;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .qr {
+                    width: 42mm;
+                    height: 42mm;
+                    display: block;
+                    margin: 3mm auto 2mm;
+                    image-rendering: pixelated;
+                }
+                .ref {
+                    border: 1px solid #111;
+                    padding: 2mm;
+                    font-family: "Courier New", monospace;
+                    font-size: 12px;
+                    font-weight: 900;
+                    word-break: break-all;
+                }
+                .meta {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1.5mm;
+                    margin-top: 2mm;
+                    font-size: 9px;
+                    text-align: left;
+                }
+                .meta div {
+                    border: 1px solid #ddd;
+                    padding: 1.5mm;
+                    min-height: 7mm;
+                }
+                .meta span {
+                    display: block;
+                    color: #666;
+                    font-size: 7px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    margin-bottom: 1mm;
+                }
+                @media print {
+                    @page { size: 58mm auto; margin: 0; }
+                    body { background: #fff; padding: 0; }
+                    .toolbar { display: none; }
+                    .ticket { margin: 0; border: 0; width: 58mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="toolbar"><button onclick="window.print()">Imprimir ticket</button></div>
+            <main class="ticket">
+                <div class="brand">BLYXU</div>
+                ${options.name ? `<div class="name">${escapeHtml(ticket.name)}</div>` : ''}
+                <img class="qr" src="${escapeHtml(qrUrl)}" alt="QR ${escapeHtml(ticket.reference)}">
+                ${options.reference ? `<div class="ref">${escapeHtml(ticket.reference)}</div>` : ''}
+                ${metaItems ? `<section class="meta">${metaItems}</section>` : ''}
+            </main>
+            <script>
+                window.addEventListener('load', function () {
+                    setTimeout(function () { window.print(); }, 350);
+                });
+            <\/script>
+        </body>
+        </html>`);
+    printWindow.document.close();
+};
+
 function getInventoryEditLabel(product, index) {
     const name = product?.Nombre || product?.Producto || 'Producto sin nombre';
     const variant = getInventoryVariationId(product);
@@ -5515,6 +5806,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
             + '<td><div class="' + stockClass + '">' + stockTotal + '</div><div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase;letter-spacing:1px;">en stock</div></td>'
             + '<td>' + toggleBtnHtml + '</td>'
             + '<td style="white-space:nowrap;"><button class="action-btn-edit" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
+            + ' <button class="action-btn-edit-sm inventory-qr-btn" type="button" data-inventory-action="qr" data-product-key="' + productKey + '">QR</button>'
             + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button>'
             + (groupSize > 1 ? ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete-group" data-mother-id="' + escapeHtml(cleanMotherId) + '">Grupo</button>' : '')
             + '</td></tr>';
@@ -5533,6 +5825,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         + '<td><span style="font-size:12px;font-weight:700;color:' + (stockVal > 0 ? '#10B981' : '#EF4444') + ';">' + stockVal + ' und.</span></td>'
         + '<td><span style="font-size:10px;color:rgba(255,255,255,0.4);font-weight:600;">' + escapeHtml(getVariantAttributesLabel(p)) + getColorSwatchesHtml(p.Color || p.color) + '</span></td>'
         + '<td><button class="action-btn-edit-sm" type="button" data-inventory-action="edit" data-product-key="' + productKey + '">Editar</button>'
+        + ' <button class="action-btn-edit-sm inventory-qr-btn" type="button" data-inventory-action="qr" data-product-key="' + productKey + '">QR</button>'
         + ' <button class="action-btn-delete-sm" type="button" data-inventory-action="delete" data-product-key="' + productKey + '">Borrar</button></td>'
         + '</tr>';
 }
@@ -8989,7 +9282,7 @@ function inferInvoiceCustomerType(invoice) {
 
 function getInvoiceStatusColor(estado) {
     const value = String(estado || '').toLowerCase();
-    if (value.includes('final') || value.includes('complet') || value.includes('enviado') || value.includes('pagado')) return '#10B981';
+    if (value.includes('final') || value.includes('complet') || value.includes('enviado') || value.includes('pagado') || value.includes('abon')) return '#10B981';
     if (value.includes('cancel')) return '#EF4444';
     return '#9ca3af';
 }
@@ -9091,6 +9384,10 @@ function buildInvoiceRowHtml(f, idx) {
             </td>
             <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
             <td class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="orders-action-btn invoice-pay" onclick="openQuickInvoicePayment(${idx})" type="button" title="${balanceInfo.balance > 0 ? 'Registrar abono rapido' : 'Factura sin saldo pendiente'}" ${balanceInfo.balance > 0 ? '' : 'disabled'}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path><path d="M7 15h4"></path><path d="M17 13v4"></path><path d="M15 15h4"></path></svg>
+                    Abonar
+                </button>
                 <button class="orders-action-btn invoice-done" onclick="abrirEditorFactura(${idx}, 'factura')" type="button" title="Ver / Editar factura">
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path><path d="M9 15h6"></path><path d="M9 11h2"></path></svg>
                     Ver
@@ -10347,6 +10644,144 @@ window.sendAdminInvoiceRowToWhatsApp = function (idx) {
                 window.sendInvoiceWhatsAppEditor();
             }
         }, 350);
+    }
+};
+
+window.openQuickInvoicePayment = function(idx) {
+    const invoice = (window.facturasList || [])[idx];
+    const modal = document.getElementById('quick-payment-modal');
+    if (!invoice || !modal) {
+        showToast('No se encontro la factura seleccionada', 'error');
+        return;
+    }
+
+    const total = parseAdminInvoiceMoney(invoice.Subtotal || invoice.Total || 0);
+    const balanceInfo = getInvoiceBalanceInfo(invoice, total);
+    if (balanceInfo.balance <= 0) {
+        showToast('Esta factura no tiene saldo pendiente', 'info');
+        return;
+    }
+
+    modal.dataset.invoiceIndex = String(idx);
+    const invoiceId = getInvoiceIdValue(invoice) || '-';
+    const customer = getInvoiceCustomerName(invoice) || 'Cliente';
+    const currentMethod = invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || invoice.pago || '';
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setText('quick-payment-invoice-id', invoiceId);
+    setText('quick-payment-customer', customer);
+    setText('quick-payment-total', formatAdminInvoiceMoney(balanceInfo.total));
+    setText('quick-payment-paid', formatAdminInvoiceMoney(balanceInfo.paid));
+    setText('quick-payment-balance', formatAdminInvoiceMoney(balanceInfo.balance));
+
+    const amountInput = document.getElementById('quick-payment-amount');
+    const methodInput = document.getElementById('quick-payment-method');
+    if (amountInput) {
+        amountInput.value = '';
+        amountInput.placeholder = formatAdminInvoiceMoney(balanceInfo.balance);
+        amountInput.dataset.maxAmount = String(balanceInfo.balance);
+    }
+    if (methodInput) methodInput.value = currentMethod || 'Abono';
+
+    modal.classList.add('open');
+    setTimeout(() => amountInput?.focus(), 80);
+};
+
+window.closeQuickInvoicePayment = function() {
+    const modal = document.getElementById('quick-payment-modal');
+    if (modal) modal.classList.remove('open');
+};
+
+window.saveQuickInvoicePayment = async function() {
+    const modal = document.getElementById('quick-payment-modal');
+    const saveBtn = document.getElementById('quick-payment-save-btn');
+    const amountInput = document.getElementById('quick-payment-amount');
+    const methodInput = document.getElementById('quick-payment-method');
+    if (!modal || !amountInput) return;
+
+    const idx = Number(modal.dataset.invoiceIndex);
+    const invoice = (window.facturasList || [])[idx];
+    if (!invoice) {
+        showToast('No se encontro la factura seleccionada', 'error');
+        return;
+    }
+
+    const invoiceId = getInvoiceIdValue(invoice);
+    if (!invoiceId) {
+        showToast('La factura no tiene ID valido para actualizar', 'error');
+        return;
+    }
+
+    const total = parseAdminInvoiceMoney(invoice.Subtotal || invoice.Total || 0);
+    const balanceInfo = getInvoiceBalanceInfo(invoice, total);
+    const requestedPayment = Math.max(0, parseAdminInvoiceMoney(amountInput.value || 0));
+    if (requestedPayment <= 0) {
+        showToast('Escribe un valor de abono mayor a cero', 'warning');
+        amountInput.focus();
+        return;
+    }
+
+    const acceptedPayment = Math.min(requestedPayment, balanceInfo.balance);
+    const paidAfter = Math.min(balanceInfo.total, balanceInfo.paid + acceptedPayment);
+    const balanceAfter = Math.max(0, balanceInfo.total - paidAfter);
+    const currentStatus = invoice['Estado Factura'] || invoice.Estado || 'Pendiente';
+    const nextStatus = balanceAfter === 0
+        ? 'Pagada'
+        : (paidAfter > 0 ? 'Abonada' : currentStatus);
+    const method = String(methodInput?.value || invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || invoice.pago || 'Abono').trim() || 'Abono';
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+    }
+
+    const payload = {
+        resource: 'facturas',
+        action: 'actualizar',
+        id: invoiceId,
+        'ID Factura': invoiceId,
+        'Valor Abonado': paidAfter,
+        'Saldo Pendiente': balanceAfter,
+        'Ultimo Abono': acceptedPayment,
+        'Estado Factura': nextStatus,
+        pago: method
+    };
+
+    try {
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!result || result.status !== 'success') {
+            throw new Error(result?.error || 'No se pudo guardar el abono');
+        }
+
+        Object.assign(invoice, {
+            'Valor Abonado': paidAfter,
+            'Saldo Pendiente': balanceAfter,
+            'Ultimo Abono': acceptedPayment,
+            'Estado Factura': nextStatus,
+            'MÃ©todo Pago': method,
+            pago: method
+        });
+
+        renderFacturas();
+        closeQuickInvoicePayment();
+        showToast(`Abono registrado: ${formatAdminInvoiceMoney(acceptedPayment)}`, 'success');
+        cargarPedidos({ force: true });
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        console.error(err);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Registrar abono';
+        }
     }
 };
 

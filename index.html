@@ -15,7 +15,7 @@
     <meta property="og:url" content="https://blyxu.online/">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="canonical" href="https://blyxu.online/">
-    <link rel="stylesheet" href="blyxu-style.css?v=cursor-quick-20260918">
+    <link rel="stylesheet" href="blyxu-style.css?v=minimal-account-gray-20260920">
 </head>
 
 <body>
@@ -329,25 +329,26 @@
                     <!-- Payment Method Selector -->
                     <div class="cart-payment-methods-select">
                         <label class="cart-payment-method-label">Método preferido:</label>
+                        <p class="cart-payment-method-helper">Elige una opción para activar tus datos de contacto.</p>
                         <div class="cart-payment-tabs">
-                            <button type="button" class="cart-payment-tab active" id="tab-payment-mp" onclick="setCartPaymentMethod('mp')">
+                            <button type="button" class="cart-payment-tab cart-payment-choice" id="tab-payment-mp" onclick="setCartPaymentMethod('mp')" aria-pressed="false">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                                     <line x1="1" y1="10" x2="23" y2="10"></line>
                                 </svg>
-                                <span>Mercado Pago</span>
+                                <span><strong>Mercado Pago</strong><small>Pago seguro online</small></span>
                             </button>
-                            <button type="button" class="cart-payment-tab" id="tab-payment-ws" onclick="setCartPaymentMethod('ws')">
+                            <button type="button" class="cart-payment-tab cart-payment-choice" id="tab-payment-ws" onclick="setCartPaymentMethod('ws')" aria-pressed="false">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
                                 </svg>
-                                <span>WhatsApp Directo</span>
+                                <span><strong>WhatsApp Directo</strong><small>Atención con asesor</small></span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Customer Form Fields -->
-                    <div class="cart-payment-form" id="cart-section-payment-form">
+                    <div class="cart-payment-form is-awaiting-method" id="cart-section-payment-form">
                         <div id="cart-section-form-error" class="cart-form-error" style="display:none;" aria-live="polite"></div>
 
                         <div class="cart-input-field" data-field="name">
@@ -361,24 +362,24 @@
                         </div>
 
                         <div class="cart-input-field" id="cart-sec-field-email">
-                            <label for="cart-sec-email">Correo electrónico <span class="opt-label">(para comprobante)</span></label>
-                            <input type="email" id="cart-sec-email" class="cart-input-ctrl" placeholder="ejemplo@correo.com" autocomplete="email">
+                            <label for="cart-sec-email">Correo electrónico <span class="req-star">*</span></label>
+                            <input type="email" id="cart-sec-email" class="cart-input-ctrl" placeholder="ejemplo@correo.com" autocomplete="email" required>
                         </div>
 
                         <div class="cart-input-row">
                             <div class="cart-input-field">
-                                <label for="cart-sec-direccion">Dirección de entrega <span class="opt-label">(opcional)</span></label>
-                                <input type="text" id="cart-sec-direccion" class="cart-input-ctrl" placeholder="Calle, Carrera, Apto..." autocomplete="street-address">
+                                <label for="cart-sec-direccion">Dirección de entrega <span class="req-star">*</span></label>
+                                <input type="text" id="cart-sec-direccion" class="cart-input-ctrl" placeholder="Calle, Carrera, Apto..." autocomplete="street-address" required>
                             </div>
                             <div class="cart-input-field">
-                                <label for="cart-sec-ciudad">Ciudad <span class="opt-label">(opcional)</span></label>
-                                <input type="text" id="cart-sec-ciudad" class="cart-input-ctrl" placeholder="Ciudad de entrega" autocomplete="address-level2">
+                                <label for="cart-sec-ciudad">Ciudad <span class="req-star">*</span></label>
+                                <input type="text" id="cart-sec-ciudad" class="cart-input-ctrl" placeholder="Ciudad de entrega" autocomplete="address-level2" required>
                             </div>
                         </div>
 
                         <div class="cart-input-field">
-                            <label for="cart-sec-nota">Nota adicional <span class="opt-label">(opcional)</span></label>
-                            <textarea id="cart-sec-nota" class="cart-input-ctrl cart-textarea-ctrl" placeholder="Indicaciones especiales de entrega o consulta..."></textarea>
+                            <label for="cart-sec-nota">Nota adicional <span class="req-star">*</span></label>
+                            <textarea id="cart-sec-nota" class="cart-input-ctrl cart-textarea-ctrl" placeholder="Indicaciones especiales de entrega o consulta..." required></textarea>
                         </div>
 
                         <div class="cart-mp-accepted-badges" id="cart-sec-mp-badges">
@@ -524,7 +525,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=cursor-quick-20260918"></script>
+    <script src="blyxu-app.js?v=cart-label-fix-20260920"></script>
 </body>
 
 </html>

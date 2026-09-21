@@ -33,8 +33,8 @@
         body {
             margin:0;
             min-height:100vh;
-            font-size:13px;
-            zoom:0.8;
+            font-size:14px;
+            zoom:1;
             background:
                 radial-gradient(circle at 20% -10%, rgba(168,85,247,.18), transparent 30%),
                 radial-gradient(circle at 88% 10%, rgba(34,211,238,.11), transparent 26%),
@@ -3252,6 +3252,817 @@
                 margin-left: 0;
             }
         }
+        /* Pedidos y facturas: abonos rapidos + limpieza visual del editor */
+        .orders-action-btn.invoice-pay {
+            background:rgba(216,209,194,.1)!important;
+            border-color:rgba(216,209,194,.28)!important;
+            color:#f0ece4!important;
+        }
+        .orders-action-btn.invoice-pay:hover {
+            background:rgba(216,209,194,.18)!important;
+            border-color:rgba(216,209,194,.42)!important;
+        }
+        .orders-action-btn:disabled,
+        .orders-action-btn[disabled] {
+            opacity:.42;
+            cursor:not-allowed;
+            transform:none!important;
+        }
+        .quick-payment-card {
+            width:min(520px, calc(100vw - 32px));
+            padding:0;
+            overflow:hidden;
+            border-color:rgba(255,255,255,.1);
+            border-radius:16px;
+            background:#111114;
+            box-shadow:0 28px 90px rgba(0,0,0,.64), inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .quick-payment-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:16px;
+            padding:22px 24px 18px;
+            border-bottom:1px solid rgba(255,255,255,.08);
+            background:rgba(255,255,255,.025);
+        }
+        .quick-payment-head h2 {
+            margin:4px 0 6px;
+            font-size:24px;
+            line-height:1.05;
+            color:#f7f5f0;
+        }
+        .quick-payment-head p {
+            margin:0;
+            color:rgba(244,242,238,.54);
+            font-size:13px;
+            line-height:1.45;
+        }
+        .quick-payment-close {
+            width:38px;
+            height:38px;
+            display:grid;
+            place-items:center;
+            flex:0 0 38px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:10px;
+            background:rgba(255,255,255,.04);
+            color:rgba(244,242,238,.7);
+        }
+        .quick-payment-close:hover {
+            border-color:rgba(255,255,255,.22);
+            background:rgba(255,255,255,.08);
+            color:#fff;
+        }
+        .quick-payment-summary {
+            padding:20px 24px;
+            display:grid;
+            gap:16px;
+        }
+        .quick-payment-main {
+            display:grid;
+            gap:5px;
+        }
+        .quick-payment-main span {
+            color:rgba(216,209,194,.78);
+            font-size:12px;
+            font-weight:850;
+            letter-spacing:.7px;
+            text-transform:uppercase;
+        }
+        .quick-payment-main strong {
+            color:#fff;
+            font-size:18px;
+            line-height:1.25;
+        }
+        .quick-payment-metrics {
+            display:grid;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:10px;
+        }
+        .quick-payment-metrics div {
+            min-width:0;
+            padding:13px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.03);
+        }
+        .quick-payment-metrics span {
+            display:block;
+            margin-bottom:4px;
+            color:rgba(244,242,238,.45);
+            font-size:10px;
+            font-weight:850;
+            text-transform:uppercase;
+            letter-spacing:.7px;
+        }
+        .quick-payment-metrics strong {
+            color:#f7f5f0;
+            font-size:15px;
+            font-weight:900;
+            white-space:nowrap;
+        }
+        .quick-payment-metrics .due {
+            border-color:rgba(216,209,194,.24);
+            background:rgba(216,209,194,.065);
+        }
+        .quick-payment-metrics .due strong {
+            color:#f0ece4;
+        }
+        .quick-payment-fields {
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+            padding:0 24px 22px;
+        }
+        .quick-payment-card .inv-input-group > span {
+            color:rgba(244,242,238,.64);
+            font-size:12px;
+            font-weight:760;
+        }
+        .quick-payment-actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            padding:16px 24px;
+            border-top:1px solid rgba(255,255,255,.08);
+            background:rgba(0,0,0,.18);
+        }
+        #invoice-editor-modal.modal {
+            padding:20px;
+            background:rgba(0,0,0,.72);
+            backdrop-filter:blur(16px);
+        }
+        #invoice-editor-modal .inv-modal-card {
+            width:min(1120px, calc(100vw - 36px));
+            max-height:calc(100vh - 36px);
+            border-color:rgba(255,255,255,.1);
+            border-radius:18px;
+            background:#111114;
+            box-shadow:0 32px 100px rgba(0,0,0,.72), inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        #invoice-editor-modal .inv-modal-header {
+            padding:22px 28px;
+            background:#151519;
+            border-bottom-color:rgba(255,255,255,.08);
+        }
+        #invoice-editor-modal .inv-kicker-badge {
+            margin-bottom:8px;
+            border-color:rgba(216,209,194,.22);
+            background:rgba(216,209,194,.07);
+            color:rgba(244,242,238,.78);
+        }
+        #invoice-editor-modal .inv-kicker-dot {
+            background:#d8d1c2;
+            box-shadow:none;
+        }
+        #invoice-editor-modal .inv-modal-header h2 {
+            font-size:clamp(24px,2.6vw,34px);
+            line-height:1.05;
+            color:#f7f5f0;
+        }
+        #invoice-editor-modal .inv-header-subtitle {
+            margin-top:5px;
+            color:rgba(244,242,238,.55);
+            font-size:13px;
+        }
+        #invoice-editor-modal .inv-modal-body {
+            padding:22px 28px 26px;
+            gap:16px;
+            background:#0d0d10;
+        }
+        #invoice-editor-modal .inv-form-section {
+            padding:18px;
+            border-color:rgba(255,255,255,.08);
+            border-radius:14px;
+            background:rgba(255,255,255,.026);
+        }
+        #invoice-editor-modal .inv-section-title {
+            margin-bottom:16px;
+            color:rgba(216,209,194,.88);
+            font-size:12px;
+            letter-spacing:.8px;
+        }
+        #invoice-editor-modal .inv-section-title svg {
+            color:rgba(216,209,194,.82);
+        }
+        #invoice-editor-modal .inv-input-group label,
+        #invoice-editor-modal .inv-input-group > span {
+            color:rgba(244,242,238,.64);
+            font-size:12px;
+            font-weight:760;
+        }
+        #invoice-editor-modal .inv-input-group .form-control,
+        .quick-payment-card .form-control {
+            min-height:44px;
+            border-color:rgba(255,255,255,.11)!important;
+            border-radius:10px;
+            background:rgba(255,255,255,.045)!important;
+            color:#f7f5f0;
+            font-size:14px;
+        }
+        #invoice-editor-modal .inv-input-group .form-control:focus,
+        .quick-payment-card .form-control:focus {
+            border-color:rgba(216,209,194,.34)!important;
+            box-shadow:0 0 0 3px rgba(216,209,194,.07)!important;
+        }
+        #invoice-editor-modal .inv-summary-card {
+            border-color:rgba(255,255,255,.08);
+            background:rgba(255,255,255,.03);
+        }
+        #invoice-editor-modal .inv-summary-card.total {
+            border-color:rgba(216,209,194,.24);
+            background:rgba(216,209,194,.075);
+        }
+        #invoice-editor-modal .inv-summary-card.total .inv-card-value,
+        #invoice-editor-modal .inv-items-table td[style*="#f4c441"] {
+            color:#f0ece4!important;
+        }
+        #invoice-editor-modal .inv-modal-footer {
+            padding:16px 28px;
+            background:#151519;
+            border-top-color:rgba(255,255,255,.08);
+        }
+        @media(max-width:760px) {
+            .quick-payment-fields,
+            .quick-payment-metrics {
+                grid-template-columns:1fr;
+            }
+            .quick-payment-actions {
+                flex-direction:column;
+            }
+            #invoice-editor-modal.modal {
+                padding:10px;
+            }
+            #invoice-editor-modal .inv-modal-card {
+                width:calc(100vw - 20px);
+                max-height:calc(100vh - 20px);
+            }
+            #invoice-editor-modal .inv-modal-header,
+            #invoice-editor-modal .inv-modal-body,
+            #invoice-editor-modal .inv-modal-footer {
+                padding-inline:16px;
+            }
+        }
+
+        .inventory-qr-btn {
+            border-color:rgba(216,209,194,.24)!important;
+            background:rgba(216,209,194,.08)!important;
+            color:#f0ece4!important;
+        }
+        .inventory-qr-btn:hover {
+            background:rgba(216,209,194,.16)!important;
+            border-color:rgba(216,209,194,.42)!important;
+        }
+        .inventory-qr-card {
+            width:min(760px, calc(100vw - 32px));
+            padding:0;
+            overflow:hidden;
+            border-color:rgba(255,255,255,.1);
+            border-radius:18px;
+            background:#111114;
+            box-shadow:0 30px 100px rgba(0,0,0,.68), inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .inventory-qr-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:16px;
+            padding:22px 24px;
+            border-bottom:1px solid rgba(255,255,255,.08);
+            background:rgba(255,255,255,.025);
+        }
+        .inventory-qr-head h2 {
+            margin:4px 0 6px;
+            font-size:26px;
+            line-height:1.05;
+            color:#f7f5f0;
+        }
+        .inventory-qr-head p {
+            margin:0;
+            color:rgba(244,242,238,.54);
+            font-size:13px;
+            line-height:1.45;
+        }
+        .inventory-qr-body {
+            display:grid;
+            grid-template-columns:minmax(250px,.82fr) minmax(0,1fr);
+            gap:22px;
+            padding:24px;
+        }
+        .inventory-qr-preview {
+            display:grid;
+            justify-items:center;
+            gap:12px;
+            padding:20px;
+            border:1px solid rgba(255,255,255,.09);
+            border-radius:16px;
+            background:#ffffff;
+            color:#111;
+        }
+        .inventory-qr-preview img {
+            width:min(260px,100%);
+            aspect-ratio:1;
+            object-fit:contain;
+            image-rendering:pixelated;
+        }
+        .inventory-qr-preview strong {
+            width:100%;
+            padding:10px 12px;
+            border:1px solid #111;
+            border-radius:8px;
+            color:#111;
+            font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size:17px;
+            font-weight:950;
+            text-align:center;
+            word-break:break-all;
+        }
+        .inventory-qr-info {
+            display:grid;
+            align-content:start;
+            gap:14px;
+            min-width:0;
+        }
+        .inventory-qr-info > span {
+            color:rgba(216,209,194,.78);
+            font-size:11px;
+            font-weight:850;
+            letter-spacing:.8px;
+            text-transform:uppercase;
+        }
+        .inventory-qr-info h3 {
+            margin:0;
+            color:#fff;
+            font-size:24px;
+            line-height:1.12;
+            overflow-wrap:anywhere;
+        }
+        .inventory-qr-meta {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:10px;
+        }
+        .inventory-qr-meta div {
+            min-width:0;
+            padding:13px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.03);
+        }
+        .inventory-qr-meta span {
+            display:block;
+            margin-bottom:4px;
+            color:rgba(244,242,238,.45);
+            font-size:10px;
+            font-weight:850;
+            text-transform:uppercase;
+            letter-spacing:.7px;
+        }
+        .inventory-qr-meta strong {
+            color:#f7f5f0;
+            font-size:14px;
+            font-weight:900;
+            overflow-wrap:anywhere;
+        }
+        .inventory-qr-options {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:8px;
+            padding:12px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.025);
+        }
+        .inventory-qr-options label {
+            min-height:34px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            padding:7px 9px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:10px;
+            background:rgba(255,255,255,.035);
+            color:rgba(244,242,238,.74);
+            font-size:11px;
+            font-weight:850;
+            text-transform:uppercase;
+            letter-spacing:.3px;
+        }
+        .inventory-qr-options input {
+            width:16px;
+            height:16px;
+            accent-color:#d8d1c2;
+        }
+        .inventory-qr-note {
+            padding:12px 14px;
+            border:1px dashed rgba(216,209,194,.24);
+            border-radius:12px;
+            color:rgba(244,242,238,.58);
+            font-size:13px;
+            line-height:1.45;
+        }
+        .inventory-qr-actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            flex-wrap:wrap;
+            padding:16px 24px;
+            border-top:1px solid rgba(255,255,255,.08);
+            background:rgba(0,0,0,.18);
+        }
+        @media(max-width:760px) {
+            .inventory-qr-body {
+                grid-template-columns:1fr;
+                padding:18px;
+            }
+            .inventory-qr-meta {
+                grid-template-columns:1fr;
+            }
+            .inventory-qr-options {
+                grid-template-columns:1fr;
+            }
+            .inventory-qr-actions {
+                flex-direction:column;
+            }
+        }
+
+        /* Escala final del administrador */
+        .dashboard-layout {
+            grid-template-columns:300px minmax(0,1fr);
+        }
+        .sub-sidebar {
+            width:300px;
+            padding:26px 22px;
+            gap:18px;
+        }
+        .sidebar-logo {
+            padding:8px 20px 22px;
+        }
+        .sidebar-logo img {
+            max-width:132px!important;
+        }
+        .sidebar-btn {
+            min-height:48px;
+            padding:12px 15px;
+            font-size:14px;
+            line-height:1.2;
+        }
+        .sidebar-btn span {
+            width:28px;
+            min-width:28px;
+            font-size:12px;
+        }
+        .dashboard-header {
+            min-height:78px;
+            padding:22px 34px;
+        }
+        .dashboard-header h1 {
+            font-size:clamp(24px,2vw,32px)!important;
+            line-height:1.05;
+        }
+        .dashboard-badge,
+        .admin-mode-pill {
+            min-height:36px;
+            padding:8px 15px;
+            font-size:11px;
+        }
+        .dashboard-content-area {
+            width:100%;
+            max-width:1720px;
+            margin-inline:auto;
+            padding:32px 36px 52px;
+        }
+        .dashboard-section.active {
+            display:block;
+            width:100%;
+        }
+        .admin-panel,
+        .dashboard-card {
+            border-radius:18px;
+        }
+        .admin-title-row,
+        .product-form-intro,
+        .admin-dashboard-hero,
+        .china-header,
+        .orders-admin-header,
+        .carousel-admin-intro {
+            padding:26px 28px;
+        }
+        .admin-title-row h2,
+        .admin-dashboard-hero h2,
+        .orders-admin-header h2,
+        .china-header h2 {
+            font-size:clamp(26px,2.2vw,34px)!important;
+            line-height:1.08;
+        }
+        .admin-dashboard-hero p,
+        .product-form-intro p,
+        .orders-admin-header p,
+        .china-header p {
+            font-size:14px;
+            line-height:1.5;
+        }
+        .admin-dashboard-shell,
+        .carousel-admin-form,
+        .orders-admin-shell,
+        .china-admin-shell {
+            gap:18px;
+        }
+        .dashboard-stat-grid,
+        .dashboard-mini-grid {
+            gap:18px;
+        }
+        .dashboard-stat-card {
+            min-height:126px;
+            padding:22px;
+        }
+        .dashboard-stat-card strong {
+            font-size:clamp(26px,2.2vw,34px)!important;
+        }
+        .dashboard-card {
+            padding:20px;
+        }
+        .dashboard-card-head h3 {
+            font-size:17px;
+        }
+        .dashboard-main-grid,
+        .dashboard-bottom-grid,
+        .dashboard-charts-grid {
+            gap:18px;
+        }
+        .admin-panel.gradient-bg,
+        #view-inventory > .admin-panel,
+        #view-china-orders > .admin-panel,
+        #view-orders > .admin-panel,
+        #view-settings > .admin-panel {
+            min-height:calc(100vh - 162px);
+        }
+        .admin-form-grid {
+            gap:18px;
+        }
+        .form-group label,
+        .inv-input-group label,
+        .inv-input-group > span {
+            font-size:12px!important;
+        }
+        .form-control,
+        .inv-input-group .form-control,
+        .orders-search-row .form-control,
+        .inventory-filter-row .form-control {
+            min-height:48px!important;
+            padding:12px 14px;
+            font-size:14px!important;
+        }
+        textarea.form-control {
+            min-height:112px;
+        }
+        .admin-btn,
+        .orders-action-btn,
+        .orders-tab-btn,
+        .settings-tab-btn,
+        .dashboard-link-btn,
+        .dashboard-shortcuts button {
+            min-height:44px;
+            padding:10px 16px;
+            font-size:12px;
+        }
+        .inventory-filter-row,
+        .orders-search-row,
+        .settings-tabs {
+            padding:22px 24px;
+            gap:14px;
+        }
+        .orders-admin-body,
+        .china-admin-body,
+        .settings-tab-content {
+            padding:24px;
+        }
+        .table-wrapper {
+            border-radius:14px;
+        }
+        th,
+        td {
+            padding:14px 15px;
+            font-size:13px;
+        }
+        th {
+            font-size:11px;
+        }
+        .inventory-tree,
+        #view-orders table,
+        #view-china-orders table {
+            min-width:1080px;
+        }
+        #view-products .grid-split.product-admin-grid {
+            gap:24px;
+        }
+        #product-form {
+            padding:22px 30px 30px;
+        }
+        .product-config-card,
+        .settings-tab-panel form,
+        .settings-subgroup {
+            padding:22px;
+            border-radius:16px;
+        }
+        .preview-container {
+            padding:22px;
+        }
+        .preview-title {
+            font-size:clamp(28px,2.4vw,38px)!important;
+        }
+        .preview-price {
+            font-size:clamp(30px,2.8vw,42px)!important;
+        }
+        /* Vista previa compacta del producto */
+        #view-products .product-preview-panel {
+            max-width:920px;
+            margin-inline:auto;
+        }
+        #view-products .preview-container {
+            min-height:0!important;
+            padding:16px!important;
+        }
+        #view-products .admin-detail-preview {
+            max-width:760px;
+            margin-inline:auto;
+            grid-template-columns:minmax(220px,.75fr) minmax(260px,.7fr)!important;
+            gap:16px!important;
+        }
+        #view-products .preview-product-gallery {
+            max-width:340px!important;
+            grid-template-columns:48px minmax(0,1fr)!important;
+            gap:10px!important;
+            top:96px!important;
+        }
+        #view-products .preview-product-gallery.has-single-image {
+            grid-template-columns:1fr!important;
+        }
+        #view-products .preview-main-img {
+            min-height:0!important;
+            border-radius:14px!important;
+            box-shadow:0 16px 38px rgba(0,0,0,.34)!important;
+        }
+        #view-products .preview-product-info {
+            gap:11px!important;
+            padding:18px!important;
+            border-radius:16px!important;
+        }
+        #view-products .preview-category,
+        #view-products .preview-stock-alert {
+            padding:4px 10px!important;
+            font-size:9px!important;
+            letter-spacing:1px!important;
+        }
+        #view-products .preview-product-info .preview-title {
+            font-size:clamp(21px,1.8vw,30px)!important;
+            line-height:1.08!important;
+        }
+        #view-products .preview-product-info .preview-price {
+            font-size:clamp(22px,1.9vw,30px)!important;
+            line-height:1.05!important;
+        }
+        #view-products .preview-actions {
+            gap:8px!important;
+        }
+        #view-products .preview-buy-btn,
+        #view-products .preview-favorite-btn,
+        #view-products .preview-consult-btn {
+            min-height:40px!important;
+            padding:8px 11px!important;
+            border-radius:10px!important;
+            font-size:11px!important;
+            line-height:1.15!important;
+        }
+        #view-products .preview-favorite-btn {
+            min-width:150px!important;
+        }
+        #view-products .preview-cart-note {
+            padding:10px!important;
+            font-size:11px!important;
+        }
+        #view-products .preview-perks {
+            padding:10px 12px!important;
+            gap:8px!important;
+        }
+        #view-products .preview-perks span {
+            font-size:10px!important;
+        }
+        #view-products .preview-details-block {
+            gap:12px!important;
+            padding-top:12px!important;
+        }
+        #view-products .preview-desc-card p {
+            font-size:11px!important;
+            line-height:1.35!important;
+        }
+        #view-products .preview-specs {
+            gap:6px!important;
+        }
+        #view-products .preview-specs div {
+            padding:10px 12px!important;
+        }
+        #view-products .product-preview-summary {
+            max-width:760px;
+            margin-inline:auto;
+        }
+        #view-products .preview-summary-grid {
+            gap:8px!important;
+        }
+        #view-products .preview-summary-grid div {
+            padding:10px 12px!important;
+        }
+        @media(max-width:640px) {
+            #view-products .product-preview-panel,
+            #view-products .admin-detail-preview,
+            #view-products .product-preview-summary {
+                max-width:360px;
+            }
+            #view-products .admin-detail-preview {
+                grid-template-columns:1fr!important;
+            }
+            #view-products .preview-product-gallery {
+                max-width:280px!important;
+                grid-template-columns:1fr!important;
+                margin-inline:auto;
+            }
+            #view-products .preview-main-img {
+                grid-column:1!important;
+            }
+            #view-products .preview-actions {
+                grid-template-columns:1fr!important;
+            }
+            #view-products .preview-favorite-btn {
+                min-width:0!important;
+            }
+        }
+        .inv-modal-body {
+            gap:20px!important;
+        }
+        #invoice-editor-modal .inv-form-section {
+            padding:22px;
+        }
+        #invoice-editor-modal .inv-form-grid-3,
+        #invoice-editor-modal .inv-form-grid-4,
+        #invoice-editor-modal .inv-summary-cards {
+            gap:16px;
+        }
+        #toast {
+            font-size:14px;
+        }
+        @media(max-width:1180px) {
+            .dashboard-layout {
+                grid-template-columns:1fr;
+            }
+            .sub-sidebar {
+                width:auto;
+            }
+            .dashboard-content-area {
+                padding:24px;
+            }
+        }
+        @media(max-width:760px) {
+            .dashboard-header {
+                min-height:68px;
+                padding:16px;
+            }
+            .dashboard-header h1 {
+                font-size:24px!important;
+            }
+            .dashboard-content-area {
+                padding:16px;
+            }
+            .admin-title-row,
+            .product-form-intro,
+            .admin-dashboard-hero,
+            .china-header,
+            .orders-admin-header,
+            .carousel-admin-intro {
+                padding:20px;
+            }
+            .admin-dashboard-hero,
+            .orders-admin-header,
+            .china-header {
+                align-items:flex-start;
+            }
+            .dashboard-stat-card,
+            .dashboard-card,
+            .product-config-card,
+            .settings-tab-panel form,
+            .settings-subgroup {
+                padding:18px;
+            }
+            .orders-admin-body,
+            .china-admin-body,
+            .settings-tab-content {
+                padding:16px;
+            }
+            th,
+            td {
+                padding:12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -3584,6 +4395,91 @@
 
     <div id="edit-product-modal" class="modal"><div class="modal-card"><div class="edit-modal-header"><h2>Editar producto</h2><div class="edit-modal-nav"><button type="button" class="admin-btn secondary" id="edit-modal-prev-product">Anterior</button><select class="form-control" id="edit-modal-product-jump" aria-label="Editar otro producto"></select><button type="button" class="admin-btn secondary" id="edit-modal-next-product">Siguiente</button></div><button class="admin-btn secondary" onclick="cerrarModalEdicion()">Cerrar</button></div><div id="edit-modal-content-area"></div></div></div>
     <div id="confirm-modal" class="modal"><div class="modal-card" style="max-width:420px;"><h2 id="modal-title">Confirmar</h2><p id="modal-body">¿Estas seguro?</p><div style="display:flex;gap:10px;justify-content:flex-end;"><button class="admin-btn secondary" id="modal-cancel-btn">Cancelar</button><button class="admin-btn" id="modal-confirm-btn">Aceptar</button></div></div></div>
+    <div id="inventory-qr-modal" class="modal">
+        <div class="modal-card inventory-qr-card">
+            <div class="inventory-qr-head">
+                <div>
+                    <span class="admin-kicker">Ticket de referencia</span>
+                    <h2>Codigo QR del producto</h2>
+                    <p>El QR codifica la referencia para escanearla en inventario.</p>
+                </div>
+                <button type="button" class="quick-payment-close" onclick="closeInventoryQrTicket()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="inventory-qr-body">
+                <div class="inventory-qr-preview">
+                    <img id="inventory-qr-image" alt="QR de producto">
+                    <strong id="inventory-qr-ref" data-qr-element="reference">BLYXU-REF</strong>
+                </div>
+                <div class="inventory-qr-info">
+                    <span>Producto</span>
+                    <h3 id="inventory-qr-name" data-qr-element="name">Producto BLYXU</h3>
+                    <div class="inventory-qr-meta">
+                        <div data-qr-element="sku"><span>SKU / ID</span><strong id="inventory-qr-sku">-</strong></div>
+                        <div data-qr-element="category"><span>Categoria</span><strong id="inventory-qr-category">-</strong></div>
+                        <div data-qr-element="stock"><span>Stock</span><strong id="inventory-qr-stock">0 und.</strong></div>
+                        <div data-qr-element="price"><span>Precio</span><strong id="inventory-qr-price">$0</strong></div>
+                        <div data-qr-element="pm"><span>PM</span><strong id="inventory-qr-pm">PM: -</strong></div>
+                    </div>
+                    <div class="inventory-qr-options" aria-label="Elementos del ticket QR">
+                        <label><input type="checkbox" data-qr-option="name" checked onchange="updateInventoryQrPreviewOptions()"> Nombre</label>
+                        <label><input type="checkbox" data-qr-option="reference" checked onchange="updateInventoryQrPreviewOptions()"> Referencia</label>
+                        <label><input type="checkbox" data-qr-option="sku" checked onchange="updateInventoryQrPreviewOptions()"> SKU / ID</label>
+                        <label><input type="checkbox" data-qr-option="category" checked onchange="updateInventoryQrPreviewOptions()"> Categoria</label>
+                        <label><input type="checkbox" data-qr-option="stock" checked onchange="updateInventoryQrPreviewOptions()"> Stock</label>
+                        <label><input type="checkbox" data-qr-option="price" checked onchange="updateInventoryQrPreviewOptions()"> Precio</label>
+                        <label><input type="checkbox" data-qr-option="pm" checked onchange="updateInventoryQrPreviewOptions()"> PM cifrado</label>
+                    </div>
+                    <div class="inventory-qr-note">Puedes abrir la imagen del QR o imprimir un ticket de 58 mm para marquillas y referencias.</div>
+                </div>
+            </div>
+            <div class="inventory-qr-actions">
+                <button type="button" class="admin-btn secondary" onclick="copyInventoryQrReference()">Copiar referencia</button>
+                <button type="button" class="admin-btn secondary" onclick="openInventoryQrImage()">Ver imagen QR</button>
+                <button type="button" class="admin-btn" onclick="printInventoryQrTicket()">Imprimir ticket</button>
+            </div>
+        </div>
+    </div>
+    <div id="quick-payment-modal" class="modal">
+        <form class="modal-card quick-payment-card" onsubmit="event.preventDefault(); saveQuickInvoicePayment();">
+            <div class="quick-payment-head">
+                <div>
+                    <span class="admin-kicker">Abono rapido</span>
+                    <h2>Registrar abono</h2>
+                    <p>Actualiza el saldo de la factura sin abrir el editor completo.</p>
+                </div>
+                <button type="button" class="quick-payment-close" onclick="closeQuickInvoicePayment()" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="quick-payment-summary">
+                <div class="quick-payment-main">
+                    <span id="quick-payment-invoice-id">FAC-</span>
+                    <strong id="quick-payment-customer">Cliente</strong>
+                </div>
+                <div class="quick-payment-metrics">
+                    <div><span>Total</span><strong id="quick-payment-total">$0</strong></div>
+                    <div><span>Abonado</span><strong id="quick-payment-paid">$0</strong></div>
+                    <div class="due"><span>Saldo</span><strong id="quick-payment-balance">$0</strong></div>
+                </div>
+            </div>
+            <div class="quick-payment-fields">
+                <label class="inv-input-group" for="quick-payment-amount">
+                    <span>Valor del abono</span>
+                    <input class="form-control" id="quick-payment-amount" inputmode="decimal" autocomplete="off" placeholder="$0">
+                </label>
+                <label class="inv-input-group" for="quick-payment-method">
+                    <span>Metodo / nota</span>
+                    <input class="form-control" id="quick-payment-method" autocomplete="off" placeholder="Nequi, efectivo, transferencia...">
+                </label>
+            </div>
+            <div class="quick-payment-actions">
+                <button type="button" class="admin-btn secondary" onclick="closeQuickInvoicePayment()">Cancelar</button>
+                <button type="submit" class="admin-btn" id="quick-payment-save-btn">Registrar abono</button>
+            </div>
+        </form>
+    </div>
     <div id="invoice-editor-modal" class="modal">
         <div class="modal-card inv-modal-card">
             <!-- Modal Header -->
@@ -3873,6 +4769,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=admin-fast-load-20260918"></script>
+    <script src="admin-app.js?v=admin-inventory-qr-pm-20260920"></script>
 </body>
 </html>
