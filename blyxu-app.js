@@ -394,13 +394,13 @@ async function renderHomeSectionsStaggered(options = {}) {
     renderBanners(bannerProducts);
     await yieldToBrowser();
     if (token !== homeRenderToken) return;
+    renderHomeAdBanner();
+    await yieldToBrowser();
+    if (token !== homeRenderToken) return;
     renderHomeCategories();
     await yieldToBrowser();
     if (token !== homeRenderToken) return;
     renderInventorySpotlight();
-    await yieldToBrowser();
-    if (token !== homeRenderToken) return;
-    renderHomeAdBanner();
     await yieldToBrowser();
     if (token !== homeRenderToken) return;
     if (renderCatalog) renderCatalogProducts();
@@ -1518,8 +1518,10 @@ function renderHomeAdBanner() {
     if (img) {
         if (image) {
             img.style.display = '';
-            img.loading = 'lazy';
+            img.loading = 'eager';
             img.decoding = 'async';
+            img.fetchPriority = 'high';
+            img.setAttribute('fetchpriority', 'high');
             img.src = image;
             img.onerror = () => { img.style.display = 'none'; };
         } else {
@@ -5672,6 +5674,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isHomePage && !readCache(PRODUCTS_CACHE_KEY)?.data?.products?.length) {
         renderIndexInstantShell();
+    }
+    if (isHomePage) {
+        hydrateSiteConfigFromCache();
+        renderHomeAdBanner();
     }
 
     if (isContactPage || isPaymentsPage || isOrdersLookupPage) {
