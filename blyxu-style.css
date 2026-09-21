@@ -12082,3 +12082,19 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         transform: translate3d(calc(-50% - var(--marquee-half-gap, 7px)), 0, 0);
     }
 }
+
+.main-banner-title,
+.blyxu-svg-title {
+    display: none !important;
+}
+
+.image-marquee-section {
+    content-visibility: visible !important;
+    contain-intrinsic-size: auto !important;
+}
+
+.image-marquee .is-loading-card {
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025)) !important;
+    border-color: rgba(255,255,255,.09) !important;
+}

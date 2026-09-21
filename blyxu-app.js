@@ -1511,9 +1511,6 @@ function renderHomeAdBanner() {
     const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
     const title = getSiteConfigValue('Home_Ad_Title', 'Brilla con tus favoritos');
     const message = getSiteConfigValue('Home_Ad_Message', 'Descubre piezas seleccionadas, promociones y anuncios especiales de BLYXU.');
-    const cta = getSiteConfigValue('Home_Ad_Cta', 'Ver productos');
-    const link = getSiteConfigValue('Home_Ad_Link', '#coleccion');
-
     banner.style.display = '';
     const img = document.getElementById('home-ad-image');
     if (img) {
@@ -1531,11 +1528,6 @@ function renderHomeAdBanner() {
     setTextById('home-ad-kicker', kicker);
     setTextById('home-ad-title', title);
     setTextById('home-ad-message', message);
-    const linkEl = document.getElementById('home-ad-link');
-    if (linkEl) {
-        linkEl.textContent = cta;
-        linkEl.href = link || '#coleccion';
-    }
 }
 
 function renderInventorySpotlight() {
