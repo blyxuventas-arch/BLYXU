@@ -11979,24 +11979,24 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
 
 @media (max-width: 768px) {
     .home-ad-section {
-        width: calc(100% - 28px) !important;
+        width: calc(100% - 24px) !important;
         min-height: 0 !important;
-        margin: 24px auto 18px !important;
-        padding: 0 !important;
+        margin: 18px auto 14px !important;
+        padding: 10px !important;
         display: block !important;
-        aspect-ratio: 16 / 7 !important;
+        aspect-ratio: 3 / 1 !important;
         border-radius: 18px !important;
-        background: #09090b !important;
+        background: #050507 !important;
     }
 
     .home-ad-media {
-        inset: 0 !important;
+        inset: 10px !important;
         border-radius: inherit !important;
         overflow: hidden !important;
     }
 
     .home-ad-media img {
-        object-fit: cover !important;
+        object-fit: contain !important;
         object-position: center center !important;
         opacity: .98 !important;
     }
@@ -12007,8 +12007,8 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
 
     .home-ad-content {
         position: absolute !important;
-        left: 18px !important;
-        bottom: 18px !important;
+        left: 34px !important;
+        bottom: 34px !important;
         padding: 0 !important;
         align-self: auto !important;
     }
@@ -12017,5 +12017,39 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         min-height: 48px !important;
         padding: 12px 22px !important;
         border-radius: 13px !important;
+    }
+
+    .collection-section {
+        padding-top: 18px !important;
+    }
+
+    .collection-section > .section-header {
+        width: 100% !important;
+        padding-inline: 16px !important;
+        margin-bottom: 18px !important;
+        gap: 14px !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+    }
+
+    .collection-section > .section-header > div {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .collection-section .smart-search,
+    .collection-section .smart-search input,
+    .collection-section .catalog-filter-bar,
+    .collection-section .category-select-wrap,
+    .collection-section .price-slider-wrap {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    .collection-section .catalog-filter-bar {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        justify-content: stretch !important;
     }
 }
