@@ -12052,4 +12052,33 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         grid-template-columns: 1fr !important;
         justify-content: stretch !important;
     }
+
+    .image-marquee {
+        --marquee-half-gap: 7px;
+        animation: scroll-marquee-mobile 14s linear infinite !important;
+        animation-play-state: running !important;
+        transform: translate3d(0, 0, 0);
+        backface-visibility: hidden;
+    }
+
+    .image-marquee:hover {
+        animation-play-state: running !important;
+    }
+
+    .home-ad-button {
+        min-height: 38px !important;
+        padding: 8px 16px !important;
+        border-radius: 11px !important;
+        font-size: 13px !important;
+    }
+}
+
+@keyframes scroll-marquee-mobile {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(calc(-50% - var(--marquee-half-gap, 7px)), 0, 0);
+    }
 }
