@@ -124,317 +124,6 @@ function initParticles() {
     })();
 }
 
-// -- WHOLESALE PARTICLES LEGACY --
-function initWholesaleParticlesLegacy() {
-    const canvas = document.getElementById('wholesale-particles');
-    if (!canvas) return;
-    canvas.remove();
-    return;
-    
-    // Configurar estilos del canvas dinámicamente
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.zIndex = '1';
-    canvas.style.pointerEvents = 'none';
-
-    const ctx = canvas.getContext('2d');
-    let width, height;
-    let particles = [];
-    let animationId = null;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    
-    const mouse = { x: -9999, y: -9999, active: false };
-    
-    const overlay = canvas.closest('.wholesale-overlay') || document.getElementById('wholesale-overlay') || document.getElementById('qr-login-overlay');
-
-    function hexToRgba(hex, alpha) {
-        const clean = String(hex || '#ffffff').replace('#', '');
-        const value = parseInt(clean.length === 3
-            ? clean.split('').map(char => char + char).join('')
-            : clean, 16);
-        const r = (value >> 16) & 255;
-        const g = (value >> 8) & 255;
-        const b = value & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    if(overlay) {
-        overlay.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouse.x = e.clientX - rect.left;
-            mouse.y = e.clientY - rect.top;
-            mouse.active = true;
-        });
-        overlay.addEventListener('mouseleave', () => { mouse.active = false; });
-        overlay.addEventListener('touchmove', (e) => {
-            if(e.touches.length > 0) {
-                const rect = canvas.getBoundingClientRect();
-                mouse.x = e.touches[0].clientX - rect.left;
-                mouse.y = e.touches[0].clientY - rect.top;
-                mouse.active = true;
-            }
-        });
-        overlay.addEventListener('touchend', () => { mouse.active = false; });
-    }
-
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        initNodes();
-    }
-
-    function initNodes() {
-        particles = [];
-        const isMobile = window.innerWidth < 768;
-        const count = isMobile ? 50 : 120; // Menos partículas en móvil por rendimiento
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 1.5,
-                vy: (Math.random() - 0.5) * 1.5,
-                radius: Math.random() * 2 + 1,
-                color: Math.random() > 0.5 ? '#a855f7' : '#3b82f6' // Tonos morados y azules (Antigravity vibe)
-            });
-        }
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    function draw() {
-        // Overlay semitransparente para efecto de estela (trail effect)
-        ctx.fillStyle = 'rgba(10, 2, 20, 0.35)';
-        ctx.fillRect(0, 0, width, height);
-
-        const connectionDistance = 120;
-        const mouseConnectionDistance = 180;
-
-        for (let i = 0; i < particles.length; i++) {
-            let p = particles[i];
-
-            // Movimiento
-            p.x += p.vx;
-            p.y += p.vy;
-
-            // Rebote en bordes
-            if (p.x < 0 || p.x > width) p.vx *= -1;
-            if (p.y < 0 || p.y > height) p.vy *= -1;
-
-            // Interacción con mouse
-            if (mouse.active) {
-                const dx = mouse.x - p.x;
-                const dy = mouse.y - p.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < mouseConnectionDistance) {
-                    // Atracción suave al mouse
-                    p.x += dx * 0.015;
-                    p.y += dy * 0.015;
-
-                    // Dibujar conexión con mouse
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(mouse.x, mouse.y);
-                    const opacity = 1 - (dist / mouseConnectionDistance);
-                    ctx.strokeStyle = `rgba(59, 130, 246, ${opacity * 0.5})`; // Azul brillante
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-
-            // Dibujar conexiones entre partículas
-            for (let j = i + 1; j < particles.length; j++) {
-                let p2 = particles[j];
-                const dx = p.x - p2.x;
-                const dy = p.y - p2.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < connectionDistance) {
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    const opacity = 1 - (dist / connectionDistance);
-                    ctx.strokeStyle = `rgba(168, 85, 247, ${opacity * 0.3})`; // Morado sutil
-                    ctx.lineWidth = 0.8;
-                    ctx.stroke();
-                }
-            }
-
-            // Dibujar partícula
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = p.color;
-            ctx.fill();
-            ctx.shadowBlur = 0; // reset
-        }
-
-        // Si el modal está visible, animamos, sino nos saltamos frames o seguimos lento (usamos requestAnimationFrame siempre)
-        requestAnimationFrame(draw);
-    }
-
-    draw();
-}
-
-function initWholesaleParticles() {
-    const canvas = document.getElementById('wholesale-particles');
-    if (!canvas) return;
-
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.zIndex = '1';
-    canvas.style.pointerEvents = 'none';
-
-    const ctx = canvas.getContext('2d');
-    let width = 0;
-    let height = 0;
-    let drops = [];
-    let animationId = null;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const overlay = canvas.closest('.wholesale-overlay') || document.getElementById('qr-login-overlay') || document.getElementById('wholesale-overlay');
-    const mouse = { x: -9999, y: -9999, active: false };
-
-    function hexToRgba(hex, alpha) {
-        const clean = String(hex || '#ffffff').replace('#', '');
-        const value = parseInt(clean.length === 3 ? clean.split('').map(char => char + char).join('') : clean, 16);
-        const r = (value >> 16) & 255;
-        const g = (value >> 8) & 255;
-        const b = value & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    function setPointer(e) {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = e.clientX - rect.left;
-        mouse.y = e.clientY - rect.top;
-        mouse.active = true;
-    }
-
-    overlay?.addEventListener('mousemove', setPointer);
-    overlay?.addEventListener('mouseleave', () => { mouse.active = false; });
-    overlay?.addEventListener('touchmove', (e) => {
-        if (!e.touches.length) return;
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = e.touches[0].clientX - rect.left;
-        mouse.y = e.touches[0].clientY - rect.top;
-        mouse.active = true;
-    }, { passive: true });
-    overlay?.addEventListener('touchend', () => { mouse.active = false; });
-
-    function resetDrops() {
-        drops = [];
-        if (reduceMotion) return;
-        const isMobile = window.innerWidth < 768;
-        const count = isMobile ? 28 : 54;
-        const palette = ['#f4c441', '#a855f7', '#22d3ee', '#ffffff'];
-
-        for (let i = 0; i < count; i++) {
-            drops.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 0.45,
-                vy: 1.4 + Math.random() * (isMobile ? 2.2 : 3.4),
-                radius: Math.random() * 1.7 + 0.8,
-                length: 22 + Math.random() * 60,
-                alpha: 0.32 + Math.random() * 0.48,
-                color: palette[Math.floor(Math.random() * palette.length)]
-            });
-        }
-    }
-
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        resetDrops();
-    }
-
-    function draw() {
-        const isHidden = overlay && (overlay.getAttribute('aria-hidden') === 'true' || overlay.style.display === 'none') && !overlay.classList.contains('open');
-        if (isHidden) {
-            animationId = null;
-            return;
-        }
-
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = 'rgba(4, 1, 10, 0.22)';
-        ctx.fillRect(0, 0, width, height);
-
-        for (const drop of drops) {
-            drop.x += drop.vx;
-            drop.y += drop.vy;
-
-            if (drop.y > height + drop.length) {
-                drop.y = -drop.length;
-                drop.x = Math.random() * width;
-                drop.vy = 1.4 + Math.random() * (window.innerWidth < 768 ? 2.2 : 3.4);
-            }
-            if (drop.x < -30) drop.x = width + 30;
-            if (drop.x > width + 30) drop.x = -30;
-
-            if (mouse.active) {
-                const dx = mouse.x - drop.x;
-                const dy = mouse.y - drop.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                if (distance < 180) {
-                    drop.x += dx * 0.006;
-                    ctx.beginPath();
-                    ctx.moveTo(drop.x, drop.y);
-                    ctx.lineTo(mouse.x, mouse.y);
-                    ctx.strokeStyle = `rgba(244, 196, 65, ${(1 - distance / 180) * 0.26})`;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-
-            const gradient = ctx.createLinearGradient(drop.x, drop.y - drop.length, drop.x, drop.y);
-            gradient.addColorStop(0, 'rgba(255,255,255,0)');
-            gradient.addColorStop(1, hexToRgba(drop.color, drop.alpha));
-
-            ctx.beginPath();
-            ctx.moveTo(drop.x, drop.y - drop.length);
-            ctx.lineTo(drop.x + drop.vx * 12, drop.y);
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = drop.radius;
-            ctx.lineCap = 'round';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = drop.color;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
-            ctx.fillStyle = hexToRgba(drop.color, Math.min(0.9, drop.alpha + 0.18));
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = drop.color;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-
-        animationId = requestAnimationFrame(draw);
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    if (!reduceMotion) {
-        draw();
-    }
-
-    window.startWholesaleParticles = function () {
-        if (!reduceMotion && !animationId) draw();
-    };
-
-    window.stopWholesaleParticles = function () {
-        if (animationId) cancelAnimationFrame(animationId);
-        animationId = null;
-        window.removeEventListener('resize', resize);
-    };
-}
-
 // -- NAVBAR --
 function initNavbar() {
     const navbar = document.getElementById('navbar');
@@ -747,6 +436,7 @@ function renderIndexInstantShell() {
                 document.getElementById('coleccion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         });
+        initHomeCategoryRing(categoryTrack);
     }
 
     const marquee = document.getElementById('image-marquee-container');
@@ -1600,6 +1290,146 @@ function getNewestProductsForMarquee(products, limit = 15) {
     return Array.from(uniqueByGeneralReference.values()).slice(0, limit);
 }
 
+function initHomeCategoryRing(track = document.getElementById('home-category-track')) {
+    if (!track) return null;
+    const items = Array.from(track.querySelectorAll('.home-category-pill'));
+    if (track._homeCategoryRing?.destroy) track._homeCategoryRing.destroy();
+    track._homeCategoryRing = null;
+
+    if (items.length <= 1) {
+        items.forEach(item => {
+            item.style.transform = '';
+            item.style.opacity = '';
+            item.style.zIndex = '';
+        });
+        track.classList.remove('is-dragging');
+        return null;
+    }
+
+    let rotation = 0;
+    let targetRotation = 0;
+    let velocity = 0;
+    let rafId = 0;
+    let isDragging = false;
+    let startX = 0;
+    let lastX = 0;
+    let moved = 0;
+    const step = 360 / items.length;
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const getSpacing = () => {
+        const itemWidth = items[0]?.offsetWidth || 150;
+        return clamp(itemWidth + 14, 146, 218);
+    };
+
+    const layout = () => {
+        const spacing = getSpacing();
+        let activeIndex = 0;
+        let activeDistance = Infinity;
+
+        items.forEach((item, index) => {
+            const wrappedAngle = ((rotation + (index * step) + 540) % 360) - 180;
+            const offset = wrappedAngle / step;
+            const distance = Math.abs(offset);
+            const x = offset * spacing;
+            const scale = Math.max(0.84, 1 - (distance * 0.045));
+            const opacity = distance > 3.45 ? 0 : Math.max(0.46, 1 - (distance * 0.13));
+
+            if (distance < activeDistance) {
+                activeDistance = distance;
+                activeIndex = index;
+            }
+
+            item.style.transform = `translate(-50%, -50%) translateX(${x.toFixed(2)}px) scale(${scale.toFixed(3)})`;
+            item.style.opacity = opacity.toFixed(3);
+            item.style.zIndex = String(Math.round(100 - (distance * 10)));
+        });
+
+        items.forEach((item, index) => item.classList.toggle('is-ring-front', index === activeIndex));
+    };
+
+    const animate = () => {
+        rotation += (targetRotation - rotation) * 0.12;
+        if (!isDragging) {
+            targetRotation += velocity;
+            velocity *= 0.94;
+            if (Math.abs(velocity) < 0.01) velocity = 0;
+        }
+        layout();
+        rafId = requestAnimationFrame(animate);
+    };
+
+    const onPointerDown = (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        isDragging = true;
+        moved = 0;
+        startX = event.clientX;
+        lastX = event.clientX;
+        velocity = 0;
+        track.classList.add('is-dragging');
+        track.setPointerCapture?.(event.pointerId);
+    };
+
+    const onPointerMove = (event) => {
+        if (!isDragging) return;
+        const delta = event.clientX - lastX;
+        moved += Math.abs(delta);
+        targetRotation += delta * 0.18;
+        velocity = delta * 0.04;
+        lastX = event.clientX;
+    };
+
+    const onPointerUp = (event) => {
+        if (!isDragging) return;
+        isDragging = false;
+        track.classList.remove('is-dragging');
+        track.releasePointerCapture?.(event.pointerId);
+        if (Math.abs(event.clientX - startX) < 4) velocity = 0;
+    };
+
+    const onClickCapture = (event) => {
+        if (moved > 9) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        moved = 0;
+    };
+
+    const onResize = () => layout();
+
+    track.addEventListener('pointerdown', onPointerDown);
+    track.addEventListener('pointermove', onPointerMove);
+    track.addEventListener('pointerup', onPointerUp);
+    track.addEventListener('pointercancel', onPointerUp);
+    track.addEventListener('click', onClickCapture, true);
+    window.addEventListener('resize', onResize);
+
+    layout();
+    rafId = requestAnimationFrame(animate);
+
+    const api = {
+        goTo(index) {
+            const desired = -index * step;
+            const diff = ((desired - targetRotation + 540) % 360) - 180;
+            targetRotation += diff;
+            velocity = 0;
+        },
+        destroy() {
+            cancelAnimationFrame(rafId);
+            track.removeEventListener('pointerdown', onPointerDown);
+            track.removeEventListener('pointermove', onPointerMove);
+            track.removeEventListener('pointerup', onPointerUp);
+            track.removeEventListener('pointercancel', onPointerUp);
+            track.removeEventListener('click', onClickCapture, true);
+            window.removeEventListener('resize', onResize);
+            track.classList.remove('is-dragging');
+        }
+    };
+
+    track._homeCategoryRing = api;
+    return api;
+}
+
 function renderHomeCategories() {
     const track = document.getElementById('home-category-track');
     if (!track) return;
@@ -1627,6 +1457,7 @@ function renderHomeCategories() {
     if (!categories.length) {
         track.innerHTML = '<a class="home-category-pill" href="#coleccion">Catalogo</a>';
         track.classList.add('is-centered');
+        initHomeCategoryRing(track);
         return;
     }
 
@@ -1659,16 +1490,21 @@ function renderHomeCategories() {
         });
     });
 
+    initHomeCategoryRing(track);
     if (buttons.length <= 1) return;
 
     const goToCategory = (nextIndex) => {
         if (!buttons.length || track.matches(':hover')) return;
         currentIndex = nextIndex % buttons.length;
         const nextButton = buttons[currentIndex];
-        track.scrollTo({
-            left: Math.max(0, nextButton.offsetLeft - 12),
-            behavior: 'smooth'
-        });
+        if (track._homeCategoryRing?.goTo) {
+            track._homeCategoryRing.goTo(currentIndex);
+        } else {
+            track.scrollTo({
+                left: Math.max(0, nextButton.offsetLeft - 12),
+                behavior: 'smooth'
+            });
+        }
     };
 
     const configuredSeconds = parseFloat(getSiteConfigValue('Home_Category_Seconds', '3.2'));
@@ -4092,7 +3928,6 @@ function initWholesaleAccess() {
     const submitText = submitBtn?.textContent || '';
 
     let isModalHistoryPushed = false;
-    let wholesaleParticlesStarted = false;
     let isUnlocking = false;
 
     function setUnlockingState(unlocking) {
@@ -4101,7 +3936,7 @@ function initWholesaleAccess() {
         if (input) input.disabled = unlocking;
         if (submitBtn) {
             submitBtn.disabled = unlocking;
-            submitBtn.textContent = unlocking ? 'Abriendo catalogo...' : submitText;
+            submitBtn.textContent = unlocking ? 'Validando...' : submitText;
         }
         if (closeBtn) closeBtn.disabled = unlocking;
         if (backBtn) backBtn.disabled = unlocking;
@@ -4122,12 +3957,6 @@ function initWholesaleAccess() {
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
-            if (!wholesaleParticlesStarted) {
-                wholesaleParticlesStarted = true;
-                initWholesaleParticles();
-            } else if (typeof window.startWholesaleParticles === 'function') {
-                window.startWholesaleParticles();
-            }
             if (input) setTimeout(() => input.focus(), 80);
 
             if (window.history && window.history.pushState) {
@@ -4429,8 +4258,8 @@ function initCustomCursor() {
     let ringY = y;
 
     function move() {
-        ringX += (x - ringX) * 0.2;
-        ringY += (y - ringY) * 0.2;
+        ringX += (x - ringX) * 0.42;
+        ringY += (y - ringY) * 0.42;
         cursor.style.setProperty('--cursor-x', `${x}px`);
         cursor.style.setProperty('--cursor-y', `${y}px`);
         cursor.style.setProperty('--ring-x', `${ringX}px`);
@@ -5649,8 +5478,89 @@ async function checkout(skipPrompt = false) {
     }
 }
 
+function initLoginBokehBackgrounds() {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
+        if (canvas.dataset.ready === 'login-bokeh') return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.dataset.ready = 'login-bokeh';
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const lights = [];
+        const count = 15;
+        let width = 0;
+        let height = 0;
+        let dpr = 1;
+
+        function makeLight() {
+            const size = Math.random() * 170 + 120;
+            return {
+                size,
+                x: Math.random() * width,
+                y: Math.random() * height,
+                hue: 246 + Math.random() * 46,
+                sat: 58 + Math.random() * 28,
+                light: 26 + Math.random() * 22,
+                alpha: .18 + Math.random() * .16,
+                speed: .18 + Math.random() * .28,
+                angleX: Math.random() * Math.PI * 2,
+                angleY: Math.random() * Math.PI * 2
+            };
+        }
+
+        function resize() {
+            const rect = canvas.parentElement?.getBoundingClientRect();
+            width = Math.max(320, rect?.width || window.innerWidth);
+            height = Math.max(420, rect?.height || window.innerHeight);
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if (!lights.length) {
+                for (let i = 0; i < count; i += 1) lights.push(makeLight());
+            }
+        }
+
+        function drawLight(light) {
+            const gradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.size);
+            gradient.addColorStop(0, `hsla(${light.hue}, ${light.sat}%, ${light.light + 28}%, ${light.alpha})`);
+            gradient.addColorStop(.45, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, ${light.alpha * .62})`);
+            gradient.addColorStop(1, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, 0)`);
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(light.x, light.y, light.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function tick() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'lighter';
+            lights.forEach(light => {
+                drawLight(light);
+                if (!reduceMotion) {
+                    light.x += Math.cos(light.angleX) * light.speed;
+                    light.y += Math.sin(light.angleY) * light.speed;
+                    light.angleX += .0022;
+                    light.angleY += .0017;
+                    if (light.x < -light.size) light.x = width + light.size;
+                    if (light.x > width + light.size) light.x = -light.size;
+                    if (light.y < -light.size) light.y = height + light.size;
+                    if (light.y > height + light.size) light.y = -light.size;
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+            if (!reduceMotion) requestAnimationFrame(tick);
+        }
+
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        tick();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     cleanBrowserUrl();
+    initLoginBokehBackgrounds();
     window.addEventListener('hashchange', cleanBrowserUrl);
     hideBrandLoader();
     window.addEventListener('pageshow', () => {

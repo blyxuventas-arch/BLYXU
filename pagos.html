@@ -8,8 +8,8 @@
     <meta name="description" content="Página de pagos por QR de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="preload" href="blyxu-style.css?v=contact-scale-final-20260920" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=contact-scale-final-20260920"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=login-flat-carousel-20260921" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=login-flat-carousel-20260921"></noscript>
     <style>
         /* Estilos específicos para la página de Pagos QR */
         .qr-page-section {
@@ -298,14 +298,14 @@
 
     <!-- Overlay de Login -->
     <div class="wholesale-overlay open" id="qr-login-overlay" style="opacity: 1; pointer-events: auto; display: flex; z-index: 1000;">
-        <canvas id="wholesale-particles" class="wholesale-particles-canvas"></canvas>
+        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
         <div class="wholesale-panel">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">ZONA SEGURA</div>
             <h2 id="qr-title">ZONA DE PAGOS</h2>
             <form class="wholesale-form" id="qr-login-form">
-                <input type="password" id="qr-password-input" placeholder="Clave de acceso" autocomplete="off" required>
-                <button type="submit">Acceder a Pagos</button>
+                <input type="password" id="qr-password-input" placeholder="Clave" autocomplete="off" required>
+                <button type="submit">Validar</button>
             </form>
             <div class="wholesale-error" id="qr-error-msg" style="display:none;">Contraseña incorrecta</div>
         </div>
@@ -399,13 +399,14 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=cursor-quick-20260918"></script>
+    <script src="blyxu-lite.js?v=login-flat-carousel-20260921"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('qr-login-form');
             const input = document.getElementById('qr-password-input');
             const errorMsg = document.getElementById('qr-error-msg');
             const overlay = document.getElementById('qr-login-overlay');
+            const panel = overlay?.querySelector('.wholesale-panel');
             const card = document.getElementById('qr-card-content');
             const loading = document.getElementById('qr-loading');
 
@@ -593,16 +594,14 @@
                 const btn = form.querySelector('button');
                 const originalText = btn ? btn.textContent : '';
                 if (btn) {
-                    btn.textContent = 'Verificando...';
+                    btn.textContent = 'Validando...';
                     btn.disabled = true;
                 }
+                panel?.classList.add('is-unlocking');
                 try {
                     await refreshPaymentConfig();
-                } finally {
-                    if (btn) {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                    }
+                } catch (error) {
+                    console.warn('No se pudo refrescar configuracion de pagos:', error);
                 }
 
                 const expectedPass = String(getSiteConfigValue('QR_Password', '')).trim();
@@ -611,6 +610,11 @@
                 if (!expectedPass) {
                     errorMsg.textContent = 'El administrador no ha configurado una contraseña.';
                     errorMsg.style.display = 'block';
+                    panel?.classList.remove('is-unlocking');
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                     return;
                 }
 
@@ -623,6 +627,11 @@
                 } else {
                     errorMsg.textContent = 'Contraseña incorrecta';
                     errorMsg.style.display = 'block';
+                    panel?.classList.remove('is-unlocking');
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                 }
             });
         });

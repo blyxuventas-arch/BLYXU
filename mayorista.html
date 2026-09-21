@@ -13,8 +13,8 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/mayorista.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="preload" href="blyxu-style.css?v=wholesale-nebula-gray-20260920" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=wholesale-nebula-gray-20260920"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=login-flat-carousel-20260921" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=login-flat-carousel-20260921"></noscript>
 </head>
 
 <body data-catalog-mode="wholesale">
@@ -187,16 +187,16 @@
 
     <!-- ===== WHOLESALE ACCESS OVERLAY ===== -->
     <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
-        <canvas id="wholesale-particles" class="wholesale-particles-canvas"></canvas>
+        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
         <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
             <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">✕</button>
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">Área Exclusiva</div>
             <h2 id="wholesale-title">Mayoristas BLYXU</h2>
             <form class="wholesale-form" id="wholesale-form">
-                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave de acceso" autocomplete="off"
+                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave" autocomplete="off"
                     required>
-                <button type="submit">Desbloquear Catálogo Mayorista</button>
+                <button type="submit">Validar</button>
             </form>
             <button type="button" class="wholesale-back-home" id="wholesale-back-btn">← Volver al inicio</button>
             <div class="wholesale-error" id="wholesale-error">Clave de acceso incorrecta</div>
@@ -213,7 +213,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=mayorista-footer-account-20260920"></script>
+    <script src="blyxu-app.js?v=login-flat-carousel-20260921"></script>
 </body>
 
 </html>

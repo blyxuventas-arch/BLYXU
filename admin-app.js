@@ -2379,138 +2379,6 @@ function initAdminCustomCursor() {
     move();
 }
 
-// -- ADMIN LOGIN PARTICLES --
-function initAdminParticles() {
-    const canvas = document.getElementById('admin-particles');
-    if (!canvas) return;
-    if (window.matchMedia('(max-width: 760px), (prefers-reduced-motion: reduce)').matches) {
-        canvas.remove();
-        window.stopAdminParticles = function () {};
-        return;
-    }
-    
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.zIndex = '0';
-    canvas.style.pointerEvents = 'none';
-
-    const ctx = canvas.getContext('2d');
-    let width, height;
-    let particles = [];
-    let animationId = null;
-    let running = true;
-    const reduceMotion = false;
-    let lastDrawAt = 0;
-    
-    function hexToRgba(hex, alpha) {
-        const clean = String(hex || '#ffffff').replace('#', '');
-        const value = parseInt(clean.length === 3
-            ? clean.split('').map(char => char + char).join('')
-            : clean, 16);
-        const r = (value >> 16) & 255;
-        const g = (value >> 8) & 255;
-        const b = value & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    
-    const loginScreen = document.getElementById('admin-login-screen');
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        initNodes();
-    }
-
-    function initNodes() {
-        particles = [];
-        const isMobile = window.innerWidth < 768;
-        const count = isMobile ? 0 : 34;
-        const palette = ['#f4c441', '#a855f7', '#22d3ee', '#ffffff'];
-        for (let i = 0; i < count; i++) {
-            particles.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 0.45,
-                vy: 1 + Math.random() * 1.6,
-                radius: Math.random() * 1.15 + 0.55,
-                length: 18 + Math.random() * 42,
-                alpha: 0.22 + Math.random() * 0.34,
-                color: palette[Math.floor(Math.random() * palette.length)]
-            });
-        }
-    }
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    function draw() {
-        if (!running || !loginScreen || loginScreen.style.display === 'none') {
-            running = false;
-            return;
-        }
-
-        const now = performance.now();
-        if (now - lastDrawAt < 33) {
-            animationId = requestAnimationFrame(draw);
-            return;
-        }
-        lastDrawAt = now;
-
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = 'rgba(4, 1, 10, 0.22)';
-        ctx.fillRect(0, 0, width, height);
-
-        for (let i = 0; i < particles.length; i++) {
-            let p = particles[i];
-
-            p.x += p.vx;
-            p.y += p.vy;
-
-            if (p.y > height + p.length) {
-                p.y = -p.length;
-                p.x = Math.random() * width;
-                p.vy = 1.4 + Math.random() * 3.4;
-            }
-            if (p.x < -30) p.x = width + 30;
-            if (p.x > width + 30) p.x = -30;
-
-            const gradient = ctx.createLinearGradient(p.x, p.y - p.length, p.x, p.y);
-            gradient.addColorStop(0, 'rgba(255,255,255,0)');
-            gradient.addColorStop(1, hexToRgba(p.color, p.alpha));
-
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y - p.length);
-            ctx.lineTo(p.x + p.vx * 12, p.y);
-            ctx.strokeStyle = gradient;
-            ctx.lineWidth = p.radius;
-            ctx.lineCap = 'round';
-            ctx.shadowBlur = 4;
-            ctx.shadowColor = p.color;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-            ctx.fillStyle = hexToRgba(p.color, Math.min(0.9, p.alpha + 0.18));
-            ctx.shadowBlur = 3;
-            ctx.shadowColor = p.color;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-
-        animationId = requestAnimationFrame(draw);
-    }
-
-    window.stopAdminParticles = function () {
-        running = false;
-        if (animationId) cancelAnimationFrame(animationId);
-        window.removeEventListener('resize', resize);
-    };
-
-    if (reduceMotion) return;
-    draw();
-}
-
 function initSettingsTabs() {
     const panel = document.querySelector('#view-settings > .admin-panel');
     if (!panel || panel.querySelector('.settings-tabs')) return;
@@ -2664,18 +2532,89 @@ function initSettingsTabs() {
     activateSettingsTab(savedTab || sections[0].id);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    const startLoginEffects = () => {
-        if (document.getElementById('admin-login-screen')?.style.display !== 'none') {
-            initAdminParticles();
+function initLoginBokehBackgrounds() {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
+        if (canvas.dataset.ready === 'login-bokeh') return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.dataset.ready = 'login-bokeh';
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const lights = [];
+        const count = 15;
+        let width = 0;
+        let height = 0;
+        let dpr = 1;
+
+        function makeLight() {
+            const size = Math.random() * 170 + 120;
+            return {
+                size,
+                x: Math.random() * width,
+                y: Math.random() * height,
+                hue: 246 + Math.random() * 46,
+                sat: 58 + Math.random() * 28,
+                light: 26 + Math.random() * 22,
+                alpha: .18 + Math.random() * .16,
+                speed: .18 + Math.random() * .28,
+                angleX: Math.random() * Math.PI * 2,
+                angleY: Math.random() * Math.PI * 2
+            };
         }
-    };
-    if ('requestIdleCallback' in window) {
-        requestIdleCallback(startLoginEffects, { timeout: 900 });
-    } else {
-        setTimeout(startLoginEffects, 450);
-    }
+
+        function resize() {
+            const rect = canvas.parentElement?.getBoundingClientRect();
+            width = Math.max(320, rect?.width || window.innerWidth);
+            height = Math.max(420, rect?.height || window.innerHeight);
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if (!lights.length) {
+                for (let i = 0; i < count; i += 1) lights.push(makeLight());
+            }
+        }
+
+        function drawLight(light) {
+            const gradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.size);
+            gradient.addColorStop(0, `hsla(${light.hue}, ${light.sat}%, ${light.light + 28}%, ${light.alpha})`);
+            gradient.addColorStop(.45, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, ${light.alpha * .62})`);
+            gradient.addColorStop(1, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, 0)`);
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(light.x, light.y, light.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function tick() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'lighter';
+            lights.forEach(light => {
+                drawLight(light);
+                if (!reduceMotion) {
+                    light.x += Math.cos(light.angleX) * light.speed;
+                    light.y += Math.sin(light.angleY) * light.speed;
+                    light.angleX += .0022;
+                    light.angleY += .0017;
+                    if (light.x < -light.size) light.x = width + light.size;
+                    if (light.x > width + light.size) light.x = -light.size;
+                    if (light.y < -light.size) light.y = height + light.size;
+                    if (light.y > height + light.size) light.y = -light.size;
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+            if (!reduceMotion) requestAnimationFrame(tick);
+        }
+
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        tick();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
+    initLoginBokehBackgrounds();
     const settingsSidebarBtn = document.querySelector('.sidebar-btn[onclick*="settings"]');
     if (settingsSidebarBtn) {
         settingsSidebarBtn.innerHTML = '<span style="font-size:18px; width:24px;">&#9881;</span> Ajustes y Banner';
@@ -2703,9 +2642,9 @@ document.addEventListener('DOMContentLoaded', () => {
     initProductBarcodeField();
     resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
-    if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave de acceso';
+    if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave';
     const adminLoginButton = document.querySelector('#admin-login-form .admin-btn');
-    if (adminLoginButton) adminLoginButton.textContent = 'Autenticar';
+    if (adminLoginButton) adminLoginButton.textContent = 'Validar';
 
     // Delegación de eventos para drag & drop en variantes dinámicas
     document.addEventListener('dragover', (e) => {
@@ -2797,49 +2736,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const pass = document.getElementById('admin-password').value;
+            const passwordInput = document.getElementById('admin-password');
+            const loginBox = document.getElementById('login-box');
+            const submitButton = loginForm.querySelector('.admin-btn');
+            const pass = passwordInput.value;
+            const resetButton = () => {
+                loginBox?.classList.remove('is-unlocking');
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Validar';
+                }
+            };
+
+            loginBox?.classList.add('is-unlocking');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Validando...';
+            }
 
             if (pass === '2015690') {
                 loginError.style.display = 'none';
-                loginForm.style.display = 'none';
-
-                const loader = document.getElementById('login-loader');
-                const loaderBar = document.getElementById('login-loader-bar');
-                const loaderText = document.getElementById('login-loader-text');
-
-                loader.style.display = 'block';
-                loaderText.style.display = 'block';
-
-                let progress = 0;
-                const loaderStart = Date.now();
-                const loaderMinDuration = 850;
-                const interval = setInterval(() => {
-                    const elapsed = Date.now() - loaderStart;
-                    const timeProgress = Math.min(96, (elapsed / loaderMinDuration) * 96);
-                    const pulse = Math.sin(elapsed / 120) * 1.2;
-                    progress = Math.max(progress, Math.min(96, timeProgress + pulse));
-                    loaderBar.style.width = progress.toFixed(1) + '%';
-
-                    if (elapsed >= loaderMinDuration) {
-                        clearInterval(interval);
-                        loaderBar.style.width = '100%';
-                        setTimeout(() => {
-                            loginScreen.style.opacity = '0';
-                            setTimeout(() => {
-                                loginScreen.style.display = 'none';
-                                if (typeof window.stopAdminParticles === 'function') window.stopAdminParticles();
-                                mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
-                                renderAdminDashboard();
-                                Promise.allSettled([
-                                    cargarInventario(),
-                                    cargarPedidos()
-                                ]).then(() => renderAdminDashboard());
-                            }, 180);
-                        }, 120);
-                    }
-                }, 55);
+                setTimeout(() => {
+                    loginScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loginScreen.style.display = 'none';
+                        mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
+                        renderAdminDashboard();
+                        Promise.allSettled([
+                            cargarInventario(),
+                            cargarPedidos()
+                        ]).then(() => renderAdminDashboard());
+                    }, 180);
+                }, 850);
             } else {
                 loginError.style.display = 'block';
+                resetButton();
                 // Shake effect
                 document.getElementById('login-box').style.transform = 'translateX(10px)';
                 setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(-10px)', 100);

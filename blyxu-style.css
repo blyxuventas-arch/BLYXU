@@ -3880,7 +3880,7 @@ body[data-catalog-mode="wholesale"] .loading-text {
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(10, 2, 20, .85);
+    background: #08080a;
     backdrop-filter: blur(18px);
     opacity: 0;
     pointer-events: none;
@@ -3898,8 +3898,8 @@ body[data-catalog-mode="wholesale"] .loading-text {
     padding: 34px;
     border: 1px solid var(--glass-border);
     border-radius: 24px;
-    background: linear-gradient(145deg, rgba(17, 10, 32, .96), rgba(34, 16, 64, .94));
-    box-shadow: 0 24px 80px rgba(0, 0, 0, .55), 0 0 40px rgba(155, 44, 250, .18);
+    background: rgba(15, 15, 18, .94);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .06);
     text-align: center;
     transform: translateY(18px) scale(.98);
     transition: transform .3s ease;
@@ -4018,48 +4018,28 @@ body[data-catalog-mode="wholesale"] .loading-text {
     color: #f4c441;
 }
 
-/* Vault-style access panels */
+/* Flat access panels */
 .wholesale-overlay {
     overflow: hidden;
     isolation: isolate;
-    background:
-        radial-gradient(circle at 50% 18%, rgba(168, 85, 247, .18), transparent 30%),
-        linear-gradient(180deg, #07020f 0%, #100620 46%, #030108 100%);
+    background: #08080a;
+    background-image: none;
 }
 
 .wholesale-overlay::before,
 .wholesale-overlay::after {
-    content: '';
-    position: absolute;
-    inset: -12%;
-    z-index: 0;
-    pointer-events: none;
+    content: none;
+    display: none;
 }
 
 .wholesale-overlay::before {
-    background: linear-gradient(115deg, transparent 0 34%, rgba(244, 196, 65, .08) 42%, transparent 52% 100%);
-    transform: translateX(-18%);
-    animation: wholesaleLightSweep 9s ease-in-out infinite;
+    background: none;
+    animation: none;
 }
 
 .wholesale-overlay::after {
-    background-image:
-        radial-gradient(circle, rgba(244, 196, 65, .28) 0 1px, transparent 1.8px),
-        radial-gradient(circle, rgba(168, 85, 247, .24) 0 1px, transparent 1.7px),
-        linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px);
-    background-size: 120px 120px, 170px 170px, 100% 44px;
-    background-position: 0 0, 42px 18px, 0 0;
-    opacity: .55;
-    animation: wholesaleRainTexture 16s linear infinite;
-}
-
-.wholesale-particles-canvas {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    background: none;
+    animation: none;
 }
 
 .wholesale-panel {
@@ -4067,14 +4047,9 @@ body[data-catalog-mode="wholesale"] .loading-text {
     width: min(410px, 100%);
     padding: 38px 42px 34px;
     border-radius: 18px;
-    border: 1px solid rgba(244, 196, 65, .18);
-    background:
-        radial-gradient(circle at 50% -12%, rgba(244, 196, 65, .12), transparent 34%),
-        linear-gradient(180deg, rgba(26, 18, 38, .94), rgba(14, 8, 24, .96));
-    box-shadow:
-        0 34px 92px rgba(0, 0, 0, .74),
-        0 0 44px rgba(155, 44, 250, .18),
-        inset 0 1px 0 rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(15, 15, 18, .94);
+    box-shadow: 0 34px 92px rgba(0, 0, 0, .64), inset 0 1px 0 rgba(255, 255, 255, .06);
     overflow: hidden;
 }
 
@@ -4090,9 +4065,9 @@ body[data-catalog-mode="wholesale"] .loading-text {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(244, 196, 65, 0.25);
+    border: 1px solid rgba(255, 255, 255, .14);
     background: rgba(255, 255, 255, 0.05);
-    color: #f4c441;
+    color: rgba(255, 255, 255, .72);
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -4103,7 +4078,7 @@ body[data-catalog-mode="wholesale"] .loading-text {
 }
 
 .wholesale-close:hover {
-    background: rgba(244, 196, 65, 0.15);
+    background: rgba(255, 255, 255, .1);
     transform: scale(1.1);
     color: #ffffff;
 }
@@ -4116,12 +4091,12 @@ body[data-catalog-mode="wholesale"] .loading-text {
     font-size: 30px;
     font-weight: 800;
     letter-spacing: 1px;
-    text-shadow: 2px 0 #a855f7, -2px 0 #f4c441, 0 12px 28px rgba(0, 0, 0, .45);
+    text-shadow: 0 12px 28px rgba(0, 0, 0, .45);
     margin-bottom: 6px;
 }
 
 .wholesale-kicker {
-    color: #f4c441;
+    color: rgba(255, 255, 255, .58);
     font-size: 10px;
     letter-spacing: 5px;
     margin-bottom: 24px;
@@ -4132,18 +4107,18 @@ body[data-catalog-mode="wholesale"] .loading-text {
 .wholesale-form input {
     height: 58px;
     border-radius: 12px;
-    border: 1px solid rgba(168, 85, 247, .45);
-    background: rgba(7, 3, 16, .72);
+    border: 1px solid rgba(255, 255, 255, .14);
+    background: rgba(255, 255, 255, .055);
     letter-spacing: 7px;
     font-size: 14px;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .02), 0 0 22px rgba(168, 85, 247, .14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
     transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
 }
 
 .wholesale-form input:focus {
-    border-color: rgba(244, 196, 65, .74);
-    background: rgba(9, 4, 19, .9);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04), 0 0 0 3px rgba(244, 196, 65, .1), 0 0 32px rgba(168, 85, 247, .26);
+    border-color: rgba(255, 255, 255, .42);
+    background: rgba(255, 255, 255, .07);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .06);
 }
 
 .wholesale-form input::placeholder {
@@ -4156,26 +4131,22 @@ body[data-catalog-mode="wholesale"] .loading-text {
     height: 48px;
     overflow: hidden;
     border-radius: 12px;
-    background: linear-gradient(135deg, #ffe477, #d8ac16 52%, #f4c441);
-    color: #09030f;
+    background: rgba(245, 245, 245, .94);
+    color: #08080a;
     font-size: 11px;
-    box-shadow: 0 16px 34px rgba(244, 196, 65, .2);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .7);
     transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
 }
 
 .wholesale-form button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(110deg, transparent 0 35%, rgba(255, 255, 255, .55) 48%, transparent 62% 100%);
-    transform: translateX(-120%);
-    animation: wholesaleButtonSheen 2.8s ease-in-out infinite;
+    content: none;
+    display: none;
 }
 
 .wholesale-form button:hover {
     transform: translateY(-2px);
-    filter: saturate(1.08);
-    box-shadow: 0 20px 42px rgba(244, 196, 65, .3);
+    filter: brightness(1.02);
+    box-shadow: 0 20px 42px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .72);
 }
 
 .wholesale-form button:active {
@@ -4193,49 +4164,10 @@ body[data-catalog-mode="wholesale"] .loading-text {
     cursor: wait;
     filter: saturate(.9);
     transform: none;
-    box-shadow: 0 12px 28px rgba(244, 196, 65, .16);
-}
-
-@keyframes wholesaleButtonSheen {
-    0%, 48% {
-        transform: translateX(-120%);
-    }
-
-    78%, 100% {
-        transform: translateX(120%);
-    }
-}
-
-@keyframes wholesaleLightSweep {
-    0%, 35% {
-        transform: translateX(-34%) skewX(-10deg);
-        opacity: .42;
-    }
-
-    62% {
-        transform: translateX(34%) skewX(-10deg);
-        opacity: .72;
-    }
-
-    100% {
-        transform: translateX(46%) skewX(-10deg);
-        opacity: .28;
-    }
-}
-
-@keyframes wholesaleRainTexture {
-    from {
-        background-position: 0 -120px, 42px -170px, 0 -44px;
-    }
-
-    to {
-        background-position: 0 120px, 42px 170px, 0 44px;
-    }
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .wholesale-overlay::before,
-    .wholesale-overlay::after,
     .wholesale-form button::before {
         animation: none;
     }
@@ -8781,8 +8713,7 @@ textarea {
 
 .bg-animation::before,
 .bg-animation::after,
-#particles-canvas,
-.wholesale-particles-canvas {
+#particles-canvas {
     display: none !important;
     animation: none !important;
 }
@@ -10498,125 +10429,6 @@ textarea,
     }
 }
 
-/* Login mayorista: nebulosa minimal gris/morado */
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open {
-    background:
-        radial-gradient(circle at 18% 22%, rgba(255,255,255,.08), transparent 22%),
-        radial-gradient(circle at 76% 18%, rgba(109,92,132,.22), transparent 30%),
-        radial-gradient(circle at 62% 72%, rgba(58,48,72,.32), transparent 34%),
-        linear-gradient(135deg, #050506 0%, #111014 48%, #07070a 100%) !important;
-    overflow: hidden !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before,
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
-    content: "" !important;
-    position: absolute !important;
-    inset: -24% !important;
-    display: block !important;
-    pointer-events: none !important;
-    opacity: 1 !important;
-    filter: blur(26px) saturate(.75) !important;
-    mix-blend-mode: screen !important;
-    animation: wholesaleNebulaDrift 18s ease-in-out infinite alternate !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before {
-    background:
-        radial-gradient(ellipse at 24% 34%, rgba(210,210,218,.18), transparent 28%),
-        radial-gradient(ellipse at 64% 24%, rgba(92,78,116,.42), transparent 32%),
-        radial-gradient(ellipse at 52% 68%, rgba(180,180,190,.1), transparent 30%) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
-    opacity: .78 !important;
-    animation-duration: 24s !important;
-    animation-direction: alternate-reverse !important;
-    background:
-        radial-gradient(ellipse at 78% 62%, rgba(118,104,145,.28), transparent 34%),
-        radial-gradient(ellipse at 34% 82%, rgba(255,255,255,.08), transparent 30%),
-        linear-gradient(115deg, transparent 20%, rgba(255,255,255,.045), transparent 68%) !important;
-}
-
-@keyframes wholesaleNebulaDrift {
-    0% {
-        transform: translate3d(-2%, -1%, 0) scale(1);
-    }
-    50% {
-        transform: translate3d(2%, 1.5%, 0) scale(1.05);
-    }
-    100% {
-        transform: translate3d(4%, -2%, 0) scale(1.1);
-    }
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-particles-canvas {
-    opacity: .2 !important;
-    mix-blend-mode: screen !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-panel {
-    width: min(440px, calc(100vw - 34px)) !important;
-    border: 1px solid rgba(255,255,255,.13) !important;
-    border-radius: 22px !important;
-    background:
-        linear-gradient(180deg, rgba(255,255,255,.055), transparent 26%),
-        rgba(12,12,15,.82) !important;
-    box-shadow:
-        0 34px 100px rgba(0,0,0,.62),
-        inset 0 1px 0 rgba(255,255,255,.07) !important;
-    backdrop-filter: blur(26px) saturate(.85) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-panel::before {
-    color: rgba(255,255,255,.08) !important;
-    text-shadow: none !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-kicker {
-    color: rgba(255,255,255,.58) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-panel h2 {
-    color: rgba(255,255,255,.94) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-form input {
-    border-color: rgba(255,255,255,.14) !important;
-    background: rgba(255,255,255,.055) !important;
-    color: #fff !important;
-    caret-color: #f5f5f5 !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-form input:focus {
-    border-color: rgba(255,255,255,.42) !important;
-    box-shadow: 0 0 0 3px rgba(255,255,255,.06) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-form button {
-    background: rgba(245,245,245,.94) !important;
-    color: #08080a !important;
-    box-shadow: 0 16px 38px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-form button::before {
-    display: none !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-back-home,
-body[data-catalog-mode="wholesale"] .wholesale-close {
-    border-color: rgba(255,255,255,.13) !important;
-    background: rgba(255,255,255,.055) !important;
-    color: rgba(255,255,255,.72) !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-back-home:hover,
-body[data-catalog-mode="wholesale"] .wholesale-close:hover {
-    background: rgba(255,255,255,.1) !important;
-    color: #fff !important;
-}
-
 /* El logo animado del hero se dibuja y luego se retira */
 .main-banner-slide.active .blyxu-svg-title {
     animation: none !important;
@@ -10692,15 +10504,9 @@ body[data-catalog-mode="wholesale"] .wholesale-close:hover {
     animation: none !important;
 }
 
-.wholesale-overlay.open .wholesale-particles-canvas {
-    display: block !important;
-    opacity: .42;
-}
-
 .wholesale-overlay.open {
-    background:
-        radial-gradient(circle at 50% 18%, rgba(168, 85, 247, .18), transparent 30%),
-        linear-gradient(180deg, #07020f 0%, #100620 46%, #030108 100%);
+    background: #08080a !important;
+    background-image: none !important;
 }
 
 /* Catalog cards: compact swatches and refined price pill */
@@ -11108,59 +10914,1013 @@ body[data-page="contact"] .contact-social-link {
     }
 }
 
-/* Mayorista login final: nebulosa sin lluvia */
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open {
+/* Base reset para logins de acceso */
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
     isolation: isolate !important;
+    overflow: hidden !important;
+    background: #08080a !important;
+    background-image: none !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open::before,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open::after {
+    content: none !important;
+    display: none !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    position: relative !important;
+    z-index: 2 !important;
+    border-color: rgba(255,255,255,.12) !important;
+    background: rgba(15,15,18,.94) !important;
+    box-shadow: 0 28px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06) !important;
+    backdrop-filter: blur(18px) !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    border-color: rgba(255,255,255,.14) !important;
+    background: rgba(255,255,255,.055) !important;
+    color: #fff !important;
+    caret-color: #fff !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input:focus,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input:focus {
+    border-color: rgba(255,255,255,.42) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,.06) !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    background: rgba(245,245,245,.94) !important;
+    color: #08080a !important;
+    box-shadow: 0 16px 38px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7) !important;
+}
+
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button::before {
+    display: none !important;
+}
+
+/* Login glass: clave + validar */
+#wholesale-overlay.wholesale-overlay.open,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
     background:
-        radial-gradient(circle at 20% 18%, rgba(255,255,255,.075), transparent 24%),
-        radial-gradient(circle at 82% 24%, rgba(112,96,138,.24), transparent 34%),
-        radial-gradient(circle at 54% 76%, rgba(74,62,92,.32), transparent 38%),
-        linear-gradient(135deg, #050506 0%, #111014 48%, #07070a 100%) !important;
+        radial-gradient(circle at 50% 18%, rgba(151, 98, 255, .26), transparent 30%),
+        radial-gradient(circle at 18% 80%, rgba(255, 255, 255, .08), transparent 28%),
+        linear-gradient(150deg, #050308 0%, #130022 52%, #050506 100%) !important;
+    backdrop-filter: blur(20px) !important;
+}
+
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    width: min(390px, calc(100vw - 34px)) !important;
+    padding: 38px 30px 32px !important;
+    border: 1px solid rgba(255, 255, 255, .38) !important;
+    border-radius: 26px !important;
+    background:
+        linear-gradient(160deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .055)),
+        rgba(22, 12, 36, .46) !important;
+    box-shadow:
+        0 34px 90px rgba(0, 0, 0, .55),
+        inset 0 1px 0 rgba(255, 255, 255, .2),
+        inset 0 -1px 0 rgba(255, 255, 255, .08) !important;
+    backdrop-filter: blur(24px) saturate(1.15) !important;
+    text-align: center !important;
+}
+
+#wholesale-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before {
+    content: none !important;
+    display: none !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    display: block !important;
+    width: 118px !important;
+    height: auto !important;
+    margin: 0 auto 28px !important;
+    object-fit: contain !important;
+    filter: drop-shadow(0 12px 26px rgba(0, 0, 0, .42)) !important;
+}
+
+#wholesale-overlay .wholesale-close,
+#wholesale-overlay .wholesale-back-home,
+#wholesale-overlay .wholesale-kicker,
+#wholesale-overlay .wholesale-panel h2,
+body[data-page="pagos"] #qr-login-overlay .wholesale-kicker,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel h2,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-close,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-back-home,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-kicker,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel h2 {
+    display: none !important;
+}
+
+#wholesale-overlay .wholesale-form,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form {
+    display: grid !important;
+    gap: 16px !important;
+}
+
+#wholesale-overlay .wholesale-form input,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    height: 54px !important;
+    border-radius: 11px !important;
+    border: 1px solid rgba(255, 255, 255, .76) !important;
+    background: rgba(255, 255, 255, .035) !important;
+    color: #fff !important;
+    caret-color: #fff !important;
+    text-align: center !important;
+    font-size: 17px !important;
+    letter-spacing: 3px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+}
+
+#wholesale-overlay .wholesale-form input::placeholder,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input::placeholder,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input::placeholder {
+    color: rgba(255, 255, 255, .56) !important;
+    letter-spacing: 0 !important;
+}
+
+#wholesale-overlay .wholesale-form input:focus,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input:focus,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input:focus {
+    border-color: #fff !important;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, .12), 0 0 24px rgba(168, 85, 247, .28) !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    position: relative !important;
+    height: 54px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255, 255, 255, .7) !important;
+    border-radius: 11px !important;
+    background: linear-gradient(135deg, rgba(255,255,255,.92), rgba(173,122,255,.72)) !important;
+    color: #fff !important;
+    text-shadow: 0 1px 9px rgba(36, 12, 70, .58) !important;
+    box-shadow: 0 18px 36px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .55) !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button {
+    padding-right: 46px !important;
+    animation: loginValidatePulse 1s ease-in-out infinite !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 50% !important;
+    right: 18px !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-top: -8px !important;
+    border-radius: 999px !important;
+    border: 2px solid rgba(255, 255, 255, .5) !important;
+    border-top-color: #fff !important;
+    animation: loginValidateSpin .7s linear infinite !important;
+}
+
+@keyframes loginValidatePulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.14); }
+}
+
+@keyframes loginValidateSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* Fondo vivo + glass para inicios de sesión */
+.login-bokeh-canvas {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    pointer-events: none !important;
+    opacity: .86 !important;
+    filter: blur(10px) saturate(1.18) contrast(1.04) !important;
+}
+
+#wholesale-overlay.wholesale-overlay.open,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
+    background:
+        radial-gradient(circle at 50% 18%, rgba(132, 84, 255, .2), transparent 34%),
+        linear-gradient(145deg, #050308 0%, #100016 48%, #050506 100%) !important;
+}
+
+#wholesale-overlay.wholesale-overlay.open::before,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 1 !important;
+    display: block !important;
+    pointer-events: none !important;
+    background:
+        linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.42)),
+        radial-gradient(circle at 50% 50%, transparent 0 34%, rgba(0,0,0,.44) 100%) !important;
+}
+
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    z-index: 2 !important;
+    border-color: rgba(255,255,255,.48) !important;
+    background:
+        linear-gradient(150deg, rgba(255,255,255,.22), rgba(255,255,255,.07) 45%, rgba(255,255,255,.13)),
+        rgba(20, 12, 34, .42) !important;
+    box-shadow:
+        0 38px 110px rgba(0,0,0,.62),
+        0 0 0 1px rgba(255,255,255,.08),
+        inset 0 1px 0 rgba(255,255,255,.38),
+        inset 0 -24px 60px rgba(0,0,0,.14) !important;
+    backdrop-filter: blur(30px) saturate(1.32) !important;
+}
+
+#wholesale-overlay .wholesale-panel::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 1px !important;
+    z-index: -1 !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+    background:
+        linear-gradient(140deg, rgba(255,255,255,.26), transparent 34%),
+        linear-gradient(320deg, rgba(168,85,247,.18), transparent 44%) !important;
+    opacity: .9 !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    width: 128px !important;
+    margin-bottom: 30px !important;
+    filter:
+        drop-shadow(0 14px 30px rgba(0,0,0,.5))
+        drop-shadow(0 0 18px rgba(255,255,255,.16)) !important;
+}
+
+#wholesale-overlay .wholesale-form input,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    background: rgba(5,5,9,.18) !important;
+    border-color: rgba(255,255,255,.82) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.13),
+        0 10px 26px rgba(0,0,0,.16) !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.96), rgba(190,150,255,.82) 58%, rgba(123,75,255,.7)) !important;
+    border-color: rgba(255,255,255,.78) !important;
+    box-shadow:
+        0 18px 42px rgba(38,10,70,.38),
+        inset 0 1px 0 rgba(255,255,255,.72),
+        inset 0 -1px 0 rgba(255,255,255,.2) !important;
+}
+
+/* Banners más vivos y legibles */
+.main-banner-slide img:not(.main-banner-fallback-media) {
+    opacity: 1 !important;
+    filter: brightness(1.08) contrast(1.05) saturate(1.08) !important;
+}
+
+.main-banner-overlay {
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.38) 0%, rgba(0,0,0,.16) 38%, rgba(0,0,0,.04) 72%, rgba(0,0,0,.1) 100%),
+        linear-gradient(0deg, rgba(0,0,0,.34) 0%, transparent 38%) !important;
+}
+
+.main-banner-content {
+    text-shadow: 0 3px 18px rgba(0,0,0,.72) !important;
+}
+
+.blyxu-svg-title {
+    filter:
+        drop-shadow(0 4px 18px rgba(0,0,0,.7))
+        drop-shadow(0 0 18px rgba(255,255,255,.18)) !important;
+}
+
+.main-banner-btn {
+    box-shadow: 0 10px 30px rgba(0,0,0,.42) !important;
+}
+
+.home-ad-section {
+    border-color: rgba(255,255,255,.14) !important;
+    background: #0b0b0d !important;
+    box-shadow: 0 26px 70px rgba(0,0,0,.36) !important;
+}
+
+.home-ad-media img {
+    opacity: .92 !important;
+    filter: brightness(1.04) contrast(1.04) saturate(1.1) !important;
+}
+
+.home-ad-section::after {
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.68) 0%, rgba(0,0,0,.36) 42%, rgba(0,0,0,.08) 72%, rgba(0,0,0,.16) 100%),
+        linear-gradient(0deg, rgba(0,0,0,.18), transparent 52%) !important;
+}
+
+.home-ad-content {
+    padding: 6px 0 !important;
+    text-shadow: 0 3px 16px rgba(0,0,0,.72) !important;
+}
+
+.home-ad-content span {
+    color: #ffe681 !important;
+    text-shadow: 0 2px 12px rgba(0,0,0,.78) !important;
+}
+
+.home-ad-content h2 {
+    color: #fff !important;
+    text-shadow: 0 4px 20px rgba(0,0,0,.82) !important;
+}
+
+.home-ad-content p {
+    color: rgba(255,255,255,.92) !important;
+    text-shadow: 0 3px 14px rgba(0,0,0,.78) !important;
+}
+
+/* Login card premium morado */
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    width: min(430px, calc(100vw - 34px)) !important;
+    padding: 56px 34px 36px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(218, 190, 255, .48) !important;
+    border-radius: 30px !important;
+    background:
+        radial-gradient(circle at 82% 0%, rgba(255, 132, 34, .18), transparent 28%),
+        radial-gradient(circle at 24% 18%, rgba(188, 125, 255, .22), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,.24), rgba(255,255,255,.07) 42%, rgba(80, 29, 130, .18)),
+        rgba(18, 17, 23, .58) !important;
+    box-shadow:
+        0 42px 110px rgba(0,0,0,.68),
+        0 0 54px rgba(151, 71, 255, .22),
+        inset 0 1px 0 rgba(255,255,255,.42),
+        inset 0 -34px 90px rgba(0,0,0,.18) !important;
+    backdrop-filter: blur(34px) saturate(1.42) !important;
+}
+
+#wholesale-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 24px !important;
+    left: 34px !important;
+    right: 34px !important;
+    height: 5px !important;
+    display: block !important;
+    border-radius: 999px !important;
+    background:
+        linear-gradient(90deg, #ff7a18 0%, #b35cff 52%, rgba(255,255,255,.2) 52%, rgba(255,255,255,.12) 100%) !important;
+    box-shadow: 0 0 22px rgba(179,92,255,.42), 0 0 18px rgba(255,122,24,.24) !important;
+    z-index: 2 !important;
+    animation: loginCardLineGlow 2.8s ease-in-out infinite !important;
+}
+
+#wholesale-overlay .wholesale-panel::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 1px !important;
+    z-index: 0 !important;
+    border-radius: inherit !important;
+    pointer-events: none !important;
+    background:
+        linear-gradient(118deg, rgba(255,255,255,.22) 0%, transparent 24%, rgba(255,255,255,.075) 44%, transparent 62%),
+        radial-gradient(circle at 86% 14%, rgba(255,122,24,.16), transparent 32%),
+        radial-gradient(circle at 8% 84%, rgba(150,82,255,.16), transparent 30%) !important;
+    opacity: .95 !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+#wholesale-overlay .wholesale-form,
+#wholesale-overlay .wholesale-error,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form,
+body[data-page="pagos"] #qr-login-overlay .wholesale-error,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-error {
+    position: relative !important;
+    z-index: 3 !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    width: 132px !important;
+    margin-bottom: 34px !important;
+}
+
+#wholesale-overlay .wholesale-form input,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    height: 58px !important;
+    border-radius: 14px !important;
+    border-color: rgba(235, 220, 255, .74) !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
+        rgba(5,5,10,.22) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.16),
+        inset 0 -1px 0 rgba(255,255,255,.05),
+        0 14px 28px rgba(0,0,0,.18) !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    height: 58px !important;
+    border-radius: 14px !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(202,160,255,.92) 40%, rgba(136,70,255,.9) 100%) !important;
+    box-shadow:
+        0 18px 48px rgba(118,54,220,.38),
+        0 6px 20px rgba(0,0,0,.22),
+        inset 0 1px 0 rgba(255,255,255,.76),
+        inset 0 -2px 0 rgba(67,21,120,.16) !important;
+}
+
+@keyframes loginCardLineGlow {
+    0%, 100% { opacity: .82; filter: brightness(1); }
+    50% { opacity: 1; filter: brightness(1.18); }
+}
+
+/* Ajustes finales: banner limpio, redes moradas y cursor completo */
+.home-ad-content span,
+.home-ad-content h2,
+.home-ad-content p {
+    display: none !important;
+}
+
+.home-ad-content {
+    align-self: end !important;
+    max-width: none !important;
+}
+
+.home-ad-button {
+    margin-top: 0 !important;
+    background: rgba(255,255,255,.94) !important;
+    color: #08080a !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.38) !important;
+}
+
+.footer-social-icon-link {
+    border-color: rgba(168,85,247,.56) !important;
+    background: rgba(168,85,247,.08) !important;
+    color: #b86cff !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.footer-social-icon-link svg {
+    stroke: #b86cff !important;
+    fill: none !important;
+}
+
+.footer-social-icon-link:hover {
+    border-color: rgba(197,148,255,.86) !important;
+    background: rgba(168,85,247,.18) !important;
+    box-shadow: 0 14px 34px rgba(168,85,247,.18), inset 0 1px 0 rgba(255,255,255,.12) !important;
+}
+
+.footer-social-icon-link:hover svg {
+    stroke: #eadcff !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    html:not(.native-cursor) #blyxu-cursor {
+        display: block !important;
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 2147483000 !important;
+        overflow: visible !important;
+        pointer-events: none !important;
+        contain: none !important;
+    }
+
+    .cursor-dot,
+    .cursor-ring {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        translate: none !important;
+        pointer-events: none !important;
+        will-change: transform !important;
+    }
+
+    .cursor-dot {
+        width: 7px !important;
+        height: 7px !important;
+        transform: translate3d(var(--cursor-x, -100px), var(--cursor-y, -100px), 0) translate(-50%, -50%) !important;
+        background: #b86cff !important;
+        box-shadow: 0 0 14px rgba(168,85,247,.8) !important;
+    }
+
+    .cursor-ring {
+        width: 30px !important;
+        height: 30px !important;
+        transform: translate3d(var(--ring-x, -100px), var(--ring-y, -100px), 0) translate(-50%, -50%) !important;
+        border: 1px solid rgba(184,108,255,.72) !important;
+        background: rgba(168,85,247,.08) !important;
+        box-shadow: 0 0 18px rgba(168,85,247,.24) !important;
+    }
+
+    #blyxu-cursor.is-hovering .cursor-ring {
+        width: 42px !important;
+        height: 42px !important;
+        border-color: rgba(218,190,255,.9) !important;
+        background: rgba(168,85,247,.14) !important;
+    }
+}
+
+/* Override final: carrusel compacto 3D de categorias */
+.home-categories-section {
+    min-height: 104px !important;
+    padding: 10px 18px 16px !important;
+    perspective: none !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(124,58,237,.08), transparent 36%),
+        rgba(5, 2, 10, .88) !important;
+}
+
+.home-category-track {
+    position: relative !important;
+    width: min(1180px, calc(100vw - 36px)) !important;
+    height: 78px !important;
+    margin: 0 auto !important;
+    display: block !important;
+    overflow: visible !important;
+    transform-style: flat !important;
+    touch-action: pan-y !important;
+    user-select: none !important;
+    cursor: grab !important;
+    scrollbar-width: none !important;
+}
+
+.home-category-track.is-dragging {
+    cursor: grabbing !important;
+}
+
+.home-category-track.is-centered .home-category-pill:only-child {
+    transform: translate(-50%, -50%) !important;
+    opacity: 1 !important;
+    z-index: 1 !important;
+}
+
+.home-category-track::-webkit-scrollbar {
+    display: none !important;
+}
+
+.home-category-pill {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    width: clamp(138px, 13vw, 184px) !important;
+    min-width: 0 !important;
+    min-height: 62px !important;
+    padding: 10px 12px !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 10px !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.13), rgba(255,255,255,.035) 58%, rgba(129,92,246,.12)),
+        rgba(15, 14, 20, .84) !important;
+    color: #fff !important;
+    box-shadow: 0 12px 26px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.14) !important;
+    backdrop-filter: blur(16px) saturate(128%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(128%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    transform-style: flat !important;
+    scroll-snap-align: none !important;
+    will-change: transform, opacity !important;
+    transition: border-color .22s ease, background .22s ease, box-shadow .22s ease !important;
+}
+
+.home-category-pill span {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    color: #f8f8fb !important;
+    font-size: 11px !important;
+    line-height: 1.13 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    overflow-wrap: anywhere !important;
+}
+
+.home-category-pill small {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    border: 1px solid rgba(199,169,255,.2) !important;
+    border-radius: 50% !important;
+    background: rgba(167,139,250,.16) !important;
+    color: #e9ddff !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14) !important;
+}
+
+.home-category-pill:hover,
+.home-category-pill.active,
+.home-category-pill.is-ring-front {
+    border-color: rgba(216,190,255,.42) !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.17), rgba(255,255,255,.055) 54%, rgba(147,51,234,.2)),
+        rgba(18, 17, 25, .92) !important;
+    box-shadow: 0 14px 30px rgba(0,0,0,.32), 0 0 14px rgba(168,85,247,.12), inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+
+.home-category-pill.is-ring-front {
+    border-color: rgba(234,220,255,.48) !important;
+    box-shadow: 0 18px 34px rgba(0,0,0,.34), 0 0 18px rgba(168,85,247,.16), inset 0 1px 0 rgba(255,255,255,.2) !important;
+}
+
+@media (max-width: 700px) {
+    .home-categories-section {
+        min-height: 98px !important;
+        padding: 10px 12px 16px !important;
+    }
+
+    .home-category-track {
+        width: calc(100vw - 24px) !important;
+        height: 72px !important;
+    }
+
+    .home-category-pill {
+        width: 132px !important;
+        min-height: 58px !important;
+        padding: 10px 12px !important;
+    }
+
+    .home-category-pill span {
+        font-size: 11px !important;
+    }
+
+    .home-category-pill small {
+        flex-basis: 27px !important;
+        width: 27px !important;
+        height: 27px !important;
+        font-size: 10px !important;
+    }
+}
+
+/* Override final: filtros minimalistas */
+.collection-section .catalog-filter-bar {
+    gap: 10px !important;
+    align-items: center !important;
+}
+
+.category-select-wrap,
+.price-slider-wrap {
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    background: rgba(255,255,255,.045) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    color: rgba(255,255,255,.9) !important;
+    transform: none !important;
+}
+
+.category-select-wrap {
+    min-width: 236px !important;
+    padding: 9px 34px 9px 14px !important;
+}
+
+.category-select-wrap::before {
+    display: none !important;
+}
+
+.category-select-wrap:hover,
+.category-select-wrap:focus-within,
+.category-select-wrap.is-open,
+.price-slider-wrap:hover,
+.price-slider-wrap:focus-within {
+    transform: none !important;
+    border-color: rgba(255,255,255,.22) !important;
+    background: rgba(255,255,255,.07) !important;
+    box-shadow: none !important;
+}
+
+.category-select-wrap svg,
+.price-slider-wrap svg {
+    width: 14px !important;
+    height: 14px !important;
+    color: rgba(205,190,235,.74) !important;
+    transform: none !important;
+}
+
+.category-select-wrap:hover svg,
+.category-select-wrap:focus-within svg,
+.category-select-wrap.is-open svg {
+    color: rgba(228,220,245,.92) !important;
+    transform: none !important;
+}
+
+.glass-select-text,
+.category-select-wrap select,
+.price-slider-wrap span {
+    color: rgba(255,255,255,.88) !important;
+    font-size: 12px !important;
+    font-weight: 760 !important;
+    letter-spacing: .02em !important;
+    text-transform: none !important;
+}
+
+.category-select-wrap:hover .glass-select-text,
+.category-select-wrap.is-open .glass-select-text {
+    color: #fff !important;
+    letter-spacing: .02em !important;
+}
+
+.category-select-wrap::after {
+    border-top-color: rgba(255,255,255,.52) !important;
+}
+
+.category-select-wrap:hover::after,
+.category-select-wrap:focus-within::after,
+.category-select-wrap.is-open::after {
+    border-top-color: rgba(255,255,255,.72) !important;
+}
+
+.custom-glass-dropdown-menu {
+    top: calc(100% + 8px) !important;
+    min-width: 100% !important;
+    max-height: 264px !important;
+    padding: 6px !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+    background: rgba(18,17,23,.94) !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,.42) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+}
+
+.glass-dropdown-item {
+    min-height: 38px !important;
+    padding: 9px 11px !important;
+    border-radius: 8px !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: rgba(255,255,255,.82) !important;
+    box-shadow: none !important;
+}
+
+.glass-dropdown-item span {
+    color: inherit !important;
+    font-size: 12px !important;
+    font-weight: 720 !important;
+    letter-spacing: .01em !important;
+    text-transform: uppercase !important;
+}
+
+.glass-dropdown-item:hover,
+.glass-dropdown-item.active {
+    background: rgba(255,255,255,.08) !important;
+    color: #fff !important;
+}
+
+.glass-dropdown-item.active::after {
+    width: 6px !important;
+    height: 6px !important;
+    background: rgba(188,157,255,.9) !important;
+    box-shadow: none !important;
+}
+
+.price-slider-wrap {
+    padding: 9px 14px !important;
+}
+
+.price-slider-wrap input[type="range"] {
+    accent-color: #a78bfa !important;
+}
+
+.price-slider-wrap input[type="range"]::-webkit-slider-runnable-track {
+    height: 3px !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.18) !important;
+}
+
+.price-slider-wrap input[type="range"]::-webkit-slider-thumb {
+    width: 14px !important;
+    height: 14px !important;
+    margin-top: -5.5px !important;
+    border: 1px solid rgba(255,255,255,.72) !important;
+    background: #a78bfa !important;
+    box-shadow: none !important;
+}
+
+.price-slider-wrap input[type="range"]::-moz-range-track {
+    height: 3px !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.18) !important;
+}
+
+.price-slider-wrap input[type="range"]::-moz-range-thumb {
+    width: 14px !important;
+    height: 14px !important;
+    border: 1px solid rgba(255,255,255,.72) !important;
+    background: #a78bfa !important;
+    box-shadow: none !important;
+}
+
+/* Override final: login glass futurista */
+#wholesale-overlay.wholesale-overlay.open,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
+    background:
+        radial-gradient(circle at 48% 18%, rgba(144,83,255,.18), transparent 34%),
+        radial-gradient(circle at 14% 86%, rgba(255,255,255,.07), transparent 30%),
+        linear-gradient(155deg, #050308 0%, #13001e 48%, #060608 100%) !important;
+}
+
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    width: min(430px, calc(100vw - 34px)) !important;
+    min-height: 340px !important;
+    padding: 82px 34px 36px !important;
+    border-radius: 28px !important;
+    border: 1px solid rgba(232,220,255,.34) !important;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.045) 58%, rgba(124,58,237,.12)),
+        rgba(13, 9, 22, .62) !important;
+    box-shadow:
+        0 34px 90px rgba(0,0,0,.58),
+        0 0 42px rgba(124,58,237,.18),
+        inset 0 1px 0 rgba(255,255,255,.22),
+        inset 0 -1px 0 rgba(255,255,255,.08) !important;
+    backdrop-filter: blur(30px) saturate(1.28) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(1.28) !important;
     overflow: hidden !important;
 }
 
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open .wholesale-particles-canvas {
-    display: none !important;
-    opacity: 0 !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before,
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
+#wholesale-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before {
     content: "" !important;
     position: absolute !important;
-    inset: -24% !important;
-    z-index: 0 !important;
+    top: 24px !important;
+    left: 34px !important;
+    right: 34px !important;
+    height: 4px !important;
     display: block !important;
+    border-radius: 999px !important;
+    background:
+        linear-gradient(90deg, #f2ebff 0%, #b98cff 32%, #7c3aed 54%, rgba(255,255,255,.16) 54%, rgba(255,255,255,.08) 100%) !important;
+    box-shadow: 0 0 24px rgba(168,85,247,.38) !important;
+    z-index: 3 !important;
+    animation: loginScanLine 3.2s ease-in-out infinite !important;
+}
+
+#wholesale-overlay .wholesale-panel::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: 1px !important;
+    border-radius: inherit !important;
     pointer-events: none !important;
-    filter: blur(28px) saturate(.78) !important;
-    mix-blend-mode: screen !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::before {
+    background:
+        linear-gradient(115deg, rgba(255,255,255,.2), transparent 26%, rgba(255,255,255,.06) 52%, transparent 72%),
+        radial-gradient(circle at 88% 16%, rgba(255,128,88,.1), transparent 26%),
+        radial-gradient(circle at 10% 86%, rgba(168,85,247,.18), transparent 28%) !important;
     opacity: .92 !important;
-    background:
-        radial-gradient(ellipse at 22% 36%, rgba(230,230,236,.15), transparent 30%),
-        radial-gradient(ellipse at 63% 22%, rgba(96,82,122,.42), transparent 34%),
-        radial-gradient(ellipse at 58% 74%, rgba(175,175,186,.09), transparent 32%) !important;
-    animation: wholesaleNebulaDriftFinal 18s ease-in-out infinite alternate !important;
+    z-index: 0 !important;
 }
 
-body[data-catalog-mode="wholesale"] .wholesale-overlay.open::after {
-    opacity: .72 !important;
-    background:
-        radial-gradient(ellipse at 78% 62%, rgba(118,104,145,.3), transparent 36%),
-        radial-gradient(ellipse at 35% 84%, rgba(255,255,255,.075), transparent 31%),
-        linear-gradient(115deg, transparent 18%, rgba(255,255,255,.04), transparent 68%) !important;
-    animation: wholesaleNebulaDriftFinal 24s ease-in-out infinite alternate-reverse !important;
-}
-
-body[data-catalog-mode="wholesale"] .wholesale-panel {
+#wholesale-overlay .wholesale-logo,
+#wholesale-overlay .wholesale-form,
+#wholesale-overlay .wholesale-error,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form,
+body[data-page="pagos"] #qr-login-overlay .wholesale-error,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-error {
     position: relative !important;
     z-index: 2 !important;
 }
 
-@keyframes wholesaleNebulaDriftFinal {
-    0% { transform: translate3d(-2%, -1%, 0) scale(1); }
-    50% { transform: translate3d(2%, 1.5%, 0) scale(1.05); }
-    100% { transform: translate3d(4%, -2%, 0) scale(1.1); }
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    width: 124px !important;
+    margin: 0 auto 40px !important;
+    filter:
+        drop-shadow(0 12px 24px rgba(0,0,0,.48))
+        drop-shadow(0 0 18px rgba(255,255,255,.16)) !important;
+}
+
+#wholesale-overlay .wholesale-form,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form {
+    gap: 14px !important;
+}
+
+#wholesale-overlay .wholesale-form input,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    height: 58px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(248,244,255,.76) !important;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.035)),
+        rgba(8,7,12,.34) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.15),
+        0 12px 28px rgba(0,0,0,.18) !important;
+    color: #fff !important;
+    caret-color: #d8b4fe !important;
+    text-align: center !important;
+}
+
+#wholesale-overlay .wholesale-form input:focus,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input:focus,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input:focus {
+    border-color: rgba(255,255,255,.96) !important;
+    box-shadow:
+        0 0 0 3px rgba(168,85,247,.16),
+        0 0 28px rgba(168,85,247,.26),
+        inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    height: 58px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.72) !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(214,190,255,.9) 42%, rgba(126,67,234,.92) 100%) !important;
+    color: #fff !important;
+    text-shadow: 0 1px 12px rgba(54,18,105,.65) !important;
+    letter-spacing: .08em !important;
+    box-shadow:
+        0 18px 44px rgba(111,55,220,.34),
+        0 8px 22px rgba(0,0,0,.24),
+        inset 0 1px 0 rgba(255,255,255,.74),
+        inset 0 -2px 0 rgba(65,28,122,.2) !important;
+    transition: transform .2s ease, filter .2s ease, box-shadow .2s ease !important;
+}
+
+#wholesale-overlay .wholesale-form button:hover,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button:hover,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button:hover {
+    transform: translateY(-1px) !important;
+    filter: brightness(1.04) !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking::before {
+    background:
+        linear-gradient(90deg, #fff 0%, #d8b4fe 38%, #8b5cf6 72%, rgba(255,255,255,.14) 72%) !important;
+    animation: loginProgressSweep 1s ease-in-out infinite !important;
+}
+
+@keyframes loginScanLine {
+    0%, 100% { opacity: .72; filter: brightness(1); }
+    50% { opacity: 1; filter: brightness(1.2); }
+}
+
+@keyframes loginProgressSweep {
+    0% { background-position: -140px 0; }
+    100% { background-position: 140px 0; }
 }

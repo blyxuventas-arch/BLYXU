@@ -230,8 +230,8 @@ function initCustomCursor() {
     let ringY = y;
 
     function move() {
-        ringX += (x - ringX) * 0.2;
-        ringY += (y - ringY) * 0.2;
+        ringX += (x - ringX) * 0.42;
+        ringY += (y - ringY) * 0.42;
         cursor.style.setProperty('--cursor-x', `${x}px`);
         cursor.style.setProperty('--cursor-y', `${y}px`);
         cursor.style.setProperty('--ring-x', `${ringX}px`);
@@ -443,8 +443,89 @@ function renderFloatingWhatsApp() {
 
 function renderPromoWidget() {}
 
+function initLoginBokehBackgrounds() {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
+        if (canvas.dataset.ready === 'login-bokeh') return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.dataset.ready = 'login-bokeh';
+
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const lights = [];
+        const count = 15;
+        let width = 0;
+        let height = 0;
+        let dpr = 1;
+
+        function makeLight() {
+            const size = Math.random() * 170 + 120;
+            return {
+                size,
+                x: Math.random() * width,
+                y: Math.random() * height,
+                hue: 246 + Math.random() * 46,
+                sat: 58 + Math.random() * 28,
+                light: 26 + Math.random() * 22,
+                alpha: .18 + Math.random() * .16,
+                speed: .18 + Math.random() * .28,
+                angleX: Math.random() * Math.PI * 2,
+                angleY: Math.random() * Math.PI * 2
+            };
+        }
+
+        function resize() {
+            const rect = canvas.parentElement?.getBoundingClientRect();
+            width = Math.max(320, rect?.width || window.innerWidth);
+            height = Math.max(420, rect?.height || window.innerHeight);
+            dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            if (!lights.length) {
+                for (let i = 0; i < count; i += 1) lights.push(makeLight());
+            }
+        }
+
+        function drawLight(light) {
+            const gradient = ctx.createRadialGradient(light.x, light.y, 0, light.x, light.y, light.size);
+            gradient.addColorStop(0, `hsla(${light.hue}, ${light.sat}%, ${light.light + 28}%, ${light.alpha})`);
+            gradient.addColorStop(.45, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, ${light.alpha * .62})`);
+            gradient.addColorStop(1, `hsla(${light.hue}, ${light.sat}%, ${light.light}%, 0)`);
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(light.x, light.y, light.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function tick() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'lighter';
+            lights.forEach(light => {
+                drawLight(light);
+                if (!reduceMotion) {
+                    light.x += Math.cos(light.angleX) * light.speed;
+                    light.y += Math.sin(light.angleY) * light.speed;
+                    light.angleX += .0022;
+                    light.angleY += .0017;
+                    if (light.x < -light.size) light.x = width + light.size;
+                    if (light.x > width + light.size) light.x = -light.size;
+                    if (light.y < -light.size) light.y = height + light.size;
+                    if (light.y > height + light.size) light.y = -light.size;
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
+            if (!reduceMotion) requestAnimationFrame(tick);
+        }
+
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        tick();
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     cleanBrowserUrl();
+    initLoginBokehBackgrounds();
     window.addEventListener('hashchange', cleanBrowserUrl);
     initCustomCursor();
     initParticles();

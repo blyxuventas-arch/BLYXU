@@ -57,25 +57,24 @@
             align-items:center;
             justify-content:center;
             padding:24px;
-            background:rgba(4,2,10,.92);
+            background:#08080a;
             z-index:10000;
             transition:opacity .18s ease;
         }
-        #admin-particles { position:absolute; inset:0; width:100%; height:100%; opacity:.32; }
         .wholesale-panel {
             position:relative;
             width:min(420px,100%);
             padding:34px;
-            border:1px solid var(--line-strong);
+            border:1px solid rgba(255,255,255,.12);
             border-radius:18px;
-            background:rgba(14,8,26,.88);
-            box-shadow:0 40px 120px rgba(0,0,0,.55);
+            background:rgba(15,15,18,.94);
+            box-shadow:0 40px 120px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
             text-align:center;
         }
         .wholesale-logo { width:130px; margin-bottom:16px; }
         .wholesale-kicker,.admin-kicker {
             display:block;
-            color:var(--gold);
+            color:rgba(255,255,255,.58);
             font-size:10px;
             font-weight:900;
             letter-spacing:1.4px;
@@ -4063,6 +4062,399 @@
                 padding:12px;
             }
         }
+
+        /* Login administrador plano */
+        #admin-login-screen.wholesale-overlay.open {
+            isolation:isolate!important;
+            overflow:hidden!important;
+            background:#08080a!important;
+            background-image:none!important;
+        }
+        #admin-login-screen.wholesale-overlay.open::before,
+        #admin-login-screen.wholesale-overlay.open::after {
+            content:none!important;
+            display:none!important;
+        }
+        #admin-login-screen #login-box {
+            position:relative!important;
+            z-index:2!important;
+            border-color:rgba(255,255,255,.12)!important;
+            background:rgba(15,15,18,.94)!important;
+            box-shadow:0 28px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06)!important;
+            backdrop-filter:blur(18px)!important;
+        }
+        #admin-login-screen input#admin-password {
+            border-color:rgba(255,255,255,.14)!important;
+            background:rgba(255,255,255,.055)!important;
+            color:#fff!important;
+            caret-color:#fff!important;
+        }
+        #admin-login-screen input#admin-password:focus {
+            border-color:rgba(255,255,255,.42)!important;
+            box-shadow:0 0 0 3px rgba(255,255,255,.06)!important;
+        }
+        #admin-login-screen .admin-btn {
+            background:rgba(245,245,245,.94)!important;
+            color:#08080a!important;
+            box-shadow:0 16px 38px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.7)!important;
+        }
+
+        /* Login administrador glass: logo, clave y validar */
+        #admin-login-screen.wholesale-overlay.open {
+            background:
+                radial-gradient(circle at 50% 18%, rgba(151,98,255,.26), transparent 30%),
+                radial-gradient(circle at 18% 80%, rgba(255,255,255,.08), transparent 28%),
+                linear-gradient(150deg,#050308 0%,#130022 52%,#050506 100%)!important;
+            backdrop-filter:blur(20px)!important;
+        }
+        #admin-login-screen #login-box {
+            width:min(390px, calc(100vw - 34px))!important;
+            padding:38px 30px 32px!important;
+            border:1px solid rgba(255,255,255,.38)!important;
+            border-radius:26px!important;
+            background:
+                linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,.055)),
+                rgba(22,12,36,.46)!important;
+            box-shadow:
+                0 34px 90px rgba(0,0,0,.55),
+                inset 0 1px 0 rgba(255,255,255,.2),
+                inset 0 -1px 0 rgba(255,255,255,.08)!important;
+            backdrop-filter:blur(24px) saturate(1.15)!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            display:block!important;
+            width:118px!important;
+            height:auto!important;
+            margin:0 auto 28px!important;
+            object-fit:contain!important;
+            filter:drop-shadow(0 12px 26px rgba(0,0,0,.42))!important;
+        }
+        #admin-login-screen .wholesale-kicker,
+        #admin-login-screen #login-box h2,
+        #admin-login-screen .loader-container,
+        #admin-login-screen .loader-text {
+            display:none!important;
+        }
+        #admin-login-screen .wholesale-form {
+            display:grid!important;
+            gap:16px!important;
+        }
+        #admin-login-screen input#admin-password {
+            height:54px!important;
+            min-height:54px!important;
+            border-radius:11px!important;
+            border:1px solid rgba(255,255,255,.76)!important;
+            background:rgba(255,255,255,.035)!important;
+            color:#fff!important;
+            caret-color:#fff!important;
+            text-align:center!important;
+            font-size:17px!important;
+            letter-spacing:3px!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.08)!important;
+        }
+        #admin-login-screen input#admin-password::placeholder {
+            color:rgba(255,255,255,.56)!important;
+            letter-spacing:0!important;
+        }
+        #admin-login-screen input#admin-password:focus {
+            border-color:#fff!important;
+            box-shadow:0 0 0 3px rgba(255,255,255,.12), 0 0 24px rgba(168,85,247,.28)!important;
+        }
+        #admin-login-screen .admin-btn {
+            position:relative!important;
+            height:54px!important;
+            min-height:54px!important;
+            overflow:hidden!important;
+            border:1px solid rgba(255,255,255,.7)!important;
+            border-radius:11px!important;
+            background:linear-gradient(135deg, rgba(255,255,255,.92), rgba(173,122,255,.72))!important;
+            color:#fff!important;
+            text-shadow:0 1px 9px rgba(36,12,70,.58)!important;
+            box-shadow:0 18px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.55)!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn {
+            padding-right:46px!important;
+            animation:adminLoginValidatePulse 1s ease-in-out infinite!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::after {
+            content:""!important;
+            position:absolute!important;
+            top:50%!important;
+            right:18px!important;
+            width:16px!important;
+            height:16px!important;
+            margin-top:-8px!important;
+            border-radius:999px!important;
+            border:2px solid rgba(255,255,255,.5)!important;
+            border-top-color:#fff!important;
+            animation:adminLoginValidateSpin .7s linear infinite!important;
+        }
+        @keyframes adminLoginValidatePulse {
+            0%,100% { filter:brightness(1); }
+            50% { filter:brightness(1.14); }
+        }
+        @keyframes adminLoginValidateSpin {
+            to { transform:rotate(360deg); }
+        }
+
+        .login-bokeh-canvas {
+            position:absolute!important;
+            inset:0!important;
+            z-index:0!important;
+            width:100%!important;
+            height:100%!important;
+            display:block!important;
+            pointer-events:none!important;
+            opacity:.86!important;
+            filter:blur(10px) saturate(1.18) contrast(1.04)!important;
+        }
+        #admin-login-screen.wholesale-overlay.open::before {
+            content:""!important;
+            position:absolute!important;
+            inset:0!important;
+            z-index:1!important;
+            display:block!important;
+            pointer-events:none!important;
+            background:
+                linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.42)),
+                radial-gradient(circle at 50% 50%, transparent 0 34%, rgba(0,0,0,.44) 100%)!important;
+        }
+        #admin-login-screen.wholesale-overlay.open::after {
+            display:none!important;
+            content:none!important;
+        }
+        #admin-login-screen #login-box {
+            z-index:2!important;
+            border-color:rgba(255,255,255,.48)!important;
+            background:
+                linear-gradient(150deg, rgba(255,255,255,.22), rgba(255,255,255,.07) 45%, rgba(255,255,255,.13)),
+                rgba(20,12,34,.42)!important;
+            box-shadow:
+                0 38px 110px rgba(0,0,0,.62),
+                0 0 0 1px rgba(255,255,255,.08),
+                inset 0 1px 0 rgba(255,255,255,.38),
+                inset 0 -24px 60px rgba(0,0,0,.14)!important;
+            backdrop-filter:blur(30px) saturate(1.32)!important;
+        }
+        #admin-login-screen #login-box::after {
+            content:""!important;
+            position:absolute!important;
+            inset:1px!important;
+            z-index:-1!important;
+            border-radius:inherit!important;
+            pointer-events:none!important;
+            background:
+                linear-gradient(140deg, rgba(255,255,255,.26), transparent 34%),
+                linear-gradient(320deg, rgba(168,85,247,.18), transparent 44%)!important;
+            opacity:.9!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            width:128px!important;
+            margin-bottom:30px!important;
+            filter:
+                drop-shadow(0 14px 30px rgba(0,0,0,.5))
+                drop-shadow(0 0 18px rgba(255,255,255,.16))!important;
+        }
+        #admin-login-screen input#admin-password {
+            background:rgba(5,5,9,.18)!important;
+            border-color:rgba(255,255,255,.82)!important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.13),
+                0 10px 26px rgba(0,0,0,.16)!important;
+        }
+        #admin-login-screen .admin-btn {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.96), rgba(190,150,255,.82) 58%, rgba(123,75,255,.7))!important;
+            border-color:rgba(255,255,255,.78)!important;
+            box-shadow:
+                0 18px 42px rgba(38,10,70,.38),
+                inset 0 1px 0 rgba(255,255,255,.72),
+                inset 0 -1px 0 rgba(255,255,255,.2)!important;
+        }
+
+        /* Login card premium morado */
+        #admin-login-screen #login-box {
+            width:min(430px, calc(100vw - 34px))!important;
+            padding:56px 34px 36px!important;
+            overflow:hidden!important;
+            border:1px solid rgba(218,190,255,.48)!important;
+            border-radius:30px!important;
+            background:
+                radial-gradient(circle at 82% 0%, rgba(255,132,34,.18), transparent 28%),
+                radial-gradient(circle at 24% 18%, rgba(188,125,255,.22), transparent 34%),
+                linear-gradient(145deg, rgba(255,255,255,.24), rgba(255,255,255,.07) 42%, rgba(80,29,130,.18)),
+                rgba(18,17,23,.58)!important;
+            box-shadow:
+                0 42px 110px rgba(0,0,0,.68),
+                0 0 54px rgba(151,71,255,.22),
+                inset 0 1px 0 rgba(255,255,255,.42),
+                inset 0 -34px 90px rgba(0,0,0,.18)!important;
+            backdrop-filter:blur(34px) saturate(1.42)!important;
+        }
+        #admin-login-screen #login-box::before {
+            content:""!important;
+            position:absolute!important;
+            top:24px!important;
+            left:34px!important;
+            right:34px!important;
+            height:5px!important;
+            display:block!important;
+            border-radius:999px!important;
+            background:
+                linear-gradient(90deg, #ff7a18 0%, #b35cff 52%, rgba(255,255,255,.2) 52%, rgba(255,255,255,.12) 100%)!important;
+            box-shadow:0 0 22px rgba(179,92,255,.42), 0 0 18px rgba(255,122,24,.24)!important;
+            z-index:2!important;
+            animation:adminLoginCardLineGlow 2.8s ease-in-out infinite!important;
+        }
+        #admin-login-screen #login-box::after {
+            content:""!important;
+            position:absolute!important;
+            inset:1px!important;
+            z-index:0!important;
+            border-radius:inherit!important;
+            pointer-events:none!important;
+            background:
+                linear-gradient(118deg, rgba(255,255,255,.22) 0%, transparent 24%, rgba(255,255,255,.075) 44%, transparent 62%),
+                radial-gradient(circle at 86% 14%, rgba(255,122,24,.16), transparent 32%),
+                radial-gradient(circle at 8% 84%, rgba(150,82,255,.16), transparent 30%)!important;
+            opacity:.95!important;
+        }
+        #admin-login-screen .wholesale-logo,
+        #admin-login-screen .wholesale-form,
+        #admin-login-screen .wholesale-error {
+            position:relative!important;
+            z-index:3!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            width:132px!important;
+            margin-bottom:34px!important;
+        }
+        #admin-login-screen input#admin-password {
+            height:58px!important;
+            min-height:58px!important;
+            border-radius:14px!important;
+            border-color:rgba(235,220,255,.74)!important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)),
+                rgba(5,5,10,.22)!important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.16),
+                inset 0 -1px 0 rgba(255,255,255,.05),
+                0 14px 28px rgba(0,0,0,.18)!important;
+        }
+        #admin-login-screen .admin-btn {
+            height:58px!important;
+            min-height:58px!important;
+            border-radius:14px!important;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(202,160,255,.92) 40%, rgba(136,70,255,.9) 100%)!important;
+            box-shadow:
+                0 18px 48px rgba(118,54,220,.38),
+                0 6px 20px rgba(0,0,0,.22),
+                inset 0 1px 0 rgba(255,255,255,.76),
+                inset 0 -2px 0 rgba(67,21,120,.16)!important;
+        }
+        @keyframes adminLoginCardLineGlow {
+            0%,100% { opacity:.82; filter:brightness(1); }
+            50% { opacity:1; filter:brightness(1.18); }
+        }
+
+        /* Override final: login admin glass futurista */
+        #admin-login-screen.wholesale-overlay.open {
+            background:
+                radial-gradient(circle at 48% 18%, rgba(144,83,255,.18), transparent 34%),
+                radial-gradient(circle at 14% 86%, rgba(255,255,255,.07), transparent 30%),
+                linear-gradient(155deg, #050308 0%, #13001e 48%, #060608 100%)!important;
+            overflow:hidden!important;
+        }
+        #admin-login-screen #login-box {
+            width:min(430px, calc(100vw - 34px))!important;
+            min-height:340px!important;
+            padding:82px 34px 36px!important;
+            border-radius:28px!important;
+            border:1px solid rgba(232,220,255,.34)!important;
+            background:
+                linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.045) 58%, rgba(124,58,237,.12)),
+                rgba(13, 9, 22, .62)!important;
+            box-shadow:
+                0 34px 90px rgba(0,0,0,.58),
+                0 0 42px rgba(124,58,237,.18),
+                inset 0 1px 0 rgba(255,255,255,.22),
+                inset 0 -1px 0 rgba(255,255,255,.08)!important;
+            backdrop-filter:blur(30px) saturate(1.28)!important;
+            -webkit-backdrop-filter:blur(30px) saturate(1.28)!important;
+            overflow:hidden!important;
+        }
+        #admin-login-screen #login-box::before {
+            top:24px!important;
+            left:34px!important;
+            right:34px!important;
+            height:4px!important;
+            border-radius:999px!important;
+            background:
+                linear-gradient(90deg, #f2ebff 0%, #b98cff 32%, #7c3aed 54%, rgba(255,255,255,.16) 54%, rgba(255,255,255,.08) 100%)!important;
+            box-shadow:0 0 24px rgba(168,85,247,.38)!important;
+            animation:adminLoginCardLineGlow 3.2s ease-in-out infinite!important;
+        }
+        #admin-login-screen #login-box::after {
+            background:
+                linear-gradient(115deg, rgba(255,255,255,.2), transparent 26%, rgba(255,255,255,.06) 52%, transparent 72%),
+                radial-gradient(circle at 88% 16%, rgba(255,128,88,.1), transparent 26%),
+                radial-gradient(circle at 10% 86%, rgba(168,85,247,.18), transparent 28%)!important;
+            opacity:.92!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            width:124px!important;
+            margin:0 auto 40px!important;
+            filter:
+                drop-shadow(0 12px 24px rgba(0,0,0,.48))
+                drop-shadow(0 0 18px rgba(255,255,255,.16))!important;
+        }
+        #admin-login-screen input#admin-password {
+            height:58px!important;
+            border-radius:14px!important;
+            border:1px solid rgba(248,244,255,.76)!important;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.085), rgba(255,255,255,.035)),
+                rgba(8,7,12,.34)!important;
+            color:#fff!important;
+            caret-color:#d8b4fe!important;
+            text-align:center!important;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.15),
+                0 12px 28px rgba(0,0,0,.18)!important;
+        }
+        #admin-login-screen input#admin-password:focus {
+            border-color:rgba(255,255,255,.96)!important;
+            box-shadow:
+                0 0 0 3px rgba(168,85,247,.16),
+                0 0 28px rgba(168,85,247,.26),
+                inset 0 1px 0 rgba(255,255,255,.18)!important;
+        }
+        #admin-login-screen .admin-btn {
+            height:58px!important;
+            border-radius:14px!important;
+            border:1px solid rgba(255,255,255,.72)!important;
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.96) 0%, rgba(214,190,255,.9) 42%, rgba(126,67,234,.92) 100%)!important;
+            color:#fff!important;
+            text-shadow:0 1px 12px rgba(54,18,105,.65)!important;
+            letter-spacing:.08em!important;
+            box-shadow:
+                0 18px 44px rgba(111,55,220,.34),
+                0 8px 22px rgba(0,0,0,.24),
+                inset 0 1px 0 rgba(255,255,255,.74),
+                inset 0 -2px 0 rgba(65,28,122,.2)!important;
+        }
+        #admin-login-screen #login-box.is-unlocking::before {
+            background:
+                linear-gradient(90deg, #fff 0%, #d8b4fe 38%, #8b5cf6 72%, rgba(255,255,255,.14) 72%)!important;
+            animation:adminLoginProgressSweep 1s ease-in-out infinite!important;
+        }
+        @keyframes adminLoginProgressSweep {
+            0% { background-position:-140px 0; }
+            100% { background-position:140px 0; }
+        }
     </style>
 </head>
 <body>
@@ -4070,14 +4462,14 @@
     <div class="bg-grid"></div>
 
     <div class="wholesale-overlay open" id="admin-login-screen" style="opacity:1; pointer-events:auto; display:flex;">
-        <canvas id="admin-particles" aria-hidden="true"></canvas>
+        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
         <div class="wholesale-panel" id="login-box">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
             <div class="wholesale-kicker">Panel Seguro</div>
             <h2>Administrador</h2>
             <form class="wholesale-form" id="admin-login-form">
-                <input class="form-control" type="password" id="admin-password" placeholder="Clave de acceso" autocomplete="off" required>
-                <button type="submit" class="admin-btn">Desbloquear Sistema</button>
+                <input class="form-control" type="password" id="admin-password" placeholder="Clave" autocomplete="off" required>
+                <button type="submit" class="admin-btn">Validar</button>
             </form>
             <div class="wholesale-error" id="login-error" style="display:none;">Clave incorrecta</div>
             <div class="loader-container" id="login-loader"><div class="loader-bar" id="login-loader-bar"></div></div>
@@ -4769,6 +5161,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=admin-inventory-qr-pm-20260920"></script>
+    <script src="admin-app.js?v=login-bokeh-glass-20260921"></script>
 </body>
 </html>
