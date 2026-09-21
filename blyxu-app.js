@@ -178,7 +178,7 @@ function initNavbar() {
             if (rect.top <= 120 && rect.bottom > 120) currentLink = link;
         });
         if (currentLink) setActiveLink(currentLink);
-    });
+    }, { passive: true });
 
     if (toggle && navLinks) {
         const toggleMenu = () => {
@@ -990,7 +990,7 @@ async function loadProducts(options = {}) {
     const { renderCatalog = true, useCache = true, showLoading = true } = options;
     const productCache = readCache(PRODUCTS_CACHE_KEY);
     const usedProductCache = useCache && allProducts.length === 0 && hydrateProductsFromCache(productCache);
-    const productCacheIsFresh = usedProductCache && cacheHasActiveBanner(productCache) && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
+    const productCacheIsFresh = usedProductCache && isCacheFresh(PRODUCTS_CACHE_KEY, PRODUCTS_CACHE_TTL);
 
     const usedConfigCache = useCache && Object.keys(siteConfig).length === 0 && hydrateSiteConfigFromCache();
     const configCacheIsFresh = usedConfigCache && isCacheFresh(SITE_CONFIG_CACHE_KEY, SITE_CONFIG_CACHE_TTL);
@@ -1315,11 +1315,12 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
     let lastX = 0;
     let moved = 0;
     const step = 360 / items.length;
+    const autoDrift = items.length > 2 ? -0.035 : 0;
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
     const getSpacing = () => {
         const itemWidth = items[0]?.offsetWidth || 150;
-        return clamp(itemWidth + 14, 146, 218);
+        return clamp(itemWidth + 18, 128, 224);
     };
 
     const layout = () => {
@@ -1332,17 +1333,19 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
             const offset = wrappedAngle / step;
             const distance = Math.abs(offset);
             const x = offset * spacing;
-            const scale = Math.max(0.84, 1 - (distance * 0.045));
-            const opacity = distance > 3.45 ? 0 : Math.max(0.46, 1 - (distance * 0.13));
+            const depth = clamp(82 - (distance * 54), -190, 92);
+            const rotateY = clamp(-offset * 18, -62, 62);
+            const scale = Math.max(0.72, 1 - (distance * 0.07));
+            const opacity = Math.max(0.34, 1 - (distance * 0.16));
 
             if (distance < activeDistance) {
                 activeDistance = distance;
                 activeIndex = index;
             }
 
-            item.style.transform = `translate(-50%, -50%) translateX(${x.toFixed(2)}px) scale(${scale.toFixed(3)})`;
+            item.style.transform = `translate(-50%, -50%) translate3d(${x.toFixed(2)}px, 0, ${depth.toFixed(2)}px) rotateY(${rotateY.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
             item.style.opacity = opacity.toFixed(3);
-            item.style.zIndex = String(Math.round(100 - (distance * 10)));
+            item.style.zIndex = String(Math.round(200 - (distance * 18)));
         });
 
         items.forEach((item, index) => item.classList.toggle('is-ring-front', index === activeIndex));
@@ -1351,7 +1354,7 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
     const animate = () => {
         rotation += (targetRotation - rotation) * 0.12;
         if (!isDragging) {
-            targetRotation += velocity;
+            targetRotation += velocity || (track.matches(':hover') ? 0 : autoDrift);
             velocity *= 0.94;
             if (Math.abs(velocity) < 0.01) velocity = 0;
         }
@@ -1492,29 +1495,6 @@ function renderHomeCategories() {
 
     initHomeCategoryRing(track);
     if (buttons.length <= 1) return;
-
-    const goToCategory = (nextIndex) => {
-        if (!buttons.length || track.matches(':hover')) return;
-        currentIndex = nextIndex % buttons.length;
-        const nextButton = buttons[currentIndex];
-        if (track._homeCategoryRing?.goTo) {
-            track._homeCategoryRing.goTo(currentIndex);
-        } else {
-            track.scrollTo({
-                left: Math.max(0, nextButton.offsetLeft - 12),
-                behavior: 'smooth'
-            });
-        }
-    };
-
-    const configuredSeconds = parseFloat(getSiteConfigValue('Home_Category_Seconds', '3.2'));
-    const intervalMs = Number.isFinite(configuredSeconds)
-        ? Math.max(1600, configuredSeconds * 1000)
-        : HOME_CATEGORY_INTERVAL_MS;
-
-    homeCategoryCarouselTimer = setInterval(() => {
-        goToCategory(currentIndex + 1);
-    }, intervalMs);
 }
 
 function renderHomeAdBanner() {
@@ -1645,27 +1625,45 @@ async function fetchProducts(options = {}) {
     return allProducts;
 }
 
-async function fetchSiteConfig() {
+async function fetchSiteConfig(options = {}) {
+    const { force = false } = options;
     if (!GOOGLE_SHEET_API) return siteConfig;
+    if (!force && configLoadPromise) return configLoadPromise;
 
-    try {
-        const url = `${GOOGLE_SHEET_API}?action=get_config&_=${Date.now()}`;
-        const res = await fetch(url, {
-            cache: 'no-store'
-        });
-        const data = await res.json();
-        if (data && data.status === 'success' && data.config) {
-            siteConfig = data.config;
-            showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] || '0') === '1';
-            localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
-            writeCache(SITE_CONFIG_CACHE_KEY, siteConfig);
-            if (typeof updateCartUI === 'function') updateCartUI();
+    if (!force) {
+        const cached = readCache(SITE_CONFIG_CACHE_KEY);
+        if (cached?.data && isCacheFresh(SITE_CONFIG_CACHE_KEY, SITE_CONFIG_CACHE_TTL)) {
+            siteConfig = cached.data;
+            if (siteConfig[RETAIL_PRICE_CONFIG_KEY] !== undefined) {
+                showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY]) === '1';
+                localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
+            }
+            return siteConfig;
         }
-    } catch (err) {
-        console.warn('No se pudo cargar configuracion del sitio:', err);
     }
 
-    return siteConfig;
+    configLoadPromise = (async () => {
+        try {
+            const url = `${GOOGLE_SHEET_API}?action=get_config&_=${Date.now()}`;
+            const res = await fetch(url, {
+                cache: 'no-store'
+            });
+            const data = await res.json();
+            if (data && data.status === 'success' && data.config) {
+                siteConfig = data.config;
+                showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] || '0') === '1';
+                localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
+                writeCache(SITE_CONFIG_CACHE_KEY, siteConfig);
+                if (typeof updateCartUI === 'function') updateCartUI();
+            }
+        } catch (err) {
+            console.warn('No se pudo cargar configuracion del sitio:', err);
+        }
+
+        return siteConfig;
+    })();
+
+    return configLoadPromise;
 }
 
 function getSiteConfigValue(key, fallback = '') {
@@ -3957,6 +3955,7 @@ function initWholesaleAccess() {
             overlay.classList.add('open');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
+            if (typeof initLoginBokehBackgrounds === 'function') initLoginBokehBackgrounds();
             if (input) setTimeout(() => input.focus(), 80);
 
             if (window.history && window.history.pushState) {
@@ -4256,33 +4255,55 @@ function initCustomCursor() {
     let y = window.innerHeight / 2;
     let ringX = x;
     let ringY = y;
+    let rafId = 0;
+    let isVisible = false;
 
     function move() {
+        if (!isVisible || document.visibilityState === 'hidden') {
+            rafId = 0;
+            return;
+        }
         ringX += (x - ringX) * 0.42;
         ringY += (y - ringY) * 0.42;
         cursor.style.setProperty('--cursor-x', `${x}px`);
         cursor.style.setProperty('--cursor-y', `${y}px`);
         cursor.style.setProperty('--ring-x', `${ringX}px`);
         cursor.style.setProperty('--ring-y', `${ringY}px`);
-        requestAnimationFrame(move);
+        rafId = requestAnimationFrame(move);
+    }
+
+    function startCursorLoop() {
+        if (!rafId && document.visibilityState !== 'hidden') {
+            rafId = requestAnimationFrame(move);
+        }
     }
 
     window.addEventListener('mousemove', event => {
         x = event.clientX;
         y = event.clientY;
+        isVisible = true;
         cursor.classList.add('is-visible');
+        startCursorLoop();
     }, { passive: true });
 
     window.addEventListener('mouseout', event => {
-        if (!event.relatedTarget) cursor.classList.remove('is-visible');
+        if (!event.relatedTarget) {
+            isVisible = false;
+            cursor.classList.remove('is-visible');
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            isVisible = false;
+            cursor.classList.remove('is-visible');
+        }
     });
 
     document.addEventListener('mouseover', event => {
         const target = event.target;
         cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .global-search-item')));
     });
-
-    move();
 }
 
 function consultProductByWhatsApp(product, pageUrl = window.location.href) {
@@ -5478,9 +5499,15 @@ async function checkout(skipPrompt = false) {
     }
 }
 
-function initLoginBokehBackgrounds() {
+function initLoginBokehBackgrounds(options = {}) {
+    const { onlyVisible = true } = options;
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
-        if (canvas.dataset.ready === 'login-bokeh') return;
+        const overlay = canvas.closest('.wholesale-overlay');
+        if (onlyVisible && overlay && !overlay.classList.contains('open')) return;
+        if (canvas.dataset.ready === 'login-bokeh') {
+            if (typeof canvas.__blyxuBokehStart === 'function') canvas.__blyxuBokehStart();
+            return;
+        }
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         canvas.dataset.ready = 'login-bokeh';
@@ -5491,6 +5518,12 @@ function initLoginBokehBackgrounds() {
         let width = 0;
         let height = 0;
         let dpr = 1;
+        let rafId = 0;
+
+        function isActive() {
+            if (document.visibilityState === 'hidden') return false;
+            return !overlay || overlay.classList.contains('open');
+        }
 
         function makeLight() {
             const size = Math.random() * 170 + 120;
@@ -5533,6 +5566,10 @@ function initLoginBokehBackgrounds() {
         }
 
         function tick() {
+            if (!isActive()) {
+                rafId = 0;
+                return;
+            }
             ctx.clearRect(0, 0, width, height);
             ctx.globalCompositeOperation = 'lighter';
             lights.forEach(light => {
@@ -5549,12 +5586,22 @@ function initLoginBokehBackgrounds() {
                 }
             });
             ctx.globalCompositeOperation = 'source-over';
-            if (!reduceMotion) requestAnimationFrame(tick);
+            rafId = reduceMotion ? 0 : requestAnimationFrame(tick);
         }
 
-        resize();
-        window.addEventListener('resize', resize, { passive: true });
-        tick();
+        function start() {
+            resize();
+            if (!rafId) tick();
+        }
+
+        canvas.__blyxuBokehStart = start;
+        window.addEventListener('resize', () => {
+            if (isActive()) resize();
+        }, { passive: true });
+        document.addEventListener('visibilitychange', () => {
+            if (isActive()) start();
+        });
+        start();
     });
 }
 

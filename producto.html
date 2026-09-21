@@ -12,8 +12,11 @@
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/producto.html">
     <meta name="twitter:card" content="summary_large_image">
-    <link rel="preload" href="blyxu-style.css?v=cursor-quick-20260918" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=cursor-quick-20260918"></noscript>
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="preconnect" href="https://lh3.googleusercontent.com">
+    <link rel="preload" href="blyxu-style.css?v=mobile-detail-20260921" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-detail-20260921"></noscript>
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -675,9 +678,12 @@
             .product-detail-luxury {
                 grid-template-columns: 1fr;
                 padding-top: 100px;
+                gap: 18px;
             }
             .product-detail-luxury .product-gallery {
                 position: static;
+                top: auto;
+                margin: 0;
             }
         }
 
@@ -685,21 +691,99 @@
             .product-detail-luxury {
                 padding-left: 14px;
                 padding-right: 14px;
+                padding-top: 92px;
+                padding-bottom: 42px;
+                gap: 14px;
             }
             .product-detail-luxury .product-gallery {
                 grid-template-columns: 1fr;
+                gap: 10px;
+                width: 100%;
+            }
+            .product-detail-luxury .product-main-img {
+                grid-column: 1 !important;
+                grid-row: 1 !important;
+                width: 100%;
+                border-radius: 18px !important;
             }
             .product-detail-luxury .product-thumbnails {
+                grid-column: 1 !important;
+                grid-row: 2 !important;
                 flex-direction: row;
                 max-height: none;
                 overflow-x: auto;
+                overflow-y: hidden;
+                padding: 0 2px 2px;
+            }
+            .product-detail-luxury .gallery-thumb {
+                flex: 0 0 64px;
+                width: 64px;
+            }
+            .product-detail-luxury .product-info {
+                padding: 20px 18px !important;
+                gap: 14px;
+                border-radius: 20px !important;
+                margin-top: 0;
+            }
+            .product-info-cat {
+                max-width: 100%;
+                font-size: 10px;
+                line-height: 1.15;
+                white-space: normal;
+            }
+            .product-info-name {
+                font-size: clamp(25px, 8.2vw, 34px) !important;
+            }
+            #detail-price {
+                font-size: clamp(28px, 8.8vw, 38px) !important;
+            }
+            .detail-variant-list {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .detail-variant-chip {
+                padding: 7px;
+            }
+            .product-detail-luxury .product-info-actions,
+            .product-detail-luxury .product-info-actions.has-consult-actions,
+            .product-detail-luxury .product-info-actions.has-online-payment {
+                align-items: stretch;
+                gap: 10px;
             }
             .product-detail-luxury .product-info-actions {
                 justify-content: center;
             }
+            .product-detail-luxury .btn-buy-now,
+            .product-detail-luxury .btn-consult-direct {
+                width: 100% !important;
+                min-height: 48px;
+            }
+            .product-detail-luxury .cart-consult-note {
+                padding: 12px 14px;
+            }
             .product-perks {
                 justify-content: center;
                 gap: 8px;
+            }
+            .product-details-block {
+                padding-top: 14px;
+                gap: 12px;
+            }
+            .product-info-desc {
+                font-size: 13px !important;
+                line-height: 1.55 !important;
+            }
+            .product-specs {
+                border-radius: 13px !important;
+            }
+            .spec-item {
+                padding: 12px 14px !important;
+                align-items: flex-start;
+            }
+            .spec-label,
+            .spec-value {
+                font-size: 12px !important;
+                line-height: 1.3 !important;
             }
         }
     </style>
@@ -876,7 +960,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=cursor-quick-20260918"></script>
+    <script src="blyxu-app.js?v=mobile-detail-20260921" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {

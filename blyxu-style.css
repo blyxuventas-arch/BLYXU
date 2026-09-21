@@ -7407,10 +7407,17 @@ textarea {
         margin-top: 28px;
         grid-template-columns: 1fr;
         padding: 28px 22px;
+        background: #09090b !important;
+    }
+
+    .home-ad-media img {
+        object-fit: contain !important;
+        object-position: center center !important;
+        opacity: .96 !important;
     }
 
     .home-ad-section::after {
-        background: linear-gradient(180deg, rgba(5, 2, 10, .92), rgba(5, 2, 10, .58));
+        background: linear-gradient(180deg, rgba(5, 2, 10, .18), rgba(5, 2, 10, .12)) !important;
     }
 
     .home-ad-content h2 {
@@ -11469,9 +11476,10 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
 
 /* Override final: carrusel compacto 3D de categorias */
 .home-categories-section {
-    min-height: 104px !important;
-    padding: 10px 18px 16px !important;
-    perspective: none !important;
+    min-height: 122px !important;
+    padding: 14px 18px 20px !important;
+    perspective: 860px !important;
+    perspective-origin: 50% 50% !important;
     overflow: hidden !important;
     background:
         radial-gradient(circle at 50% 0%, rgba(124,58,237,.08), transparent 36%),
@@ -11481,11 +11489,11 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
 .home-category-track {
     position: relative !important;
     width: min(1180px, calc(100vw - 36px)) !important;
-    height: 78px !important;
+    height: 88px !important;
     margin: 0 auto !important;
     display: block !important;
     overflow: visible !important;
-    transform-style: flat !important;
+    transform-style: preserve-3d !important;
     touch-action: pan-y !important;
     user-select: none !important;
     cursor: grab !important;
@@ -11527,10 +11535,11 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
     align-items: center !important;
     justify-content: space-between !important;
     gap: 12px !important;
-    transform-style: flat !important;
+    transform-style: preserve-3d !important;
+    backface-visibility: hidden !important;
     scroll-snap-align: none !important;
-    will-change: transform, opacity !important;
-    transition: border-color .22s ease, background .22s ease, box-shadow .22s ease !important;
+    will-change: transform, opacity, filter !important;
+    transition: border-color .22s ease, background .22s ease, box-shadow .22s ease, filter .22s ease !important;
 }
 
 .home-category-pill span {
@@ -11567,18 +11576,20 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
 
 .home-category-pill.is-ring-front {
     border-color: rgba(234,220,255,.48) !important;
-    box-shadow: 0 18px 34px rgba(0,0,0,.34), 0 0 18px rgba(168,85,247,.16), inset 0 1px 0 rgba(255,255,255,.2) !important;
+    filter: brightness(1.08) saturate(1.08) !important;
+    box-shadow: 0 22px 42px rgba(0,0,0,.38), 0 0 22px rgba(168,85,247,.2), inset 0 1px 0 rgba(255,255,255,.22) !important;
 }
 
 @media (max-width: 700px) {
     .home-categories-section {
-        min-height: 98px !important;
-        padding: 10px 12px 16px !important;
+        min-height: 112px !important;
+        padding: 12px 12px 18px !important;
+        perspective: 720px !important;
     }
 
     .home-category-track {
         width: calc(100vw - 24px) !important;
-        height: 72px !important;
+        height: 80px !important;
     }
 
     .home-category-pill {
@@ -11923,4 +11934,20 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
 @keyframes loginProgressSweep {
     0% { background-position: -140px 0; }
     100% { background-position: 140px 0; }
+}
+
+/* Performance: skip layout/paint work for long sections until they approach the viewport. */
+@supports (content-visibility: auto) {
+    .home-categories-section,
+    .image-marquee-section,
+    .home-ad-section,
+    .collection-section,
+    .cart-standalone-section,
+    .contact-grid,
+    .orders-page,
+    .product-detail-luxury,
+    .footer {
+        content-visibility: auto;
+        contain-intrinsic-size: 1px 900px;
+    }
 }

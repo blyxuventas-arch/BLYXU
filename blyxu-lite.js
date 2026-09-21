@@ -228,33 +228,55 @@ function initCustomCursor() {
     let y = window.innerHeight / 2;
     let ringX = x;
     let ringY = y;
+    let rafId = 0;
+    let isVisible = false;
 
     function move() {
+        if (!isVisible || document.visibilityState === 'hidden') {
+            rafId = 0;
+            return;
+        }
         ringX += (x - ringX) * 0.42;
         ringY += (y - ringY) * 0.42;
         cursor.style.setProperty('--cursor-x', `${x}px`);
         cursor.style.setProperty('--cursor-y', `${y}px`);
         cursor.style.setProperty('--ring-x', `${ringX}px`);
         cursor.style.setProperty('--ring-y', `${ringY}px`);
-        requestAnimationFrame(move);
+        rafId = requestAnimationFrame(move);
+    }
+
+    function startCursorLoop() {
+        if (!rafId && document.visibilityState !== 'hidden') {
+            rafId = requestAnimationFrame(move);
+        }
     }
 
     window.addEventListener('mousemove', event => {
         x = event.clientX;
         y = event.clientY;
+        isVisible = true;
         cursor.classList.add('is-visible');
+        startCursorLoop();
     }, { passive: true });
 
     window.addEventListener('mouseout', event => {
-        if (!event.relatedTarget) cursor.classList.remove('is-visible');
+        if (!event.relatedTarget) {
+            isVisible = false;
+            cursor.classList.remove('is-visible');
+        }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            isVisible = false;
+            cursor.classList.remove('is-visible');
+        }
     });
 
     document.addEventListener('mouseover', event => {
         const target = event.target;
         cursor.classList.toggle('is-hovering', Boolean(target?.closest?.('a, button, input, textarea, select, [role="button"], .nav-icon, .product-card, .global-search-item')));
     });
-
-    move();
 }
 
 function initParticles() {
@@ -443,9 +465,15 @@ function renderFloatingWhatsApp() {
 
 function renderPromoWidget() {}
 
-function initLoginBokehBackgrounds() {
+function initLoginBokehBackgrounds(options = {}) {
+    const { onlyVisible = true } = options;
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
-        if (canvas.dataset.ready === 'login-bokeh') return;
+        const overlay = canvas.closest('.wholesale-overlay');
+        if (onlyVisible && overlay && !overlay.classList.contains('open')) return;
+        if (canvas.dataset.ready === 'login-bokeh') {
+            if (typeof canvas.__blyxuBokehStart === 'function') canvas.__blyxuBokehStart();
+            return;
+        }
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         canvas.dataset.ready = 'login-bokeh';
@@ -456,6 +484,12 @@ function initLoginBokehBackgrounds() {
         let width = 0;
         let height = 0;
         let dpr = 1;
+        let rafId = 0;
+
+        function isActive() {
+            if (document.visibilityState === 'hidden') return false;
+            return !overlay || overlay.classList.contains('open');
+        }
 
         function makeLight() {
             const size = Math.random() * 170 + 120;
@@ -498,6 +532,10 @@ function initLoginBokehBackgrounds() {
         }
 
         function tick() {
+            if (!isActive()) {
+                rafId = 0;
+                return;
+            }
             ctx.clearRect(0, 0, width, height);
             ctx.globalCompositeOperation = 'lighter';
             lights.forEach(light => {
@@ -514,12 +552,22 @@ function initLoginBokehBackgrounds() {
                 }
             });
             ctx.globalCompositeOperation = 'source-over';
-            if (!reduceMotion) requestAnimationFrame(tick);
+            rafId = reduceMotion ? 0 : requestAnimationFrame(tick);
         }
 
-        resize();
-        window.addEventListener('resize', resize, { passive: true });
-        tick();
+        function start() {
+            resize();
+            if (!rafId) tick();
+        }
+
+        canvas.__blyxuBokehStart = start;
+        window.addEventListener('resize', () => {
+            if (isActive()) resize();
+        }, { passive: true });
+        document.addEventListener('visibilitychange', () => {
+            if (isActive()) start();
+        });
+        start();
     });
 }
 

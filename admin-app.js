@@ -2532,6 +2532,220 @@ function initSettingsTabs() {
     activateSettingsTab(savedTab || sections[0].id);
 }
 
+function initWebpConverterAdmin() {
+    const fileInput = document.getElementById('webp-file-input');
+    const pickBtn = document.getElementById('webp-pick-files-btn');
+    const dropZone = document.getElementById('webp-drop-zone');
+    const qualityRange = document.getElementById('webp-quality-range');
+    const qualityLabel = document.getElementById('webp-quality-label');
+    const maxWidthInput = document.getElementById('webp-max-width');
+    const prefixInput = document.getElementById('webp-name-prefix');
+    const convertBtn = document.getElementById('webp-convert-btn');
+    const downloadAllBtn = document.getElementById('webp-download-all-btn');
+    const clearBtn = document.getElementById('webp-clear-btn');
+    const resultsBox = document.getElementById('webp-results');
+    const countEl = document.getElementById('webp-summary-count');
+    const originalEl = document.getElementById('webp-summary-original');
+    const savedEl = document.getElementById('webp-summary-saved');
+    if (!fileInput || !dropZone || !resultsBox) return;
+
+    let selectedFiles = [];
+    let convertedItems = [];
+
+    const formatBytes = bytes => {
+        const value = Number(bytes || 0);
+        if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(2)} MB`;
+        return `${Math.max(0, value / 1024).toFixed(1)} KB`;
+    };
+
+    const safeFileBase = name => String(name || 'imagen')
+        .replace(/\.[^.]+$/, '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_-]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase() || 'imagen';
+
+    function updateSummary() {
+        const originalBytes = selectedFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+        const webpBytes = convertedItems.reduce((sum, item) => sum + (item.blob?.size || 0), 0);
+        const savedPercent = originalBytes && webpBytes
+            ? Math.max(0, Math.round((1 - (webpBytes / originalBytes)) * 100))
+            : 0;
+        if (countEl) countEl.textContent = String(selectedFiles.length);
+        if (originalEl) originalEl.textContent = formatBytes(originalBytes);
+        if (savedEl) savedEl.textContent = `${savedPercent}%`;
+    }
+
+    function renderResults() {
+        updateSummary();
+        if (!selectedFiles.length) {
+            resultsBox.innerHTML = '<div class="webp-empty-state">Selecciona imagenes para convertirlas a WebP.</div>';
+            return;
+        }
+        if (!convertedItems.length) {
+            resultsBox.innerHTML = selectedFiles.map(file => `
+                <div class="webp-result-card">
+                    <span style="width:72px;height:72px;border-radius:10px;background:rgba(255,255,255,.06);display:block;"></span>
+                    <div><strong>${escapeHtml(file.name)}</strong><span>Original: ${formatBytes(file.size)}</span><em>Pendiente de conversion</em></div>
+                    <div class="webp-result-actions"><span style="color:var(--muted);font-size:11px;">Listo para convertir</span></div>
+                </div>
+            `).join('');
+            return;
+        }
+        resultsBox.innerHTML = convertedItems.map((item, index) => `
+            <div class="webp-result-card">
+                <img src="${item.previewUrl}" alt="">
+                <div>
+                    <strong>${escapeHtml(item.outputName)}</strong>
+                    <span>${item.width} x ${item.height}px · ${formatBytes(item.originalSize)} → ${formatBytes(item.blob.size)}</span>
+                    <em>${item.savedPercent}% menos peso</em>
+                </div>
+                <div class="webp-result-actions">
+                    <button class="admin-btn secondary" type="button" data-webp-download="${index}">Descargar</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function setFiles(files) {
+        selectedFiles = Array.from(files || []).filter(file => file.type?.startsWith('image/'));
+        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
+        convertedItems = [];
+        fileInput.value = '';
+        renderResults();
+        if (selectedFiles.length && typeof showToast === 'function') {
+            showToast(`${selectedFiles.length} imagen(es) listas para convertir`, 'success');
+        }
+    }
+
+    async function loadImageFromFile(file) {
+        if ('createImageBitmap' in window) {
+            try {
+                return await createImageBitmap(file);
+            } catch (error) {
+                console.warn('createImageBitmap fallo, usando fallback:', error);
+            }
+        }
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('No se pudo leer la imagen'));
+            };
+            img.src = url;
+        });
+    }
+
+    function canvasToWebp(canvas, quality) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(blob => {
+                if (blob) resolve(blob);
+                else reject(new Error('Este navegador no pudo crear WebP'));
+            }, 'image/webp', quality);
+        });
+    }
+
+    async function convertFile(file, index) {
+        const image = await loadImageFromFile(file);
+        const originalWidth = image.width || image.naturalWidth;
+        const originalHeight = image.height || image.naturalHeight;
+        const maxWidth = parseInt(maxWidthInput?.value || '0', 10);
+        const scale = maxWidth > 0 && originalWidth > maxWidth ? maxWidth / originalWidth : 1;
+        const width = Math.max(1, Math.round(originalWidth * scale));
+        const height = Math.max(1, Math.round(originalHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { alpha: true });
+        ctx.drawImage(image, 0, 0, width, height);
+        if (typeof image.close === 'function') image.close();
+        const quality = Math.max(0.45, Math.min(0.95, Number(qualityRange?.value || 82) / 100));
+        const blob = await canvasToWebp(canvas, quality);
+        const prefix = String(prefixInput?.value || '').trim();
+        const outputName = `${prefix ? safeFileBase(prefix) + '-' : ''}${safeFileBase(file.name)}.webp`;
+        const previewUrl = URL.createObjectURL(blob);
+        const savedPercent = file.size ? Math.max(0, Math.round((1 - (blob.size / file.size)) * 100)) : 0;
+        return { file, index, blob, previewUrl, outputName, originalSize: file.size || 0, width, height, savedPercent };
+    }
+
+    async function convertSelectedFiles() {
+        if (!selectedFiles.length) {
+            if (typeof showToast === 'function') showToast('Selecciona imagenes primero', 'error');
+            return;
+        }
+        convertBtn.disabled = true;
+        const originalText = convertBtn.textContent;
+        convertBtn.textContent = 'Convirtiendo...';
+        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
+        convertedItems = [];
+        try {
+            convertedItems = await Promise.all(selectedFiles.map(convertFile));
+            renderResults();
+            if (typeof showToast === 'function') showToast('Imagenes convertidas a WebP', 'success');
+        } catch (error) {
+            console.error('Error convirtiendo imagenes:', error);
+            if (typeof showToast === 'function') showToast(error.message || 'No se pudo convertir la imagen', 'error');
+        } finally {
+            convertBtn.disabled = false;
+            convertBtn.textContent = originalText;
+        }
+    }
+
+    function downloadItem(item) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(item.blob);
+        link.download = item.outputName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1200);
+    }
+
+    pickBtn?.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', event => setFiles(event.target.files));
+    qualityRange?.addEventListener('input', () => {
+        if (qualityLabel) qualityLabel.textContent = `${qualityRange.value}%`;
+    });
+    convertBtn?.addEventListener('click', convertSelectedFiles);
+    clearBtn?.addEventListener('click', () => {
+        selectedFiles = [];
+        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
+        convertedItems = [];
+        renderResults();
+    });
+    downloadAllBtn?.addEventListener('click', () => {
+        if (!convertedItems.length) {
+            if (typeof showToast === 'function') showToast('Convierte las imagenes antes de descargarlas', 'error');
+            return;
+        }
+        convertedItems.forEach((item, index) => setTimeout(() => downloadItem(item), index * 180));
+    });
+    resultsBox.addEventListener('click', event => {
+        const button = event.target.closest('[data-webp-download]');
+        if (!button) return;
+        const item = convertedItems[Number(button.dataset.webpDownload)];
+        if (item) downloadItem(item);
+    });
+    dropZone.addEventListener('dragover', event => {
+        event.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', event => {
+        event.preventDefault();
+        dropZone.classList.remove('drag-over');
+        setFiles(event.dataTransfer?.files);
+    });
+    dropZone.addEventListener('click', () => fileInput.click());
+    renderResults();
+}
+
 function initLoginBokehBackgrounds() {
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
         if (canvas.dataset.ready === 'login-bokeh') return;
@@ -2631,6 +2845,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initHomeAdConfigAdmin();
     initCustomerPromoAdmin();
     initQRConfigAdmin();
+    initWebpConverterAdmin();
     initInventorySearch();
     initInventoryActions();
     initInventoryPdfExport();

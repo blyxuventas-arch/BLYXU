@@ -583,6 +583,44 @@
             gap:14px;
         }
 
+        .webp-tool-shell { display:grid; gap:16px; }
+        .webp-tool-grid { display:grid; grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr); gap:16px; align-items:start; }
+        .webp-drop-zone {
+            min-height:260px;
+            border:1px dashed rgba(255,255,255,.18);
+            border-radius:18px;
+            background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+            display:grid;
+            place-items:center;
+            text-align:center;
+            padding:24px;
+            transition:border-color .2s ease, background .2s ease, transform .2s ease;
+        }
+        .webp-drop-zone.drag-over { border-color:rgba(244,196,65,.68); background:rgba(244,196,65,.08); transform:translateY(-1px); }
+        .webp-drop-zone strong { display:block; color:#fff; font-size:17px; margin-bottom:8px; }
+        .webp-drop-zone span { color:var(--muted); font-size:12px; line-height:1.45; }
+        .webp-controls { display:grid; gap:12px; }
+        .webp-control-row { display:grid; grid-template-columns:1fr 110px; gap:10px; align-items:center; }
+        .webp-control-row output { color:#fff; font-weight:950; text-align:right; }
+        .webp-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+        .webp-summary-card { padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.035); }
+        .webp-summary-card span { display:block; color:var(--soft); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.8px; }
+        .webp-summary-card strong { display:block; margin-top:6px; color:#fff; font-size:18px; }
+        .webp-results { display:grid; gap:10px; }
+        .webp-result-card { display:grid; grid-template-columns:72px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.03); }
+        .webp-result-card img { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#09030f; }
+        .webp-result-card strong { display:block; color:#fff; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .webp-result-card span { display:block; margin-top:4px; color:var(--muted); font-size:11px; }
+        .webp-result-card em { display:block; margin-top:4px; color:#a7f3d0; font-style:normal; font-size:11px; font-weight:900; }
+        .webp-result-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        .webp-empty-state { padding:28px; border:1px dashed var(--line); border-radius:14px; color:var(--soft); text-align:center; }
+        @media(max-width:980px) {
+            .webp-tool-grid { grid-template-columns:1fr; }
+            .webp-result-card { grid-template-columns:58px minmax(0,1fr); }
+            .webp-result-card img { width:58px; height:58px; }
+            .webp-result-actions { grid-column:1/-1; justify-content:flex-start; }
+        }
+
         #view-products .grid-split.product-admin-grid,
         #edit-product-modal .grid-split.product-admin-grid {
             display:grid;
@@ -4588,6 +4626,7 @@
                 <div class="sidebar-section">
                     <h4>Sistema</h4>
                     <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuracion del Sitio')"><span>AJ</span> Ajustes y Banner</button>
+                    <button class="sidebar-btn" data-view="webp" onclick="switchDashboardView('webp','Convertidor WebP')"><span>WP</span> Convertidor WebP</button>
                 </div>
             </div>
             <div class="sidebar-section"><button class="sidebar-btn logout" onclick="window.location.href='index.html'"><span>SA</span> Cerrar Sesion</button></div>
@@ -4778,6 +4817,47 @@
                             <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promocion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Titulo de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir metodo</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="view-webp" class="dashboard-section">
+                    <div class="admin-panel gradient-bg webp-tool-shell">
+                        <div class="admin-title-row"><div><span class="admin-kicker">Optimizacion</span><h2>Convertidor de imagenes a WebP</h2><p style="margin:6px 0 0;color:var(--muted);font-size:12px;">Convierte imagenes desde este navegador. No se suben archivos a ninguna plataforma.</p></div><button class="admin-btn" type="button" id="webp-pick-files-btn">Elegir imagenes</button></div>
+                        <div class="webp-tool-grid">
+                            <section class="webp-controls">
+                                <input type="file" id="webp-file-input" accept="image/*" multiple hidden>
+                                <div class="webp-drop-zone" id="webp-drop-zone">
+                                    <div><strong>Arrastra imagenes aqui</strong><span>JPG, PNG, JPEG o cualquier imagen compatible. Puedes convertir varias a la vez.</span></div>
+                                </div>
+                                <div class="admin-panel" style="padding:16px;">
+                                    <div class="form-group">
+                                        <label for="webp-quality-range">Calidad WebP</label>
+                                        <div class="webp-control-row">
+                                            <input id="webp-quality-range" type="range" min="45" max="95" value="82">
+                                            <output id="webp-quality-label">82%</output>
+                                        </div>
+                                    </div>
+                                    <div class="admin-form-grid">
+                                        <div class="form-group"><label for="webp-max-width">Ancho maximo</label><input class="form-control" id="webp-max-width" type="number" min="320" step="10" placeholder="Mantener original"></div>
+                                        <div class="form-group"><label for="webp-name-prefix">Prefijo opcional</label><input class="form-control" id="webp-name-prefix" placeholder="Ej: blyxu"></div>
+                                    </div>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <button class="admin-btn" type="button" id="webp-convert-btn">Convertir a WebP</button>
+                                        <button class="admin-btn secondary" type="button" id="webp-download-all-btn">Descargar todo</button>
+                                        <button class="admin-btn secondary" type="button" id="webp-clear-btn">Limpiar</button>
+                                    </div>
+                                </div>
+                            </section>
+                            <section class="webp-tool-shell">
+                                <div class="webp-summary-grid">
+                                    <article class="webp-summary-card"><span>Imagenes</span><strong id="webp-summary-count">0</strong></article>
+                                    <article class="webp-summary-card"><span>Peso original</span><strong id="webp-summary-original">0 KB</strong></article>
+                                    <article class="webp-summary-card"><span>Ahorro estimado</span><strong id="webp-summary-saved">0%</strong></article>
+                                </div>
+                                <div class="webp-results" id="webp-results">
+                                    <div class="webp-empty-state">Selecciona imagenes para convertirlas a WebP.</div>
+                                </div>
+                            </section>
                         </div>
                     </div>
                 </div>
@@ -5161,6 +5241,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=login-bokeh-glass-20260921"></script>
+    <script src="admin-app.js?v=mobile-detail-20260921" defer></script>
 </body>
 </html>
