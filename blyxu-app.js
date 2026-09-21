@@ -1569,8 +1569,8 @@ function renderInventorySpotlight() {
                 </div>`;
     }).join('');
 
-    // Duplicate for seamless infinite scrolling on larger screens.
-    marqueeContainer.innerHTML = IS_MOBILE_VIEWPORT ? imagesHtml : imagesHtml + imagesHtml;
+    // Duplicate for seamless infinite scrolling on every viewport.
+    marqueeContainer.innerHTML = imagesHtml + imagesHtml;
     
     inventorySpotlightRendered = true;
 }
@@ -2333,7 +2333,7 @@ function renderCatalogProducts() {
     const sectionTitle = document.querySelector('.collection-section .section-title');
     const products = getCurrentCatalogProducts();
     if (sectionTitle) {
-        sectionTitle.textContent = activeCatalogMode === 'wholesale' ? 'CAT\u00c1LOGO MAYORISTA' : 'NUEVA COLECCI\u00d3N';
+        sectionTitle.textContent = activeCatalogMode === 'wholesale' ? 'CAT\u00c1LOGO MAYORISTA' : '';
     }
     renderCategoryFilters(products);
     renderPriceFilters({

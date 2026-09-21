@@ -6710,10 +6710,12 @@ body.dark-mode {
 }
 
 .image-marquee {
+    --marquee-half-gap: 10px;
     display: flex;
     gap: 20px;
     width: max-content;
     animation: scroll-marquee 40s linear infinite;
+    will-change: transform;
 }
 
 .image-marquee:hover {
@@ -6946,7 +6948,7 @@ body.dark-mode {
 
 @keyframes scroll-marquee {
     to {
-        transform: translateX(calc(-50% - 10px));
+        transform: translateX(calc(-50% - var(--marquee-half-gap, 10px)));
     }
 }
 
@@ -7396,6 +7398,12 @@ textarea {
         padding-top: 36px;
     }
 
+    .image-marquee {
+        --marquee-half-gap: 7px;
+        animation-duration: 28s;
+        gap: 14px;
+    }
+
     .marquee-item {
         width: 210px;
         height: 230px;
@@ -7403,11 +7411,13 @@ textarea {
 
     .home-ad-section {
         width: calc(100% - 32px);
-        min-height: 320px;
+        min-height: 0;
         margin-top: 28px;
         grid-template-columns: 1fr;
-        padding: 28px 22px;
+        padding: 12px;
+        aspect-ratio: 16 / 10;
         background: #09090b !important;
+        border-radius: 18px !important;
     }
 
     .home-ad-media img {
@@ -7422,6 +7432,17 @@ textarea {
 
     .home-ad-content h2 {
         font-size: clamp(26px, 8vw, 38px);
+    }
+
+    .home-ad-content {
+        align-self: end !important;
+        padding: 0 0 16px 16px !important;
+    }
+
+    .home-ad-button {
+        min-height: 54px !important;
+        padding: 14px 24px !important;
+        border-radius: 13px !important;
     }
 
     .main-banner-arrow {
@@ -11949,5 +11970,52 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
     .footer {
         content-visibility: auto;
         contain-intrinsic-size: 1px 900px;
+    }
+}
+
+#coleccion .section-title {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .home-ad-section {
+        width: calc(100% - 28px) !important;
+        min-height: 0 !important;
+        margin: 24px auto 18px !important;
+        padding: 0 !important;
+        display: block !important;
+        aspect-ratio: 16 / 7 !important;
+        border-radius: 18px !important;
+        background: #09090b !important;
+    }
+
+    .home-ad-media {
+        inset: 0 !important;
+        border-radius: inherit !important;
+        overflow: hidden !important;
+    }
+
+    .home-ad-media img {
+        object-fit: cover !important;
+        object-position: center center !important;
+        opacity: .98 !important;
+    }
+
+    .home-ad-section::after {
+        background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.24)) !important;
+    }
+
+    .home-ad-content {
+        position: absolute !important;
+        left: 18px !important;
+        bottom: 18px !important;
+        padding: 0 !important;
+        align-self: auto !important;
+    }
+
+    .home-ad-button {
+        min-height: 48px !important;
+        padding: 12px 22px !important;
+        border-radius: 13px !important;
     }
 }
