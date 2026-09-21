@@ -6714,8 +6714,19 @@ body.dark-mode {
     display: flex;
     gap: 20px;
     width: max-content;
-    animation: scroll-marquee 40s linear infinite;
     will-change: transform;
+}
+
+.image-marquee.is-ready {
+    animation: scroll-marquee 40s linear infinite;
+}
+
+.image-marquee.is-loading {
+    width: 100%;
+    min-height: 260px;
+    overflow: hidden;
+    animation: none !important;
+    transform: none !important;
 }
 
 .image-marquee:hover {
@@ -12053,7 +12064,7 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         justify-content: stretch !important;
     }
 
-    .image-marquee {
+    .image-marquee.is-ready {
         --marquee-half-gap: 7px;
         animation: scroll-marquee-mobile 14s linear infinite !important;
         animation-play-state: running !important;
@@ -12061,7 +12072,7 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         backface-visibility: hidden;
     }
 
-    .image-marquee:hover {
+    .image-marquee.is-ready:hover {
         animation-play-state: running !important;
     }
 
@@ -12097,4 +12108,36 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
     background:
         linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025)) !important;
     border-color: rgba(255,255,255,.09) !important;
+}
+
+.main-banner-content {
+    position: absolute !important;
+    inset: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    pointer-events: none;
+}
+
+.main-banner-actions,
+.main-banner-desc + .main-banner-actions {
+    position: absolute !important;
+    left: 50% !important;
+    bottom: clamp(96px, 15vh, 165px) !important;
+    width: min(760px, calc(100% - 48px)) !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+    justify-content: center !important;
+    pointer-events: auto;
+    z-index: 4;
+}
+
+@media (max-width: 768px) {
+    .main-banner-actions,
+    .main-banner-desc + .main-banner-actions {
+        bottom: 82px !important;
+        width: calc(100% - 32px) !important;
+        gap: 10px !important;
+    }
 }

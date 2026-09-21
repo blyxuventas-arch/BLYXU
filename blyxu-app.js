@@ -441,6 +441,8 @@ function renderIndexInstantShell() {
 
     const marquee = document.getElementById('image-marquee-container');
     if (marquee && !marquee.children.length) {
+        marquee.classList.add('is-loading');
+        marquee.classList.remove('is-ready');
         marquee.innerHTML = Array.from({ length: IS_MOBILE_VIEWPORT ? 4 : 8 }).map(() => `
             <div class="marquee-item is-loading-card" aria-hidden="true">
                 <span class="skeleton-block skeleton-img"></span>
@@ -1539,20 +1541,24 @@ function renderInventorySpotlight() {
 
     if (!candidates.length) {
         if (marqueeSection) marqueeSection.style.display = 'none';
+        marqueeContainer.classList.remove('is-loading', 'is-ready');
         return;
     }
     if (marqueeSection) marqueeSection.style.display = '';
 
     // Generate HTML for the images
-    const imagesHtml = candidates.map(p => {
+    const eagerCount = IS_MOBILE_VIEWPORT ? 4 : 6;
+    const imagesHtml = candidates.map((p, index) => {
         const img = getProductImageSet(p, 'card')[0];
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
         const stockBadge = getProductBadgeMarkup(p);
         const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
         const price = getProductCardPriceInfo(p, 'retail').price;
         const priceText = shouldShowProductPrices('retail') ? formatMoney(price) : 'Precio por consultar';
+        const loading = index < eagerCount ? 'eager' : 'lazy';
+        const priority = index < eagerCount ? 'high' : 'low';
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
-                    <img src="${escapeHtml(img || 'hero_necklace.png')}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
+                    <img src="${escapeHtml(img || 'hero_necklace.png')}" alt="${escapeHtml(name)}" loading="${loading}" decoding="async" fetchpriority="${priority}" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
                     ${stockBadge}
                     <div class="marquee-item-info">
                         <strong>${escapeHtml(name)}</strong>
@@ -1563,6 +1569,8 @@ function renderInventorySpotlight() {
 
     // Duplicate for seamless infinite scrolling on every viewport.
     marqueeContainer.innerHTML = imagesHtml + imagesHtml;
+    marqueeContainer.classList.remove('is-loading');
+    marqueeContainer.classList.add('is-ready');
     
     inventorySpotlightRendered = true;
 }
