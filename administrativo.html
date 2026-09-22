@@ -148,6 +148,189 @@
             margin-top: 8px;
         }
 
+        @media (max-width: 760px) {
+            html,
+            body {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            .dashboard-layout {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            .sub-sidebar {
+                display: none !important;
+            }
+
+            .dashboard-main,
+            .dashboard-content-area,
+            .dashboard-section,
+            .admin-panel,
+            .admin-dashboard-shell,
+            .admin-dashboard-hero,
+            .dashboard-card,
+            .product-config-card,
+            .orders-admin-body,
+            .china-admin-body,
+            .settings-tab-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            .dashboard-header {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 50 !important;
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+                padding: 12px 14px !important;
+                border-bottom: 1px solid rgba(255,255,255,.08) !important;
+            }
+
+            .dashboard-header h1 {
+                font-size: 18px !important;
+                line-height: 1.1 !important;
+            }
+
+            .dashboard-badge {
+                display: none !important;
+            }
+
+            .admin-mobile-view-select {
+                display: block !important;
+                width: 100% !important;
+                min-height: 44px !important;
+                padding: 0 14px !important;
+                border: 1px solid rgba(216,209,194,.22) !important;
+                border-radius: 12px !important;
+                background: rgba(255,255,255,.055) !important;
+                color: #f8f4ff !important;
+                font-weight: 800 !important;
+                outline: none !important;
+            }
+
+            .dashboard-content-area {
+                padding: 12px !important;
+            }
+
+            .admin-dashboard-hero,
+            .admin-title-row,
+            .product-form-intro,
+            .china-header,
+            .orders-admin-header,
+            .carousel-admin-intro {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 14px !important;
+                padding: 16px !important;
+                border-radius: 16px !important;
+            }
+
+            .admin-dashboard-actions,
+            .product-form-actions,
+            .china-header > div:last-child,
+            .orders-admin-header > div:last-child,
+            .china-options-row {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+
+            .admin-btn,
+            .orders-action-btn,
+            .action-btn-edit,
+            .action-btn-edit-sm {
+                width: 100% !important;
+                justify-content: center !important;
+                min-height: 44px !important;
+            }
+
+            .dashboard-stat-grid,
+            .dashboard-mini-grid,
+            .dashboard-main-grid,
+            .dashboard-bottom-grid,
+            .dashboard-filter-bar,
+            .admin-form-grid,
+            .grid-split,
+            .grid-split.product-admin-grid,
+            .inventory-filter-row,
+            .orders-search-row,
+            .preview-summary-grid,
+            .inv-form-grid-3,
+            .inv-form-grid-4,
+            .inv-summary-cards {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .dashboard-card,
+            .dashboard-stat-card,
+            .product-config-card,
+            .admin-panel,
+            .settings-tab-panel form,
+            .settings-subgroup {
+                padding: 14px !important;
+                border-radius: 16px !important;
+            }
+
+            .form-control,
+            input,
+            select,
+            textarea {
+                max-width: 100% !important;
+            }
+
+            .orders-tabs,
+            .settings-tabs {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                width: 100% !important;
+                overflow: visible !important;
+            }
+
+            .settings-tabs {
+                padding: 12px !important;
+            }
+
+            .table-wrapper,
+            .inv-table-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px !important;
+            }
+
+            table,
+            .inventory-tree,
+            #view-orders table,
+            #view-china-orders table {
+                min-width: 720px !important;
+            }
+
+            #invoice-editor-modal .modal-card,
+            #edit-product-modal .modal-card {
+                width: calc(100vw - 18px) !important;
+                max-width: calc(100vw - 18px) !important;
+                max-height: calc(100vh - 18px) !important;
+                border-radius: 16px !important;
+            }
+
+            #invoice-editor-modal .inv-form-section,
+            #edit-product-modal .modal-card {
+                padding: 14px !important;
+            }
+        }
+
         .dashboard-layout {
             min-height:100vh;
             display:grid;
@@ -229,6 +412,7 @@
         .dashboard-content-area { padding:28px 32px 42px; }
         .dashboard-section { display:none; }
         .dashboard-section.active { display:block; }
+        .admin-mobile-view-select { display:none; }
         .admin-panel,.dashboard-card {
             border:1px solid var(--line);
             border-radius:16px;
@@ -4557,6 +4741,143 @@
             0% { background-position:-140px 0; }
             100% { background-position:140px 0; }
         }
+        /* Capa final mobile admin: selector compacto y secciones adaptables */
+        @media (max-width: 760px) {
+            html,
+            body {
+                overflow-x: hidden !important;
+            }
+            .dashboard-layout {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            .sub-sidebar {
+                display: none !important;
+            }
+            .dashboard-main,
+            .dashboard-content-area,
+            .dashboard-section,
+            .admin-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+            }
+            .dashboard-header {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 70 !important;
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+                min-height: 0 !important;
+                padding: 12px 14px !important;
+            }
+            .dashboard-header h1 {
+                font-size: 18px !important;
+                line-height: 1.08 !important;
+            }
+            .dashboard-badge {
+                display: none !important;
+            }
+            .admin-mobile-view-select {
+                display: block !important;
+                width: 100% !important;
+                min-height: 44px !important;
+                padding: 0 14px !important;
+                border: 1px solid rgba(216,209,194,.22) !important;
+                border-radius: 12px !important;
+                background: #141218 !important;
+                color: #f8f4ff !important;
+                font-weight: 800 !important;
+            }
+            .dashboard-content-area {
+                padding: 12px !important;
+            }
+            .admin-dashboard-hero,
+            .admin-title-row,
+            .product-form-intro,
+            .china-header,
+            .orders-admin-header,
+            .carousel-admin-intro,
+            .dashboard-card,
+            .dashboard-stat-card,
+            .product-config-card,
+            .settings-tab-panel form,
+            .settings-subgroup {
+                padding: 14px !important;
+                border-radius: 16px !important;
+            }
+            .admin-dashboard-hero,
+            .admin-title-row,
+            .product-form-intro,
+            .china-header,
+            .orders-admin-header,
+            .carousel-admin-intro,
+            .admin-dashboard-actions,
+            .product-form-actions,
+            .china-header > div:last-child,
+            .orders-admin-header > div:last-child,
+            .china-options-row {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+                width: 100% !important;
+            }
+            .dashboard-stat-grid,
+            .dashboard-mini-grid,
+            .dashboard-main-grid,
+            .dashboard-bottom-grid,
+            .dashboard-filter-bar,
+            .admin-form-grid,
+            .grid-split,
+            .grid-split.product-admin-grid,
+            .inventory-filter-row,
+            .orders-search-row,
+            .preview-summary-grid,
+            .inv-form-grid-3,
+            .inv-form-grid-4,
+            .inv-summary-cards {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+            .admin-btn,
+            .orders-action-btn,
+            .action-btn-edit,
+            .action-btn-edit-sm {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+            .orders-tabs,
+            .settings-tabs {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+            .table-wrapper,
+            .inv-table-wrapper {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px !important;
+            }
+            table,
+            .inventory-tree,
+            #view-orders table,
+            #view-china-orders table {
+                min-width: 720px !important;
+            }
+            #invoice-editor-modal .modal-card,
+            #edit-product-modal .modal-card {
+                width: calc(100vw - 18px) !important;
+                max-width: calc(100vw - 18px) !important;
+                max-height: calc(100vh - 18px) !important;
+                border-radius: 16px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -4698,6 +5019,15 @@
         <main class="dashboard-main">
             <header class="dashboard-header">
                 <h1 id="current-section-title">Dashboard</h1>
+                <select class="admin-mobile-view-select" id="admin-mobile-view-select" aria-label="Cambiar seccion del panel">
+                    <option value="dashboard">Dashboard</option>
+                    <option value="products">Añadir Producto</option>
+                    <option value="inventory">Ver Inventario</option>
+                    <option value="china-orders">Pedidos China</option>
+                    <option value="orders">Pedidos y Fact.</option>
+                    <option value="settings">Ajustes y Banner</option>
+                    <option value="logout">Cerrar Sesion</option>
+                </select>
                 <div class="dashboard-badge">Panel Administrativo</div>
             </header>
 
@@ -5265,7 +5595,20 @@
                 panel.classList.toggle('active', panel.dataset.settingsTab === tabId);
             });
         });
+        document.addEventListener('change', function (event) {
+            const select = event.target.closest('#admin-mobile-view-select');
+            if (!select) return;
+            if (select.value === 'logout') {
+                window.location.href = 'index.html';
+                return;
+            }
+            const option = select.options[select.selectedIndex];
+            const title = option ? option.textContent : 'Panel';
+            if (typeof switchDashboardView === 'function') {
+                switchDashboardView(select.value, title);
+            }
+        });
     </script>
-    <script src="admin-app.js?v=invoice-status-v1-20260922" defer></script>
+    <script src="admin-app.js?v=admin-mobile-v1-20260922" defer></script>
 </body>
 </html>

@@ -7937,6 +7937,8 @@ function switchDashboardView(viewId, title) {
     if (btn) btn.classList.add('active');
     var titleEl = document.getElementById('current-section-title');
     if (titleEl) titleEl.textContent = title || 'Panel';
+    var mobileSelect = document.getElementById('admin-mobile-view-select');
+    if (mobileSelect && mobileSelect.value !== viewId) mobileSelect.value = viewId;
     var area = document.querySelector('.dashboard-content-area');
     if (area) area.scrollTop = 0;
 

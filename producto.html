@@ -749,6 +749,10 @@
             color: rgba(255, 255, 255, 0.64);
         }
 
+        .product-mobile-heading {
+            display: none;
+        }
+
         @media (max-width: 900px) {
             .product-detail-luxury {
                 grid-template-columns: 1fr;
@@ -775,9 +779,19 @@
                 gap: 10px;
                 width: 100%;
             }
+            .product-detail-luxury .product-mobile-heading {
+                display: block;
+                margin: 0 2px 2px;
+                color: #fff;
+                font-size: clamp(20px, 5.8vw, 26px);
+                font-weight: 900;
+                line-height: 1.05;
+                letter-spacing: 0;
+                text-transform: uppercase;
+            }
             .product-detail-luxury .product-main-img {
                 grid-column: 1 !important;
-                grid-row: 1 !important;
+                grid-row: 2 !important;
                 width: 100%;
                 border-radius: 18px !important;
             }
@@ -811,7 +825,8 @@
                 padding: 5px 10px;
             }
             .product-info-name {
-                font-size: clamp(25px, 8.2vw, 34px) !important;
+                display: none !important;
+                font-size: clamp(20px, 5.8vw, 26px) !important;
             }
             #detail-price {
                 font-size: clamp(28px, 8.8vw, 38px) !important;
@@ -924,6 +939,7 @@
     <!-- ===== PRODUCT DETAIL ===== -->
     <main class="product-detail-container product-detail-luxury" id="product-detail">
         <section class="product-gallery">
+            <h1 class="product-mobile-heading" id="detail-name-mobile">Nombre del Producto</h1>
             <div class="product-main-img" id="detail-img-container">
                 <img src="" alt="" id="detail-img" style="transition: opacity 0.2s ease-in-out;">
             </div>
@@ -1379,6 +1395,8 @@
                 const stock = getProductStock(product);
 
                 document.getElementById('detail-name').textContent = name;
+                const mobileName = document.getElementById('detail-name-mobile');
+                if (mobileName) mobileName.textContent = name;
                 document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista - ${cat}` : cat;
                 document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
                 document.getElementById('detail-desc').textContent = desc;
