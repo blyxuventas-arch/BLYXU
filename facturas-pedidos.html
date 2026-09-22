@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=home-ad-fast-20260921" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=home-ad-fast-20260921"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=perf-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=perf-20260922"></noscript>
     <style>
         .orders-page {
             position: relative;
@@ -124,6 +124,15 @@
             box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.055);
         }
 
+        .orders-login.is-generating {
+            animation: lookupPulse 1.2s ease-in-out infinite;
+        }
+
+        .orders-form input.lookup-active {
+            border-color: rgba(168, 85, 247, 0.55);
+            box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.12), 0 0 28px rgba(168, 85, 247, 0.18);
+        }
+
         .orders-form button,
         .orders-action-btn {
             min-height: 50px;
@@ -152,6 +161,29 @@
             cursor: wait;
             opacity: 0.7;
             transform: none;
+        }
+
+        .orders-form button.is-generating {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .orders-form button.is-generating::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.24), transparent);
+            transform: translateX(-100%);
+            animation: lookupSweep 0.95s linear infinite;
+        }
+
+        @keyframes lookupPulse {
+            0%, 100% { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), 0 0 0 rgba(168, 85, 247, 0); }
+            50% { box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), 0 0 34px rgba(168, 85, 247, 0.24); }
+        }
+
+        @keyframes lookupSweep {
+            to { transform: translateX(100%); }
         }
 
         .orders-status {
@@ -331,26 +363,26 @@
 
         .items-compact-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 10px;
+            grid-template-columns: 1fr;
+            gap: 6px;
         }
 
         .item-compact-card {
             display: grid;
-            grid-template-columns: 58px 1fr auto;
+            grid-template-columns: 46px minmax(0, 1fr) auto;
             gap: 10px;
             align-items: center;
             min-width: 0;
-            padding: 10px;
+            padding: 8px 10px;
             border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 12px;
+            border-radius: 10px;
             background: rgba(0, 0, 0, 0.18);
         }
 
         .item-compact-thumb {
-            width: 58px;
-            height: 58px;
-            border-radius: 10px;
+            width: 46px;
+            height: 46px;
+            border-radius: 8px;
             object-fit: cover;
             background: rgba(255, 255, 255, 0.08);
         }
@@ -1145,7 +1177,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=home-ad-fast-20260921" defer></script>
+    <script src="blyxu-lite.js?v=perf-20260922" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
@@ -1237,6 +1269,17 @@
                 return '$' + number.toLocaleString('es-CO');
             }
 
+            function parseMoneyValue(value) {
+                if (value === undefined || value === null || value === '') return 0;
+                if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+                const cleaned = String(value)
+                    .replace(/[^\d,.-]/g, '')
+                    .replace(/\.(?=\d{3}(\D|$))/g, '')
+                    .replace(',', '.');
+                const parsed = Number(cleaned);
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+
             function formatDate(value) {
                 if (!value) return '-';
                 const date = new Date(value);
@@ -1246,22 +1289,107 @@
 
             function parseItems(order) {
                 const raw = getField(order, ['Productos JSON', 'Productos', 'items', 'carrito'], []);
-                if (Array.isArray(raw)) return raw;
-                if (!raw) return [];
+                if (Array.isArray(raw)) return compactOrderItems(raw);
+                if (!raw) return compactOrderItems(getLooseOrderItems(order));
                 try {
                     const parsed = JSON.parse(raw);
-                    return Array.isArray(parsed) ? parsed : [];
+                    return compactOrderItems(Array.isArray(parsed) ? parsed : []);
                 } catch (error) {
-                    return [];
+                    return compactOrderItems(getLooseOrderItems(order));
                 }
             }
 
+            function getLooseOrderItems(order) {
+                const name = getField(order, [
+                    'Nombre Producto',
+                    'Producto',
+                    'Producto Nombre',
+                    'Nombre del Producto',
+                    'Item',
+                    'Articulo',
+                    'Artículo'
+                ], '');
+                const sku = getField(order, ['SKU', 'Referencia', 'Ref', 'ID Producto', 'ID Variacion', 'ID Variación'], '');
+                if (!name && !sku) return [];
+                const qty = Number(getField(order, ['Cantidad', 'cantidad', 'Qty', 'qty'], 1)) || 1;
+                const price = parseMoneyValue(getField(order, ['Precio', 'Precio Unitario', 'Valor Unitario', 'price'], 0));
+                const subtotal = parseMoneyValue(getField(order, ['Subtotal Producto', 'Subtotal Item', 'Subtotal'], 0));
+                return [{
+                    nombre: name || sku || 'Producto',
+                    sku,
+                    cantidad: qty,
+                    precio: price || (subtotal > 0 ? Math.round(subtotal / Math.max(1, qty)) : 0),
+                    subtotal,
+                    imagen: getField(order, ['Imagen', 'Foto', 'img', 'image', 'thumb'], '')
+                }];
+            }
+
+            function compactOrderItems(items) {
+                const grouped = new Map();
+                (Array.isArray(items) ? items : []).forEach(item => {
+                    const name = getField(item, ['nombre', 'Nombre', 'Producto', 'name'], 'Producto');
+                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion', 'ID Variacion', 'ID Variación'], '');
+                    const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty', 'quantity'], 1)) || 1;
+                    const price = parseMoneyValue(getField(item, ['precio', 'Precio', 'price', 'valor'], 0));
+                    const image = getField(item, ['img', 'imagen', 'Imagen', 'image', 'foto', 'Foto', 'thumb'], '');
+                    const key = [onlyLetters(sku), onlyLetters(name), price].join('|');
+                    if (!grouped.has(key)) {
+                        grouped.set(key, {
+                            ...item,
+                            nombre: name,
+                            sku,
+                            cantidad: 0,
+                            precio: price,
+                            imagen: image
+                        });
+                    }
+                    const current = grouped.get(key);
+                    current.cantidad += qty;
+                    if (!current.imagen && image) current.imagen = image;
+                });
+                return Array.from(grouped.values());
+            }
+
+            function mergeRecordsByOrder(records) {
+                const groups = new Map();
+                (Array.isArray(records) ? records : []).forEach((record, index) => {
+                    const id = getField(record, ['ID Pedido', 'ID', 'id', 'Referencia', 'Ref'], '');
+                    const key = id ? 'order:' + onlyLetters(id) : 'row:' + index;
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(record);
+                });
+
+                return Array.from(groups.values()).map(group => {
+                    if (group.length === 1) return group[0];
+                    const base = { ...group[0] };
+                    const rawItemValues = group
+                        .map(record => getField(record, ['Productos JSON', 'Productos', 'items', 'carrito'], ''))
+                        .filter(Boolean)
+                        .map(value => String(value));
+                    const uniqueRawItems = Array.from(new Set(rawItemValues));
+                    const items = uniqueRawItems.length === 1
+                        ? parseItems(group[0])
+                        : compactOrderItems(group.flatMap(parseItems));
+                    const itemTotal = items.reduce((sum, item) => {
+                        const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
+                        const price = parseMoneyValue(getField(item, ['precio', 'Precio', 'price'], 0));
+                        return sum + (qty * price);
+                    }, 0);
+                    const maxStoredTotal = Math.max(...group.map(record => parseMoneyValue(getField(record, ['Subtotal', 'Total', 'total'], 0))), 0);
+                    base['Productos JSON'] = JSON.stringify(items);
+                    base['Cantidad Total'] = items.reduce((sum, item) => sum + (Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1), 0);
+                    base.Subtotal = itemTotal > 0 ? itemTotal : maxStoredTotal;
+                    base.Total = base.Subtotal;
+                    return base;
+                });
+            }
+
             function getOrderTotal(order, items) {
-                const direct = Number(getField(order, ['Subtotal', 'Total', 'total'], 0));
+                const direct = parseMoneyValue(getField(order, ['Subtotal', 'Total', 'total'], 0));
                 if (direct > 0) return direct;
                 return items.reduce((sum, item) => {
                     const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1;
-                    const price = Number(getField(item, ['precio', 'Precio', 'price'], 0)) || 0;
+                    const price = parseMoneyValue(getField(item, ['precio', 'Precio', 'price'], 0));
                     return sum + (qty * price);
                 }, 0);
             }
@@ -1371,14 +1499,14 @@
                     throw new Error(data?.error || 'No se pudo cargar la informacion.');
                 }
 
-                return data.data
+                return mergeRecordsByOrder(data.data
                     .filter(order => matchesLookup(
                         order,
                         phone,
                         ['Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Telefono Cliente', 'Celular', 'ID Cliente'],
                         ['ID Pedido', 'ID', 'id', 'Referencia', 'Ref']
                     ))
-                    .reverse();
+                    .reverse());
             }
 
             async function fetchInvoicesByPhone(phone) {
@@ -1426,7 +1554,7 @@
                     return '<div class="orders-empty">Este registro no tiene productos detallados.</div>';
                 }
 
-                const visibleItems = items.slice(0, 4);
+                const visibleItems = items.slice(0, 8);
                 const totalQty = items.reduce((sum, item) => {
                     return sum + (Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1);
                 }, 0);
@@ -2179,6 +2307,9 @@
                 status.textContent = '';
                 btn.disabled = true;
                 btn.textContent = 'Buscando...';
+                btn.classList.add('is-generating');
+                input.classList.add('lookup-active');
+                form.closest('.orders-login')?.classList.add('is-generating');
 
                 try {
                     currentPhone = lookup;
@@ -2205,6 +2336,9 @@
                 } finally {
                     btn.disabled = false;
                     btn.textContent = 'Ver mi panel';
+                    btn.classList.remove('is-generating');
+                    input.classList.remove('lookup-active');
+                    form.closest('.orders-login')?.classList.remove('is-generating');
                 }
             });
 

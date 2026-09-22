@@ -11972,7 +11972,9 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
 @supports (content-visibility: auto) {
     .home-categories-section,
     .image-marquee-section,
+    .home-ad-section,
     .collection-section,
+    .recommended-section,
     .cart-standalone-section,
     .contact-grid,
     .orders-page,

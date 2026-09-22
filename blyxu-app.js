@@ -388,6 +388,13 @@ function yieldToBrowser() {
     });
 }
 
+function runWhenIdle(callback, timeout = 1400) {
+    if (typeof requestIdleCallback === 'function') {
+        return requestIdleCallback(callback, { timeout });
+    }
+    return setTimeout(callback, Math.min(timeout, 700));
+}
+
 async function renderHomeSectionsStaggered(options = {}) {
     const { renderCatalog = true } = options;
     const token = ++homeRenderToken;
@@ -5686,12 +5693,35 @@ document.addEventListener('DOMContentLoaded', () => {
             renderFooterSocialLinks();
             renderPromoWidget();
         });
+    } else if (isCartPage) {
+        hydrateSiteConfigFromCache();
+        renderFooterSocialLinks();
+        renderPromoWidget();
+        runWhenIdle(() => {
+            const tasks = [fetchSiteConfig().catch(() => {})];
+            if (cart.length) {
+                tasks.push(loadProducts({ renderCatalog: false, showLoading: false }).catch(() => {}));
+            }
+            Promise.all(tasks).then(() => {
+                renderFloatingWhatsApp();
+                renderFooterSocialLinks();
+                renderPromoWidget();
+                if (cart.length) updateCartUI();
+            });
+        }, 1800);
+    } else if (isProductDetailPage) {
+        runWhenIdle(() => {
+            const detailDataLoad = productsLoadPromise || configLoadPromise || fetchSiteConfig();
+            Promise.resolve(detailDataLoad).then(() => {
+                renderFooterSocialLinks();
+                renderPromoWidget();
+            }).catch(() => {});
+        }, 1800);
     } else {
         loadProducts({ renderCatalog: !isProductDetailPage && !isCartPage, showLoading: !isHomePage }).then(() => {
             renderFloatingWhatsApp();
             renderFooterSocialLinks();
             renderPromoWidget();
-            if (isCartPage) updateCartUI();
             if (isWholesalePage) flushWholesaleEntryCelebration();
         });
     }

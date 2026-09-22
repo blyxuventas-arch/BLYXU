@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=home-ad-fast-20260921" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=home-ad-fast-20260921"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=perf-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=perf-20260922"></noscript>
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -148,6 +148,14 @@
             flex-wrap: wrap;
         }
 
+        .product-header-badges {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
         .product-info-cat {
             display: inline-flex;
             align-items: center;
@@ -160,6 +168,39 @@
             font-weight: 700;
             letter-spacing: 1.5px;
             text-transform: uppercase;
+        }
+
+        .product-availability-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            color: #22c55e;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 1.15;
+            width: fit-content;
+        }
+
+        .product-availability-pill span {
+            color: rgba(255, 255, 255, 0.48);
+            font-weight: 700;
+            letter-spacing: 0.9px;
+            text-transform: uppercase;
+        }
+
+        .product-availability-pill strong {
+            color: inherit;
+            font: inherit;
+        }
+
+        .product-availability-pill.is-out {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.32);
+            color: #f87171;
         }
 
         .product-stock-alert {
@@ -765,6 +806,10 @@
                 line-height: 1.15;
                 white-space: normal;
             }
+            .product-availability-pill {
+                font-size: 10px;
+                padding: 5px 10px;
+            }
             .product-info-name {
                 font-size: clamp(25px, 8.2vw, 34px) !important;
             }
@@ -888,7 +933,13 @@
         <section class="product-info">
             <!-- 1. Header: Categoría & Stock Badge -->
             <div class="product-header-row">
-                <div class="product-info-cat" id="detail-cat">Categoría</div>
+                <div class="product-header-badges">
+                    <div class="product-info-cat" id="detail-cat">Categoría</div>
+                    <div class="product-availability-pill" id="detail-availability-pill">
+                        <span>Disponibilidad</span>
+                        <strong id="detail-stock">En Stock</strong>
+                    </div>
+                </div>
                 <div class="product-stock-alert" id="detail-stock-alert" style="display:none;"></div>
             </div>
 
@@ -948,10 +999,6 @@
                 </div>
 
                 <div class="product-specs">
-                    <div class="spec-item">
-                        <span class="spec-label">Disponibilidad</span>
-                        <span class="spec-value" id="detail-stock">En Stock</span>
-                    </div>
                     <div class="spec-item" id="spec-color-row">
                         <span class="spec-label" id="detail-color-label">Colores</span>
                         <span class="spec-value" id="detail-colors">Varios</span>
@@ -1008,7 +1055,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=home-ad-fast-20260921" defer></script>
+    <script src="blyxu-app.js?v=perf-20260922" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1376,15 +1423,14 @@
                 document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
                 document.getElementById('detail-desc').textContent = desc;
                 document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
+                document.getElementById('detail-availability-pill')?.classList.toggle('is-out', stock <= 0);
                 setSpec('spec-color-row', 'detail-colors', product.Color || product.color || '');
 
                 const stockAlert = document.getElementById('detail-stock-alert');
                 if (stockAlert) {
                     stockAlert.className = 'product-stock-alert';
                     if (stock <= 0) {
-                        stockAlert.textContent = 'Agotado por ahora';
-                        stockAlert.classList.add('is-out');
-                        stockAlert.style.display = 'inline-flex';
+                        stockAlert.style.display = 'none';
                     } else if (stock <= LOW_STOCK_THRESHOLD) {
                         stockAlert.textContent = 'Bajo stock';
                         stockAlert.classList.add('is-low');

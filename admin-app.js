@@ -29,6 +29,9 @@ const INVENTORY_BATCH_SIZE = 25;
 const MAX_CAROUSEL_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_UPLOAD_MAX_EDGE = 1800;
 const IMAGE_UPLOAD_QUALITY = 0.82;
+const IMAGE_UPLOAD_FORMAT = 'image/webp';
+const IMAGE_UPLOAD_EXTENSION = 'webp';
+const JSPDF_CDN_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
 function clearPublicProductsCache() {
     try {
@@ -46,6 +49,7 @@ let inventoryLoadMoreObserver = null;
 let filteredInventario = [];
 let adminInventorySearchQuery = '';
 let adminInventoryCategoryFilter = 'todos';
+let adminInventoryPdfSelectedCategoryKeys = null;
 let isEditingProduct = false;
 let inventoryFetchToken = 0;
 const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
@@ -687,6 +691,94 @@ function normalizeSearchText(value) {
         .trim();
 }
 
+function normalizeInventoryCategoryWord(word) {
+    const singularMap = {
+        anillos: 'anillo',
+        aretes: 'arete',
+        collares: 'collar',
+        pulseras: 'pulsera',
+        dijes: 'dije',
+        billeteras: 'billetera',
+        monederos: 'monedero',
+        bolsos: 'bolso',
+        maletas: 'maleta',
+        botillos: 'botillo',
+        termos: 'termo',
+        cepillos: 'cepillo',
+        espejos: 'espejo',
+        cosmetiqueras: 'cosmetiquera',
+        maquillajes: 'maquillaje',
+        caimanes: 'caiman',
+        cadenas: 'cadena',
+        escolares: 'escolar',
+        juegos: 'juego',
+        estuches: 'estuche',
+        joyeros: 'joyero',
+        llaveros: 'llavero',
+        lamparas: 'lampara',
+        relojes: 'reloj',
+        peluches: 'peluche'
+    };
+    const cleanWord = normalizeSearchText(word).replace(/[^a-z0-9]+/g, '');
+    if (!cleanWord) return '';
+    if (singularMap[cleanWord]) return singularMap[cleanWord];
+    if (cleanWord.length > 4 && cleanWord.endsWith('s')) return cleanWord.slice(0, -1);
+    return cleanWord;
+}
+
+function normalizeInventoryCategoryKey(value) {
+    const base = normalizeSearchText(value);
+    if (base === 'todos' || base === 'all') return 'todos';
+    return base
+        .replace(/\s*\/\s*/g, '/')
+        .split('/')
+        .map(part => part
+            .split(/\s+/)
+            .map(normalizeInventoryCategoryWord)
+            .filter(Boolean)
+            .join(' '))
+        .filter(Boolean)
+        .join('/');
+}
+
+function formatInventoryCategoryLabel(value) {
+    return String(value || '')
+        .replace(/\s*\/\s*/g, ' / ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase()
+        .replace(/(^|[\s/])([a-záéíóúñ])/g, function (_, prefix, letter) {
+            return prefix + letter.toUpperCase();
+        });
+}
+
+function getInventoryCategoryGroups(options = {}) {
+    const includeDefaults = options.includeDefaults !== false;
+    const defaults = ['Collares', 'Pulseras', 'Aretes', 'Anillos', 'Sets', 'Dijes', 'BANNER'];
+    const groups = new Map();
+
+    function addCategory(rawCategory) {
+        const raw = String(rawCategory || '').trim();
+        if (!raw) return;
+        const key = normalizeInventoryCategoryKey(raw);
+        if (!key) return;
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                label: formatInventoryCategoryLabel(raw),
+                values: new Set()
+            });
+        }
+        groups.get(key).values.add(raw);
+    }
+
+    if (includeDefaults) defaults.forEach(addCategory);
+    (inventario || []).forEach(product => addCategory(product.Categoria || product.categoria));
+
+    return Array.from(groups.values())
+        .sort((a, b) => String(a.label).localeCompare(String(b.label), 'es', { sensitivity: 'base' }));
+}
+
 function inventorySearchBlob(product) {
     return normalizeSearchText([
         product.Nombre,
@@ -816,7 +908,7 @@ async function saveProductListToGoogleSheets(itemsList, options = {}) {
 
 function getFilteredInventory() {
     const query = normalizeSearchText(adminInventorySearchQuery);
-    const categoryFilter = normalizeSearchText(adminInventoryCategoryFilter);
+    const categoryFilter = normalizeInventoryCategoryKey(adminInventoryCategoryFilter);
     const indexed = inventario
         .map((product, index) => ({ product, index }))
         .filter(item => !isBannerInventoryProduct(item.product) && isVisibleInventoryProduct(item.product));
@@ -858,7 +950,7 @@ function getFilteredInventory() {
     if (categoryFilter && categoryFilter !== 'todos') {
         groupEntries = groupEntries.filter(function (entry) {
             return entry.items.some(function (item) {
-                return normalizeSearchText(item.product.Categoria) === categoryFilter;
+                return normalizeInventoryCategoryKey(item.product.Categoria) === categoryFilter;
             });
         });
     }
@@ -1765,7 +1857,7 @@ function setupVariantImagePicker(card) {
         if (isUploading) {
             saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar esta Variante';
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Subiendo imagen...';
+            saveBtn.textContent = 'Optimizando imagen...';
         } else {
             saveBtn.disabled = false;
             saveBtn.textContent = saveBtn.dataset.readyText || 'Guardar esta Variante';
@@ -1782,7 +1874,7 @@ function setupVariantImagePicker(card) {
         const localUrl = URL.createObjectURL(file);
         updateVariantImagePickerPreview(card, localUrl);
         setUploadingState(true);
-        showToast('Subiendo imagen de variante...');
+        showToast('Convirtiendo imagen a WebP y subiendo...');
 
         try {
             const uploadedUrl = await uploadCarouselImage(file);
@@ -2312,29 +2404,107 @@ function updateCategoryOptions() {
     const list = el('admin-category-options');
     const select = el('prod-categoria');
     const inventorySelect = el('admin-inventory-category-filter');
-
-    const defaults = ['Collares', 'Pulseras', 'Aretes', 'Anillos', 'Sets', 'Dijes', 'BANNER'];
-    const categories = [...new Set([
-        ...defaults,
-        ...inventario.map(p => p.Categoria).filter(Boolean)
-    ])].sort((a, b) => String(a).localeCompare(String(b), 'es'));
+    const categoryGroups = getInventoryCategoryGroups();
 
     if (list) {
-        list.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}"></option>`).join('');
+        list.innerHTML = categoryGroups
+            .map(group => `<option value="${escapeHtml(group.label)}"></option>`)
+            .join('');
     }
     if (select && select.tagName === 'SELECT') {
         const current = select.value;
-        select.innerHTML = categories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
+        select.innerHTML = categoryGroups
+            .map(group => `<option value="${escapeHtml(group.label)}">${escapeHtml(group.label)}</option>`)
+            .join('');
         if (current) select.value = current;
     }
     if (inventorySelect) {
-        const current = inventorySelect.value || 'todos';
-        const inventoryCategories = categories.filter(category => normalizeSearchText(category) !== 'banner');
+        const current = inventorySelect.value || adminInventoryCategoryFilter || 'todos';
+        const currentKey = current === 'todos' ? 'todos' : normalizeInventoryCategoryKey(current);
+        const inventoryCategories = categoryGroups.filter(group => group.key !== 'banner');
         inventorySelect.innerHTML = '<option value="todos">Todas las categor&iacute;as</option>'
-            + inventoryCategories.map(category => `<option value="${String(category).replace(/"/g, '&quot;')}">${category}</option>`).join('');
-        inventorySelect.value = inventoryCategories.includes(current) ? current : 'todos';
+            + inventoryCategories.map(group => `<option value="${escapeHtml(group.key)}">${escapeHtml(group.label)}</option>`).join('');
+        inventorySelect.value = inventoryCategories.some(group => group.key === currentKey) ? currentKey : 'todos';
         adminInventoryCategoryFilter = inventorySelect.value;
     }
+    renderInventoryPdfCategoryPicker(categoryGroups);
+}
+
+function getInventoryPdfCategoryGroups() {
+    return getInventoryCategoryGroups({ includeDefaults: false })
+        .filter(group => group.key && group.key !== 'banner');
+}
+
+function getSelectedInventoryPdfCategoryKeys() {
+    const inputs = Array.from(document.querySelectorAll('[data-inventory-pdf-category]'));
+    if (inputs.length) {
+        return inputs
+            .filter(input => input.checked)
+            .map(input => input.value)
+            .filter(Boolean);
+    }
+    const groups = getInventoryPdfCategoryGroups();
+    return adminInventoryPdfSelectedCategoryKeys === null
+        ? groups.map(group => group.key)
+        : Array.from(adminInventoryPdfSelectedCategoryKeys);
+}
+
+function updateInventoryPdfCategorySummary() {
+    const summary = document.getElementById('inventory-pdf-category-summary');
+    if (!summary) return;
+    const total = document.querySelectorAll('[data-inventory-pdf-category]').length;
+    const selected = getSelectedInventoryPdfCategoryKeys().length;
+    if (!total) {
+        summary.textContent = 'Sin categorias disponibles';
+    } else if (selected === total) {
+        summary.textContent = 'Todas las categorias';
+    } else if (selected === 0) {
+        summary.textContent = 'Ninguna categoria seleccionada';
+    } else {
+        summary.textContent = `${selected} de ${total} categorias`;
+    }
+}
+
+function renderInventoryPdfCategoryPicker(categoryGroups) {
+    const list = document.getElementById('inventory-pdf-category-list');
+    if (!list) return;
+
+    const groups = getInventoryPdfCategoryGroups();
+    const allKeys = groups.map(group => group.key);
+    const selectedKeys = adminInventoryPdfSelectedCategoryKeys === null
+        ? new Set(allKeys)
+        : new Set(Array.from(adminInventoryPdfSelectedCategoryKeys).filter(key => allKeys.includes(key)));
+
+    list.innerHTML = groups.map(group => {
+        const checked = selectedKeys.has(group.key) ? ' checked' : '';
+        return `<label class="inventory-pdf-category-check"><input type="checkbox" value="${escapeHtml(group.key)}" data-inventory-pdf-category${checked}> <span>${escapeHtml(group.label)}</span></label>`;
+    }).join('');
+
+    updateInventoryPdfCategorySummary();
+}
+
+function initInventoryPdfCategoryPicker() {
+    const panel = document.getElementById('inventory-pdf-category-panel');
+    if (!panel || panel.dataset.ready === 'true') return;
+    panel.dataset.ready = 'true';
+
+    panel.addEventListener('change', function (event) {
+        if (!event.target.matches('[data-inventory-pdf-category]')) return;
+        adminInventoryPdfSelectedCategoryKeys = new Set(getSelectedInventoryPdfCategoryKeys());
+        updateInventoryPdfCategorySummary();
+    });
+
+    panel.addEventListener('click', function (event) {
+        const action = event.target.closest('[data-inventory-pdf-categories-action]')?.dataset.inventoryPdfCategoriesAction;
+        if (!action) return;
+        const inputs = Array.from(panel.querySelectorAll('[data-inventory-pdf-category]'));
+        const shouldCheck = action === 'all';
+        inputs.forEach(input => { input.checked = shouldCheck; });
+        adminInventoryPdfSelectedCategoryKeys = shouldCheck
+            ? new Set(inputs.map(input => input.value).filter(Boolean))
+            : new Set();
+        updateInventoryPdfCategorySummary();
+    });
 }
 
 function initAdminCustomCursor() {
@@ -2532,220 +2702,6 @@ function initSettingsTabs() {
     activateSettingsTab(savedTab || sections[0].id);
 }
 
-function initWebpConverterAdmin() {
-    const fileInput = document.getElementById('webp-file-input');
-    const pickBtn = document.getElementById('webp-pick-files-btn');
-    const dropZone = document.getElementById('webp-drop-zone');
-    const qualityRange = document.getElementById('webp-quality-range');
-    const qualityLabel = document.getElementById('webp-quality-label');
-    const maxWidthInput = document.getElementById('webp-max-width');
-    const prefixInput = document.getElementById('webp-name-prefix');
-    const convertBtn = document.getElementById('webp-convert-btn');
-    const downloadAllBtn = document.getElementById('webp-download-all-btn');
-    const clearBtn = document.getElementById('webp-clear-btn');
-    const resultsBox = document.getElementById('webp-results');
-    const countEl = document.getElementById('webp-summary-count');
-    const originalEl = document.getElementById('webp-summary-original');
-    const savedEl = document.getElementById('webp-summary-saved');
-    if (!fileInput || !dropZone || !resultsBox) return;
-
-    let selectedFiles = [];
-    let convertedItems = [];
-
-    const formatBytes = bytes => {
-        const value = Number(bytes || 0);
-        if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(2)} MB`;
-        return `${Math.max(0, value / 1024).toFixed(1)} KB`;
-    };
-
-    const safeFileBase = name => String(name || 'imagen')
-        .replace(/\.[^.]+$/, '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9_-]+/gi, '-')
-        .replace(/^-+|-+$/g, '')
-        .toLowerCase() || 'imagen';
-
-    function updateSummary() {
-        const originalBytes = selectedFiles.reduce((sum, file) => sum + (file.size || 0), 0);
-        const webpBytes = convertedItems.reduce((sum, item) => sum + (item.blob?.size || 0), 0);
-        const savedPercent = originalBytes && webpBytes
-            ? Math.max(0, Math.round((1 - (webpBytes / originalBytes)) * 100))
-            : 0;
-        if (countEl) countEl.textContent = String(selectedFiles.length);
-        if (originalEl) originalEl.textContent = formatBytes(originalBytes);
-        if (savedEl) savedEl.textContent = `${savedPercent}%`;
-    }
-
-    function renderResults() {
-        updateSummary();
-        if (!selectedFiles.length) {
-            resultsBox.innerHTML = '<div class="webp-empty-state">Selecciona imagenes para convertirlas a WebP.</div>';
-            return;
-        }
-        if (!convertedItems.length) {
-            resultsBox.innerHTML = selectedFiles.map(file => `
-                <div class="webp-result-card">
-                    <span style="width:72px;height:72px;border-radius:10px;background:rgba(255,255,255,.06);display:block;"></span>
-                    <div><strong>${escapeHtml(file.name)}</strong><span>Original: ${formatBytes(file.size)}</span><em>Pendiente de conversion</em></div>
-                    <div class="webp-result-actions"><span style="color:var(--muted);font-size:11px;">Listo para convertir</span></div>
-                </div>
-            `).join('');
-            return;
-        }
-        resultsBox.innerHTML = convertedItems.map((item, index) => `
-            <div class="webp-result-card">
-                <img src="${item.previewUrl}" alt="">
-                <div>
-                    <strong>${escapeHtml(item.outputName)}</strong>
-                    <span>${item.width} x ${item.height}px · ${formatBytes(item.originalSize)} → ${formatBytes(item.blob.size)}</span>
-                    <em>${item.savedPercent}% menos peso</em>
-                </div>
-                <div class="webp-result-actions">
-                    <button class="admin-btn secondary" type="button" data-webp-download="${index}">Descargar</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function setFiles(files) {
-        selectedFiles = Array.from(files || []).filter(file => file.type?.startsWith('image/'));
-        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
-        convertedItems = [];
-        fileInput.value = '';
-        renderResults();
-        if (selectedFiles.length && typeof showToast === 'function') {
-            showToast(`${selectedFiles.length} imagen(es) listas para convertir`, 'success');
-        }
-    }
-
-    async function loadImageFromFile(file) {
-        if ('createImageBitmap' in window) {
-            try {
-                return await createImageBitmap(file);
-            } catch (error) {
-                console.warn('createImageBitmap fallo, usando fallback:', error);
-            }
-        }
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            const url = URL.createObjectURL(file);
-            img.onload = () => {
-                URL.revokeObjectURL(url);
-                resolve(img);
-            };
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                reject(new Error('No se pudo leer la imagen'));
-            };
-            img.src = url;
-        });
-    }
-
-    function canvasToWebp(canvas, quality) {
-        return new Promise((resolve, reject) => {
-            canvas.toBlob(blob => {
-                if (blob) resolve(blob);
-                else reject(new Error('Este navegador no pudo crear WebP'));
-            }, 'image/webp', quality);
-        });
-    }
-
-    async function convertFile(file, index) {
-        const image = await loadImageFromFile(file);
-        const originalWidth = image.width || image.naturalWidth;
-        const originalHeight = image.height || image.naturalHeight;
-        const maxWidth = parseInt(maxWidthInput?.value || '0', 10);
-        const scale = maxWidth > 0 && originalWidth > maxWidth ? maxWidth / originalWidth : 1;
-        const width = Math.max(1, Math.round(originalWidth * scale));
-        const height = Math.max(1, Math.round(originalHeight * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d', { alpha: true });
-        ctx.drawImage(image, 0, 0, width, height);
-        if (typeof image.close === 'function') image.close();
-        const quality = Math.max(0.45, Math.min(0.95, Number(qualityRange?.value || 82) / 100));
-        const blob = await canvasToWebp(canvas, quality);
-        const prefix = String(prefixInput?.value || '').trim();
-        const outputName = `${prefix ? safeFileBase(prefix) + '-' : ''}${safeFileBase(file.name)}.webp`;
-        const previewUrl = URL.createObjectURL(blob);
-        const savedPercent = file.size ? Math.max(0, Math.round((1 - (blob.size / file.size)) * 100)) : 0;
-        return { file, index, blob, previewUrl, outputName, originalSize: file.size || 0, width, height, savedPercent };
-    }
-
-    async function convertSelectedFiles() {
-        if (!selectedFiles.length) {
-            if (typeof showToast === 'function') showToast('Selecciona imagenes primero', 'error');
-            return;
-        }
-        convertBtn.disabled = true;
-        const originalText = convertBtn.textContent;
-        convertBtn.textContent = 'Convirtiendo...';
-        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
-        convertedItems = [];
-        try {
-            convertedItems = await Promise.all(selectedFiles.map(convertFile));
-            renderResults();
-            if (typeof showToast === 'function') showToast('Imagenes convertidas a WebP', 'success');
-        } catch (error) {
-            console.error('Error convirtiendo imagenes:', error);
-            if (typeof showToast === 'function') showToast(error.message || 'No se pudo convertir la imagen', 'error');
-        } finally {
-            convertBtn.disabled = false;
-            convertBtn.textContent = originalText;
-        }
-    }
-
-    function downloadItem(item) {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(item.blob);
-        link.download = item.outputName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1200);
-    }
-
-    pickBtn?.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', event => setFiles(event.target.files));
-    qualityRange?.addEventListener('input', () => {
-        if (qualityLabel) qualityLabel.textContent = `${qualityRange.value}%`;
-    });
-    convertBtn?.addEventListener('click', convertSelectedFiles);
-    clearBtn?.addEventListener('click', () => {
-        selectedFiles = [];
-        convertedItems.forEach(item => URL.revokeObjectURL(item.previewUrl));
-        convertedItems = [];
-        renderResults();
-    });
-    downloadAllBtn?.addEventListener('click', () => {
-        if (!convertedItems.length) {
-            if (typeof showToast === 'function') showToast('Convierte las imagenes antes de descargarlas', 'error');
-            return;
-        }
-        convertedItems.forEach((item, index) => setTimeout(() => downloadItem(item), index * 180));
-    });
-    resultsBox.addEventListener('click', event => {
-        const button = event.target.closest('[data-webp-download]');
-        if (!button) return;
-        const item = convertedItems[Number(button.dataset.webpDownload)];
-        if (item) downloadItem(item);
-    });
-    dropZone.addEventListener('dragover', event => {
-        event.preventDefault();
-        dropZone.classList.add('drag-over');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', event => {
-        event.preventDefault();
-        dropZone.classList.remove('drag-over');
-        setFiles(event.dataTransfer?.files);
-    });
-    dropZone.addEventListener('click', () => fileInput.click());
-    renderResults();
-}
-
 function initLoginBokehBackgrounds() {
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
         if (canvas.dataset.ready === 'login-bokeh') return;
@@ -2845,7 +2801,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initHomeAdConfigAdmin();
     initCustomerPromoAdmin();
     initQRConfigAdmin();
-    initWebpConverterAdmin();
     initInventorySearch();
     initInventoryActions();
     initInventoryPdfExport();
@@ -3825,6 +3780,22 @@ function getConfigFieldElement(fieldIds) {
     return null;
 }
 
+function updateHomeAdImagePreview(src) {
+    const preview = document.getElementById('home-ad-image-preview');
+    if (!preview) return;
+
+    const rawSrc = String(src || '').trim();
+    const imageUrl = rawSrc.startsWith('blob:') ? rawSrc : normalizeImageUrl(rawSrc);
+    if (!imageUrl) {
+        preview.classList.add('is-empty');
+        preview.innerHTML = '<span>Sin imagen para mostrar</span>';
+        return;
+    }
+
+    preview.classList.remove('is-empty');
+    preview.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="Vista previa del banner promocional" onerror="this.parentElement.classList.add('is-empty');this.parentElement.innerHTML='<span>No se pudo cargar la imagen</span>';">`;
+}
+
 function fillHomeAdConfigForm(config) {
     if (!config) return;
     window.storeConfig = window.storeConfig || {};
@@ -3838,6 +3809,7 @@ function fillHomeAdConfigForm(config) {
             input.value = config[key] || '';
         }
     });
+    updateHomeAdImagePreview(config.Home_Ad_Image || '');
 }
 
 function initHomeAdConfigAdmin() {
@@ -3848,18 +3820,37 @@ function initHomeAdConfigAdmin() {
 
     const fileInput = document.getElementById('home-ad-config-file');
     const imageInput = document.getElementById('home-ad-config-image');
+    let localPreviewUrl = '';
+
+    imageInput?.addEventListener('input', () => {
+        if (localPreviewUrl) {
+            URL.revokeObjectURL(localPreviewUrl);
+            localPreviewUrl = '';
+        }
+        updateHomeAdImagePreview(imageInput.value);
+    });
+
     fileInput?.addEventListener('change', async () => {
         const file = fileInput.files?.[0];
         if (!file) return;
         const previousPlaceholder = imageInput?.placeholder || '';
         try {
-            if (imageInput) imageInput.placeholder = 'Subiendo imagen...';
+            if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+            localPreviewUrl = URL.createObjectURL(file);
+            updateHomeAdImagePreview(localPreviewUrl);
+            if (imageInput) imageInput.placeholder = 'Optimizando imagen...';
             const uploadedUrl = await uploadCarouselImage(file);
             if (imageInput) imageInput.value = uploadedUrl;
+            updateHomeAdImagePreview(uploadedUrl);
+            if (localPreviewUrl) {
+                URL.revokeObjectURL(localPreviewUrl);
+                localPreviewUrl = '';
+            }
             showToast('Imagen del banner subida correctamente');
         } catch (error) {
             console.error('Error subiendo imagen del banner del home:', error);
             showToast('No se pudo subir la imagen del banner', true);
+            updateHomeAdImagePreview(imageInput?.value || '');
         } finally {
             if (imageInput) imageInput.placeholder = previousPlaceholder || 'https://...';
             fileInput.value = '';
@@ -4258,7 +4249,7 @@ function canvasToBlob(canvas, type, quality) {
 }
 
 async function prepareImageForUpload(file) {
-    if (file.size <= MAX_CAROUSEL_IMAGE_SIZE || file.type === 'image/gif') {
+    if (file.type === 'image/gif') {
         return file;
     }
 
@@ -4274,16 +4265,19 @@ async function prepareImageForUpload(file) {
     }
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    let blob = await canvasToBlob(canvas, 'image/jpeg', IMAGE_UPLOAD_QUALITY);
+    let blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, IMAGE_UPLOAD_QUALITY);
     if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
-        blob = await canvasToBlob(canvas, 'image/jpeg', 0.68);
+        blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, 0.68);
+    }
+    if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
+        blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, 0.55);
     }
     if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
         throw new Error('La imagen sigue pesando mas de 5 MB despues de comprimirla');
     }
 
     const cleanName = String(file.name || 'imagen').replace(/\.[^.]+$/, '') || 'imagen';
-    return new File([blob], `${cleanName}.jpg`, { type: 'image/jpeg' });
+    return new File([blob], `${cleanName}.${IMAGE_UPLOAD_EXTENSION}`, { type: IMAGE_UPLOAD_FORMAT });
 }
 
 async function uploadCarouselImage(file) {
@@ -4401,10 +4395,10 @@ function initProductImageUpload() {
         if (saveBtn) {
             saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Subiendo imagen...';
+            saveBtn.textContent = 'Optimizando imagen...';
         }
 
-        showToast('Subiendo imagen a Google Drive...');
+        showToast('Convirtiendo imagen a WebP y subiendo...');
         try {
             const uploadedUrl = await uploadCarouselImage(file);
             if (imageInput) {
@@ -4479,9 +4473,9 @@ function initProductImageUpload() {
         if (saveBtn) {
             saveBtn.dataset.readyText = saveBtn.textContent || 'Guardar producto';
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Subiendo imagen...';
+            saveBtn.textContent = 'Optimizando imagen...';
         }
-        showToast('Subiendo imagen a Google Drive...');
+        showToast('Convirtiendo imagen a WebP y subiendo...');
     }, () => {
         const saveBtn = document.getElementById('btn-save');
         if (saveBtn) {
@@ -5059,7 +5053,7 @@ function initCarouselImageAdmin() {
 
             if (files.length) {
                 for (let index = 0; index < files.length; index += 1) {
-                    btn.textContent = `Subiendo imagen ${index + 1} de ${files.length}...`;
+                    btn.textContent = `Optimizando imagen ${index + 1} de ${files.length}...`;
                     const uploadedUrl = await uploadCarouselImage(files[index]);
                     imageUrls.push(uploadedUrl);
                 }
@@ -5131,7 +5125,7 @@ function initCarouselImageAdmin() {
             const file = fileInput.files?.[0];
             let imageUrl = imageUrlInput.value.trim();
             if (file) {
-                btn.textContent = 'Subiendo imagen...';
+                btn.textContent = 'Optimizando imagen...';
                 imageUrl = await uploadCarouselImage(file);
                 imageUrlInput.value = imageUrl;
             }
@@ -5308,6 +5302,7 @@ function mergeSavedProductsIntoInventory(savedProducts) {
     var searchInput = document.getElementById('admin-inventory-search');
     if (searchInput) searchInput.value = '';
     writeInventoryCache(inventario);
+    updateCategoryOptions();
     renderInventoryInBatches();
 }
 
@@ -6011,8 +6006,15 @@ function observeInventoryLoadMore(renderToken) {
 
 // === EXPORTACIÓN DE CATÁLOGO PDF POR CATEGORÍA CON TOGGLES ===
 function getInventoryProductsForCatalogPdf(selectedCategory) {
-    const rawCategory = selectedCategory || adminInventoryCategoryFilter || 'todos';
-    const cleanCategory = normalizeSearchText(rawCategory);
+    const selectedKeys = Array.isArray(selectedCategory)
+        ? selectedCategory.map(normalizeInventoryCategoryKey).filter(Boolean)
+        : (() => {
+            const rawCategory = selectedCategory || adminInventoryCategoryFilter || 'todos';
+            const cleanCategory = normalizeInventoryCategoryKey(rawCategory);
+            return cleanCategory && cleanCategory !== 'todos' ? [cleanCategory] : [];
+        })();
+    const selectedKeySet = new Set(selectedKeys);
+    const categoryOrder = new Map(selectedKeys.map((key, index) => [key, index]));
 
     // Filtrar productos visibles excluyendo BANNER e inactivos
     let list = (inventario || []).filter(p => {
@@ -6023,8 +6025,8 @@ function getInventoryProductsForCatalogPdf(selectedCategory) {
         return isVisibleInventoryProduct(p);
     });
 
-    if (cleanCategory && cleanCategory !== 'todos') {
-        list = list.filter(p => normalizeSearchText(p.Categoria) === cleanCategory);
+    if (selectedKeySet.size) {
+        list = list.filter(p => selectedKeySet.has(normalizeInventoryCategoryKey(p.Categoria)));
     }
 
     if (adminInventorySearchQuery) {
@@ -6038,7 +6040,7 @@ function getInventoryProductsForCatalogPdf(selectedCategory) {
     list.forEach(p => {
         const motherId = getInventoryMotherId(p);
         const name = String(p.Nombre || p.Producto || '').trim();
-        const cat = normalizeSearchText(p.Categoria || '');
+        const cat = normalizeInventoryCategoryKey(p.Categoria || '');
 
         // Clave única por producto madre o por nombre + categoría (ignora color, estilo y tamaño)
         const baseKey = motherId
@@ -6064,7 +6066,7 @@ function getInventoryProductsForCatalogPdf(selectedCategory) {
             group.product = p;
         }
 
-        const sizeVal = String(p.Tamano || p.Tamaño || p.Talla || p['Tamaño'] || p['Tamano'] || '').trim();
+        const sizeVal = getInventoryPdfSizeValue(p);
         if (sizeVal && !['ambos', 'minorista', 'mayorista', '-', 'n/a'].includes(sizeVal.toLowerCase())) {
             group.sizes.add(sizeVal);
         }
@@ -6077,7 +6079,7 @@ function getInventoryProductsForCatalogPdf(selectedCategory) {
 
     const consolidatedList = Array.from(groupedMap.values()).map(item => {
         const rep = { ...item.product };
-        const sizesArr = Array.from(item.sizes);
+        const sizesArr = Array.from(item.sizes).sort((a, b) => String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' }));
         const colorsArr = Array.from(item.colors);
         rep._availableSizes = sizesArr;
         rep._availableColors = colorsArr;
@@ -6089,6 +6091,15 @@ function getInventoryProductsForCatalogPdf(selectedCategory) {
 
     // Ordenar alfabéticamente por nombre
     consolidatedList.sort((a, b) => {
+        const categoryA = normalizeInventoryCategoryKey(a.Categoria || a.categoria || '');
+        const categoryB = normalizeInventoryCategoryKey(b.Categoria || b.categoria || '');
+        const orderA = categoryOrder.has(categoryA) ? categoryOrder.get(categoryA) : 9999;
+        const orderB = categoryOrder.has(categoryB) ? categoryOrder.get(categoryB) : 9999;
+        if (orderA !== orderB) return orderA - orderB;
+        if (categoryA !== categoryB) {
+            return formatInventoryCategoryLabel(a.Categoria || categoryA)
+                .localeCompare(formatInventoryCategoryLabel(b.Categoria || categoryB), 'es', { sensitivity: 'base' });
+        }
         const nameA = String(a.Nombre || a.Producto || '').trim();
         const nameB = String(b.Nombre || b.Producto || '').trim();
         return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
@@ -6207,68 +6218,379 @@ function buildInventoryCatalogPrintHtml(products, options = {}) {
     }).join('');
 }
 
+function loadJsPdfLibrary() {
+    if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+
+    return new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-blyxu-jspdf="true"]');
+        if (existing) {
+            existing.addEventListener('load', () => resolve(window.jspdf?.jsPDF), { once: true });
+            existing.addEventListener('error', () => reject(new Error('No se pudo cargar jsPDF')), { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = JSPDF_CDN_URL;
+        script.async = true;
+        script.dataset.blyxuJspdf = 'true';
+        script.onload = () => {
+            if (window.jspdf?.jsPDF) resolve(window.jspdf.jsPDF);
+            else reject(new Error('jsPDF no quedo disponible'));
+        };
+        script.onerror = () => reject(new Error('No se pudo cargar jsPDF'));
+        document.head.appendChild(script);
+    });
+}
+
+function getPdfFriendlyImageUrl(url) {
+    const normalized = normalizeImageUrl(url || '', 'thumb') || '';
+    const driveId = normalized.match(/[?&]id=([^&]+)/)?.[1]
+        || normalized.match(/drive\.google\.com\/file\/d\/([^/?&#]+)/)?.[1]
+        || normalized.match(/googleusercontent\.com\/d\/([^=?&#]+)/)?.[1];
+    if (driveId) {
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveId)}=w420`;
+    }
+    return normalized || 'Logo2.png';
+}
+
+function getInventoryPdfProductImage(product) {
+    return getPdfFriendlyImageUrl(product?.Imagen || product?.['Imagen Principal'] || product?.imagen || product?.Foto || '');
+}
+
+function getInventoryPdfReference(product) {
+    return product?._displayRef || getProductBarcode(product) || product?.SKU || getInventoryVariationId(product) || getInventoryMotherId(product) || product?.ID || '';
+}
+
+function getInventoryPdfSizeValue(product) {
+    const directValue = getProductField(product, [
+        'Tamano',
+        'TamaÃ±o',
+        'TamaÃƒÂ±o',
+        'Tamaño',
+        'Talla',
+        'Talla Textil',
+        'TallaTextil',
+        'Medida',
+        'Medidas'
+    ], '');
+    if (directValue) return String(directValue).trim();
+
+    const unit = product?.UnidadMedida || product?.['Unidad Medida'] || '';
+    const width = product?.Ancho || '';
+    const length = product?.Largo || '';
+    const depth = product?.Fondo || '';
+    const capacity = product?.Capacidad || '';
+    if (capacity) return `${capacity} ml`;
+    if (width && length && depth) return `${width} x ${length} x ${depth} ${unit || 'cm'}`;
+    if (width && length) return `${width} x ${length} ${unit || 'cm'}`;
+    if (width) return `${width} ${unit || 'cm'}`;
+    return '';
+}
+
+function resizeImageForPdf(src, maxEdge = 96) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            try {
+                const width = img.naturalWidth || img.width || maxEdge;
+                const height = img.naturalHeight || img.height || maxEdge;
+                const scale = Math.min(1, maxEdge / Math.max(width, height));
+                const drawWidth = Math.max(1, Math.round(width * scale));
+                const drawHeight = Math.max(1, Math.round(height * scale));
+                const canvas = document.createElement('canvas');
+                canvas.width = maxEdge;
+                canvas.height = maxEdge;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) throw new Error('Canvas no disponible');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, (maxEdge - drawWidth) / 2, (maxEdge - drawHeight) / 2, drawWidth, drawHeight);
+                resolve(canvas.toDataURL('image/jpeg', 0.82));
+            } catch (error) {
+                reject(error);
+            }
+        };
+        img.onerror = () => reject(new Error('No se pudo leer la imagen'));
+        img.src = src;
+    });
+}
+
+async function imageUrlToPdfDataUrl(url, maxEdge = 96) {
+    const cleanUrl = normalizeImageUrl(url || '', 'thumb') || 'Logo2.png';
+    try {
+        const response = await fetch(cleanUrl, { mode: 'cors', cache: 'force-cache' });
+        if (!response.ok) throw new Error('Imagen no disponible');
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        try {
+            return await resizeImageForPdf(objectUrl, maxEdge);
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+        }
+    } catch (error) {
+        try {
+            return await resizeImageForPdf(cleanUrl, maxEdge);
+        } catch (directError) {
+            try {
+                return await resizeImageForPdf('Logo2.png', maxEdge);
+            } catch (fallbackError) {
+                return '';
+            }
+        }
+    }
+}
+
+function drawInventoryPdfHeader(doc, meta) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFillColor(18, 18, 24);
+    doc.rect(0, 0, pageWidth, 25, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text('BLYXU - Inventario actual', 12, 10);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(`Categoria: ${meta.categoryTitle}`, 12, 16);
+    doc.text(`Expedido: ${meta.fullDateString}`, 12, 21);
+    doc.text(`Productos: ${meta.totalProducts}`, pageWidth - 12, 16, { align: 'right' });
+    doc.text(meta.priceModeLabel, pageWidth - 12, 21, { align: 'right' });
+}
+
+function drawInventoryPdfFooter(doc, pageNumber) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(230, 230, 230);
+    doc.line(12, pageHeight - 12, pageWidth - 12, pageHeight - 12);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('BLYXU - Catalogo de inventario', 12, pageHeight - 7);
+    doc.text(`Pagina ${pageNumber}`, pageWidth - 12, pageHeight - 7, { align: 'right' });
+}
+
+function drawInventoryPdfTableHeader(doc, columns, y) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFillColor(245, 242, 237);
+    doc.rect(12, y, pageWidth - 24, 9, 'F');
+    doc.setTextColor(65, 60, 55);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    columns.forEach(col => doc.text(col.label, col.x, y + 5.8, col.align ? { align: col.align } : undefined));
+}
+
+async function buildInventoryPdfRows(products) {
+    const rows = [];
+    for (const product of products) {
+        const priceDetal = Number(product.Precio || product.precio || 0) || 0;
+        const priceMayor = Number(product.Precio_Mayorista || product.precio_mayorista || product.Mayorista || product['Precio Mayor'] || product['Precio_Mayor'] || 0) || 0;
+        rows.push({
+            image: await imageUrlToPdfDataUrl(getInventoryPdfProductImage(product), 260),
+            name: String(product.Nombre || product.Producto || 'Producto BLYXU').trim(),
+            reference: String(getInventoryPdfReference(product) || '').trim(),
+            sizes: Array.isArray(product._availableSizes) ? product._availableSizes.filter(Boolean).join(', ') : '',
+            categoryKey: normalizeInventoryCategoryKey(product.Categoria || product.categoria || '-'),
+            categoryLabel: formatInventoryCategoryLabel(product.Categoria || product.categoria || '-'),
+            category: formatInventoryCategoryLabel(product.Categoria || product.categoria || '-'),
+            detal: priceDetal > 0 ? formatAdminMoney(priceDetal) : '-',
+            mayorista: priceMayor > 0 ? formatAdminMoney(priceMayor) : '-'
+        });
+    }
+    return rows;
+}
+
 async function downloadInventoryCatalogPdf() {
-    const categorySelect = document.getElementById('admin-inventory-category-filter');
-    const category = categorySelect?.value || adminInventoryCategoryFilter || 'todos';
-    const categoryText = categorySelect && categorySelect.options[categorySelect.selectedIndex]
-        ? categorySelect.options[categorySelect.selectedIndex].textContent.trim()
-        : (category === 'todos' ? 'Todas las categorías' : category);
+    const selectedCategoryKeys = getSelectedInventoryPdfCategoryKeys();
+    const pdfCategoryGroups = getInventoryPdfCategoryGroups();
+    const allPdfCategoryKeys = pdfCategoryGroups.map(group => group.key);
+    const selectedCategorySet = new Set(selectedCategoryKeys);
+    const selectedCategoryLabels = pdfCategoryGroups
+        .filter(group => selectedCategorySet.has(group.key))
+        .map(group => group.label);
+    const categoryText = selectedCategoryKeys.length === allPdfCategoryKeys.length
+        ? 'Todas las categorias'
+        : selectedCategoryLabels.length > 4
+            ? `${selectedCategoryLabels.length} categorias: ${selectedCategoryLabels.slice(0, 4).join(', ')}...`
+            : selectedCategoryLabels.join(', ');
 
     const showDetal = document.getElementById('inventory-pdf-show-detal')?.checked !== false;
     const showMayorista = document.getElementById('inventory-pdf-show-mayorista')?.checked !== false;
+    const products = selectedCategoryKeys.length
+        ? getInventoryProductsForCatalogPdf(selectedCategoryKeys)
+        : [];
 
-    const products = getInventoryProductsForCatalogPdf(category);
     if (!products.length) {
-        showToast('No hay productos disponibles para exportar en esta categoría', 'warning');
+        showToast(selectedCategoryKeys.length ? 'No hay productos disponibles para exportar en estas categorias' : 'Selecciona al menos una categoria para el PDF', 'warning');
         return;
     }
 
-    const container = document.getElementById('inventory-catalog-print-container');
-    if (!container) return;
+    const btn = document.getElementById('btn-download-inventory-pdf');
+    const originalText = btn?.textContent || 'Ver PDF';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Generando PDF...';
+    }
 
-    showToast('Generando catálogo PDF...', 'info');
-
-    container.innerHTML = buildInventoryCatalogPrintHtml(products, {
-        categoryTitle: categoryText,
-        showDetal,
-        showMayorista
-    });
-
-    const parent = container.parentElement;
-    const nextSib = container.nextSibling;
-    document.body.appendChild(container);
-
-    const previousTitle = document.title;
-    const cleanCategorySlug = String(categoryText).replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
-    const dateSlug = new Date().toISOString().slice(0, 10);
-    document.title = `Catalogo-BLYXU-${cleanCategorySlug}-${dateSlug}`;
-
-    document.body.classList.add('printing-inventory-catalog');
-
-    let cleanedUp = false;
-    const cleanup = () => {
-        if (cleanedUp) return;
-        cleanedUp = true;
-        document.body.classList.remove('printing-inventory-catalog');
-        document.title = previousTitle;
-        if (parent && container.parentElement === document.body) {
-            if (nextSib && parent.contains(nextSib)) parent.insertBefore(container, nextSib);
-            else parent.appendChild(container);
+    try {
+        if (!showDetal && !showMayorista) {
+            showToast('Selecciona Detal, Mayorista o ambos para incluir precios en el PDF', 'warning');
+            return;
         }
-        window.removeEventListener('afterprint', cleanup);
-        window.removeEventListener('focus', cleanup);
-    };
 
-    window.addEventListener('afterprint', cleanup);
-    window.addEventListener('focus', cleanup, { once: true });
+        showToast('Generando PDF de inventario...', 'info');
+        const JsPDF = await loadJsPdfLibrary();
+        const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+        const rows = await buildInventoryPdfRows(products);
 
-    // Esperar a que las imágenes se descarguen y procesen completamente
-    await waitForPrintImages(container);
+        const now = new Date();
+        const fullDateString = now.toLocaleString('es-CO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const dateSlug = now.toISOString().slice(0, 10);
+        const priceModeLabel = [
+            showDetal ? 'Detal' : '',
+            showMayorista ? 'Mayorista' : ''
+        ].filter(Boolean).join(' + ');
+        const meta = {
+            categoryTitle: categoryText,
+            fullDateString,
+            totalProducts: rows.length,
+            priceModeLabel: `Precios: ${priceModeLabel}`
+        };
 
-    window.print();
+        const bothPrices = showDetal && showMayorista;
+        const columns = [
+            { key: 'image', label: 'FOTO', x: 14, w: 44 },
+            { key: 'product', label: 'PRODUCTO', x: 63, w: bothPrices ? 58 : 76 },
+            { key: 'category', label: 'CATEGORIA', x: bothPrices ? 124 : 144, w: 24 },
+            ...(showDetal ? [{ key: 'detal', label: 'DETAL', x: showMayorista ? 150 : 171, w: 22, align: 'right' }] : []),
+            ...(showMayorista ? [{ key: 'mayorista', label: 'MAYORISTA', x: 178, w: 23, align: 'right' }] : [])
+        ];
+
+        let pageNumber = 1;
+        let y = 34;
+        const rowHeight = 42;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const bottomLimit = pageHeight - 18;
+        let lastCategoryKey = '';
+
+        drawInventoryPdfHeader(doc, meta);
+        drawInventoryPdfTableHeader(doc, columns, y);
+        y += 11;
+
+        for (const row of rows) {
+            const rowCategoryKey = row.categoryKey || normalizeInventoryCategoryKey(row.category || '');
+            const isNewCategory = rowCategoryKey !== lastCategoryKey;
+            const categoryBandHeight = isNewCategory ? 8 : 0;
+
+            if (y + categoryBandHeight + rowHeight > bottomLimit) {
+                drawInventoryPdfFooter(doc, pageNumber);
+                doc.addPage();
+                pageNumber += 1;
+                drawInventoryPdfHeader(doc, meta);
+                y = 34;
+                drawInventoryPdfTableHeader(doc, columns, y);
+                y += 11;
+            }
+
+            if (isNewCategory) {
+                doc.setFillColor(248, 246, 252);
+                doc.rect(12, y - 1, 186, 6, 'F');
+                doc.setDrawColor(109, 40, 217);
+                doc.line(12, y - 1, 198, y - 1);
+                doc.setTextColor(85, 65, 135);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.text((row.categoryLabel || row.category || 'Categoria').toUpperCase(), 14, y + 3.4);
+                y += 8;
+                lastCategoryKey = rowCategoryKey;
+            }
+
+            doc.setDrawColor(232, 232, 232);
+            doc.line(12, y - 2, 198, y - 2);
+
+            if (row.image) {
+                doc.addImage(row.image, 'JPEG', 14, y, 38, 38);
+            } else {
+                doc.setFillColor(245, 245, 245);
+                doc.roundedRect(14, y, 38, 38, 2, 2, 'F');
+            }
+
+            const productCol = columns.find(item => item.key === 'product');
+            const categoryCol = columns.find(item => item.key === 'category');
+
+            doc.setTextColor(20, 20, 24);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.8);
+            doc.text(doc.splitTextToSize(row.name, productCol.w).slice(0, 2), productCol.x, y + 5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(90, 90, 90);
+            doc.setFontSize(6.2);
+            doc.text(doc.splitTextToSize(`Ref: ${row.reference || '-'}`, productCol.w).slice(0, 1), productCol.x, y + 16);
+            if (row.sizes) {
+                doc.setTextColor(85, 65, 135);
+                doc.setFont('helvetica', 'bold');
+                doc.text(doc.splitTextToSize(`Tamanos: ${row.sizes}`, productCol.w).slice(0, 2), productCol.x, y + 22);
+            }
+
+            doc.setTextColor(45, 45, 45);
+            doc.setFontSize(6.8);
+            doc.text(doc.splitTextToSize(row.category || '-', categoryCol.w).slice(0, 2), categoryCol.x, y + 7);
+
+            if (showDetal) {
+                const col = columns.find(item => item.key === 'detal');
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(30, 30, 30);
+                doc.setFontSize(7.2);
+                doc.text(row.detal, col.x + col.w, y + 8, { align: 'right' });
+            }
+            if (showMayorista) {
+                const col = columns.find(item => item.key === 'mayorista');
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(180, 128, 0);
+                doc.setFontSize(7.2);
+                doc.text(row.mayorista, col.x + col.w, y + 8, { align: 'right' });
+            }
+
+            y += rowHeight;
+        }
+
+        drawInventoryPdfFooter(doc, pageNumber);
+        const cleanCategorySlug = String(categoryText || 'inventario')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9_-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '') || 'inventario';
+        const fileName = `Inventario-BLYXU-${cleanCategorySlug}-${dateSlug}.pdf`;
+        const blobUrl = URL.createObjectURL(doc.output('blob'));
+        const previewWindow = window.open(blobUrl, '_blank');
+        if (!previewWindow) {
+            doc.save(fileName);
+            URL.revokeObjectURL(blobUrl);
+            showToast('No se pudo abrir la vista previa. PDF descargado directamente.', 'warning');
+        } else {
+            previewWindow.document.title = fileName;
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+            showToast('Vista previa del PDF abierta. Puedes descargarlo desde el visor.', 'success');
+        }
+    } catch (error) {
+        console.error('Error generando PDF de inventario:', error);
+        showToast(error.message || 'No se pudo generar el PDF de inventario', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    }
 }
 
 function initInventoryPdfExport() {
+    initInventoryPdfCategoryPicker();
     const btn = document.getElementById('btn-download-inventory-pdf');
     if (!btn || btn.dataset.ready === 'true') return;
     btn.dataset.ready = 'true';
@@ -9428,9 +9750,18 @@ function inferInvoiceCustomerType(invoice) {
 
 function getInvoiceStatusColor(estado) {
     const value = String(estado || '').toLowerCase();
-    if (value.includes('final') || value.includes('complet') || value.includes('enviado') || value.includes('pagado') || value.includes('abon')) return '#10B981';
+    if (value.includes('final') || value.includes('complet') || value.includes('enviado') || value.includes('pagado') || value.includes('pago') || value.includes('abon')) return '#10B981';
     if (value.includes('cancel')) return '#EF4444';
     return '#9ca3af';
+}
+
+function buildInvoiceStatusSelect(idx, estado) {
+    const options = ['Pendiente', 'Abonada', 'Pago', 'Enviado', 'Finalizada'];
+    const current = String(estado || 'Pendiente').trim();
+    const allOptions = options.includes(current) ? options : [current, ...options];
+    return `<select class="invoice-status-select" onchange="updateAdminInvoiceStatus(${idx}, this.value, this)" aria-label="Cambiar estado de factura">
+        ${allOptions.map(option => `<option value="${escapeHtml(option)}"${option === current ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+    </select>`;
 }
 
 function getOrdersSearchQuery() {
@@ -9528,7 +9859,7 @@ function buildInvoiceRowHtml(f, idx) {
                 <div style="font-size:10px; color:#34d399; font-weight:800;">Abonado: ${formatAdminInvoiceMoney(balanceInfo.paid)}</div>
                 <div style="font-size:10px; color:${balanceInfo.balance > 0 ? '#fbbf24' : '#34d399'}; font-weight:800;">Saldo: ${formatAdminInvoiceMoney(balanceInfo.balance)}</div>
             </td>
-            <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+            <td>${buildInvoiceStatusSelect(idx, estado)}<div style="margin-top:5px;"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800;">${escapeHtml(estado)}</span></div></td>
             <td class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button class="orders-action-btn invoice-pay" onclick="openQuickInvoicePayment(${idx})" type="button" title="${balanceInfo.balance > 0 ? 'Registrar abono rapido' : 'Factura sin saldo pendiente'}" ${balanceInfo.balance > 0 ? '' : 'disabled'}>
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path><path d="M7 15h4"></path><path d="M17 13v4"></path><path d="M15 15h4"></path></svg>
@@ -9798,7 +10129,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     document.getElementById('inv-edit-dir').value = '';
     document.getElementById('inv-edit-ciudad').value = '';
     document.getElementById('inv-edit-fecha').value = new Date().toISOString().slice(0, 10);
-    document.getElementById('inv-edit-estado').value = 'Finalizada';
+    document.getElementById('inv-edit-estado').value = 'Pendiente';
     document.getElementById('inv-edit-metodo').value = 'Mostrador / Manual';
     document.getElementById('inv-edit-nota').value = '';
     setInvoiceCustomerTypeControl('Detal');
@@ -9845,7 +10176,9 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
             : (p['Dirección'] || p.Direccion || '');
         document.getElementById('inv-edit-ciudad').value = p.Ciudad || '';
         document.getElementById('inv-edit-fecha').value = formatDateForInvoiceInput(p.Fecha);
-        document.getElementById('inv-edit-estado').value = editingInvoice ? (p['Estado Factura'] || p.Estado || 'Finalizada') : 'Finalizada';
+        document.getElementById('inv-edit-estado').value = editingInvoice
+            ? (p['Estado Factura'] || p.Estado || 'Pendiente')
+            : (linkedExistingInvoice ? (linkedExistingInvoice['Estado Factura'] || linkedExistingInvoice.Estado || 'Pendiente') : 'Pendiente');
         document.getElementById('inv-edit-metodo').value = editingInvoice
             ? (p['Método Pago'] || p['Metodo Pago'] || p.pago || '')
             : (p['MÃ©todo Contacto'] || p['Metodo Contacto'] || p.Metodo || '');
@@ -10202,317 +10535,318 @@ function isAdminInvoiceMobilePrint() {
 function getAdminInvoicePrintWindowStyles() {
     return `
         * { box-sizing: border-box; }
+        :root {
+            --invoice-purple: #6d28d9;
+            --invoice-purple-soft: #ede9fe;
+            --invoice-ink: #171717;
+            --invoice-muted: #5f6470;
+            --invoice-line: #d9d9e3;
+            --invoice-soft-line: #ececf2;
+        }
         html, body {
             margin: 0;
             background: #ffffff;
-            color: #111827;
+            color: var(--invoice-ink);
             font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
         }
-        body { padding: 24px; }
+        body { padding: 22px; }
         .invoice-print-toolbar {
             position: sticky;
             top: 0;
             z-index: 20;
             display: flex;
             justify-content: flex-end;
-            gap: 12px;
-            max-width: 860px;
-            margin: 0 auto 16px;
+            gap: 10px;
+            max-width: 880px;
+            margin: 0 auto 12px;
             padding: 8px 0;
             background: #ffffff;
+            border-bottom: 1px solid var(--invoice-soft-line);
         }
         .invoice-print-button {
-            min-height: 42px;
-            border: 1.5px solid #000000;
-            border-radius: 8px;
-            padding: 0 20px;
-            background: #000000;
-            color: #ffffff;
+            min-height: 40px;
+            border: 1px solid var(--invoice-purple);
+            border-radius: 7px;
+            padding: 0 18px;
+            background: #ffffff;
+            color: var(--invoice-purple);
             font: inherit;
-            font-size: 12px;
-            font-weight: 800;
+            font-size: 11px;
+            font-weight: 850;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .invoice-print-button:hover {
-            background: #27272a;
-        }
+        .invoice-print-button:hover { background: var(--invoice-purple-soft); }
         #invoice-print-container {
             display: block;
-            max-width: 860px;
+            max-width: 880px;
             margin: 0 auto;
-            padding: 30px 34px;
+            padding: 28px 34px 24px;
             background: #ffffff;
-            border: 1.5px solid #000000;
-            border-radius: 6px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--invoice-line);
+            border-radius: 4px;
+            box-shadow: 0 8px 22px rgba(17, 17, 17, 0.06);
         }
         .admin-inv-top-banner {
             background: #ffffff;
-            padding: 0 0 18px 0;
-            border-bottom: 2px solid #000000;
-            color: #000000;
-            display: flex;
-            justify-content: space-between;
-            gap: 20px;
-            align-items: flex-start;
-            margin-bottom: 20px;
+            padding: 0 0 16px;
+            border-bottom: 2px solid var(--invoice-purple);
+            color: var(--invoice-ink);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 24px;
+            align-items: start;
+            margin-bottom: 18px;
         }
         .admin-inv-brand-wrapper {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
+            min-width: 0;
         }
         .admin-inv-brand-wrapper img {
-            height: 52px;
+            height: 48px;
             width: auto;
             object-fit: contain;
         }
         .admin-inv-brand-wrapper h1 {
             margin: 0;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
-            letter-spacing: -0.5px;
-            color: #000000;
+            letter-spacing: 0;
+            color: var(--invoice-ink);
             text-transform: uppercase;
         }
         .admin-inv-brand-wrapper p {
             margin: 4px 0 0;
-            font-size: 11.5px;
-            color: #52525b;
+            font-size: 10.8px;
+            color: var(--invoice-muted);
             font-weight: 500;
-            line-height: 1.4;
+            line-height: 1.45;
         }
         .admin-inv-badge-box {
             background: #ffffff;
-            border: 1.5px solid #000000;
-            border-radius: 6px;
-            padding: 10px 18px;
+            border: 1px solid var(--invoice-line);
+            border-top: 3px solid var(--invoice-purple);
+            border-radius: 4px;
+            padding: 10px 14px;
             text-align: right;
-            flex: 0 0 auto;
+            min-width: 190px;
         }
         .admin-inv-badge-box h2 {
-            margin: 0;
-            font-size: 10.5px;
+            margin: 0 0 3px;
+            font-size: 10px;
             font-weight: 900;
-            letter-spacing: 1.5px;
-            color: #000000;
+            letter-spacing: 1.2px;
+            color: var(--invoice-purple);
             text-transform: uppercase;
         }
         .admin-inv-badge-box .inv-num {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 900;
-            color: #000000;
-            margin: 2px 0;
-            font-family: monospace, monospace;
-            letter-spacing: 0.5px;
+            color: var(--invoice-ink);
+            margin: 0 0 2px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0.2px;
         }
         .admin-inv-badge-box .inv-date {
-            font-size: 12px;
-            color: #52525b;
-            font-weight: 600;
+            font-size: 11px;
+            color: var(--invoice-muted);
+            font-weight: 650;
         }
         .admin-inv-badge-box .inv-status-chip {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            margin-top: 4px;
+            margin-top: 6px;
             background: #ffffff;
-            border: 1px solid #000000;
-            color: #000000;
+            border: 1px solid var(--invoice-line);
+            color: var(--invoice-muted);
             padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9.5px;
-            font-weight: 800;
+            border-radius: 999px;
+            font-size: 8.8px;
+            font-weight: 850;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .admin-inv-badge-box .status-dot {
             width: 5px;
             height: 5px;
-            background: #000000;
+            background: var(--invoice-purple);
             border-radius: 50%;
         }
         .invoice-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
+            gap: 14px;
+            margin-bottom: 18px;
         }
         .invoice-details-box {
             background: #ffffff;
-            border: 1px solid #d4d4d8;
-            border-radius: 6px;
-            padding: 14px 18px;
+            border: 1px solid var(--invoice-line);
+            border-radius: 4px;
+            padding: 12px 14px;
+            min-height: 132px;
         }
-        .invoice-details-box.inv-box-cliente {
-            border-left: 3px solid #000000;
-        }
-        .invoice-details-box.inv-box-emisor {
-            border-left: 3px solid #000000;
-        }
+        .invoice-details-box.inv-box-cliente,
+        .invoice-details-box.inv-box-emisor { border-left: 3px solid var(--invoice-purple); }
         .invoice-details-box .box-header-title {
             display: flex;
             align-items: center;
-            gap: 8px;
             margin: 0 0 8px;
-            font-size: 10.5px;
+            font-size: 9.5px;
             font-weight: 900;
-            letter-spacing: 1px;
-            color: #000000;
+            letter-spacing: 0.9px;
+            color: var(--invoice-purple);
             text-transform: uppercase;
-            border-bottom: 1px solid #e4e4e7;
-            padding-bottom: 5px;
+            border-bottom: 1px solid var(--invoice-soft-line);
+            padding-bottom: 6px;
         }
         .invoice-details-box .cliente-nombre-title,
         .invoice-details-box .emisor-nombre-title {
-            font-size: 15.5px;
-            font-weight: 800;
-            color: #000000;
+            font-size: 14px;
+            font-weight: 850;
+            color: var(--invoice-ink);
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
         .invoice-details-box p {
             margin: 3px 0;
-            font-size: 12.5px;
-            color: #3f3f46;
+            font-size: 11.2px;
+            color: var(--invoice-muted);
             line-height: 1.45;
             font-weight: 500;
         }
+        .invoice-details-box p strong { color: #2f3138; font-weight: 760; }
         .invoice-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
-            border-top: 1.5px solid #000000;
-            border-bottom: 1.5px solid #000000;
+            margin-bottom: 18px;
+            border-top: 2px solid var(--invoice-purple);
+            border-bottom: 1px solid var(--invoice-line);
         }
         .invoice-table th {
-            background: #fafafa;
-            color: #000000;
-            font-size: 10.5px;
+            background: #ffffff;
+            color: var(--invoice-purple);
+            font-size: 9.5px;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding: 10px 12px;
-            border-bottom: 1.5px solid #000000;
-            border-right: 1px solid #f0f0f0;
+            letter-spacing: 0.75px;
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--invoice-line);
         }
         .invoice-table td {
-            padding: 11px 12px;
-            border-bottom: 1px solid #e4e4e7;
-            border-right: 1px solid #f4f4f5;
-            font-size: 13px;
-            color: #18181b;
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--invoice-soft-line);
+            font-size: 12px;
+            color: var(--invoice-ink);
             background: #ffffff;
             font-weight: 500;
+            vertical-align: top;
         }
-        .invoice-table th:last-child,
-        .invoice-table td:last-child { border-right: none; }
+        .invoice-table tr:last-child td { border-bottom: none; }
         .invoice-bottom-grid {
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: minmax(0, 1fr) 300px;
             gap: 16px;
             align-items: start;
-            margin-top: 16px;
+            margin-top: 14px;
         }
         .invoice-notes-box {
             background: #ffffff;
-            border: 1px solid #d4d4d8;
-            border-left: 3px solid #000000;
-            border-radius: 6px;
-            padding: 12px 16px;
-            font-size: 12px;
-            color: #3f3f46;
+            border: 1px solid var(--invoice-line);
+            border-left: 3px solid var(--invoice-purple);
+            border-radius: 4px;
+            padding: 11px 13px;
+            font-size: 11px;
+            color: var(--invoice-muted);
             line-height: 1.5;
         }
         .invoice-notes-box .notes-title {
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: 900;
-            letter-spacing: 1px;
-            color: #000000;
-            margin-bottom: 4px;
+            letter-spacing: 0.9px;
+            color: var(--invoice-purple);
+            margin-bottom: 5px;
             text-transform: uppercase;
         }
         .invoice-total-container { display: flex; justify-content: flex-end; }
         .invoice-total-box {
             background: #ffffff;
-            color: #000000;
-            padding: 16px 20px;
-            border-radius: 6px;
+            color: var(--invoice-ink);
+            padding: 13px 16px;
+            border-radius: 4px;
             width: 100%;
-            border: 1.5px solid #000000;
+            border: 1px solid var(--invoice-line);
+            border-top: 3px solid var(--invoice-purple);
         }
-        .invoice-total-box .total-row-item {
+        .invoice-total-box .total-row-item,
+        .invoice-total-box .payment-row-item {
             display: flex;
             align-items: baseline;
             justify-content: space-between;
-            gap: 16px;
+            gap: 14px;
         }
         .invoice-total-box .payment-row-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px solid #e4e4e7;
-            font-size: 11.5px;
+            margin-top: 7px;
+            padding-top: 7px;
+            border-top: 1px solid var(--invoice-soft-line);
+            font-size: 11px;
             font-weight: 700;
-            color: #52525b;
+            color: var(--invoice-muted);
         }
         .invoice-total-box .payment-row-item.balance {
-            color: #000000;
+            color: var(--invoice-ink);
             font-weight: 900;
-            font-size: 12.5px;
+            font-size: 12px;
         }
         .invoice-total-box .total-label {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 900;
-            letter-spacing: 1px;
-            color: #000000;
+            letter-spacing: 0.9px;
+            color: var(--invoice-purple);
             text-transform: uppercase;
         }
         .invoice-total-box .total-amount {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 900;
-            color: #000000;
-            font-family: monospace, monospace;
+            color: var(--invoice-ink);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         }
         .invoice-total-box .total-sub-info {
             margin-top: 8px;
-            padding-top: 6px;
-            border-top: 1px solid #e4e4e7;
-            font-size: 10.5px;
-            color: #71717a;
+            padding-top: 7px;
+            border-top: 1px solid var(--invoice-soft-line);
+            font-size: 9.8px;
+            color: #777b85;
             text-align: right;
             font-weight: 600;
         }
         .invoice-footer-line {
             height: 1px;
-            background: #000000;
-            margin: 22px 0 10px;
+            background: linear-gradient(90deg, transparent, var(--invoice-purple), var(--invoice-line), transparent);
+            margin: 21px 0 9px;
         }
         .invoice-footer {
             text-align: center;
-            font-size: 11.5px;
-            color: #52525b;
+            font-size: 10.8px;
+            color: var(--invoice-muted);
         }
         .invoice-footer .thank-you {
-            font-size: 13px;
-            font-weight: 800;
-            color: #000000;
+            font-size: 12px;
+            font-weight: 850;
+            color: var(--invoice-ink);
             margin-bottom: 2px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
         .invoice-footer .footer-subtext {
             margin: 0;
-            font-size: 10.5px;
-            color: #71717a;
+            font-size: 9.8px;
+            color: #777b85;
             font-weight: 500;
         }
         @media (max-width: 640px) {
@@ -10521,18 +10855,14 @@ function getAdminInvoicePrintWindowStyles() {
             .invoice-print-button { width: 100%; }
             #invoice-print-container { padding: 14px; box-shadow: none; border: none; }
             .admin-inv-top-banner,
-            .admin-inv-brand-wrapper {
-                align-items: flex-start;
-                flex-direction: column;
-            }
+            .admin-inv-brand-wrapper { grid-template-columns: 1fr; align-items: flex-start; flex-direction: column; }
             .admin-inv-badge-box { width: 100%; text-align: left; }
             .invoice-details,
             .invoice-bottom-grid { grid-template-columns: 1fr; }
             .invoice-table { display: block; overflow-x: auto; white-space: nowrap; }
-            .invoice-total-box .total-row-item { align-items: flex-start; flex-direction: column; gap: 8px; }
         }
         @media print {
-            @page { size: A4 portrait; margin: 8mm; }
+            @page { size: A4 portrait; margin: 9mm; }
             html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important; }
             body { padding: 0 !important; }
             .invoice-print-toolbar { display: none !important; }
@@ -10542,14 +10872,10 @@ function getAdminInvoicePrintWindowStyles() {
             .invoice-bottom-grid,
             .invoice-footer { page-break-inside: avoid; }
             .invoice-table tr { page-break-inside: avoid; }
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     `;
 }
-
 function openAdminInvoicePrintWindow(title) {
     const printContainer = document.getElementById('invoice-print-container');
     if (!printContainer) return false;
@@ -10570,16 +10896,9 @@ function openAdminInvoicePrintWindow(title) {
         </head>
         <body>
             <div class="invoice-print-toolbar">
-                <button type="button" class="invoice-print-button" onclick="window.print()">Guardar / imprimir PDF</button>
+                <button type="button" class="invoice-print-button" onclick="window.print()">Imprimir / guardar PDF</button>
             </div>
             ${printContainer.outerHTML}
-            <script>
-                window.addEventListener('load', function () {
-                    if (!/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                        setTimeout(function () { window.print(); }, 250);
-                    }
-                });
-            <\/script>
         </body>
         </html>`);
     printWindow.document.close();
@@ -10652,7 +10971,7 @@ window.imprimirFacturaEditor = function() {
         if (nota.trim()) {
             notesElem.textContent = nota;
         } else {
-            notesElem.textContent = 'Gracias por preferir BLYXU Joyería. Cada una de nuestras piezas cuenta con sello y garantía de autenticidad BLYXU.';
+            notesElem.textContent = 'N/A';
         }
     }
 
@@ -10670,14 +10989,14 @@ window.imprimirFacturaEditor = function() {
         return `
             <tr>
                 <td style="text-align:center;">
-                    <span style="background: #f4f4f5; color: #09090b; font-weight: 800; padding: 2px 8px; border-radius: 4px; font-size: 12px; display:inline-block; border: 1px solid #d4d4d8;">${cant}</span>
+                    <span style="background:#ffffff; color:#6d28d9; font-weight:850; padding:2px 8px; border-radius:4px; font-size:12px; display:inline-block; border:1px solid #d9d9e3;">${cant}</span>
                 </td>
                 <td>
-                    <strong style="font-size:14px; color:#09090b; display:block; margin-bottom:2px; font-weight:700;">${escapeHtml(item.nombre)}</strong>
-                    <span style="display:inline-block; background:#fafafa; color:#52525b; font-size:11px; font-weight:600; padding:1px 6px; border-radius:4px; border: 1px solid #e4e4e7; font-family: monospace;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
+                    <strong style="font-size:13.2px; color:#171717; display:block; margin-bottom:3px; font-weight:760;">${escapeHtml(item.nombre)}</strong>
+                    <span style="display:inline-block; background:#ffffff; color:#5f6470; font-size:10.5px; font-weight:650; padding:1px 6px; border-radius:4px; border:1px solid #ececf2; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">Ref: ${escapeHtml(item.sku || item.idVariacion || '-')}</span>
                 </td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 600; color:#3f3f46; font-size: 13.5px;">$${precio.toLocaleString('es-CO')}</td>
-                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight: 800; color:#09090b; font-size: 14px;">$${sub.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight:650; color:#3f4148; font-size:13px;">$${precio.toLocaleString('es-CO')}</td>
+                <td style="text-align:right; font-variant-numeric: tabular-nums; font-weight:850; color:#171717; font-size:13.5px;">$${sub.toLocaleString('es-CO')}</td>
             </tr>
         `;
     }).join('');
@@ -10842,6 +11161,53 @@ window.closeQuickInvoicePayment = function() {
     if (modal) modal.classList.remove('open');
 };
 
+window.updateAdminInvoiceStatus = async function(idx, nextStatus, selectEl) {
+    const invoice = (window.facturasList || [])[idx];
+    if (!invoice) {
+        showToast('No se encontro la factura seleccionada', 'error');
+        return;
+    }
+
+    const invoiceId = getInvoiceIdValue(invoice);
+    if (!invoiceId) {
+        showToast('La factura no tiene ID valido para actualizar', 'error');
+        return;
+    }
+
+    const previousStatus = invoice['Estado Factura'] || invoice.Estado || 'Pendiente';
+    const cleanStatus = String(nextStatus || '').trim() || previousStatus;
+    if (cleanStatus === previousStatus) return;
+
+    if (selectEl) selectEl.disabled = true;
+    try {
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify({
+                resource: 'facturas',
+                action: 'actualizar',
+                id: invoiceId,
+                'ID Factura': invoiceId,
+                'Estado Factura': cleanStatus
+            })
+        });
+        const result = await res.json();
+        if (!result || result.status !== 'success') {
+            throw new Error(result?.error || 'No se pudo actualizar el estado');
+        }
+
+        invoice['Estado Factura'] = cleanStatus;
+        invoice.Estado = cleanStatus;
+        renderFacturas();
+        showToast(`Factura marcada como ${cleanStatus}`, 'success');
+    } catch (error) {
+        if (selectEl) selectEl.value = previousStatus;
+        showToast('Error actualizando estado: ' + error.message, 'error');
+        console.error(error);
+    } finally {
+        if (selectEl) selectEl.disabled = false;
+    }
+};
+
 window.saveQuickInvoicePayment = async function() {
     const modal = document.getElementById('quick-payment-modal');
     const saveBtn = document.getElementById('quick-payment-save-btn');
@@ -10876,7 +11242,7 @@ window.saveQuickInvoicePayment = async function() {
     const balanceAfter = Math.max(0, balanceInfo.total - paidAfter);
     const currentStatus = invoice['Estado Factura'] || invoice.Estado || 'Pendiente';
     const nextStatus = balanceAfter === 0
-        ? 'Pagada'
+        ? 'Pago'
         : (paidAfter > 0 ? 'Abonada' : currentStatus);
     const method = String(methodInput?.value || invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || invoice.pago || 'Abono').trim() || 'Abono';
 
@@ -10965,11 +11331,6 @@ window.guardarFacturaDB = async function() {
     const saldoPendiente = Math.max(0, total - paidAfter);
     const metodo = document.getElementById('inv-edit-metodo').value.trim() || 'Mostrador / Manual';
     let estadoFactura = document.getElementById('inv-edit-estado').value.trim() || 'Finalizada';
-    if (saldoPendiente > 0 && /^(finalizada|finalizado|pagada|pagado)$/i.test(estadoFactura)) {
-        estadoFactura = 'Pendiente';
-    } else if (saldoPendiente === 0 && paidAfter > 0 && /pendiente|parcial|abono/i.test(estadoFactura)) {
-        estadoFactura = 'Pagada';
-    }
     const entrega = [document.getElementById('inv-edit-dir').value.trim(), document.getElementById('inv-edit-ciudad').value.trim()]
         .filter(Boolean)
         .join(' - ');

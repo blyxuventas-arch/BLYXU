@@ -583,44 +583,6 @@
             gap:14px;
         }
 
-        .webp-tool-shell { display:grid; gap:16px; }
-        .webp-tool-grid { display:grid; grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr); gap:16px; align-items:start; }
-        .webp-drop-zone {
-            min-height:260px;
-            border:1px dashed rgba(255,255,255,.18);
-            border-radius:18px;
-            background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
-            display:grid;
-            place-items:center;
-            text-align:center;
-            padding:24px;
-            transition:border-color .2s ease, background .2s ease, transform .2s ease;
-        }
-        .webp-drop-zone.drag-over { border-color:rgba(244,196,65,.68); background:rgba(244,196,65,.08); transform:translateY(-1px); }
-        .webp-drop-zone strong { display:block; color:#fff; font-size:17px; margin-bottom:8px; }
-        .webp-drop-zone span { color:var(--muted); font-size:12px; line-height:1.45; }
-        .webp-controls { display:grid; gap:12px; }
-        .webp-control-row { display:grid; grid-template-columns:1fr 110px; gap:10px; align-items:center; }
-        .webp-control-row output { color:#fff; font-weight:950; text-align:right; }
-        .webp-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-        .webp-summary-card { padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.035); }
-        .webp-summary-card span { display:block; color:var(--soft); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.8px; }
-        .webp-summary-card strong { display:block; margin-top:6px; color:#fff; font-size:18px; }
-        .webp-results { display:grid; gap:10px; }
-        .webp-result-card { display:grid; grid-template-columns:72px minmax(0,1fr) auto; gap:12px; align-items:center; padding:10px; border:1px solid var(--line); border-radius:14px; background:rgba(255,255,255,.03); }
-        .webp-result-card img { width:72px; height:72px; object-fit:cover; border-radius:10px; background:#09030f; }
-        .webp-result-card strong { display:block; color:#fff; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .webp-result-card span { display:block; margin-top:4px; color:var(--muted); font-size:11px; }
-        .webp-result-card em { display:block; margin-top:4px; color:#a7f3d0; font-style:normal; font-size:11px; font-weight:900; }
-        .webp-result-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-        .webp-empty-state { padding:28px; border:1px dashed var(--line); border-radius:14px; color:var(--soft); text-align:center; }
-        @media(max-width:980px) {
-            .webp-tool-grid { grid-template-columns:1fr; }
-            .webp-result-card { grid-template-columns:58px minmax(0,1fr); }
-            .webp-result-card img { width:58px; height:58px; }
-            .webp-result-actions { grid-column:1/-1; justify-content:flex-start; }
-        }
-
         #view-products .grid-split.product-admin-grid,
         #edit-product-modal .grid-split.product-admin-grid {
             display:grid;
@@ -1131,6 +1093,93 @@
         }
         .inventory-pdf-toolbar,.inventory-pdf-toggles { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
         .inventory-toggle-switch { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:11px; font-weight:850; }
+        .inventory-pdf-category-panel {
+            display:grid;
+            gap:12px;
+            padding:14px 22px 18px;
+            border-bottom:1px solid var(--line);
+            background:rgba(255,255,255,.025);
+        }
+        .inventory-pdf-category-head {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:14px;
+        }
+        .inventory-pdf-category-head span {
+            display:block;
+            color:var(--muted);
+            font-size:10px;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.8px;
+        }
+        .inventory-pdf-category-head strong {
+            display:block;
+            margin-top:3px;
+            color:#fff;
+            font-size:13px;
+            font-weight:900;
+        }
+        .inventory-pdf-category-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .inventory-pdf-category-actions button {
+            min-height:30px;
+            border:1px solid var(--line);
+            border-radius:8px;
+            padding:5px 10px;
+            background:rgba(255,255,255,.04);
+            color:rgba(255,255,255,.8);
+            font-size:10px;
+            font-weight:850;
+            cursor:pointer;
+        }
+        .inventory-pdf-category-list {
+            display:flex;
+            flex-wrap:wrap;
+            gap:8px;
+            max-height:118px;
+            overflow:auto;
+            padding-right:6px;
+        }
+        .inventory-pdf-category-check {
+            display:inline-flex;
+            align-items:center;
+            gap:7px;
+            min-height:32px;
+            border:1px solid rgba(155,44,250,.24);
+            border-radius:8px;
+            padding:6px 10px;
+            background:rgba(255,255,255,.035);
+            color:rgba(255,255,255,.82);
+            font-size:11px;
+            font-weight:850;
+        }
+        .inventory-pdf-category-check input { accent-color:var(--primary-light); }
+        .home-ad-image-preview {
+            width:100%;
+            min-height:168px;
+            margin-top:10px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            overflow:hidden;
+            border:1px solid var(--line);
+            border-radius:12px;
+            background:rgba(255,255,255,.035);
+            color:var(--muted);
+            font-size:12px;
+            font-weight:800;
+        }
+        .home-ad-image-preview img {
+            width:100%;
+            aspect-ratio:16/7;
+            display:block;
+            object-fit:cover;
+            background:#101014;
+        }
+        .home-ad-image-preview.is-empty {
+            border-style:dashed;
+        }
         .orders-admin-shell,.china-admin-shell { display:grid; gap:16px; }
         .orders-admin-header,.china-header {
             display:flex;
@@ -3299,6 +3348,21 @@
             background:rgba(216,209,194,.18)!important;
             border-color:rgba(216,209,194,.42)!important;
         }
+        .invoice-status-select {
+            min-height:32px;
+            width:116px;
+            padding:5px 8px;
+            border-radius:9px;
+            border:1px solid rgba(255,255,255,.12);
+            background:rgba(255,255,255,.06);
+            color:#fff;
+            font-size:11px;
+            font-weight:850;
+        }
+        .invoice-status-select:disabled {
+            opacity:.62;
+            cursor:wait;
+        }
         .orders-action-btn:disabled,
         .orders-action-btn[disabled] {
             opacity:.42;
@@ -4626,7 +4690,6 @@
                 <div class="sidebar-section">
                     <h4>Sistema</h4>
                     <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuracion del Sitio')"><span>AJ</span> Ajustes y Banner</button>
-                    <button class="sidebar-btn" data-view="webp" onclick="switchDashboardView('webp','Convertidor WebP')"><span>WP</span> Convertidor WebP</button>
                 </div>
             </div>
             <div class="sidebar-section"><button class="sidebar-btn logout" onclick="window.location.href='index.html'"><span>SA</span> Cerrar Sesion</button></div>
@@ -4786,7 +4849,8 @@
 
                 <div id="view-inventory" class="dashboard-section">
                     <div class="admin-panel gradient-bg">
-                        <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Descargar PDF</button></div></div>
+                        <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
+                        <div class="inventory-pdf-category-panel" id="inventory-pdf-category-panel"><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div>
                         <div class="table-wrapper" style="padding:20px;"><table class="inventory-tree"><thead><tr><th>Foto</th><th>Producto</th><th>Categoria</th><th>Detal</th><th>Mayorista</th><th>Stock</th><th>Variantes</th><th>Acciones</th></tr></thead><tbody id="inventory-tbody"><tr><td colspan="8">Cargando inventario...</td></tr></tbody></table></div>
                         <div id="inventory-catalog-print-container" class="hidden-print"></div>
                     </div>
@@ -4812,52 +4876,11 @@
                         <div class="admin-title-row"><div><span class="admin-kicker">Sistema</span><h2>Configuracion y banner</h2></div></div>
                         <div class="settings-tabs"><button class="settings-tab-btn active" data-settings-tab-target="carousel">Banner</button><button class="settings-tab-btn" data-settings-tab-target="contact">Contacto</button><button class="settings-tab-btn" data-settings-tab-target="promo">Promos</button><button class="settings-tab-btn" data-settings-tab-target="invoice">Factura</button><button class="settings-tab-btn" data-settings-tab-target="payments">Pagos</button></div>
                         <div class="settings-tab-content">
-                            <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="carousel-title" placeholder="Titulo del banner"></div><div class="form-group"><label>Descripcion</label><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
+                            <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="carousel-title" placeholder="Titulo del banner"></div><div class="form-group"><label>Descripcion</label><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"><div class="home-ad-image-preview" id="home-ad-image-preview"><span>Sin imagen para mostrar</span></div></div><div class="form-group"><label>Titulo</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="contact" id="settings-tab-contact"><form id="contact-config-form"><div class="admin-form-grid"><input class="form-control" id="contact-config-days" placeholder="Dias"><input class="form-control" id="contact-config-hours" placeholder="Horario"><input class="form-control" id="contact-config-whatsapp" placeholder="WhatsApp"><input class="form-control" id="contact-config-facebook" placeholder="Facebook"><input class="form-control" id="contact-config-tiktok" placeholder="TikTok"><input class="form-control" id="contact-config-instagram" placeholder="Instagram"></div><button class="admin-btn" id="btn-save-contact-config">Guardar contacto</button></form><form id="whatsapp-config-form"><input class="form-control" id="whatsapp-config-commerce" placeholder="WhatsApp comercial"><button class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promocion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Titulo de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir metodo</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
-                        </div>
-                    </div>
-                </div>
-                <div id="view-webp" class="dashboard-section">
-                    <div class="admin-panel gradient-bg webp-tool-shell">
-                        <div class="admin-title-row"><div><span class="admin-kicker">Optimizacion</span><h2>Convertidor de imagenes a WebP</h2><p style="margin:6px 0 0;color:var(--muted);font-size:12px;">Convierte imagenes desde este navegador. No se suben archivos a ninguna plataforma.</p></div><button class="admin-btn" type="button" id="webp-pick-files-btn">Elegir imagenes</button></div>
-                        <div class="webp-tool-grid">
-                            <section class="webp-controls">
-                                <input type="file" id="webp-file-input" accept="image/*" multiple hidden>
-                                <div class="webp-drop-zone" id="webp-drop-zone">
-                                    <div><strong>Arrastra imagenes aqui</strong><span>JPG, PNG, JPEG o cualquier imagen compatible. Puedes convertir varias a la vez.</span></div>
-                                </div>
-                                <div class="admin-panel" style="padding:16px;">
-                                    <div class="form-group">
-                                        <label for="webp-quality-range">Calidad WebP</label>
-                                        <div class="webp-control-row">
-                                            <input id="webp-quality-range" type="range" min="45" max="95" value="82">
-                                            <output id="webp-quality-label">82%</output>
-                                        </div>
-                                    </div>
-                                    <div class="admin-form-grid">
-                                        <div class="form-group"><label for="webp-max-width">Ancho maximo</label><input class="form-control" id="webp-max-width" type="number" min="320" step="10" placeholder="Mantener original"></div>
-                                        <div class="form-group"><label for="webp-name-prefix">Prefijo opcional</label><input class="form-control" id="webp-name-prefix" placeholder="Ej: blyxu"></div>
-                                    </div>
-                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                                        <button class="admin-btn" type="button" id="webp-convert-btn">Convertir a WebP</button>
-                                        <button class="admin-btn secondary" type="button" id="webp-download-all-btn">Descargar todo</button>
-                                        <button class="admin-btn secondary" type="button" id="webp-clear-btn">Limpiar</button>
-                                    </div>
-                                </div>
-                            </section>
-                            <section class="webp-tool-shell">
-                                <div class="webp-summary-grid">
-                                    <article class="webp-summary-card"><span>Imagenes</span><strong id="webp-summary-count">0</strong></article>
-                                    <article class="webp-summary-card"><span>Peso original</span><strong id="webp-summary-original">0 KB</strong></article>
-                                    <article class="webp-summary-card"><span>Ahorro estimado</span><strong id="webp-summary-saved">0%</strong></article>
-                                </div>
-                                <div class="webp-results" id="webp-results">
-                                    <div class="webp-empty-state">Selecciona imagenes para convertirlas a WebP.</div>
-                                </div>
-                            </section>
                         </div>
                     </div>
                 </div>
@@ -5020,6 +5043,8 @@
                                 <option value="Finalizada">Finalizada</option>
                                 <option value="Pendiente">Pendiente</option>
                                 <option value="Abonada">Abonada</option>
+                                <option value="Pago">Pago</option>
+                                <option value="Enviado">Enviado</option>
                             </select>
                         </div>
                         <div class="inv-input-group">
@@ -5197,7 +5222,7 @@
         <div class="invoice-bottom-grid">
             <div class="invoice-notes-box">
                 <div class="notes-title">OBSERVACIONES & NOTAS</div>
-                <p id="inv-print-notes">Gracias por preferir BLYXU Joyería.</p>
+                <p id="inv-print-notes">N/A</p>
             </div>
             <div class="invoice-total-container">
                 <div class="invoice-total-box">
@@ -5241,6 +5266,6 @@
             });
         });
     </script>
-    <script src="admin-app.js?v=home-ad-fast-20260921" defer></script>
+    <script src="admin-app.js?v=invoice-status-v1-20260922" defer></script>
 </body>
 </html>
