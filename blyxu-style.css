@@ -8532,6 +8532,15 @@ textarea {
     color: #ef4444;
 }
 
+.cart-input-field .cart-optional {
+    color: rgba(244,242,238,.46) !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    margin-left: 5px;
+    text-transform: uppercase;
+}
+
 .cart-input-field .opt-label {
     font-size: 11px;
     color: var(--text-dim);
@@ -12033,6 +12042,10 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
 
     .collection-section {
         padding-top: 18px !important;
+    }
+
+    body[data-catalog-mode="wholesale"] #coleccion.collection-section.wholesale-page-section {
+        padding-top: 86px !important;
     }
 
     .collection-section > .section-header {

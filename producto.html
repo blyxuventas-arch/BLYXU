@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=perf-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=perf-20260922"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=mobile-cart-gallery-v1-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-cart-gallery-v1-20260922"></noscript>
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -1055,7 +1055,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=perf-20260922" defer></script>
+    <script src="blyxu-app.js?v=mobile-cart-gallery-v1-20260922" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1265,50 +1265,10 @@
             }
 
             function renderVariantThumbnails(product, name, activeSrc) {
-                const images = getGalleryItems(product, currentDetailProductId);
                 thumbsContainer.innerHTML = '';
                 const gallery = thumbsContainer.closest('.product-gallery');
-
-                if (images.length <= 1) {
-                    gallery?.classList.add('has-single-image');
-                    thumbsContainer.style.display = 'none';
-                    return;
-                }
-
-                gallery?.classList.remove('has-single-image');
-                const activeImage = activeSrc ? normalizeImageUrl(activeSrc, 'detail') : images[0]?.src;
-                images.forEach((item, index) => {
-                    const thumb = document.createElement('button');
-                    thumb.type = 'button';
-                    thumb.className = `gallery-thumb ${item.src === activeImage ? 'active' : ''}`;
-                    thumb.dataset.src = item.src;
-                    thumb.dataset.productIndex = String(item.productIndex);
-
-                    const thumbImg = document.createElement('img');
-                    thumbImg.src = normalizeImageUrl(item.src, 'thumb');
-                    thumbImg.loading = 'lazy';
-                    thumbImg.decoding = 'async';
-                    thumbImg.alt = item.label || name;
-                    thumbImg.onerror = () => { thumb.style.display = 'none'; };
-                    thumb.appendChild(thumbImg);
-
-                    const thumbLabel = document.createElement('span');
-                    thumbLabel.textContent = item.label || `Vista ${index + 1}`;
-                    thumb.appendChild(thumbLabel);
-
-                    thumb.addEventListener('click', () => {
-                        thumbsContainer.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
-                        thumb.classList.add('active');
-                        if (item.productIndex !== currentDetailProductId) {
-                            renderVariantInPlace(item.productIndex, true, item.src);
-                        } else {
-                            switchMainImage(item.src, name);
-                        }
-                    });
-                    thumbsContainer.appendChild(thumb);
-                });
-
-                thumbsContainer.style.display = 'flex';
+                gallery?.classList.add('has-single-image');
+                thumbsContainer.style.display = 'none';
             }
 
             function renderVariantChips(productId, product) {

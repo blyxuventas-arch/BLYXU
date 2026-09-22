@@ -3354,11 +3354,7 @@ function updateCartUI() {
 
             const requiredCheckoutFields = [
                 { input: nameInput, value: n, label: 'Nombre completo' },
-                { input: phoneInput, value: t, label: 'Celular / WhatsApp' },
-                { input: emailInput, value: email, label: 'Correo electronico' },
-                { input: addressInput, value: d, label: 'Direccion de entrega' },
-                { input: cityInput, value: c, label: 'Ciudad' },
-                { input: notesInput, value: nota, label: 'Nota adicional' }
+                { input: phoneInput, value: t, label: 'Celular / WhatsApp' }
             ];
             requiredCheckoutFields.forEach(field => field.input?.closest('.cart-input-field')?.classList.remove('is-invalid'));
             const missingFields = requiredCheckoutFields.filter(field => !field.value);
@@ -3371,7 +3367,7 @@ function updateCartUI() {
                     const missingLabels = missingFields.map(field => field.label).join(', ');
                     errorBox.textContent = invalidEmail && !missingFields.length
                         ? 'Por favor escribe un correo electronico valido para continuar.'
-                        : 'Por favor completa todos los campos obligatorios: ' + missingLabels + '.';
+                        : 'Por favor completa nombre y celular para continuar: ' + missingLabels + '.';
                     errorBox.style.display = 'block';
                     errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
