@@ -15,8 +15,7 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=contact-schedule-v11-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=contact-schedule-v11-20260922"></noscript>
+    <link rel="stylesheet" href="blyxu-style.css?v=detail-solid-first-paint-v22-20260923">
     <style>
         /* ── STUDIO NOIR PRODUCT DETAIL ── */
         .product-detail-luxury {
@@ -244,28 +243,71 @@
         /* Price */
         .product-info-price {
             display: flex;
-            align-items: baseline;
-            gap: 12px;
+            align-items: center;
+            gap: 10px;
             margin: 0 !important;
             flex-wrap: wrap;
         }
 
         #detail-price {
-            font-size: clamp(30px, 3.2vw, 40px);
-            font-weight: 800;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            width: fit-content;
+            min-height: 42px;
+            padding: 8px 15px 8px 42px;
+            border-radius: 999px;
+            border: 1px solid rgba(168, 85, 247, 0.42);
+            background:
+                radial-gradient(circle at 18% 12%, rgba(216, 180, 254, 0.2), transparent 34%),
+                rgba(28, 16, 44, 0.72);
+            box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.08), 0 12px 30px rgba(124, 58, 237, 0.18);
+            font-size: clamp(17px, 1.55vw, 22px);
+            font-weight: 900;
             color: #ffffff !important;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;
             line-height: 1;
+            white-space: nowrap;
             text-shadow: none !important;
+        }
+
+        #detail-price::before {
+            content: "";
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            width: 23px;
+            height: 23px;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            background:
+                radial-gradient(circle at 50% 48%, rgba(255,255,255,.95) 0 18%, transparent 19%),
+                linear-gradient(135deg, rgba(216,180,254,.72), rgba(124,58,237,.52));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 0 12px rgba(168,85,247,.42);
+        }
+
+        #detail-price::after {
+            content: "";
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            width: 11px;
+            height: 11px;
+            transform: translateY(-50%);
+            background: #12091d;
+            -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h2.5A2.5 2.5 0 0 1 22 6.5v12A2.5 2.5 0 0 1 19.5 21h-15A2.5 2.5 0 0 1 2 18.5v-12A2.5 2.5 0 0 1 4.5 4H7V2Zm12.5 8h-15v8.5h15V10Z'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M7 2h2v2h6V2h2v2h2.5A2.5 2.5 0 0 1 22 6.5v12A2.5 2.5 0 0 1 19.5 21h-15A2.5 2.5 0 0 1 2 18.5v-12A2.5 2.5 0 0 1 4.5 4H7V2Zm12.5 8h-15v8.5h15V10Z'/%3E%3C/svg%3E") center / contain no-repeat;
         }
 
         #detail-price.discount-active {
             color: #ffffff !important;
-            text-shadow: none !important;
+            border-color: rgba(216, 180, 254, 0.52);
+            box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.12), 0 12px 34px rgba(168, 85, 247, 0.25);
         }
 
         #detail-old-price {
-            font-size: 18px;
+            font-size: 14px;
             color: rgba(255, 255, 255, 0.36) !important;
             text-decoration: line-through;
             font-weight: 600;
@@ -828,8 +870,14 @@
                 display: none !important;
                 font-size: clamp(20px, 5.8vw, 26px) !important;
             }
+            .product-info-price {
+                justify-content: flex-start !important;
+                gap: 8px !important;
+            }
             #detail-price {
-                font-size: clamp(28px, 8.8vw, 38px) !important;
+                min-height: 38px !important;
+                padding: 7px 13px 7px 39px !important;
+                font-size: clamp(15px, 4.4vw, 19px) !important;
             }
             .detail-variant-list {
                 grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -940,7 +988,68 @@
         <section class="product-gallery">
             <h1 class="product-mobile-heading" id="detail-name-mobile">Nombre del Producto</h1>
             <div class="product-main-img" id="detail-img-container">
-                <img src="" alt="" id="detail-img" style="transition: opacity 0.2s ease-in-out;">
+                <script>
+                    (() => {
+                        const box = document.getElementById('detail-img-container');
+                        const params = new URLSearchParams(location.search);
+                        const productId = Number.parseInt(params.get('id'), 10);
+                        const mode = params.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
+                        const escapeAttr = value => String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                        const normalizeImage = (value, width = 420) => {
+                            if (!value) return '';
+                            const raw = Array.isArray(value) ? value[0] : String(value).split('\n')[0].trim();
+                            if (!raw) return '';
+                            const first = raw.includes(',http') ? raw.split(',http')[0].trim() : raw;
+                            const drive = first.match(/drive\.google\.com\/file\/d\/([^/]+)/) || first.match(/[?&]id=([^&]+)/);
+                            if (first.includes('drive.google.com') && drive?.[1]) return `https://drive.google.com/thumbnail?id=${encodeURIComponent(drive[1])}&sz=w${width}`;
+                            if (first.startsWith('//')) return `https:${first}`;
+                            if (/drive\.google\.com\/thumbnail/i.test(first)) {
+                                try {
+                                    const url = new URL(first);
+                                    url.searchParams.set('sz', `w${width}`);
+                                    return url.toString();
+                                } catch (_) {
+                                    return first;
+                                }
+                            }
+                            if (/lh3\.googleusercontent\.com\/d\//i.test(first)) {
+                                return /=w\d+/i.test(first) ? first.replace(/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i, `=w${width}`) : `${first}=w${width}`;
+                            }
+                            return first;
+                        };
+                        let initialSrc = '';
+                        let initialName = '';
+
+                        try {
+                            const preview = JSON.parse(sessionStorage.getItem('blyxu_product_detail_preview_v1') || 'null');
+                            const fresh = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
+                            if (fresh && preview.id === productId && preview.mode === mode) {
+                                initialSrc = preview.imageCard || preview.image || preview.imageDetail || '';
+                                initialName = preview.name || '';
+                            }
+                        } catch (_) {}
+
+                        if (!initialSrc) try {
+                            const cache = JSON.parse(localStorage.getItem('blyxu_products_cache_v3') || 'null');
+                            const product = cache?.data?.products?.[productId];
+                            if (product) {
+                                initialName = product.Nombre || product.nombre || product.Producto || '';
+                                initialSrc = normalizeImage(product.Imagen || product.imagen || product.Foto || (product.Galeria && product.Galeria[0]), 420);
+                            }
+                        } catch (_) {}
+
+                        if (box && initialSrc) {
+                            box.classList.remove('is-loading', 'is-fallback');
+                            box.style.backgroundImage = `url("${initialSrc.replace(/"/g, '%22')}")`;
+                            box.style.backgroundSize = 'cover';
+                            box.style.backgroundPosition = 'center';
+                            const mobileName = document.getElementById('detail-name-mobile');
+                            if (mobileName && initialName) mobileName.textContent = initialName;
+                        }
+
+                        document.write(`<img src="${escapeAttr(initialSrc)}" alt="${escapeAttr(initialName)}" id="detail-img" class="is-ready" loading="eager" decoding="sync" fetchpriority="high" referrerpolicy="no-referrer">`);
+                    })();
+                </script>
             </div>
             <div class="product-thumbnails" id="detail-thumbnails"></div>
         </section>
@@ -1070,7 +1179,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=mobile-cart-gallery-v1-20260922" defer></script>
+    <script src="blyxu-app.js?v=mp-toggle-detail-img-v22-20260923" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1083,12 +1192,6 @@
             setCartMode(detailCatalogMode);
             updateCartUI();
 
-            if (allProducts.length === 0) {
-                await loadProducts({ renderCatalog: false });
-            }
-            detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
-            updateCartUI();
-
             const detailImg = document.getElementById('detail-img');
             const detailImgContainer = document.getElementById('detail-img-container');
             const thumbsContainer = document.getElementById('detail-thumbnails');
@@ -1097,6 +1200,34 @@
             const favoriteBtn = document.getElementById('btn-save-favorite-detail');
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
+
+            try {
+                const preview = JSON.parse(sessionStorage.getItem(PRODUCT_DETAIL_PREVIEW_KEY) || 'null');
+                const isFreshPreview = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
+                const previewImage = preview?.imageCard || preview?.image || preview?.imageDetail || '';
+                if (isFreshPreview && preview.id === currentDetailProductId && preview.mode === detailCatalogMode && previewImage) {
+                    detailImg.onerror = () => {
+                        detailImg.onerror = null;
+                        detailImg.src = 'Logo2.png';
+                        detailImgContainer.classList.add('is-fallback');
+                        detailImgContainer.style.backgroundImage = '';
+                    };
+                    if (detailImg.getAttribute('src') !== previewImage) {
+                        detailImg.src = previewImage;
+                    }
+                    detailImg.alt = preview.name || '';
+                    detailImg.classList.add('is-ready');
+                    detailImgContainer.classList.remove('is-loading', 'is-fallback');
+                    const mobileName = document.getElementById('detail-name-mobile');
+                    if (mobileName && preview.name) mobileName.textContent = preview.name;
+                }
+            } catch (_) {}
+
+            if (allProducts.length === 0) {
+                await loadProducts({ renderCatalog: false });
+            }
+            detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
+            updateCartUI();
 
             if (!Number.isInteger(currentDetailProductId) || !allProducts[currentDetailProductId]) {
                 document.getElementById('product-detail').innerHTML = `
@@ -1214,37 +1345,103 @@
                 target.textContent = visibleValue || '';
             }
 
+            const preloadedDetailImages = new Set();
+
+            function preloadDetailImage(src) {
+                if (!src || preloadedDetailImages.has(src)) return;
+                preloadedDetailImages.add(src);
+
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = src;
+                link.fetchPriority = 'high';
+                link.setAttribute('fetchpriority', 'high');
+                document.head.appendChild(link);
+
+                const img = new Image();
+                img.decoding = 'async';
+                img.src = src;
+            }
+
+            function getImageIdentity(src) {
+                const value = String(src || '').trim();
+                if (!value) return '';
+                const driveId = value.match(/[?&]id=([^&#]+)/) || value.match(/drive\.google\.com\/file\/d\/([^/]+)/) || value.match(/lh3\.googleusercontent\.com\/d\/([^/?=&#]+)/);
+                if (driveId?.[1]) return `drive:${decodeURIComponent(driveId[1])}`;
+                return value
+                    .replace(/([?&]sz=)w\d+/i, '$1w')
+                    .replace(/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i, '=w')
+                    .replace(/[?#].*$/, '');
+            }
+
             function switchMainImage(src, alt) {
                 const nextSrc = src || 'Logo2.png';
-                if (detailImg.getAttribute('src') === nextSrc) return;
+                const currentSrc = detailImg.getAttribute('src') || '';
+                const isSameImage = currentSrc === nextSrc;
+                if (isSameImage && detailImg.complete && detailImg.naturalWidth > 0) return;
+                if (currentSrc && getImageIdentity(currentSrc) === getImageIdentity(nextSrc) && detailImg.naturalWidth > 0) {
+                    preloadDetailImage(nextSrc);
+                    detailImg.alt = alt || detailImg.alt || '';
+                    detailImg.classList.add('is-ready');
+                    detailImgContainer.classList.remove('is-loading', 'is-fallback');
+                    detailImgContainer.style.backgroundImage = '';
+                    return;
+                }
 
                 detailImgContainer.classList.add('is-loading');
-                detailImg.classList.remove('is-ready');
+                detailImg.classList.add('is-ready');
                 detailImg.alt = alt || '';
 
-                const preloader = new Image();
-                preloader.onload = () => {
-                    detailImgContainer.classList.remove('is-fallback');
-                    detailImg.onerror = () => {
-                        detailImg.onerror = null;
-                        detailImg.src = 'Logo2.png';
-                        detailImgContainer.classList.add('is-fallback');
-                        detailImgContainer.classList.remove('is-loading');
-                        detailImg.classList.add('is-ready');
-                    };
-                    detailImg.onload = () => {
-                        detailImgContainer.classList.remove('is-loading');
-                        detailImg.classList.add('is-ready');
-                    };
-                    detailImg.src = nextSrc;
-                };
-                preloader.onerror = () => {
-                    detailImg.src = 'Logo2.png';
-                    detailImgContainer.classList.add('is-fallback');
+                preloadDetailImage(nextSrc);
+                detailImgContainer.classList.remove('is-fallback');
+
+                const finishSwap = () => {
                     detailImgContainer.classList.remove('is-loading');
                     detailImg.classList.add('is-ready');
+                    requestAnimationFrame(() => {
+                        detailImgContainer.style.backgroundImage = '';
+                    });
                 };
-                preloader.src = nextSrc;
+
+                const fallback = () => {
+                    detailImg.onerror = null;
+                    detailImg.onload = null;
+                    detailImg.src = 'Logo2.png';
+                    detailImgContainer.classList.add('is-fallback');
+                    finishSwap();
+                };
+
+                if (currentSrc && !isSameImage) {
+                    detailImgContainer.style.backgroundImage = `url("${currentSrc.replace(/"/g, '%22')}")`;
+                    detailImgContainer.style.backgroundSize = 'cover';
+                    detailImgContainer.style.backgroundPosition = 'center';
+
+                    const preloader = new Image();
+                    preloader.decoding = 'async';
+                    preloader.onload = () => {
+                        detailImg.onerror = fallback;
+                        detailImg.onload = finishSwap;
+                        detailImg.src = nextSrc;
+                        if (detailImg.complete && detailImg.naturalWidth > 0) finishSwap();
+                    };
+                    preloader.onerror = fallback;
+                    preloader.src = nextSrc;
+                    return;
+                }
+
+                detailImg.onerror = fallback;
+                detailImg.onload = finishSwap;
+                if (!isSameImage) {
+                    detailImg.src = nextSrc;
+                }
+                if (detailImg.complete && detailImg.naturalWidth === 0) {
+                    fallback();
+                    return;
+                }
+                if (detailImg.complete) {
+                    finishSwap();
+                }
             }
 
             function getGalleryItems(product, activeProductId) {
@@ -1392,6 +1589,7 @@
                 const cat = getDisplayValue(product.Categoria, product.categoria);
                 const desc = getDisplayValue(product.Descripcion, product.descripcion, 'Sin descripcion disponible.');
                 const stock = getProductStock(product);
+                preloadDetailImage(img);
 
                 document.getElementById('detail-name').textContent = name;
                 const mobileName = document.getElementById('detail-name-mobile');
@@ -1526,7 +1724,10 @@
                 }
 
                 if (Number.isInteger(nextId) && nextId !== currentDetailProductId) {
-                    renderVariantInPlace(nextId, true);
+                    const nextProduct = allProducts[nextId];
+                    const nextImage = normalizeImageUrl(nextProduct?.Imagen || nextProduct?.imagen || (nextProduct?.Galeria && nextProduct.Galeria[0]) || '', 'detail');
+                    preloadDetailImage(nextImage);
+                    renderVariantInPlace(nextId, true, nextImage);
                 }
             }, true);
         });

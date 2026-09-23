@@ -3,6 +3,7 @@ const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
+const MERCADO_PAGO_ENABLED_CONFIG_KEY = 'Mercado_Pago_Publico_Activo';
 const CONTACT_CONFIG_FIELDS = [
     ['Contacto_Dias', 'contact-config-days'],
     ['Contacto_Horarios', 'contact-config-hours'],
@@ -2794,6 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initChinaOrdersBuilder();
     initAdminCostCalculator();
     initRetailPriceToggle();
+    initMercadoPagoPublicToggle();
     initContactConfigAdmin();
     initWhatsAppConfigAdmin();
     initInvoiceConfigAdmin();
@@ -3393,6 +3395,42 @@ function initRetailPriceToggle() {
             const enabled = String(config[RETAIL_PRICE_CONFIG_KEY]) === '1';
             localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, enabled ? '1' : '0');
             renderState(enabled);
+        }
+    });
+}
+
+function initMercadoPagoPublicToggle() {
+    const toggle = document.getElementById('toggle-mercado-pago-public');
+    if (!toggle) return;
+    const toggleLabel = toggle.closest('.settings-toggle-row');
+
+    function renderState(enabled) {
+        if (enabled === undefined) enabled = true;
+        toggle.checked = Boolean(enabled);
+        toggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        if (toggleLabel) {
+            toggleLabel.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) node.textContent = enabled ? ' Activo' : ' Solo WhatsApp';
+            });
+        }
+        toggle.title = enabled ? 'Mercado Pago visible en carrito publico' : 'Mercado Pago oculto; carrito finaliza por WhatsApp';
+    }
+
+    toggle.addEventListener('change', async () => {
+        const nextEnabled = toggle.checked;
+        renderState(nextEnabled);
+        await saveSiteConfig(MERCADO_PAGO_ENABLED_CONFIG_KEY, nextEnabled ? '1' : '0');
+        window.storeConfig = {
+            ...(window.storeConfig || {}),
+            [MERCADO_PAGO_ENABLED_CONFIG_KEY]: nextEnabled ? '1' : '0'
+        };
+        showToast(nextEnabled ? 'Mercado Pago publico activo' : 'Mercado Pago publico desactivado');
+    });
+
+    renderState();
+    loadSiteConfigForAdmin().then(config => {
+        if (config && config[MERCADO_PAGO_ENABLED_CONFIG_KEY] !== undefined) {
+            renderState(String(config[MERCADO_PAGO_ENABLED_CONFIG_KEY]) !== '0');
         }
     });
 }

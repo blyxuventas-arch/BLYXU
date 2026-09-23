@@ -26,9 +26,11 @@ let bannerProducts = [];
 let productsLoadError = '';
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
 const RETAIL_PRICE_CONFIG_KEY = 'Mostrar_Precios_Minorista';
+const MERCADO_PAGO_ENABLED_CONFIG_KEY = 'Mercado_Pago_Publico_Activo';
 const PRODUCTS_CACHE_KEY = 'blyxu_products_cache_v3';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const CUSTOMER_SESSION_KEY = 'blyxu_customer_session_v1';
+const PRODUCT_DETAIL_PREVIEW_KEY = 'blyxu_product_detail_preview_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
 const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
 const HOME_CATEGORY_INTERVAL_MS = 3200;
@@ -590,6 +592,47 @@ function normalizeImageUrl(value, imageSize = 'default') {
     if (firstUrl.startsWith('//')) return `https:${firstUrl}`;
 
     return resizeGoogleImageUrl(firstUrl, imageSize);
+}
+
+function getProductPreviewName(product) {
+    return product?.Nombre || product?.nombre || product?.Producto || 'Producto';
+}
+
+function getProductPreviewImage(product, imageSize = 'detail') {
+    return normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || '', imageSize);
+}
+
+function prepareProductDetailPreview(productIndex, mode = 'retail') {
+    const index = Number(productIndex);
+    const product = Number.isInteger(index) ? allProducts[index] : null;
+    if (!product) return;
+
+    const image = getProductPreviewImage(product, 'detail');
+    const cardImage = getProductPreviewImage(product, 'card');
+    try {
+        sessionStorage.setItem(PRODUCT_DETAIL_PREVIEW_KEY, JSON.stringify({
+            id: index,
+            mode,
+            name: getProductPreviewName(product),
+            image,
+            imageDetail: image,
+            imageCard: cardImage || image,
+            savedAt: Date.now()
+        }));
+    } catch (_) {}
+
+    if (image) {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = image;
+    }
+}
+
+function openProductDetail(productIndex, mode = 'retail') {
+    const index = Number(productIndex);
+    prepareProductDetailPreview(index, mode);
+    const catalogParam = mode === 'wholesale' ? '&catalogo=mayorista' : '';
+    window.location.href = `producto.html?id=${index}${catalogParam}`;
 }
 
 function getImageFallbackUrl(source, imageSize = 'default') {
@@ -2072,6 +2115,12 @@ function shouldShowProductPrices(mode = activeCatalogMode) {
     return mode === 'wholesale' || showRetailPrices;
 }
 
+function isMercadoPagoCheckoutEnabled() {
+    return siteConfig[MERCADO_PAGO_ENABLED_CONFIG_KEY] === undefined
+        ? true
+        : String(siteConfig[MERCADO_PAGO_ENABLED_CONFIG_KEY]) !== '0';
+}
+
 async function syncRetailPriceVisibility() {
     if (activeCartMode !== 'retail') return;
 
@@ -2587,8 +2636,8 @@ function renderProducts(products, options = {}) {
         const badge = getProductBadgeMarkup(p, i);
 
         return `
-        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}">
-            <div class="product-card-img" onclick="window.location.href='${detailUrl}'">
+        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}" onpointerenter="prepareProductDetailPreview(${productIndex}, '${mode}')" ontouchstart="prepareProductDetailPreview(${productIndex}, '${mode}')" tabindex="0">
+            <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
                 ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
@@ -2600,7 +2649,7 @@ function renderProducts(products, options = {}) {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
             </div>
-            <div class="product-card-info" onclick="window.location.href='${detailUrl}'">
+            <div class="product-card-info" onclick="openProductDetail(${productIndex}, '${mode}')">
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
@@ -2778,8 +2827,12 @@ function shouldRegisterCartOrder(mode = activeCartMode) {
     return normalizedMode === 'wholesale' || cart.some(item => !cartItemShowsPrice(item)) || shouldShowProductPrices('retail');
 }
 
+function isRetailCheckoutConsultationMode(mode = activeCartMode, items = cart) {
+    return normalizeCartMode(mode) === 'retail' && (!shouldShowProductPrices('retail') || items.some(item => !cartItemShowsPrice(item)));
+}
+
 function isCartConsultationMode(items = cart) {
-    return normalizeCartMode(activeCartMode) === 'retail' && items.some(item => !cartItemShowsPrice(item));
+    return isRetailCheckoutConsultationMode(activeCartMode, items);
 }
 
 function cartItemShowsPrice(item) {
@@ -3097,8 +3150,9 @@ function updateCartPaymentFormState(resolvedMethod = currentCartSectionPaymentMe
 
 function setCartPaymentMethod(method) {
     const isConsultationMode = isCartConsultationMode();
+    const mpEnabled = isMercadoPagoCheckoutEnabled();
     const requestedMethod = method === 'mp' || method === 'ws' ? method : '';
-    currentCartSectionPaymentMethod = isConsultationMode && requestedMethod === 'mp' ? 'ws' : requestedMethod;
+    currentCartSectionPaymentMethod = (!mpEnabled || isConsultationMode) && requestedMethod === 'mp' ? 'ws' : requestedMethod;
     try {
         if (currentCartSectionPaymentMethod) {
             localStorage.setItem(CART_PAYMENT_METHOD_STORAGE_KEY, currentCartSectionPaymentMethod);
@@ -3115,8 +3169,10 @@ function setCartPaymentMethod(method) {
     const resolvedMethod = currentCartSectionPaymentMethod;
 
     if (mpTab && wsTab) {
-        mpTab.disabled = isConsultationMode;
-        mpTab.title = isConsultationMode ? 'Mercado Pago se habilita cuando los precios minoristas estan visibles.' : '';
+        mpTab.disabled = isConsultationMode || !mpEnabled;
+        mpTab.title = !mpEnabled
+            ? 'Mercado Pago esta desactivado desde el panel administrativo.'
+            : (isConsultationMode ? 'Mercado Pago se habilita cuando los precios minoristas estan visibles.' : '');
         if (resolvedMethod === 'mp') {
             mpTab.classList.add('active');
             wsTab.classList.remove('active');
@@ -3189,8 +3245,8 @@ function updateCartUI() {
     const total = pricingSummary.total;
     const hasHiddenPrices = cart.some(c => !cartItemShowsPrice(c));
     const isWholesale = normalizeCartMode(activeCartMode) === 'wholesale';
-    const isRegisteredOrder = shouldRegisterCartOrder();
-    const showMpCheckout = !isWholesale && isRegisteredOrder;
+    const retailConsultationMode = isRetailCheckoutConsultationMode(activeCartMode, cart);
+    const mpCheckoutEnabled = isMercadoPagoCheckoutEnabled();
 
     if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
     if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
@@ -3289,14 +3345,15 @@ function updateCartUI() {
     }
 
     // Configure Standalone Section Payment Method & Button text
-    if (isWholesale || hasHiddenPrices) {
+    if (isWholesale || retailConsultationMode || !mpCheckoutEnabled) {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'none';
         const paymentTabs = mpTab?.closest('.cart-payment-tabs');
         if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr';
         setCartPaymentMethod('ws');
         if (secCheckoutBtnText) secCheckoutBtnText.textContent = 'Confirmar y Registrar Pedido Mayorista ✦';
-        if (secCheckoutBtnText && hasHiddenPrices) secCheckoutBtnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
+        if (secCheckoutBtnText && retailConsultationMode) secCheckoutBtnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
+        if (secCheckoutBtnText && !isWholesale && !retailConsultationMode && !mpCheckoutEnabled) secCheckoutBtnText.textContent = 'Finalizar pedido por WhatsApp';
     } else {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'flex';
@@ -3378,7 +3435,7 @@ function updateCartUI() {
             if (errorBox) errorBox.style.display = 'none';
             window.wsClienteTemp = { nombre: n, telefono: t, email: email, direccion: d, ciudad: c, nota: nota };
 
-            if (!isWholesale && !hasHiddenPrices && currentCartSectionPaymentMethod === 'mp') {
+            if (!isWholesale && !retailConsultationMode && mpCheckoutEnabled && currentCartSectionPaymentMethod === 'mp') {
                 newSecBtn.disabled = true;
                 const origText = newSecBtn.innerHTML;
                 newSecBtn.innerHTML = '<span>Generando pago seguro... ✦</span>';
@@ -5113,6 +5170,15 @@ function initCustomerAuth() {
 async function checkoutWithMercadoPago(cliente, options = {}) {
     const checkoutItems = Array.isArray(options.items) && options.items.length ? options.items : cart;
     if (!checkoutItems.length) return;
+    if (!isMercadoPagoCheckoutEnabled()) {
+        setCartPaymentMethod('ws');
+        const secErrorBox = document.getElementById('cart-section-form-error');
+        if (secErrorBox) {
+            secErrorBox.textContent = 'Mercado Pago esta desactivado. Finaliza este pedido por WhatsApp.';
+            secErrorBox.style.display = 'block';
+        }
+        return;
+    }
     if (checkoutItems.some(item => !cartItemShowsPrice(item))) {
         setCartPaymentMethod('ws');
         const secErrorBox = document.getElementById('cart-section-form-error');
@@ -5229,6 +5295,11 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
 
     if (!shouldShowProductPrices('retail')) {
         alert('Este producto está disponible para consulta por WhatsApp.');
+        return;
+    }
+
+    if (!isMercadoPagoCheckoutEnabled()) {
+        alert('Mercado Pago no esta disponible por ahora. Finaliza tu pedido por WhatsApp.');
         return;
     }
 
@@ -5693,8 +5764,14 @@ document.addEventListener('DOMContentLoaded', () => {
         hydrateSiteConfigFromCache();
         renderFooterSocialLinks();
         renderPromoWidget();
+        fetchSiteConfig().then(() => {
+            renderFloatingWhatsApp();
+            renderFooterSocialLinks();
+            renderPromoWidget();
+            updateCartUI();
+        }).catch(() => {});
         runWhenIdle(() => {
-            const tasks = [fetchSiteConfig().catch(() => {})];
+            const tasks = [];
             if (cart.length) {
                 tasks.push(loadProducts({ renderCatalog: false, showLoading: false }).catch(() => {}));
             }
@@ -5702,7 +5779,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderFloatingWhatsApp();
                 renderFooterSocialLinks();
                 renderPromoWidget();
-                if (cart.length) updateCartUI();
+                updateCartUI();
             });
         }, 1800);
     } else if (isProductDetailPage) {

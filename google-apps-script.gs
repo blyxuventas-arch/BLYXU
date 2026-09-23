@@ -369,6 +369,19 @@ function handleRequest_(e, method) {
       return handleMercadoPagoPaymentUpdate_(body, params);
     }
 
+    // ==========================================
+    // 4) AVEONLINE / INTERRAPIDISIMO - COTIZACION ENVIO
+    // ==========================================
+    if (
+      action === 'cotizarenvio' ||
+      action === 'cotizar_envio' ||
+      action === 'shippingquote' ||
+      action === 'quoteshipping' ||
+      action === 'aveonlinequote'
+    ) {
+      return handleAveonlineShippingQuote_(body);
+    }
+
     const sheetName = sheetFromResource_(resource || action);
 
     if (!sheetName) {
@@ -517,6 +530,14 @@ function handleRequest_(e, method) {
  ***************/
 function handleMercadoPagoPreference_(body) {
   ensureSheets_();
+  if (String(getConfigValue_('Mercado_Pago_Publico_Activo', '1')) === '0') {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: 'Mercado Pago esta desactivado desde el panel administrativo.'
+    });
+  }
+
   const token = getMercadoPagoAccessToken_();
   if (!token || token.indexOf('PEGA_AQUÍ') >= 0 || token.trim() === '') {
     return json_({
@@ -892,6 +913,209 @@ function applyMercadoPagoPaymentToOrder_(payment) {
     return { applied: true, orderId: orderId, stockDiscounted: false, orderStatus: updates['Estado Pedido'] };
   } finally {
     lock.releaseLock();
+  }
+}
+
+/***************
+ * AVEONLINE / INTERRAPIDISIMO
+ ***************/
+function getPrivateConfig_(key, fallback) {
+  const propValue = PropertiesService.getScriptProperties().getProperty(key);
+  if (propValue !== null && propValue !== undefined && String(propValue).trim() !== '') return propValue;
+
+  try {
+    const sheetValue = getConfigValue_(key, fallback);
+    return sheetValue !== null && sheetValue !== undefined && String(sheetValue).trim() !== '' ? sheetValue : (fallback || '');
+  } catch (error) {
+    return fallback || '';
+  }
+}
+
+function getAveonlineCredentials_() {
+  return {
+    user: getPrivateConfig_('AVEONLINE_USER', getPrivateConfig_('AVEONLINE_USUARIO', '')),
+    password: getPrivateConfig_('AVEONLINE_PASSWORD', getPrivateConfig_('AVEONLINE_CLAVE', '')),
+    origin: getPrivateConfig_('AVEONLINE_ORIGIN_CITY', getPrivateConfig_('AVEONLINE_CIUDAD_ORIGEN', '')),
+    enterpriseId: getPrivateConfig_('AVEONLINE_ENTERPRISE_ID', getPrivateConfig_('AVEONLINE_EMPRESA_ID', '')),
+    operatorId: getPrivateConfig_('AVEONLINE_OPERATOR_ID', getPrivateConfig_('AVEONLINE_OPERADOR_ID', '')),
+    authUrl: getPrivateConfig_('AVEONLINE_AUTH_URL', 'https://app.aveonline.co/api/auth/v3.0/index.php'),
+    quoteUrl: getPrivateConfig_('AVEONLINE_QUOTE_URL', 'https://app.aveonline.co/avestock/api/calcularenvio.php')
+  };
+}
+
+function authenticateAveonline_(credentials) {
+  if (!credentials.user || !credentials.password) {
+    throw new Error('Faltan credenciales AVEONLINE_USER y AVEONLINE_PASSWORD en Propiedades del Script.');
+  }
+
+  const response = UrlFetchApp.fetch(credentials.authUrl, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    payload: JSON.stringify({
+      tipo: 'AuthProduct',
+      user: credentials.user,
+      password: credentials.password,
+      tokenTime: 1
+    })
+  });
+
+  const text = response.getContentText();
+  const data = JSON.parse(text || '{}');
+  const account = data.data || {};
+  const token = account.token || account.tokenBody || data.token || '';
+
+  if (response.getResponseCode() >= 400 || !token) {
+    throw new Error(data.message || data.error || 'No se pudo autenticar con Aveonline.');
+  }
+
+  return {
+    token: token,
+    enterpriseId: credentials.enterpriseId || account.idEnterprise || account.idActive || account.id || '',
+    agentId: account.idAgent || account.idAgentUser || ''
+  };
+}
+
+function normalizeShippingDestination_(body) {
+  return String(
+    body.destino ||
+    body.ciudad ||
+    body.city ||
+    body.clientDestino ||
+    body.destination ||
+    ''
+  ).trim();
+}
+
+function getShippingItems_(body) {
+  const items = Array.isArray(body.items) ? body.items :
+    Array.isArray(body.productos) ? body.productos :
+    Array.isArray(body.products) ? body.products : [];
+
+  if (!items.length) return [{
+    name: 'Pedido BLYXU',
+    qty: 1,
+    price: Math.max(10000, toNumber_(body.valorDeclarado || body.subtotal || body.total || 10000)),
+    weight: toNumber_(body.peso || body.weight || 1)
+  }];
+
+  return items.map(function(item) {
+    return {
+      name: item.name || item.nombre || item.title || 'Producto BLYXU',
+      qty: Math.max(1, toNumber_(item.qty || item.cantidad || item.unidades || 1)),
+      price: Math.max(0, toNumber_(item.price || item.precio || item.valor || item.valorDeclarado || 0)),
+      weight: Math.max(0, toNumber_(item.weight || item.peso || 0))
+    };
+  });
+}
+
+function buildAveonlineQuotePayload_(body, credentials, auth) {
+  const destination = normalizeShippingDestination_(body);
+  if (!destination) throw new Error('Ingresa ciudad de destino para cotizar el envio.');
+  if (!credentials.origin) throw new Error('Falta AVEONLINE_ORIGIN_CITY o AVEONLINE_CIUDAD_ORIGEN en Propiedades del Script.');
+  if (!auth.enterpriseId) throw new Error('No se pudo resolver el ID de empresa de Aveonline.');
+
+  const items = getShippingItems_(body);
+  const units = Math.max(1, toNumber_(body.unidades || body.grandTotalUnit || items.reduce(function(sum, item) {
+    return sum + item.qty;
+  }, 0)));
+  const declared = Math.max(10000, toNumber_(body.valorDeclarado || body.grandTotalDeclarado || items.reduce(function(sum, item) {
+    return sum + (item.price * item.qty);
+  }, 0)));
+  const weight = Math.max(0.5, toNumber_(body.peso || body.grandTotalPeso || items.reduce(function(sum, item) {
+    return sum + ((item.weight || 0.25) * item.qty);
+  }, 0)));
+  const alto = Math.max(1, toNumber_(body.alto || body.idalto || getPrivateConfig_('AVEONLINE_DEFAULT_ALTO', 10)));
+  const ancho = Math.max(1, toNumber_(body.ancho || body.idancho || getPrivateConfig_('AVEONLINE_DEFAULT_ANCHO', 10)));
+  const largo = Math.max(1, toNumber_(body.largo || body.idlargo || getPrivateConfig_('AVEONLINE_DEFAULT_LARGO', 10)));
+  const volume = Math.max(1, toNumber_(body.volumen || body.grandTotalVol || ((alto * ancho * largo) / 2500)));
+
+  return {
+    tipo: 'authave',
+    empresa: Number(auth.enterpriseId),
+    bodegaOrigen: credentials.origin,
+    clientDestino: destination,
+    paymentCliente: Number(body.paymentCliente !== undefined ? body.paymentCliente : 1),
+    grandTotalPeso: weight.toFixed(2),
+    campo: String(body.campo || body.operador || credentials.operatorId || ''),
+    recaudo: toNumber_(body.recaudo || 0),
+    grandTotalDeclarado: declared.toFixed(2),
+    paymentAsumecosto: Number(body.paymentAsumecosto !== undefined ? body.paymentAsumecosto : 1),
+    origenpedidos: Number(body.origenpedidos !== undefined ? body.origenpedidos : 1),
+    grandTotalUnit: units,
+    grandTotalVol: volume,
+    idalto: alto,
+    idancho: ancho,
+    idlargo: largo,
+    plugin: body.plugin || 'aveonline'
+  };
+}
+
+function selectPreferredShippingQuote_(data) {
+  const rawQuotes = data.cotizaciones || data.data || data.result || data.results || [];
+  const quotes = Array.isArray(rawQuotes) ? rawQuotes : [];
+  if (!quotes.length) return null;
+
+  return quotes.find(function(quote) {
+    const name = normalizeKey_(quote.nombreTransportadora || quote.transportadora || quote.operator || quote.nombre || '');
+    return name.indexOf('interrapidisimo') >= 0;
+  }) || quotes[0];
+}
+
+function publicShippingQuote_(quote) {
+  if (!quote) return null;
+  return {
+    transportadora: quote.nombreTransportadora || quote.transportadora || quote.operator || '',
+    codigo: quote.codTransportadora || quote.codigo || quote.campo || '',
+    total: toNumber_(quote.total || quote.valorTotal || quote.fletetotal || quote.valor || 0),
+    valorTransporte: toNumber_(quote.valorTotal || quote.fletetotal || quote.valor || 0),
+    recaudo: toNumber_(quote.valorOtrosRecaudos || quote.costoRecaudo || 0),
+    diasEntrega: quote.diasentrega || quote.diasEntrega || quote.deliveryDays || '',
+    origen: quote.origen || '',
+    destino: quote.destino || ''
+  };
+}
+
+function handleAveonlineShippingQuote_(body) {
+  try {
+    const credentials = getAveonlineCredentials_();
+    const auth = authenticateAveonline_(credentials);
+    const payload = buildAveonlineQuotePayload_(body || {}, credentials, auth);
+    const response = UrlFetchApp.fetch(credentials.quoteUrl, {
+      method: 'post',
+      contentType: 'application/json',
+      muteHttpExceptions: true,
+      headers: {
+        Authorization: auth.token
+      },
+      payload: JSON.stringify(payload)
+    });
+
+    const text = response.getContentText();
+    const data = JSON.parse(text || '{}');
+    const quote = selectPreferredShippingQuote_(data);
+
+    if (response.getResponseCode() >= 400 || !quote) {
+      return json_({
+        ok: false,
+        status: 'error',
+        error: data.message || data.error || 'No se encontraron cotizaciones para ese destino.',
+        rawStatus: response.getResponseCode()
+      });
+    }
+
+    return json_({
+      ok: true,
+      status: 'success',
+      data: publicShippingQuote_(quote),
+      quotes: (data.cotizaciones || data.data || []).map(publicShippingQuote_).filter(Boolean)
+    });
+  } catch (error) {
+    return json_({
+      ok: false,
+      status: 'error',
+      error: error.message || 'No se pudo cotizar el envio.'
+    });
   }
 }
 
@@ -2574,6 +2798,16 @@ function configurarBlyxuSpreadsheet(spreadsheetId) {
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', id);
   ensureSheets_();
   return 'Spreadsheet configurado y hojas verificadas.';
+}
+
+function configurarAveonlineEnvios(usuario, clave, ciudadOrigen, empresaId, operadorId) {
+  const props = PropertiesService.getScriptProperties();
+  if (usuario) props.setProperty('AVEONLINE_USER', String(usuario).trim());
+  if (clave) props.setProperty('AVEONLINE_PASSWORD', String(clave).trim());
+  if (ciudadOrigen) props.setProperty('AVEONLINE_ORIGIN_CITY', String(ciudadOrigen).trim());
+  if (empresaId) props.setProperty('AVEONLINE_ENTERPRISE_ID', String(empresaId).trim());
+  if (operadorId) props.setProperty('AVEONLINE_OPERATOR_ID', String(operadorId).trim());
+  return 'Credenciales de Aveonline guardadas. Prueba con action=cotizarenvio.';
 }
 
 function verificarSistemaClientes() {

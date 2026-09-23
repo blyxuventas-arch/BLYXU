@@ -4900,6 +4900,196 @@
             100% { transform:translateX(78%) scaleX(.34); opacity:.25; }
         }
 
+        /* Login admin final premium: limpio y sobrio */
+        #admin-login-screen.wholesale-overlay.open {
+            background:
+                radial-gradient(circle at 50% -10%, rgba(168,85,247,.14), transparent 34%),
+                linear-gradient(180deg, rgba(2,2,5,.78), rgba(9,4,14,.88))!important;
+            backdrop-filter:none!important;
+        }
+        #admin-login-screen .login-bokeh-canvas {
+            position:absolute!important;
+            inset:0!important;
+            z-index:0!important;
+            display:block!important;
+            width:100%!important;
+            height:100%!important;
+            opacity:.92!important;
+            filter:blur(8px) saturate(1.24) contrast(1.05)!important;
+            pointer-events:none!important;
+        }
+        #admin-login-screen.wholesale-overlay.open::before {
+            content:""!important;
+            position:absolute!important;
+            inset:0!important;
+            z-index:1!important;
+            display:block!important;
+            pointer-events:none!important;
+            background:
+                radial-gradient(circle at 50% 58%, transparent 0 22%, rgba(0,0,0,.12) 58%, rgba(0,0,0,.32) 100%),
+                linear-gradient(180deg, rgba(0,0,0,.04), rgba(0,0,0,.24))!important;
+        }
+        #admin-login-screen.wholesale-overlay.open::after {
+            content:""!important;
+            position:absolute!important;
+            inset:-18%!important;
+            z-index:1!important;
+            display:block!important;
+            pointer-events:none!important;
+            background:
+                radial-gradient(circle at 22% 18%, rgba(216,180,254,.18), transparent 20%),
+                radial-gradient(circle at 78% 28%, rgba(124,58,237,.16), transparent 24%),
+                radial-gradient(circle at 42% 84%, rgba(76,29,149,.16), transparent 26%)!important;
+            animation:adminLoginNebulaDrift 18s ease-in-out infinite alternate!important;
+        }
+        #admin-login-screen #login-box {
+            position:relative!important;
+            z-index:2!important;
+            width:min(390px, calc(100vw - 34px))!important;
+            min-height:0!important;
+            padding:34px!important;
+            border-radius:24px!important;
+            border:1px solid rgba(255,255,255,.1)!important;
+            background:#09090d!important;
+            box-shadow:
+                0 30px 90px rgba(0,0,0,.66),
+                0 0 0 1px rgba(168,85,247,.06),
+                inset 0 1px 0 rgba(255,255,255,.055)!important;
+            backdrop-filter:none!important;
+        }
+        #admin-login-screen #login-box::before,
+        #admin-login-screen #login-box::after {
+            content:none!important;
+            display:none!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            display:block!important;
+            width:86px!important;
+            height:auto!important;
+            max-height:52px!important;
+            margin:0 auto 22px!important;
+            object-fit:contain!important;
+            opacity:.95!important;
+            filter:drop-shadow(0 10px 22px rgba(0,0,0,.38))!important;
+            animation:adminLogoSettle .58s cubic-bezier(.16,1,.3,1) both!important;
+        }
+        #admin-login-screen .login-brand-word,
+        #admin-login-screen .login-brand-word::after {
+            display:none!important;
+            content:none!important;
+        }
+        #admin-login-screen .wholesale-kicker {
+            display:block!important;
+            margin:0 0 8px!important;
+            color:rgba(216,180,254,.8)!important;
+            font-size:11px!important;
+            font-weight:850!important;
+            letter-spacing:.14em!important;
+            text-align:center!important;
+            text-transform:uppercase!important;
+        }
+        #admin-login-screen #login-box h2 {
+            display:block!important;
+            margin:0 0 26px!important;
+            color:#fff!important;
+            font-size:22px!important;
+            font-weight:850!important;
+            letter-spacing:0!important;
+            line-height:1.08!important;
+            text-align:center!important;
+        }
+        #admin-login-screen .wholesale-form {
+            display:grid!important;
+            gap:12px!important;
+        }
+        #admin-login-screen input#admin-password {
+            height:52px!important;
+            min-height:52px!important;
+            border-radius:14px!important;
+            border:1px solid rgba(255,255,255,.12)!important;
+            background:#101015!important;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+            color:#fff!important;
+            caret-color:#d8b4fe!important;
+            text-align:center!important;
+            font-size:16px!important;
+            letter-spacing:0!important;
+        }
+        #admin-login-screen input#admin-password::placeholder {
+            color:rgba(255,255,255,.42)!important;
+        }
+        #admin-login-screen input#admin-password:focus {
+            border-color:rgba(216,180,254,.58)!important;
+            box-shadow:0 0 0 3px rgba(168,85,247,.12), inset 0 1px 0 rgba(255,255,255,.05)!important;
+        }
+        #admin-login-screen .admin-btn {
+            height:52px!important;
+            min-height:52px!important;
+            border-radius:14px!important;
+            border:1px solid rgba(255,255,255,.88)!important;
+            background:#f7f3ff!important;
+            color:#08070b!important;
+            text-shadow:none!important;
+            font-size:12px!important;
+            font-weight:950!important;
+            letter-spacing:.08em!important;
+            box-shadow:0 18px 36px rgba(0,0,0,.28)!important;
+            transition:transform .18s ease, box-shadow .18s ease, background .18s ease!important;
+        }
+        #admin-login-screen .admin-btn:hover {
+            transform:translateY(-1px)!important;
+            background:#fff!important;
+            box-shadow:0 22px 42px rgba(0,0,0,.34), 0 0 24px rgba(168,85,247,.12)!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn {
+            color:transparent!important;
+            background:#17121f!important;
+            border-color:rgba(216,180,254,.24)!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::before {
+            content:"VALIDANDO"!important;
+            position:absolute!important;
+            inset:0!important;
+            z-index:2!important;
+            display:grid!important;
+            place-items:center!important;
+            color:rgba(255,255,255,.92)!important;
+            font-size:12px!important;
+            font-weight:950!important;
+            letter-spacing:.12em!important;
+            animation:none!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::after {
+            content:""!important;
+            position:absolute!important;
+            left:16px!important;
+            right:16px!important;
+            top:auto!important;
+            bottom:7px!important;
+            z-index:2!important;
+            width:auto!important;
+            height:2px!important;
+            margin:0!important;
+            border-radius:999px!important;
+            background:linear-gradient(90deg, transparent, #d8b4fe, transparent)!important;
+            box-shadow:0 0 16px rgba(216,180,254,.58)!important;
+            animation:adminMinimalTrack 1.1s ease-in-out infinite!important;
+        }
+        @keyframes adminLogoSettle {
+            0% { opacity:0; transform:translateY(8px) scale(.96); filter:blur(4px); }
+            100% { opacity:.95; transform:none; filter:drop-shadow(0 10px 22px rgba(0,0,0,.38)); }
+        }
+        @keyframes adminMinimalTrack {
+            0% { transform:translateX(-45%) scaleX(.24); opacity:.25; }
+            50% { transform:translateX(0) scaleX(.86); opacity:1; }
+            100% { transform:translateX(45%) scaleX(.24); opacity:.25; }
+        }
+        @keyframes adminLoginNebulaDrift {
+            0% { transform:translate3d(-2%,-1%,0) scale(1); filter:hue-rotate(0deg); }
+            50% { transform:translate3d(3%,2%,0) scale(1.05); filter:hue-rotate(10deg); }
+            100% { transform:translate3d(-1%,4%,0) scale(1.02); filter:hue-rotate(-8deg); }
+        }
+
         /* Capa final mobile admin: selector compacto y secciones adaptables */
         @media (max-width: 760px) {
             html,
@@ -5515,7 +5705,7 @@
                         <div class="settings-tab-content">
                             <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imagenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imagenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imagenes aqui</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="carousel-title" placeholder="Titulo del banner"></div><div class="form-group"><label>Descripcion</label><textarea class="form-control" id="carousel-description" placeholder="Descripcion corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"><div class="home-ad-image-preview" id="home-ad-image-preview"><span>Sin imagen para mostrar</span></div></div><div class="form-group"><label>Titulo</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="contact" id="settings-tab-contact"><form id="contact-config-form"><div class="admin-form-grid"><input class="form-control" id="contact-config-days" placeholder="Dias"><input class="form-control" id="contact-config-hours" placeholder="Horario"><input class="form-control" id="contact-config-whatsapp" placeholder="WhatsApp"><input class="form-control" id="contact-config-facebook" placeholder="Facebook"><input class="form-control" id="contact-config-tiktok" placeholder="TikTok"><input class="form-control" id="contact-config-instagram" placeholder="Instagram"></div><button class="admin-btn" id="btn-save-contact-config">Guardar contacto</button></form><form id="whatsapp-config-form"><input class="form-control" id="whatsapp-config-commerce" placeholder="WhatsApp comercial"><button class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button></form></div>
-                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promocion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Titulo de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
+                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mercado Pago público</strong><span>Permite mostrar precios de detal pero finalizar únicamente por WhatsApp cuando esta pasarela esté apagada.</span></div><label class="settings-toggle-row" title="Activar o desactivar Mercado Pago en catálogo público"><input type="checkbox" id="toggle-mercado-pago-public" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promocion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Titulo de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesion.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Titulo</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir metodo</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
                         </div>
@@ -5932,6 +6122,6 @@
             }
         });
     </script>
-    <script src="admin-app.js?v=admin-orders-drawer-v1-20260922" defer></script>
+    <script src="admin-app.js?v=mp-toggle-v2-20260923" defer></script>
 </body>
 </html>
