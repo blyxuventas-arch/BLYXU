@@ -203,7 +203,7 @@
             }
 
             .admin-mobile-view-select {
-                display: block !important;
+                display: none !important;
                 width: 100% !important;
                 min-height: 44px !important;
                 padding: 0 14px !important;
@@ -413,6 +413,7 @@
         .dashboard-section { display:none; }
         .dashboard-section.active { display:block; }
         .admin-mobile-view-select { display:none; }
+        .admin-section-drawer { display:none; }
         .admin-panel,.dashboard-card {
             border:1px solid var(--line);
             border-radius:16px;
@@ -4741,6 +4742,164 @@
             0% { background-position:-140px 0; }
             100% { background-position:140px 0; }
         }
+        /* Login admin final: sin barra superior, logo cortina y carga liviana */
+        #admin-login-screen #login-box,
+        #admin-login-screen #login-box.is-unlocking {
+            padding-top:56px!important;
+        }
+        #admin-login-screen #login-box::before,
+        #admin-login-screen #login-box.is-unlocking::before {
+            content:none!important;
+            display:none!important;
+        }
+        #admin-login-screen.wholesale-overlay.open .wholesale-logo {
+            animation:adminLogoCurtain 1.08s cubic-bezier(.16,1,.3,1) both!important;
+            transform-origin:center!important;
+        }
+        #admin-login-screen .admin-btn {
+            position:relative!important;
+            overflow:hidden!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn {
+            padding-right:0!important;
+            color:transparent!important;
+            text-shadow:none!important;
+            filter:brightness(1.04)!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::before {
+            content:"BLYXU"!important;
+            position:absolute!important;
+            inset:0!important;
+            z-index:2!important;
+            display:grid!important;
+            place-items:center!important;
+            color:rgba(255,255,255,.9)!important;
+            font-size:12px!important;
+            font-weight:950!important;
+            letter-spacing:.28em!important;
+            animation:adminButtonCurtain 1.1s cubic-bezier(.16,1,.3,1) infinite!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::after {
+            content:""!important;
+            position:absolute!important;
+            left:calc(50% - 78px)!important;
+            top:50%!important;
+            right:auto!important;
+            z-index:1!important;
+            width:10px!important;
+            height:10px!important;
+            margin-top:-5px!important;
+            border:0!important;
+            border-radius:3px!important;
+            background:rgba(255,255,255,.95)!important;
+            box-shadow:
+                28px 0 0 rgba(216,180,254,.78),
+                56px 0 0 rgba(168,85,247,.58),
+                84px 0 0 rgba(216,180,254,.36),
+                112px 0 0 rgba(255,255,255,.2)!important;
+            animation:adminFollowerRun 1.2s cubic-bezier(.65,0,.35,1) infinite!important;
+        }
+        @keyframes adminLogoCurtain {
+            0% { opacity:.08; clip-path:inset(0 100% 0 0); transform:translateY(6px) scale(.98); filter:blur(5px) drop-shadow(0 0 0 rgba(216,180,254,0)); }
+            52% { opacity:1; clip-path:inset(0 0 0 0); transform:translateY(0) scale(1); filter:blur(0) drop-shadow(0 0 26px rgba(216,180,254,.5)); }
+            100% { opacity:1; clip-path:inset(0 0 0 0); transform:none; }
+        }
+        @keyframes adminButtonCurtain {
+            0%,100% { clip-path:inset(0 0 0 0); opacity:.78; }
+            48% { clip-path:inset(0 0 0 42%); opacity:1; }
+            52% { clip-path:inset(0 42% 0 0); opacity:1; }
+        }
+        @keyframes adminFollowerRun {
+            0% { transform:translateX(0) rotate(0deg); opacity:.28; }
+            32% { transform:translateX(32px) rotate(-180deg); opacity:1; }
+            66% { transform:translateX(64px) rotate(-360deg); opacity:.7; }
+            100% { transform:translateX(92px) rotate(-540deg); opacity:.18; }
+        }
+        #admin-login-screen #login-box {
+            min-height:0!important;
+            padding:48px 34px 34px!important;
+            border-color:rgba(216,180,254,.42)!important;
+            background:
+                radial-gradient(circle at 50% 4%, rgba(216,180,254,.16), transparent 28%),
+                linear-gradient(150deg, rgba(255,255,255,.18), rgba(255,255,255,.045) 52%, rgba(124,58,237,.16)),
+                rgba(12,8,20,.78)!important;
+            box-shadow:
+                0 36px 100px rgba(0,0,0,.62),
+                0 0 56px rgba(124,58,237,.18),
+                inset 0 1px 0 rgba(255,255,255,.2),
+                inset 0 -1px 0 rgba(216,180,254,.08)!important;
+        }
+        #admin-login-screen .wholesale-logo {
+            width:54px!important;
+            max-height:54px!important;
+            margin:0 auto 8px!important;
+            object-fit:contain!important;
+            opacity:.96!important;
+        }
+        #admin-login-screen .login-brand-word {
+            position:relative!important;
+            z-index:3!important;
+            width:fit-content!important;
+            margin:0 auto 34px!important;
+            color:#fff!important;
+            font-size:28px!important;
+            font-weight:950!important;
+            letter-spacing:-1px!important;
+            line-height:1!important;
+            text-shadow:0 0 22px rgba(216,180,254,.36), 0 8px 24px rgba(0,0,0,.42)!important;
+            animation:adminWordCurtain 1.28s cubic-bezier(.16,1,.3,1) both!important;
+        }
+        #admin-login-screen .login-brand-word::after {
+            content:""!important;
+            position:absolute!important;
+            inset:-5px -10px!important;
+            background:linear-gradient(90deg, transparent, rgba(255,255,255,.62), transparent)!important;
+            transform:translateX(-140%) skewX(-18deg)!important;
+            animation:adminWordSweep 1.42s cubic-bezier(.16,1,.3,1) .12s both!important;
+            pointer-events:none!important;
+            mix-blend-mode:screen!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::before {
+            content:"VALIDANDO"!important;
+            z-index:3!important;
+            font-size:12px!important;
+            letter-spacing:.18em!important;
+            animation:adminValidatingText 1.2s ease-in-out infinite!important;
+        }
+        #admin-login-screen #login-box.is-unlocking .admin-btn::after {
+            left:18px!important;
+            right:18px!important;
+            top:auto!important;
+            bottom:8px!important;
+            width:auto!important;
+            height:3px!important;
+            margin:0!important;
+            border-radius:999px!important;
+            background:linear-gradient(90deg, transparent, rgba(255,255,255,.88), rgba(216,180,254,.95), transparent)!important;
+            box-shadow:0 0 18px rgba(216,180,254,.62)!important;
+            transform:translateX(-60%)!important;
+            animation:adminButtonTrack 1.05s cubic-bezier(.65,0,.35,1) infinite!important;
+        }
+        @keyframes adminWordCurtain {
+            0% { opacity:0; clip-path:inset(0 100% 0 0); transform:translateY(8px); filter:blur(6px); }
+            58% { opacity:1; clip-path:inset(0 0 0 0); transform:translateY(0); filter:blur(0); }
+            100% { opacity:1; clip-path:inset(0 0 0 0); transform:none; filter:none; }
+        }
+        @keyframes adminWordSweep {
+            0% { transform:translateX(-140%) skewX(-18deg); opacity:0; }
+            30% { opacity:.85; }
+            100% { transform:translateX(140%) skewX(-18deg); opacity:0; }
+        }
+        @keyframes adminValidatingText {
+            0%,100% { opacity:.7; letter-spacing:.16em; }
+            50% { opacity:1; letter-spacing:.24em; }
+        }
+        @keyframes adminButtonTrack {
+            0% { transform:translateX(-78%) scaleX(.34); opacity:.25; }
+            48% { transform:translateX(0) scaleX(.72); opacity:1; }
+            100% { transform:translateX(78%) scaleX(.34); opacity:.25; }
+        }
+
         /* Capa final mobile admin: selector compacto y secciones adaptables */
         @media (max-width: 760px) {
             html,
@@ -4781,7 +4940,7 @@
                 display: none !important;
             }
             .admin-mobile-view-select {
-                display: block !important;
+                display: none !important;
                 width: 100% !important;
                 min-height: 44px !important;
                 padding: 0 14px !important;
@@ -4790,6 +4949,79 @@
                 background: #141218 !important;
                 color: #f8f4ff !important;
                 font-weight: 800 !important;
+            }
+            .admin-section-drawer {
+                display: block !important;
+                position: fixed !important;
+                left: -262px !important;
+                top: 124px !important;
+                z-index: 90 !important;
+                width: 262px !important;
+                max-width: calc(100vw - 54px) !important;
+                transition: left .22s ease !important;
+            }
+            .admin-section-drawer.open {
+                left: 0 !important;
+            }
+            .admin-section-tab {
+                position: absolute !important;
+                right: -42px !important;
+                top: 18px !important;
+                width: 42px !important;
+                min-height: 132px !important;
+                border: 1px solid rgba(255,255,255,.12) !important;
+                border-left: 0 !important;
+                border-radius: 0 18px 18px 0 !important;
+                background: rgba(17,17,20,.96) !important;
+                color: #f8f4ff !important;
+                font-size: 11px !important;
+                font-weight: 950 !important;
+                letter-spacing: 1.5px !important;
+                text-transform: uppercase !important;
+                writing-mode: vertical-rl !important;
+                transform: rotate(180deg) !important;
+                box-shadow: 18px 18px 52px rgba(0,0,0,.34) !important;
+            }
+            .admin-section-panel {
+                max-height: calc(100vh - 158px) !important;
+                overflow-y: auto !important;
+                padding: 14px !important;
+                border: 1px solid rgba(255,255,255,.1) !important;
+                border-left: 0 !important;
+                border-radius: 0 18px 18px 0 !important;
+                background: rgba(10,10,12,.98) !important;
+                box-shadow: 22px 28px 90px rgba(0,0,0,.46) !important;
+                backdrop-filter: blur(18px) !important;
+            }
+            .admin-section-head {
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                gap: 4px 10px !important;
+                align-items: center !important;
+                padding: 4px 4px 12px !important;
+                border-bottom: 1px solid rgba(255,255,255,.08) !important;
+                margin-bottom: 10px !important;
+            }
+            .admin-section-head .admin-kicker {
+                grid-column: 1 / -1 !important;
+            }
+            .admin-section-close {
+                width: 34px !important;
+                height: 34px !important;
+                border: 1px solid rgba(255,255,255,.12) !important;
+                border-radius: 10px !important;
+                background: rgba(255,255,255,.05) !important;
+                color: #fff !important;
+                font-weight: 900 !important;
+            }
+            .admin-section-list {
+                display: grid !important;
+                gap: 8px !important;
+            }
+            .admin-section-list .sidebar-btn {
+                display: flex !important;
+                width: 100% !important;
+                min-height: 44px !important;
             }
             .dashboard-content-area {
                 padding: 12px !important;
@@ -4877,6 +5109,61 @@
                 max-height: calc(100vh - 18px) !important;
                 border-radius: 16px !important;
             }
+            #view-orders .table-wrapper {
+                overflow: visible !important;
+                padding: 0 !important;
+                border-top: 0 !important;
+            }
+            #view-orders table,
+            #view-orders thead,
+            #view-orders tbody,
+            #view-orders tr,
+            #view-orders td {
+                display: block !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            #view-orders table {
+                min-width: 0 !important;
+                border-collapse: separate !important;
+                border-spacing: 0 12px !important;
+            }
+            #view-orders thead {
+                display: none !important;
+            }
+            #view-orders tr {
+                padding: 14px !important;
+                border: 1px solid rgba(255,255,255,.08) !important;
+                border-radius: 16px !important;
+                background: rgba(255,255,255,.035) !important;
+            }
+            #view-orders td {
+                min-height: 0 !important;
+                padding: 8px 0 !important;
+                border: 0 !important;
+                white-space: normal !important;
+                overflow-wrap: anywhere !important;
+            }
+            #view-orders td::before {
+                content: attr(data-label);
+                display: block;
+                margin-bottom: 4px;
+                color: rgba(216,209,194,.68);
+                font-size: 10px;
+                font-weight: 900;
+                letter-spacing: .8px;
+                text-transform: uppercase;
+            }
+            #view-orders .orders-actions-cell {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
+            }
+            #view-orders .orders-action-btn,
+            #view-orders .invoice-status-select {
+                width: 100% !important;
+                min-width: 0 !important;
+            }
         }
     </style>
 </head>
@@ -4888,6 +5175,7 @@
         <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
         <div class="wholesale-panel" id="login-box">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
+            <div class="login-brand-word" aria-hidden="true">BLYXU</div>
             <div class="wholesale-kicker">Panel Seguro</div>
             <h2>Administrador</h2>
             <form class="wholesale-form" id="admin-login-form">
@@ -4994,6 +5282,25 @@
                         <button class="admin-btn secondary" type="button" id="calc-copy-result">Copiar resultado</button>
                         <button class="admin-btn secondary" type="button" id="calc-clear">Limpiar</button>
                     </div>
+                </div>
+            </div>
+        </aside>
+        <aside class="admin-section-drawer" id="admin-section-drawer" aria-label="Secciones del panel">
+            <button class="admin-section-tab" type="button" id="admin-section-toggle" aria-expanded="false">Secciones</button>
+            <div class="admin-section-panel">
+                <div class="admin-section-head">
+                    <span class="admin-kicker">Panel</span>
+                    <strong>Secciones</strong>
+                    <button type="button" class="admin-section-close" id="admin-section-close" aria-label="Cerrar secciones">x</button>
+                </div>
+                <div class="admin-section-list">
+                    <button class="sidebar-btn active" data-view="dashboard" onclick="switchDashboardView('dashboard','Dashboard')"><span>DB</span> Dashboard</button>
+                    <button class="sidebar-btn" data-view="products" onclick="switchDashboardView('products','Gestion de Productos')"><span>PR</span> Añadir Producto</button>
+                    <button class="sidebar-btn" data-view="inventory" onclick="switchDashboardView('inventory','Inventario Actual')"><span>IN</span> Ver Inventario</button>
+                    <button class="sidebar-btn" data-view="china-orders" onclick="switchDashboardView('china-orders','Pedidos a China')"><span>CN</span> Pedidos China</button>
+                    <button class="sidebar-btn" data-view="orders" onclick="switchDashboardView('orders','Pedidos y Facturacion')"><span>PF</span> Pedidos y Fact.</button>
+                    <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuracion del Sitio')"><span>AJ</span> Ajustes y Banner</button>
+                    <button class="sidebar-btn logout" onclick="window.location.href='index.html'"><span>SA</span> Cerrar Sesion</button>
                 </div>
             </div>
         </aside>
@@ -5608,7 +5915,23 @@
                 switchDashboardView(select.value, title);
             }
         });
+        document.addEventListener('click', function (event) {
+            const drawer = document.getElementById('admin-section-drawer');
+            if (!drawer) return;
+            const toggle = event.target.closest('#admin-section-toggle');
+            const close = event.target.closest('#admin-section-close');
+            const sectionButton = event.target.closest('#admin-section-drawer .sidebar-btn');
+            if (toggle) {
+                const isOpen = drawer.classList.toggle('open');
+                toggle.setAttribute('aria-expanded', String(isOpen));
+                return;
+            }
+            if (close || sectionButton) {
+                drawer.classList.remove('open');
+                document.getElementById('admin-section-toggle')?.setAttribute('aria-expanded', 'false');
+            }
+        });
     </script>
-    <script src="admin-app.js?v=admin-mobile-v1-20260922" defer></script>
+    <script src="admin-app.js?v=admin-orders-drawer-v1-20260922" defer></script>
 </body>
 </html>

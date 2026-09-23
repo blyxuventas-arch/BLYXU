@@ -9,17 +9,67 @@
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=mobile-cart-gallery-v1-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-cart-gallery-v1-20260922"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=contact-schedule-v11-20260922" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=contact-schedule-v11-20260922"></noscript>
     <style>
         .orders-page {
             position: relative;
             z-index: 2;
             min-height: 100vh;
             padding: 124px 24px 72px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 15% 7%, rgba(168, 85, 247, 0.26), transparent 18%),
+                radial-gradient(circle at 84% 24%, rgba(91, 33, 182, 0.22), transparent 24%),
+                radial-gradient(circle at 28% 46%, rgba(76, 29, 149, 0.18), transparent 28%),
+                linear-gradient(155deg, #090414 0%, #19022a 42%, #07040d 100%);
+        }
+
+        .orders-page::before {
+            content: "";
+            position: absolute;
+            inset: -18%;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 16% 18%, rgba(189, 119, 255, .22), transparent 20%),
+                radial-gradient(circle at 76% 30%, rgba(91, 33, 182, .24), transparent 24%),
+                radial-gradient(circle at 38% 70%, rgba(124, 58, 237, .18), transparent 26%),
+                linear-gradient(90deg, rgba(255,255,255,.035), transparent 32%, rgba(168,85,247,.055) 72%, transparent);
+            opacity: .9;
+            filter: blur(.2px);
+            animation: ordersPurpleDrift 18s ease-in-out infinite alternate;
+        }
+
+        .orders-page::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,.026) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+            background-size: 54px 54px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), transparent 82%);
+            opacity: .32;
+            animation: ordersGridFloat 24s linear infinite;
+        }
+
+        @keyframes ordersPurpleDrift {
+            0% { transform: translate3d(-2%, -1%, 0) scale(1); filter: hue-rotate(0deg) blur(.2px); }
+            50% { transform: translate3d(3%, 2%, 0) scale(1.05); filter: hue-rotate(10deg) blur(.6px); }
+            100% { transform: translate3d(-1%, 4%, 0) scale(1.02); filter: hue-rotate(-8deg) blur(.3px); }
+        }
+
+        @keyframes ordersGridFloat {
+            from { background-position: 0 0, 0 0; }
+            to { background-position: 54px 54px, -54px 54px; }
         }
 
         .orders-shell {
+            position: relative;
+            z-index: 1;
             width: min(1120px, 100%);
             margin: 0 auto;
         }
@@ -35,10 +85,12 @@
         .orders-intro,
         .orders-login,
         .orders-panel {
-            background: rgba(17, 17, 20, 0.88);
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            border-radius: 18px;
-            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            background:
+                radial-gradient(circle at 18% 0%, rgba(168,85,247,.10), transparent 28%),
+                linear-gradient(145deg, rgba(21,21,25,.98), rgba(10,10,13,.98));
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.06);
             backdrop-filter: blur(18px);
         }
 
@@ -259,11 +311,201 @@
             gap: 16px;
         }
 
+        .orders-results.stack-mode {
+            display: block;
+            padding: 30px 24px 42px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.006)),
+                rgba(8,8,10,.42);
+        }
+
+        .orders-stack {
+            width: min(840px, 100%);
+            margin: 0 auto;
+            display: grid;
+            gap: 22px;
+        }
+
+        .orders-stack-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .orders-stack-count {
+            color: rgba(255,255,255,.5);
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+        }
+
+        .orders-stack-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .orders-stack-nav {
+            width: 44px;
+            height: 44px;
+            display: inline-grid;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 999px;
+            background: rgba(255,255,255,.055);
+            color: #fff;
+            font-size: 25px;
+            font-weight: 500;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease;
+        }
+
+        .orders-stack-nav:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,.24);
+            background: rgba(255,255,255,.1);
+        }
+
+        .orders-stack-stage {
+            position: relative;
+            min-height: 675px;
+            perspective: 1400px;
+            touch-action: pan-y;
+            user-select: none;
+            isolation: isolate;
+        }
+
+        .orders-stack-card {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: max-content;
+            transform-origin: 50% 18%;
+            border-radius: 18px;
+            transition:
+                transform .52s cubic-bezier(.22, 1, .36, 1),
+                opacity .38s ease,
+                filter .38s ease,
+                box-shadow .38s ease;
+            will-change: transform, opacity, filter;
+            pointer-events: none;
+            box-shadow: 0 28px 80px rgba(0,0,0,.42);
+        }
+
+        .orders-stack-card[data-stack-pos="0"] {
+            z-index: 20;
+            opacity: 1;
+            filter: none;
+            pointer-events: auto;
+            transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+            box-shadow: 0 34px 90px rgba(0,0,0,.52), 0 0 0 1px rgba(255,255,255,.03);
+        }
+
+        .orders-stack-card[data-stack-pos="1"] {
+            z-index: 16;
+            opacity: 1;
+            filter: brightness(.86) saturate(.9);
+            transform: translate3d(0, -28px, -44px) scale(.9) rotate(0deg);
+        }
+
+        .orders-stack-card[data-stack-pos="-1"] {
+            z-index: 14;
+            opacity: 1;
+            filter: brightness(.8) saturate(.86);
+            transform: translate3d(-72px, -10px, -80px) scale(.82) rotate(-2.2deg);
+        }
+
+        .orders-stack-card[data-stack-pos="2"] {
+            z-index: 12;
+            opacity: 1;
+            filter: brightness(.74) saturate(.82);
+            transform: translate3d(74px, -10px, -120px) scale(.78) rotate(2deg);
+        }
+
+        .orders-stack-card[data-stack-pos="3"] {
+            z-index: 10;
+            opacity: .95;
+            filter: brightness(.68) saturate(.78);
+            transform: translate3d(0, -48px, -160px) scale(.7) rotate(0deg);
+        }
+
+        .orders-stack-card[data-stack-pos="hidden"] {
+            z-index: 1;
+            opacity: 0;
+            filter: brightness(.55);
+            transform: translate3d(0, -92px, -240px) scale(.82) rotate(0deg);
+        }
+
+        .orders-stack-hint {
+            margin-top: 2px;
+            color: rgba(255,255,255,.38);
+            font-size: 11px;
+            text-align: center;
+        }
+
         .order-card {
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.035);
+            position: relative;
+            height: 540px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            background:
+                linear-gradient(180deg, #1a1a1f 0%, #111115 52%, #0b0b0e 100%);
             overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.42);
+        }
+
+        .order-card.is-expanded {
+            height: auto;
+            min-height: 540px;
+        }
+
+        .orders-stack-card[data-stack-pos="1"] .order-card,
+        .orders-stack-card[data-stack-pos="-1"] .order-card,
+        .orders-stack-card[data-stack-pos="2"] .order-card,
+        .orders-stack-card[data-stack-pos="3"] .order-card,
+        .orders-stack-card[data-stack-pos="hidden"] .order-card {
+            height: 290px;
+            background:
+                linear-gradient(180deg, #25252b 0%, #18181d 100%);
+            border-color: rgba(255,255,255,.18);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 30px 80px rgba(0,0,0,.55);
+        }
+
+        .orders-stack-card[data-stack-pos="1"] .order-body,
+        .orders-stack-card[data-stack-pos="-1"] .order-body,
+        .orders-stack-card[data-stack-pos="2"] .order-body,
+        .orders-stack-card[data-stack-pos="3"] .order-body,
+        .orders-stack-card[data-stack-pos="hidden"] .order-body {
+            display: none;
+        }
+
+        .orders-stack-card:not([data-stack-pos="0"]) .order-card-head {
+            min-height: 100%;
+            align-content: center;
+            border-bottom: 0;
+            background:
+                radial-gradient(circle at 50% 20%, rgba(255,255,255,.08), transparent 34%),
+                linear-gradient(180deg, rgba(255,255,255,.045), rgba(0,0,0,.12));
+        }
+
+        .orders-stack-card:not([data-stack-pos="0"]) .order-id,
+        .orders-stack-card:not([data-stack-pos="0"]) .order-meta,
+        .orders-stack-card:not([data-stack-pos="0"]) .order-status {
+            opacity: 0;
+        }
+
+        .orders-stack-card:not([data-stack-pos="0"]) .order-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.045), rgba(0,0,0,.22));
         }
 
         .order-card-head {
@@ -271,8 +513,9 @@
             grid-template-columns: 1fr auto;
             gap: 12px;
             align-items: start;
-            padding: 18px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.085);
+            background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
         }
 
         .order-id {
@@ -308,9 +551,13 @@
         }
 
         .order-body {
-            padding: 18px;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            padding: 20px;
             display: grid;
-            gap: 14px;
+            gap: 16px;
+            grid-template-rows: auto minmax(0, 1fr) auto;
         }
 
         .order-grid {
@@ -321,10 +568,11 @@
 
         .order-metric {
             min-height: 70px;
-            border-radius: 12px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            background: #101014;
+            border: 1px solid rgba(255, 255, 255, 0.085);
             padding: 12px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
         }
 
         .order-metric span {
@@ -347,6 +595,59 @@
         .items-summary {
             display: grid;
             gap: 10px;
+        }
+
+        .order-collapsible {
+            position: relative;
+            min-height: 0;
+            max-height: 260px;
+            overflow: hidden;
+            display: grid;
+            gap: 12px;
+            transition: max-height .32s ease;
+        }
+
+        .order-collapsible::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 58px;
+            pointer-events: none;
+            background: linear-gradient(180deg, rgba(17,17,20,0), #111115);
+            opacity: 1;
+            transition: opacity .2s ease;
+        }
+
+        .order-card.is-expanded .order-collapsible {
+            max-height: 860px;
+            overflow: auto;
+            padding-right: 3px;
+        }
+
+        .order-card.is-expanded .order-collapsible::after {
+            opacity: 0;
+        }
+
+        .order-details-toggle {
+            min-height: 40px;
+            border: 1px solid rgba(255,255,255,.16);
+            border-radius: 14px;
+            background: #26262a;
+            color: rgba(244,242,238,.88);
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, border-color .2s ease;
+        }
+
+        .order-details-toggle:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255,255,255,.2);
+            background: rgba(255,255,255,.09);
         }
 
         .items-summary-head {
@@ -374,9 +675,10 @@
             align-items: center;
             min-width: 0;
             padding: 8px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.07);
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 12px;
+            background: #0f0f13;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
         }
 
         .item-compact-thumb {
@@ -441,7 +743,7 @@
         }
 
         .invoice-card .order-card-head {
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+            background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.012));
         }
 
         .invoice-total {
@@ -539,6 +841,47 @@
                 display: flex;
                 justify-content: space-between;
                 text-align: left;
+            }
+
+            .orders-results.stack-mode {
+                padding: 20px 12px 28px;
+            }
+
+            .orders-stack {
+                gap: 14px;
+            }
+
+            .orders-stack-stage {
+                min-height: 650px;
+            }
+
+            .order-card {
+                height: 540px;
+            }
+
+            .order-card.is-expanded {
+                min-height: 540px;
+            }
+
+            .orders-stack-toolbar {
+                padding-inline: 2px;
+            }
+
+            .orders-stack-nav {
+                width: 42px;
+                height: 42px;
+            }
+
+            .orders-stack-card[data-stack-pos="1"] {
+                transform: translate3d(0, -24px, -44px) scale(.9) rotate(0deg);
+            }
+
+            .orders-stack-card[data-stack-pos="-1"] {
+                transform: translate3d(-32px, -8px, -80px) scale(.82) rotate(-1.6deg);
+            }
+
+            .orders-stack-card[data-stack-pos="2"] {
+                transform: translate3d(32px, -8px, -120px) scale(.78) rotate(1.6deg);
             }
         }
 
@@ -1059,7 +1402,6 @@
             <li><a href="contacto.html">Contacto</a></li>
             <li><a href="pagos.html">Pagos</a></li>
             <li><a href="facturas-pedidos.html" class="active">Facturas y Pedidos</a></li>
-            <li><a href="administrativo.html">Administrativo</a></li>
         </ul>
 
         <div class="nav-actions">
@@ -1126,6 +1468,9 @@
                 <img src="Logo2-nav.png" alt="BLYXU" style="height:32px" onerror="this.style.display='none'">
             </a>
             <p>Joyeria artesanal con piedras naturales. Elegancia, exclusividad y diseno en cada pieza.</p>
+            <a class="footer-admin-link" href="administrativo.html" aria-label="Acceso administrativo">
+                <span class="footer-admin-crown" aria-hidden="true">&#9819;</span>
+            </a>
         </div>
         <div>
             <h4>Navegacion</h4>
@@ -1196,6 +1541,8 @@
             let currentInvoices = [];
             let currentView = 'orders';
             let currentPhone = '';
+            const stackIndexes = { orders: 0, invoices: 0 };
+            let stackTouch = null;
 
             function onlyDigits(value) {
                 return String(value || '').replace(/\D/g, '');
@@ -1554,7 +1901,7 @@
                     return '<div class="orders-empty">Este registro no tiene productos detallados.</div>';
                 }
 
-                const visibleItems = items.slice(0, 8);
+                const visibleItems = items.slice(0, 12);
                 const totalQty = items.reduce((sum, item) => {
                     return sum + (Number(getField(item, ['cantidad', 'Cantidad', 'qty'], 1)) || 1);
                 }, 0);
@@ -1592,13 +1939,89 @@
                 `;
             }
 
+            function getStackPosition(index, activeIndex, total) {
+                if (!total) return 'hidden';
+                const forward = (index - activeIndex + total) % total;
+                const backward = (activeIndex - index + total) % total;
+                if (forward === 0) return '0';
+                if (forward <= 3) return String(forward);
+                if (backward === 1) return '-1';
+                return 'hidden';
+            }
+
+            function syncStackStageHeight() {
+                const stage = results.querySelector('.orders-stack-stage');
+                const activeCard = stage?.querySelector('[data-stack-pos="0"]');
+                if (!stage || !activeCard) return;
+                requestAnimationFrame(() => {
+                    const height = activeCard.getBoundingClientRect().height;
+                    if (height > 0) {
+                        stage.style.minHeight = `${Math.ceil(height + 124)}px`;
+                    }
+                });
+            }
+
+            function updateStackPositions(view = currentView) {
+                const cards = Array.from(results.querySelectorAll('.orders-stack-card'));
+                const total = cards.length;
+                if (!total) return;
+                stackIndexes[view] = ((stackIndexes[view] % total) + total) % total;
+                const activeIndex = stackIndexes[view];
+                cards.forEach(card => {
+                    const index = Number(card.dataset.stackIndex || 0);
+                    const pos = getStackPosition(index, activeIndex, total);
+                    card.dataset.stackPos = pos;
+                    card.setAttribute('aria-hidden', index === activeIndex ? 'false' : 'true');
+                });
+                const counter = results.querySelector('[data-stack-counter]');
+                if (counter) counter.textContent = `${activeIndex + 1} / ${total}`;
+                syncStackStageHeight();
+            }
+
+            function moveStack(direction) {
+                const total = results.querySelectorAll('.orders-stack-card').length;
+                if (!total) return;
+                stackIndexes[currentView] = (stackIndexes[currentView] + direction + total) % total;
+                updateStackPositions(currentView);
+            }
+
+            function renderStackedCards(cardHtmlList, view, label) {
+                const total = cardHtmlList.length;
+                stackIndexes[view] = Math.min(stackIndexes[view] || 0, Math.max(total - 1, 0));
+                results.classList.add('stack-mode');
+                results.innerHTML = `
+                    <div class="orders-stack" data-stack-view="${view}">
+                        <div class="orders-stack-toolbar">
+                            <div class="orders-stack-count">${escapeHtml(label)} <span data-stack-counter>${stackIndexes[view] + 1} / ${total}</span></div>
+                            <div class="orders-stack-controls" aria-label="Navegar ${escapeHtml(label)}">
+                                <button type="button" class="orders-stack-nav" data-stack-dir="-1" aria-label="Anterior">&lt;</button>
+                                <button type="button" class="orders-stack-nav" data-stack-dir="1" aria-label="Siguiente">&gt;</button>
+                            </div>
+                        </div>
+                        <div class="orders-stack-stage">
+                            ${cardHtmlList.map((html, index) => `
+                                <div class="orders-stack-card" data-stack-index="${index}" data-stack-pos="${getStackPosition(index, stackIndexes[view], total)}" aria-hidden="${index === stackIndexes[view] ? 'false' : 'true'}">
+                                    ${html}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="orders-stack-hint">Usa las flechas o desliza en celular para cambiar de tarjeta.</div>
+                    </div>
+                `;
+                syncStackStageHeight();
+                results.querySelectorAll('.orders-stack-card img').forEach(img => {
+                    img.addEventListener('load', syncStackStageHeight, { once: true });
+                });
+            }
+
             function renderOrders() {
                 if (!currentOrders.length) {
+                    results.classList.remove('stack-mode');
                     results.innerHTML = '<div class="orders-empty">No encontramos pedidos asociados a ese numero de contacto.</div>';
                     return;
                 }
 
-                results.innerHTML = currentOrders.map(order => {
+                const cards = currentOrders.map(order => {
                     const id = getField(order, ['ID Pedido', 'ID', 'id'], 'Pedido');
                     const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
                     const name = getField(order, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU');
@@ -1626,21 +2049,26 @@
                                     <div class="order-metric"><span>Entrega</span><strong>${escapeHtml(address)}</strong></div>
                                     <div class="order-metric"><span>Origen</span><strong>${escapeHtml(method)}</strong></div>
                                 </div>
-                                ${renderItemsTable(items)}
-                                ${note ? `<div class="order-metric"><span>Nota</span><strong>${escapeHtml(note)}</strong></div>` : ''}
+                                <div class="order-collapsible">
+                                    ${renderItemsTable(items)}
+                                    ${note ? `<div class="order-metric"><span>Nota</span><strong>${escapeHtml(note)}</strong></div>` : ''}
+                                </div>
+                                <button type="button" class="order-details-toggle" aria-expanded="false">Ver detalle completo</button>
                             </div>
                         </article>
                     `;
-                }).join('');
+                });
+                renderStackedCards(cards, 'orders', 'Pedidos');
             }
 
             function renderInvoices() {
                 if (!currentInvoices.length) {
+                    results.classList.remove('stack-mode');
                     results.innerHTML = '<div class="orders-empty">No encontramos facturas asociadas a ese numero de contacto.</div>';
                     return;
                 }
 
-                results.innerHTML = currentInvoices.map((order, index) => {
+                const cards = currentInvoices.map((order, index) => {
                     const id = getField(order, ['ID Factura', 'ID', 'id'], 'Factura');
                     const orderId = getField(order, ['ID Pedido'], '-');
                     const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
@@ -1669,17 +2097,21 @@
                                     <div class="order-metric"><span>Direccion</span><strong>${escapeHtml(address)}</strong></div>
                                     <div class="order-metric"><span>Ciudad</span><strong>${escapeHtml(city)}</strong></div>
                                 </div>
-                                ${renderItemsTable(items)}
-                                <div class="invoice-total"><span>Total factura</span>${formatMoney(total)}</div>
-                                <div class="invoice-total"><span>Abonado</span>${formatMoney(balanceInfo.paid)}</div>
-                                <div class="invoice-total"><span>Saldo pendiente</span>${formatMoney(balanceInfo.balance)}</div>
+                                <div class="order-collapsible">
+                                    ${renderItemsTable(items)}
+                                    <div class="invoice-total"><span>Total factura</span>${formatMoney(total)}</div>
+                                    <div class="invoice-total"><span>Abonado</span>${formatMoney(balanceInfo.paid)}</div>
+                                    <div class="invoice-total"><span>Saldo pendiente</span>${formatMoney(balanceInfo.balance)}</div>
+                                </div>
+                                <button type="button" class="order-details-toggle" aria-expanded="false">Ver detalle completo</button>
                                 <div class="invoice-actions">
                                     <button type="button" class="orders-action-btn invoice-download-btn" onclick="downloadInvoicePdf(${index})">Abrir / guardar PDF</button>
                                 </div>
                             </div>
                         </article>
                     `;
-                }).join('');
+                });
+                renderStackedCards(cards, 'invoices', 'Facturas');
             }
 
             function buildPrintableInvoice(order) {
@@ -2292,6 +2724,43 @@
                 });
             });
 
+            results.addEventListener('click', event => {
+                const detailButton = event.target.closest('.order-details-toggle');
+                if (detailButton) {
+                    const card = detailButton.closest('.order-card');
+                    const expanded = !card?.classList.contains('is-expanded');
+                    card?.classList.toggle('is-expanded', expanded);
+                    detailButton.setAttribute('aria-expanded', String(expanded));
+                    detailButton.textContent = expanded ? 'Ocultar detalle' : 'Ver detalle completo';
+                    syncStackStageHeight();
+                    setTimeout(syncStackStageHeight, 340);
+                    return;
+                }
+                const button = event.target.closest('[data-stack-dir]');
+                if (!button) return;
+                moveStack(Number(button.dataset.stackDir || 1));
+            });
+
+            results.addEventListener('touchstart', event => {
+                const stage = event.target.closest('.orders-stack-stage');
+                if (!stage || !event.touches.length) return;
+                stackTouch = {
+                    x: event.touches[0].clientX,
+                    y: event.touches[0].clientY
+                };
+            }, { passive: true });
+
+            results.addEventListener('touchend', event => {
+                if (!stackTouch || !event.changedTouches.length) return;
+                const dx = event.changedTouches[0].clientX - stackTouch.x;
+                const dy = event.changedTouches[0].clientY - stackTouch.y;
+                stackTouch = null;
+                if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+                moveStack(dx < 0 ? 1 : -1);
+            }, { passive: true });
+
+            window.addEventListener('resize', syncStackStageHeight);
+
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const lookup = input.value.trim();
@@ -2317,6 +2786,8 @@
                         fetchOrdersByPhone(lookup),
                         fetchInvoicesByPhone(lookup)
                     ]);
+                    stackIndexes.orders = 0;
+                    stackIndexes.invoices = 0;
                     const firstRecord = currentOrders[0] || currentInvoices[0];
                     const totalRecords = currentOrders.length + currentInvoices.length;
                     const customer = firstRecord ? getField(firstRecord, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU') : 'Cliente BLYXU';

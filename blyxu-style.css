@@ -10962,6 +10962,440 @@ body[data-page="contact"] .contact-social-link {
     }
 }
 
+/* Contacto morado tipo glass console */
+body[data-page="contact"] .contact-page {
+    position: relative !important;
+    isolation: isolate !important;
+    display: grid !important;
+    grid-template-columns: minmax(320px, .82fr) minmax(430px, 1fr) !important;
+    align-items: center !important;
+    gap: clamp(28px, 5vw, 72px) !important;
+    min-height: 100vh !important;
+    padding: 132px max(32px, calc((100vw - 1320px) / 2)) 96px !important;
+    overflow: hidden !important;
+    background:
+        radial-gradient(circle at 34% 4%, rgba(168,85,247,.34), transparent 20%),
+        radial-gradient(circle at 78% 38%, rgba(91,33,182,.24), transparent 28%),
+        radial-gradient(circle at 18% 74%, rgba(124,58,237,.16), transparent 24%),
+        linear-gradient(150deg, #030207 0%, #130020 46%, #050307 100%) !important;
+}
+
+body[data-page="contact"] .contact-page::before {
+    content: "CONTACTO";
+    position: absolute;
+    left: 50%;
+    top: 29%;
+    z-index: 0;
+    transform: translate(-50%, -50%);
+    color: rgba(255,255,255,.055);
+    font-size: clamp(96px, 18vw, 250px);
+    font-weight: 950;
+    letter-spacing: -.06em;
+    line-height: 1;
+    pointer-events: none;
+    animation: contactWordFloat 14s ease-in-out infinite alternate;
+}
+
+body[data-page="contact"] .contact-page::after {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(216,180,254,.16), transparent 20%),
+        radial-gradient(circle at 72% 26%, rgba(168,85,247,.18), transparent 22%),
+        radial-gradient(circle at 42% 84%, rgba(76,29,149,.22), transparent 28%),
+        linear-gradient(90deg, rgba(255,255,255,.035), transparent 30%, rgba(168,85,247,.06) 74%, transparent);
+    opacity: .95;
+    animation: contactPurpleDrift 20s ease-in-out infinite alternate;
+}
+
+body[data-page="contact"] .contact-hero-luxury,
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+    position: relative !important;
+    z-index: 1 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    max-width: none !important;
+}
+
+body[data-page="contact"] .contact-hero-luxury {
+    min-height: 520px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body[data-page="contact"] .contact-hero-bg {
+    display: none !important;
+}
+
+body[data-page="contact"] .contact-hero-content {
+    width: min(560px, 100%) !important;
+    max-width: 560px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+body[data-page="contact"] .contact-hero-content > div {
+    width: fit-content !important;
+    justify-content: flex-start !important;
+    margin: 0 0 26px !important;
+    padding: 10px 15px !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+    border-radius: 999px !important;
+    background: rgba(255,255,255,.055) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 14px 36px rgba(0,0,0,.24) !important;
+}
+
+body[data-page="contact"] .contact-hero-content > div::after {
+    content: "Contacto";
+    margin-left: 10px;
+    color: rgba(244,242,238,.88);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+body[data-page="contact"] .contact-hero-content > div svg {
+    width: 22px !important;
+    height: 22px !important;
+    stroke: #d8b4fe !important;
+}
+
+body[data-page="contact"] .contact-hero h1 {
+    margin: 0 0 18px !important;
+    font-size: clamp(48px, 7vw, 82px) !important;
+    line-height: .95 !important;
+    letter-spacing: 0 !important;
+    color: #ffffff !important;
+}
+
+body[data-page="contact"] .contact-hero p {
+    max-width: 420px !important;
+    margin: 0 !important;
+    color: rgba(244,242,238,.7) !important;
+    font-size: 16px !important;
+    line-height: 1.55 !important;
+}
+
+body[data-page="contact"] .contact-hero-btn {
+    width: fit-content !important;
+    min-height: 52px !important;
+    margin-top: 34px !important;
+    padding: 0 28px !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    border-radius: 999px !important;
+    background: #f3eefc !important;
+    color: #15051f !important;
+    box-shadow: 0 18px 50px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.78) !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-self: center !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card {
+    min-height: 0 !important;
+    padding: 22px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    background:
+        linear-gradient(145deg, rgba(255,255,255,.105), rgba(255,255,255,.032)),
+        rgba(15,12,22,.86) !important;
+    box-shadow: 0 24px 80px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(22px) saturate(1.25) !important;
+}
+
+body[data-page="contact"] .contact-schedule-card {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 210px !important;
+    gap: 18px 24px !important;
+    align-items: center !important;
+}
+
+body[data-page="contact"] .contact-schedule-card .contact-card-icon,
+body[data-page="contact"] .contact-schedule-card .contact-card-label,
+body[data-page="contact"] .contact-schedule-card h2,
+body[data-page="contact"] .contact-schedule-card p {
+    grid-column: 1 !important;
+}
+
+body[data-page="contact"] .contact-card-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+    color: #d8b4fe !important;
+    background: rgba(168,85,247,.16) !important;
+    border: 1px solid rgba(216,180,254,.22) !important;
+}
+
+body[data-page="contact"] .contact-card-label {
+    color: rgba(216,180,254,.82) !important;
+    font-size: 11px !important;
+    letter-spacing: 1.5px !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card h2 {
+    margin: 6px 0 !important;
+    color: #fff !important;
+    font-size: clamp(25px, 2.5vw, 36px) !important;
+    line-height: 1.05 !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card p {
+    color: rgba(244,242,238,.62) !important;
+    font-size: 14px !important;
+}
+
+body[data-page="contact"] .contact-hours-timeline {
+    grid-column: 2 !important;
+    grid-row: 1 / span 5 !important;
+    position: relative !important;
+    width: 190px !important;
+    height: 190px !important;
+    display: grid !important;
+    place-items: center !important;
+    margin: 26px 0 0 !important;
+    border-radius: 50% !important;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(20,7,32,.96) 0 54%, transparent 55%),
+        conic-gradient(from 0deg, rgba(216,180,254,.95), rgba(168,85,247,.24), rgba(255,255,255,.18), rgba(216,180,254,.95)) !important;
+    box-shadow: 0 22px 60px rgba(124,58,237,.22), inset 0 0 0 1px rgba(255,255,255,.12) !important;
+    animation: contactClockGlow 4.8s ease-in-out infinite !important;
+}
+
+body[data-page="contact"] .contact-hours-timeline::before {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: inherit;
+    border: 1px solid rgba(216,180,254,.22);
+    border-top-color: rgba(216,180,254,.85);
+    animation: contactClockOrbit 8s linear infinite;
+}
+
+body[data-page="contact"] .contact-hours-timeline::after {
+    content: "Horario";
+    position: absolute;
+    inset: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(5,3,9,.78);
+    color: rgba(244,242,238,.62);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    box-shadow: inset 0 0 28px rgba(168,85,247,.16);
+}
+
+body[data-page="contact"] .contact-time-node {
+    position: absolute !important;
+    z-index: 2 !important;
+    min-width: 112px !important;
+    padding: 8px 10px !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 14px !important;
+    background: rgba(18,13,28,.92) !important;
+    text-align: center !important;
+}
+
+body[data-page="contact"] .contact-time-node.active {
+    top: 14px !important;
+}
+
+body[data-page="contact"] .contact-time-node:not(.active) {
+    bottom: 14px !important;
+}
+
+body[data-page="contact"] .contact-time-node span {
+    display: block !important;
+    color: rgba(216,180,254,.68) !important;
+    font-size: 9px !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+}
+
+body[data-page="contact"] .contact-time-node strong {
+    color: #fff !important;
+    font-size: 13px !important;
+}
+
+body[data-page="contact"] .contact-action,
+body[data-page="contact"] .contact-social-link {
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    background: rgba(255,255,255,.055) !important;
+    color: rgba(244,242,238,.9) !important;
+}
+
+body[data-page="contact"] .contact-social-links {
+    display: grid !important;
+    gap: 10px !important;
+}
+
+body[data-page="contact"] .footer {
+    position: relative;
+    z-index: 2;
+}
+
+@media (min-width: 981px) {
+    body[data-page="contact"] .contact-page {
+        grid-template-columns: minmax(330px, 560px) minmax(430px, 1fr) !important;
+        grid-template-rows: auto auto !important;
+        align-items: start !important;
+        align-content: center !important;
+        column-gap: clamp(30px, 5vw, 72px) !important;
+        row-gap: 14px !important;
+    }
+
+    body[data-page="contact"] .contact-hero-luxury {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        min-height: 0 !important;
+        align-self: end !important;
+    }
+
+    body[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
+        display: contents !important;
+    }
+
+    body[data-page="contact"] .contact-schedule-card {
+        grid-column: 1 !important;
+        grid-row: 2 !important;
+        align-self: start !important;
+        max-width: 560px !important;
+        grid-template-columns: minmax(0, 1fr) 164px !important;
+        padding: 18px 20px !important;
+        gap: 12px 18px !important;
+    }
+
+    body[data-page="contact"] .contact-phone-card {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        align-self: end !important;
+    }
+
+    body[data-page="contact"] .contact-channel-card {
+        grid-column: 2 !important;
+        grid-row: 2 !important;
+        align-self: start !important;
+    }
+
+    body[data-page="contact"] .contact-schedule-card .contact-card-icon {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 12px !important;
+    }
+
+    body[data-page="contact"] .contact-schedule-card h2 {
+        font-size: clamp(22px, 2.2vw, 30px) !important;
+        margin: 4px 0 !important;
+    }
+
+    body[data-page="contact"] .contact-schedule-card p {
+        font-size: 13px !important;
+    }
+
+    body[data-page="contact"] .contact-hours-timeline {
+        width: 148px !important;
+        height: 148px !important;
+        margin: 0 !important;
+    }
+
+    body[data-page="contact"] .contact-hours-timeline::after {
+        inset: 30px !important;
+        font-size: 9px !important;
+    }
+
+    body[data-page="contact"] .contact-time-node {
+        min-width: 92px !important;
+        padding: 6px 8px !important;
+        border-radius: 12px !important;
+    }
+
+    body[data-page="contact"] .contact-time-node.active {
+        top: 10px !important;
+    }
+
+    body[data-page="contact"] .contact-time-node:not(.active) {
+        bottom: 10px !important;
+    }
+
+    body[data-page="contact"] .contact-time-node strong {
+        font-size: 12px !important;
+    }
+}
+
+@keyframes contactPurpleDrift {
+    0% { transform: translate3d(-2%, -1%, 0) scale(1); filter: hue-rotate(0deg); }
+    50% { transform: translate3d(3%, 2%, 0) scale(1.05); filter: hue-rotate(12deg); }
+    100% { transform: translate3d(-1%, 4%, 0) scale(1.02); filter: hue-rotate(-8deg); }
+}
+
+@keyframes contactWordFloat {
+    0% { transform: translate(-52%, -51%) scale(1); opacity: .8; }
+    100% { transform: translate(-48%, -48%) scale(1.035); opacity: 1; }
+}
+
+@keyframes contactClockOrbit {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes contactClockGlow {
+    0%, 100% { filter: brightness(.96); }
+    50% { filter: brightness(1.14); }
+}
+
+@media (max-width: 980px) {
+    body[data-page="contact"] .contact-page {
+        grid-template-columns: 1fr !important;
+        padding-inline: 22px !important;
+    }
+
+    body[data-page="contact"] .contact-hero-luxury {
+        min-height: auto !important;
+    }
+
+    body[data-page="contact"] .contact-hero-content {
+        max-width: 720px !important;
+    }
+}
+
+@media (max-width: 620px) {
+    body[data-page="contact"] .contact-page {
+        padding: 108px 16px 60px !important;
+    }
+
+    body[data-page="contact"] .contact-schedule-card {
+        grid-template-columns: 1fr !important;
+    }
+
+    body[data-page="contact"] .contact-hours-timeline {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+        width: 176px !important;
+        height: 176px !important;
+        margin: 24px auto 0 !important;
+    }
+
+    body[data-page="contact"] .contact-page::before {
+        top: 18%;
+        font-size: 26vw;
+    }
+}
+
 /* Base reset para logins de acceso */
 body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
 body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
@@ -11977,6 +12411,51 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
     100% { background-position: 140px 0; }
 }
 
+/* Movimiento sutil para fondos morados de acceso */
+#wholesale-overlay.wholesale-overlay.open::before,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open::before {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    inset: -18% !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(216,180,254,.22), transparent 22%),
+        radial-gradient(circle at 76% 30%, rgba(124,58,237,.2), transparent 26%),
+        radial-gradient(circle at 38% 78%, rgba(59,7,100,.28), transparent 30%) !important;
+    opacity: .9 !important;
+    animation: loginPurpleDrift 18s ease-in-out infinite alternate !important;
+}
+
+#wholesale-overlay.wholesale-overlay.open::after,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+    background:
+        linear-gradient(120deg, rgba(255,255,255,.04), transparent 36%, rgba(168,85,247,.08) 70%, transparent),
+        radial-gradient(circle at 84% 22%, rgba(255,255,255,.08), transparent 24%) !important;
+    opacity: .75 !important;
+    animation: loginPurpleHalo 22s ease-in-out infinite alternate !important;
+}
+
+@keyframes loginPurpleDrift {
+    0% { transform: translate3d(-2%, -1%, 0) scale(1); opacity: .92; }
+    50% { transform: translate3d(3%, 2%, 0) scale(1.04); opacity: 1; }
+    100% { transform: translate3d(-1%, 4%, 0) scale(1.02); opacity: .88; }
+}
+
+@keyframes loginPurpleHalo {
+    0% { transform: translate3d(1%, 2%, 0) scale(1); filter: hue-rotate(0deg); }
+    100% { transform: translate3d(-3%, -1%, 0) scale(1.06); filter: hue-rotate(12deg); }
+}
+
 /* Performance: skip layout/paint work for long sections until they approach the viewport. */
 @supports (content-visibility: auto) {
     .home-categories-section,
@@ -11985,13 +12464,388 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
     .collection-section,
     .recommended-section,
     .cart-standalone-section,
-    .contact-grid,
-    .orders-page,
     .product-detail-luxury,
     .footer {
         content-visibility: auto;
         contain-intrinsic-size: 1px 900px;
     }
+}
+
+/* Barra superior mas legible sobre fondos claros */
+.navbar,
+.navbar.scrolled {
+    background: transparent !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.nav-links {
+    gap: 2px !important;
+    padding: 3px !important;
+    border: 1px solid rgba(216,180,254,.22) !important;
+    border-radius: 999px !important;
+    background:
+        radial-gradient(circle at 14% 0%, rgba(168,85,247,.16), transparent 24%),
+        linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.008)),
+        rgba(3,3,5,.9) !important;
+    box-shadow:
+        0 16px 42px rgba(0,0,0,.34),
+        0 0 0 1px rgba(124,58,237,.08),
+        inset 0 1px 0 rgba(255,255,255,.07),
+        inset 0 -1px 0 rgba(168,85,247,.12) !important;
+    backdrop-filter: blur(20px) saturate(1.14) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(1.14) !important;
+}
+
+.nav-links li {
+    position: relative !important;
+}
+
+.nav-links li + li::before {
+    content: "" !important;
+    position: absolute !important;
+    left: -3px !important;
+    top: 8px !important;
+    bottom: 8px !important;
+    width: 1px !important;
+    background: linear-gradient(180deg, transparent, rgba(216,180,254,.24), transparent) !important;
+    opacity: .82 !important;
+}
+
+.nav-links a {
+    min-width: 88px !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    flex-direction: row !important;
+    gap: 0 !important;
+    border-radius: 13px !important;
+    color: rgba(255,255,255,.66) !important;
+    font-size: 11.5px !important;
+    line-height: 1 !important;
+    text-transform: none !important;
+    text-shadow: 0 1px 12px rgba(0,0,0,.55) !important;
+    letter-spacing: 0 !important;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: #fff !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow:
+        0 8px 22px rgba(168,85,247,.14) !important;
+    transform: none !important;
+}
+
+.nav-links a::before {
+    display: none !important;
+    content: none !important;
+}
+
+.nav-links a:hover::before,
+.nav-links a.active::before {
+    display: none !important;
+    content: none !important;
+}
+
+.nav-links a.active::after {
+    bottom: 4px !important;
+    width: 28px !important;
+    height: 2px !important;
+    background: #d8b4fe !important;
+    box-shadow: 0 0 14px rgba(216,180,254,.82), 0 0 28px rgba(168,85,247,.45) !important;
+}
+
+.footer-admin-link {
+    width: 38px !important;
+    height: 38px !important;
+    margin-top: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    border: 1px solid rgba(168,85,247,.34) !important;
+    background: rgba(168,85,247,.055) !important;
+    color: rgba(216,180,254,.82) !important;
+    text-decoration: none !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 0 18px rgba(168,85,247,.14) !important;
+    transition: transform .22s ease, color .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease !important;
+}
+
+.footer-admin-link:hover {
+    transform: translateY(-2px) !important;
+    color: #fff !important;
+    border-color: rgba(216,180,254,.58) !important;
+    background: rgba(168,85,247,.12) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 26px rgba(168,85,247,.28) !important;
+}
+
+.footer-admin-crown {
+    font-size: 17px !important;
+    line-height: 1 !important;
+}
+
+.nav-links a[href="index.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 10.8 12 3l9 7.8v9.7a1.5 1.5 0 0 1-1.5 1.5h-5.2v-6.4H9.7V22H4.5A1.5 1.5 0 0 1 3 20.5v-9.7Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="index.html#coleccion"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M4 4h6.5v6.5H4V4Zm9.5 0H20v6.5h-6.5V4ZM4 13.5h6.5V20H4v-6.5Zm9.5 0H20V20h-6.5v-6.5Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="mayorista.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M8.8 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm6.8.4a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4ZM2 20.2c.6-4.2 3.1-6.6 6.8-6.6s6.2 2.4 6.8 6.6H2Zm12.8 0a8.6 8.6 0 0 0-1.8-4.5 6.7 6.7 0 0 1 2.6-.5c3 0 5.1 1.8 5.6 5h-6.4Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="contacto.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6.6 2.6 10 6c.5.5.5 1.3.1 1.9L8.5 9.8a13 13 0 0 0 5.7 5.7l1.9-1.6c.6-.4 1.4-.4 1.9.1l3.4 3.4c.5.5.6 1.3.2 1.9-.9 1.4-2.3 2.4-4 2.4C9.1 21.7 2.3 14.9 2.3 6.4c0-1.7 1-3.1 2.4-4 .6-.4 1.4-.3 1.9.2Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="pagos.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 6.8A2.8 2.8 0 0 1 5.8 4h12.4A2.8 2.8 0 0 1 21 6.8v10.4a2.8 2.8 0 0 1-2.8 2.8H5.8A2.8 2.8 0 0 1 3 17.2V6.8Zm2 1.7h14V7a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v1.5Zm0 3v5.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5.5H5Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="facturas-pedidos.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M6 2h8.5L20 7.5V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.8V8h4.2L14 3.8ZM7 12h10v2H7v-2Zm0 4h7v2H7v-2Z'/%3E%3C/svg%3E");
+}
+
+.nav-links a[href="administrativo.html"] {
+    --nav-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M10.8 2h2.4l.5 2.5a7.8 7.8 0 0 1 1.9.8l2.1-1.4 1.7 1.7L18 7.7c.4.6.7 1.2.8 1.9l2.5.5v2.4l-2.5.5a7.8 7.8 0 0 1-.8 1.9l1.4 2.1-1.7 1.7-2.1-1.4c-.6.4-1.2.7-1.9.8l-.5 2.5h-2.4l-.5-2.5a7.8 7.8 0 0 1-1.9-.8l-2.1 1.4L4.6 17l1.4-2.1c-.4-.6-.7-1.2-.8-1.9l-2.5-.5v-2.4l2.5-.5c.2-.7.5-1.3.8-1.9L4.6 5.6l1.7-1.7 2.1 1.4c.6-.4 1.2-.7 1.9-.8l.5-2.5ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z'/%3E%3C/svg%3E");
+}
+
+/* Login premium: logo cortina y carga liviana */
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    padding-top: 56px !important;
+}
+
+#wholesale-overlay .wholesale-panel::before,
+#wholesale-overlay .wholesale-panel.is-unlocking::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking::before {
+    content: none !important;
+    display: none !important;
+}
+
+#wholesale-overlay.wholesale-overlay.open .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open .wholesale-logo {
+    animation: loginLogoCurtain 1.08s cubic-bezier(.16,1,.3,1) both !important;
+    transform-origin: center !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button {
+    color: transparent !important;
+    text-shadow: none !important;
+    filter: brightness(1.04) !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before {
+    content: "BLYXU" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    display: grid !important;
+    place-items: center !important;
+    color: rgba(255,255,255,.9) !important;
+    font-size: 12px !important;
+    font-weight: 950 !important;
+    letter-spacing: .28em !important;
+    animation: loginButtonCurtain 1.1s cubic-bezier(.16,1,.3,1) infinite !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after {
+    content: "" !important;
+    position: absolute !important;
+    left: calc(50% - 78px) !important;
+    top: 50% !important;
+    z-index: 1 !important;
+    width: 10px !important;
+    height: 10px !important;
+    margin-top: -5px !important;
+    border-radius: 3px !important;
+    background: rgba(255,255,255,.95) !important;
+    box-shadow:
+        28px 0 0 rgba(216,180,254,.78),
+        56px 0 0 rgba(168,85,247,.58),
+        84px 0 0 rgba(216,180,254,.36),
+        112px 0 0 rgba(255,255,255,.2) !important;
+    animation: loginFollowerRun 1.2s cubic-bezier(.65,0,.35,1) infinite !important;
+}
+
+@keyframes loginLogoCurtain {
+    0% {
+        opacity: .08;
+        clip-path: inset(0 100% 0 0);
+        transform: translateY(6px) scale(.98);
+        filter: blur(5px) drop-shadow(0 0 0 rgba(216,180,254,0));
+    }
+    52% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: translateY(0) scale(1);
+        filter: blur(0) drop-shadow(0 0 26px rgba(216,180,254,.5));
+    }
+    100% {
+        opacity: 1;
+        clip-path: inset(0 0 0 0);
+        transform: none;
+    }
+}
+
+@keyframes loginButtonCurtain {
+    0%, 100% { clip-path: inset(0 0 0 0); opacity: .78; }
+    48% { clip-path: inset(0 0 0 42%); opacity: 1; }
+    52% { clip-path: inset(0 42% 0 0); opacity: 1; }
+}
+
+@keyframes loginFollowerRun {
+    0% { transform: translateX(0) rotate(0deg); opacity: .28; }
+    32% { transform: translateX(32px) rotate(-180deg); opacity: 1; }
+    66% { transform: translateX(64px) rotate(-360deg); opacity: .7; }
+    100% { transform: translateX(92px) rotate(-540deg); opacity: .18; }
+}
+
+/* Login refinement: marca visible, sin bolitas montadas */
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    min-height: 0 !important;
+    padding: 48px 34px 34px !important;
+    border-color: rgba(216,180,254,.42) !important;
+    background:
+        radial-gradient(circle at 50% 4%, rgba(216,180,254,.16), transparent 28%),
+        linear-gradient(150deg, rgba(255,255,255,.18), rgba(255,255,255,.045) 52%, rgba(124,58,237,.16)),
+        rgba(12,8,20,.78) !important;
+    box-shadow:
+        0 36px 100px rgba(0,0,0,.62),
+        0 0 56px rgba(124,58,237,.18),
+        inset 0 1px 0 rgba(255,255,255,.2),
+        inset 0 -1px 0 rgba(216,180,254,.08) !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    width: 54px !important;
+    max-height: 54px !important;
+    margin: 0 auto 8px !important;
+    object-fit: contain !important;
+    opacity: .96 !important;
+}
+
+#wholesale-overlay .login-brand-word,
+body[data-page="pagos"] #qr-login-overlay .login-brand-word,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .login-brand-word {
+    position: relative !important;
+    z-index: 3 !important;
+    width: fit-content !important;
+    margin: 0 auto 34px !important;
+    color: #fff !important;
+    font-size: 28px !important;
+    font-weight: 950 !important;
+    letter-spacing: -1px !important;
+    line-height: 1 !important;
+    text-shadow: 0 0 22px rgba(216,180,254,.36), 0 8px 24px rgba(0,0,0,.42) !important;
+    animation: loginWordCurtain 1.28s cubic-bezier(.16,1,.3,1) both !important;
+}
+
+#wholesale-overlay .login-brand-word::after,
+body[data-page="pagos"] #qr-login-overlay .login-brand-word::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .login-brand-word::after {
+    content: "" !important;
+    position: absolute !important;
+    inset: -5px -10px !important;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.62), transparent) !important;
+    transform: translateX(-140%) skewX(-18deg) !important;
+    animation: loginWordSweep 1.42s cubic-bezier(.16,1,.3,1) .12s both !important;
+    pointer-events: none !important;
+    mix-blend-mode: screen !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    isolation: isolate !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before {
+    content: "VALIDANDO" !important;
+    z-index: 3 !important;
+    font-size: 12px !important;
+    letter-spacing: .18em !important;
+    animation: loginValidatingText 1.2s ease-in-out infinite !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after {
+    left: 18px !important;
+    right: 18px !important;
+    top: auto !important;
+    bottom: 8px !important;
+    width: auto !important;
+    height: 3px !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,.88), rgba(216,180,254,.95), transparent) !important;
+    box-shadow: 0 0 18px rgba(216,180,254,.62) !important;
+    transform: translateX(-60%) !important;
+    animation: loginButtonTrack 1.05s cubic-bezier(.65,0,.35,1) infinite !important;
+}
+
+@keyframes loginWordCurtain {
+    0% { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(8px); filter: blur(6px); }
+    58% { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); filter: blur(0); }
+    100% { opacity: 1; clip-path: inset(0 0 0 0); transform: none; filter: none; }
+}
+
+@keyframes loginWordSweep {
+    0% { transform: translateX(-140%) skewX(-18deg); opacity: 0; }
+    30% { opacity: .85; }
+    100% { transform: translateX(140%) skewX(-18deg); opacity: 0; }
+}
+
+@keyframes loginValidatingText {
+    0%, 100% { opacity: .7; letter-spacing: .16em; }
+    50% { opacity: 1; letter-spacing: .24em; }
+}
+
+@keyframes loginButtonTrack {
+    0% { transform: translateX(-78%) scaleX(.34); opacity: .25; }
+    48% { transform: translateX(0) scaleX(.72); opacity: 1; }
+    100% { transform: translateX(78%) scaleX(.34); opacity: .25; }
+}
+
+.nav-icon,
+.nav-icon-btn,
+.customer-account-btn {
+    background: rgba(10,8,14,.54) !important;
+    border-color: rgba(216,180,254,.22) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.2) !important;
+    backdrop-filter: blur(18px) saturate(1.2) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(1.2) !important;
 }
 
 #coleccion .section-title {
@@ -12154,4 +13008,220 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unloc
         width: calc(100% - 32px) !important;
         gap: 10px !important;
     }
+}
+
+/* Login final: minimalismo premium tipo producto */
+#wholesale-overlay.wholesale-overlay.open,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
+    background:
+        radial-gradient(circle at 50% -10%, rgba(168,85,247,.18), transparent 34%),
+        linear-gradient(180deg, rgba(2,2,5,.96), rgba(9,4,14,.98)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#wholesale-overlay .login-bokeh-canvas,
+body[data-page="pagos"] #qr-login-overlay .login-bokeh-canvas,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .login-bokeh-canvas {
+    display: none !important;
+}
+
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    width: min(390px, calc(100vw - 34px)) !important;
+    min-height: 0 !important;
+    padding: 34px !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(255,255,255,.1) !important;
+    background: #09090d !important;
+    box-shadow:
+        0 30px 90px rgba(0,0,0,.66),
+        0 0 0 1px rgba(168,85,247,.06),
+        inset 0 1px 0 rgba(255,255,255,.055) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#wholesale-overlay .wholesale-panel::before,
+#wholesale-overlay .wholesale-panel::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::after {
+    content: none !important;
+    display: none !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    display: block !important;
+    width: 86px !important;
+    height: auto !important;
+    max-height: 52px !important;
+    margin: 0 auto 22px !important;
+    object-fit: contain !important;
+    opacity: .95 !important;
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.38)) !important;
+    animation: loginLogoSettle .58s cubic-bezier(.16,1,.3,1) both !important;
+}
+
+#wholesale-overlay .login-brand-word,
+body[data-page="pagos"] #qr-login-overlay .login-brand-word,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .login-brand-word,
+#wholesale-overlay .login-brand-word::after,
+body[data-page="pagos"] #qr-login-overlay .login-brand-word::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .login-brand-word::after {
+    display: none !important;
+    content: none !important;
+}
+
+#wholesale-overlay .wholesale-kicker,
+body[data-page="pagos"] #qr-login-overlay .wholesale-kicker,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-kicker {
+    display: block !important;
+    margin: 0 0 8px !important;
+    color: rgba(216,180,254,.8) !important;
+    font-size: 11px !important;
+    font-weight: 850 !important;
+    letter-spacing: .14em !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+}
+
+#wholesale-overlay .wholesale-panel h2,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel h2,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel h2 {
+    display: block !important;
+    margin: 0 0 26px !important;
+    color: #fff !important;
+    font-size: 22px !important;
+    font-weight: 850 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.08 !important;
+    text-align: center !important;
+}
+
+#wholesale-overlay .wholesale-form,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form {
+    display: grid !important;
+    gap: 12px !important;
+}
+
+#wholesale-overlay .wholesale-form input,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input {
+    height: 52px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    background: #101015 !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04) !important;
+    color: #fff !important;
+    caret-color: #d8b4fe !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    letter-spacing: 0 !important;
+}
+
+#wholesale-overlay .wholesale-form input::placeholder,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input::placeholder,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input::placeholder {
+    color: rgba(255,255,255,.42) !important;
+}
+
+#wholesale-overlay .wholesale-form input:focus,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form input:focus,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form input:focus {
+    border-color: rgba(216,180,254,.58) !important;
+    box-shadow:
+        0 0 0 3px rgba(168,85,247,.12),
+        inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    height: 52px !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255,255,255,.88) !important;
+    background: #f7f3ff !important;
+    color: #08070b !important;
+    text-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 950 !important;
+    letter-spacing: .08em !important;
+    box-shadow: 0 18px 36px rgba(0,0,0,.28) !important;
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease !important;
+}
+
+#wholesale-overlay .wholesale-form button:hover,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button:hover,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button:hover {
+    transform: translateY(-1px) !important;
+    background: #fff !important;
+    box-shadow: 0 22px 42px rgba(0,0,0,.34), 0 0 24px rgba(168,85,247,.12) !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button {
+    color: transparent !important;
+    background: #17121f !important;
+    border-color: rgba(216,180,254,.24) !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::before {
+    content: "VALIDANDO" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    display: grid !important;
+    place-items: center !important;
+    color: rgba(255,255,255,.92) !important;
+    font-size: 12px !important;
+    font-weight: 950 !important;
+    letter-spacing: .12em !important;
+    animation: none !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after {
+    content: "" !important;
+    position: absolute !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: auto !important;
+    bottom: 7px !important;
+    z-index: 2 !important;
+    width: auto !important;
+    height: 2px !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    background: linear-gradient(90deg, transparent, #d8b4fe, transparent) !important;
+    box-shadow: 0 0 16px rgba(216,180,254,.58) !important;
+    animation: loginMinimalTrack 1.1s ease-in-out infinite !important;
+}
+
+#wholesale-overlay .wholesale-close,
+#wholesale-overlay .wholesale-back-home,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-close,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-back-home {
+    opacity: .68 !important;
+}
+
+@keyframes loginLogoSettle {
+    0% { opacity: 0; transform: translateY(8px) scale(.96); filter: blur(4px); }
+    100% { opacity: .95; transform: none; filter: drop-shadow(0 10px 22px rgba(0,0,0,.38)); }
+}
+
+@keyframes loginMinimalTrack {
+    0% { transform: translateX(-45%) scaleX(.24); opacity: .25; }
+    50% { transform: translateX(0) scaleX(.86); opacity: 1; }
+    100% { transform: translateX(45%) scaleX(.24); opacity: .25; }
 }

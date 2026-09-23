@@ -7939,6 +7939,11 @@ function switchDashboardView(viewId, title) {
     if (titleEl) titleEl.textContent = title || 'Panel';
     var mobileSelect = document.getElementById('admin-mobile-view-select');
     if (mobileSelect && mobileSelect.value !== viewId) mobileSelect.value = viewId;
+    var sectionDrawer = document.getElementById('admin-section-drawer');
+    if (sectionDrawer) {
+        sectionDrawer.classList.remove('open');
+        document.getElementById('admin-section-toggle')?.setAttribute('aria-expanded', 'false');
+    }
     var area = document.querySelector('.dashboard-content-area');
     if (area) area.scrollTop = 0;
 
@@ -9825,12 +9830,12 @@ function buildOrderRowHtml(p, idx) {
 
     return `
         <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="font-weight:700;">${escapeHtml(id)}</td>
-            <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
-            <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['TelÃ©fono'] || p.Telefono || '')}</span></td>
-            <td style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
-            <td><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
-            <td class="orders-actions-cell">
+            <td data-label="Pedido" style="font-weight:700;">${escapeHtml(id)}</td>
+            <td data-label="Fecha" style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+            <td data-label="Cliente" style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['TelÃ©fono'] || p.Telefono || '')}</span></td>
+            <td data-label="Total" style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+            <td data-label="Estado"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
+            <td data-label="Accion" class="orders-actions-cell">
                 <button class="orders-action-btn" onclick="abrirEditorFactura(${idx})" type="button" title="Ajustar factura">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
                     Facturar
@@ -9852,17 +9857,17 @@ function buildInvoiceRowHtml(f, idx) {
 
     return `
         <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="font-weight:700;">${escapeHtml(idFactura)}</td>
-            <td style="font-size:12px; color:var(--text-muted);">${escapeHtml(idPedido)}</td>
-            <td style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
-            <td style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
-            <td style="font-weight:800; color:#fff;">
+            <td data-label="Factura" style="font-weight:700;">${escapeHtml(idFactura)}</td>
+            <td data-label="Pedido" style="font-size:12px; color:var(--text-muted);">${escapeHtml(idPedido)}</td>
+            <td data-label="Fecha" style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
+            <td data-label="Cliente" style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(f['ID Cliente'] || '')}</span></td>
+            <td data-label="Total" style="font-weight:800; color:#fff;">
                 <div>${formatAdminInvoiceMoney(total)}</div>
                 <div style="font-size:10px; color:#34d399; font-weight:800;">Abonado: ${formatAdminInvoiceMoney(balanceInfo.paid)}</div>
                 <div style="font-size:10px; color:${balanceInfo.balance > 0 ? '#fbbf24' : '#34d399'}; font-weight:800;">Saldo: ${formatAdminInvoiceMoney(balanceInfo.balance)}</div>
             </td>
-            <td>${buildInvoiceStatusSelect(idx, estado)}<div style="margin-top:5px;"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800;">${escapeHtml(estado)}</span></div></td>
-            <td class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <td data-label="Estado">${buildInvoiceStatusSelect(idx, estado)}<div style="margin-top:5px;"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800;">${escapeHtml(estado)}</span></div></td>
+            <td data-label="Accion" class="orders-actions-cell" style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button class="orders-action-btn invoice-pay" onclick="openQuickInvoicePayment(${idx})" type="button" title="${balanceInfo.balance > 0 ? 'Registrar abono rapido' : 'Factura sin saldo pendiente'}" ${balanceInfo.balance > 0 ? '' : 'disabled'}>
                     <svg viewBox="0 0 24 24" aria-hidden="true" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path><path d="M7 15h4"></path><path d="M17 13v4"></path><path d="M15 15h4"></path></svg>
                     Abonar
