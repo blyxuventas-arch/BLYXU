@@ -16,13 +16,171 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=mayorista-login-clean-20260924" as="style">
+    <link rel="preload" href="blyxu-app.js?v=mayorista-login-clean-20260924" as="script">
+    <link rel="stylesheet" href="blyxu-style.css?v=mayorista-login-clean-20260924" data-blyxu-main-style="1">
+    <script>
+        // Limpiar claves guardadas — siempre pedir login
+        try {
+            localStorage.removeItem('blyxu_wholesale_access');
+            sessionStorage.removeItem('blyxu_wholesale_access');
+            sessionStorage.removeItem('blyxu_just_logged_in');
+        } catch(e) {}
+    </script>
+    <style>
+        /* Login mayorista limpio y aislado */
+        body.wholesale-gated:not(.wholesale-unlocked) {
+            min-height: 100vh;
+            overflow: hidden;
+            background: #05030a !important;
+        }
+
+        body.wholesale-gated:not(.wholesale-unlocked) .navbar,
+        body.wholesale-gated:not(.wholesale-unlocked) .collection-section,
+        body.wholesale-gated:not(.wholesale-unlocked) .footer,
+        body.wholesale-gated:not(.wholesale-unlocked) .cart-overlay,
+        body.wholesale-gated:not(.wholesale-unlocked) .cart-sidebar,
+        body.wholesale-gated:not(.wholesale-unlocked) .brand-loader {
+            display: none !important;
+        }
+
+        #mayorista-login-screen {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 22px !important;
+            background: #09030f !important;
+            color: #fff !important;
+        }
+
+        body.wholesale-unlocked #mayorista-login-screen {
+            display: none !important;
+        }
+
+        .mayorista-login-card {
+            width: min(390px, 100%) !important;
+            padding: 34px 28px 28px !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 16px !important;
+            background: #0d0b13 !important;
+            box-shadow: none !important;
+            text-align: center !important;
+            position: relative !important;
+        }
+
+        .mayorista-login-card *,
+        .mayorista-login-card::before,
+        .mayorista-login-card::after {
+            animation: none !important;
+            transition: none !important;
+            filter: none !important;
+            text-shadow: none !important;
+        }
+
+        .mayorista-login-logo {
+            display: block !important;
+            width: 86px !important;
+            max-height: 52px !important;
+            height: auto !important;
+            object-fit: contain !important;
+            margin: 0 auto 20px !important;
+        }
+
+        .mayorista-login-kicker {
+            margin: 0 0 8px !important;
+            color: rgba(216, 180, 254, 0.84) !important;
+            font-size: 11px !important;
+            font-weight: 850 !important;
+            letter-spacing: 0.14em !important;
+            text-transform: uppercase !important;
+        }
+
+        #mayorista-login-title {
+            margin: 0 0 22px !important;
+            color: #fff !important;
+            font-size: 24px !important;
+            font-weight: 850 !important;
+            line-height: 1.1 !important;
+            letter-spacing: 0 !important;
+        }
+
+        .mayorista-login-form {
+            display: grid !important;
+            gap: 14px !important;
+        }
+
+        #mayorista-access-key {
+            width: 100% !important;
+            height: 52px !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
+            border-radius: 12px !important;
+            background: #15121d !important;
+            color: #fff !important;
+            padding: 0 16px !important;
+            font: inherit !important;
+            font-size: 18px !important;
+            text-align: center !important;
+            letter-spacing: 4px !important;
+            outline: none !important;
+        }
+
+        #mayorista-access-key:focus {
+            border-color: rgba(216, 180, 254, 0.68) !important;
+        }
+
+        .mayorista-login-button {
+            width: 100% !important;
+            height: 52px !important;
+            border: 0 !important;
+            border-radius: 12px !important;
+            background: #f7f3ff !important;
+            color: #08070b !important;
+            font: inherit !important;
+            font-size: 12px !important;
+            font-weight: 950 !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+            cursor: pointer !important;
+        }
+
+        .mayorista-login-button:disabled {
+            opacity: 0.6 !important;
+            cursor: wait !important;
+        }
+
+        .mayorista-login-error {
+            min-height: 18px !important;
+            margin-top: 10px !important;
+            color: #fb7185 !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            visibility: hidden !important;
+        }
+
+        .mayorista-login-error.show {
+            visibility: visible !important;
+        }
+
+        .mayorista-login-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 16px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        .mayorista-login-back:hover {
+            color: #ffd969;
+        }
+    </style>
 </head>
 
-<body data-catalog-mode="wholesale">
-    <div class="bg-animation"></div>
-    <canvas id="particles-canvas"></canvas>
+<body data-catalog-mode="wholesale" class="wholesale-gated">
 
     <nav class="navbar scrolled" id="navbar">
         <a href="index.html" class="nav-logo">
@@ -190,22 +348,24 @@
         </div>
     </div>
 
-    <!-- ===== WHOLESALE ACCESS OVERLAY ===== -->
-    <div class="wholesale-overlay" id="wholesale-overlay" aria-hidden="true">
-        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
-        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="wholesale-title">
-            <button class="wholesale-close" id="wholesale-close" type="button" aria-label="Cerrar">✕</button>
-            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
-            <div class="login-brand-word" aria-hidden="true">BLYXU</div>
-            <div class="wholesale-kicker">Área Exclusiva</div>
-            <h2 id="wholesale-title">Mayoristas BLYXU</h2>
-            <form class="wholesale-form" id="wholesale-form">
-                <input type="password" inputmode="numeric" id="wholesale-key" placeholder="Clave" autocomplete="off"
-                    required>
-                <button type="submit">Validar</button>
+    <!-- ===== ACCESO MAYORISTA LIMPIO ===== -->
+    <div id="mayorista-login-screen" aria-hidden="false">
+        <div class="mayorista-login-card" role="dialog" aria-modal="true" aria-labelledby="mayorista-login-title">
+            <img src="Logo2.png" alt="BLYXU" class="mayorista-login-logo" onerror="this.style.display='none'">
+            <div class="mayorista-login-kicker">Acceso Exclusivo</div>
+            <h2 id="mayorista-login-title">Mayoristas BLYXU</h2>
+            <form class="mayorista-login-form" id="mayorista-login-form">
+                <input type="password" inputmode="numeric" id="mayorista-access-key" placeholder="Clave de acceso" autocomplete="off" required>
+                <button class="mayorista-login-button" type="submit" id="mayorista-login-submit">Ingresar al Cat&aacute;logo</button>
             </form>
-            <button type="button" class="wholesale-back-home" id="wholesale-back-btn">← Volver al inicio</button>
-            <div class="wholesale-error" id="wholesale-error">Clave de acceso incorrecta</div>
+            <div class="mayorista-login-error" id="mayorista-login-error">Clave de acceso incorrecta</div>
+            <a href="index.html" class="mayorista-login-back">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Volver a la tienda p&uacute;blica</span>
+            </a>
         </div>
     </div>
 
@@ -219,7 +379,77 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=mp-toggle-detail-img-v22-20260923" defer></script>
+    <!-- Carga diferida optimizada de la aplicacion -->
+    <script src="blyxu-app.js?v=mayorista-login-clean-20260924" defer></script>
+    <script>
+        (function() {
+            const body = document.body;
+            const overlay = document.getElementById('mayorista-login-screen');
+            const form = document.getElementById('mayorista-login-form');
+            const input = document.getElementById('mayorista-access-key');
+            const error = document.getElementById('mayorista-login-error');
+            const submitBtn = document.getElementById('mayorista-login-submit');
+
+            function unlockWholesaleInterface() {
+                body.classList.remove('wholesale-gated');
+                body.classList.add('wholesale-unlocked');
+                if (overlay) {
+                    overlay.setAttribute('aria-hidden', 'true');
+                    overlay.remove();
+                }
+            }
+
+            function loadWholesaleCatalogWhenReady(attempts) {
+                if (typeof loadProducts === 'function') {
+                    loadProducts({ renderCatalog: true }).catch(function() {});
+                    return;
+                }
+
+                if (typeof renderCatalogProducts === 'function') {
+                    renderCatalogProducts();
+                    return;
+                }
+
+                if (attempts > 0) {
+                    setTimeout(function() {
+                        loadWholesaleCatalogWhenReady(attempts - 1);
+                    }, 120);
+                }
+            }
+
+            // Siempre pedir clave — no se guarda sesión
+            body.classList.add('wholesale-gated');
+            overlay?.setAttribute('aria-hidden', 'false');
+            setTimeout(() => input?.focus({ preventScroll: true }), 50);
+
+            form?.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const entered = (input?.value || '').trim();
+                if (entered !== '531') {
+                    error?.classList.add('show');
+                    input?.select();
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.textContent = 'Ingresando...';
+                    submitBtn.disabled = true;
+                }
+
+                unlockWholesaleInterface();
+
+                // Mostrar navbar y cargar catalogo despues de autenticarse
+                var navbar = document.getElementById('navbar');
+                if (navbar) navbar.style.display = '';
+
+                loadWholesaleCatalogWhenReady(40);
+            });
+
+            input?.addEventListener('input', function() {
+                error?.classList.remove('show');
+            });
+        })();
+    </script>
 </body>
 
 </html>

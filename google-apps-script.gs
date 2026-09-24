@@ -283,6 +283,15 @@ function handleRequest_(e, method) {
     }
 
     if (
+      action === 'customerdashboard' ||
+      action === 'dashboardcliente' ||
+      action === 'clientedashboard' ||
+      action === 'micuenta'
+    ) {
+      return handleCustomerDashboard_(body, params);
+    }
+
+    if (
       action === 'cerrarsesion' ||
       action === 'customerlogout'
     ) {
@@ -1739,7 +1748,6 @@ function verifyGoogleIdToken_(credential) {
 }
 
 function handleCustomerProfile_(body, params) {
-  ensureSheets_();
   const token = String((body && body.token) || (params && params.token) || '').trim();
   const found = findCustomerBySessionToken_(token);
   if (!found) {
@@ -1750,6 +1758,23 @@ function handleCustomerProfile_(body, params) {
     ok: true,
     status: 'success',
     cliente: publicCustomer_(found.data)
+  });
+}
+
+function handleCustomerDashboard_(body, params) {
+  const found = getAuthenticatedCustomer_(body, params);
+  if (!found) {
+    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
+  }
+  const orders = getCustomerOrdersForAccount_(found);
+
+  return json_({
+    ok: true,
+    status: 'success',
+    cliente: publicCustomer_(found.data),
+    orders: orders.slice(0, 60).map(publicCustomerOrder_),
+    invoices: getCustomerInvoicesForAccount_(found, orders).slice(0, 60).map(publicCustomerInvoice_),
+    favorites: getCustomerFavoritesForAccount_(found).map(publicCustomerFavorite_)
   });
 }
 
@@ -1767,7 +1792,6 @@ function handleCustomerLogout_(body, params) {
 }
 
 function handleCustomerOrders_(body, params) {
-  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1793,7 +1817,6 @@ function handleCustomerOrders_(body, params) {
 }
 
 function handleCustomerInvoices_(body, params) {
-  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1835,7 +1858,6 @@ function handleCustomerInvoices_(body, params) {
 }
 
 function handleCustomerFavorites_(body, params) {
-  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1988,6 +2010,106 @@ function handleCustomerPromotionSave_(body) {
   });
 }
 
+function getCustomerOrdersForAccount_(found) {
+  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
+  const rows = listRows_('Pedidos', {});
+  return rows.filter(function(row) {
+    const phone = cleanPhone_(row['TelÃ©fono'] || row.Telefono || row.telefono);
+    const email = normalizeEmail_(row.Email || row.email);
+    const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
+    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
+function getCustomerInvoicesForAccount_(found, knownOrders) {
+  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono'] || found.data['TelÃƒÂ©fono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
+  const customerOrders = knownOrders || getCustomerOrdersForAccount_(found);
+  const orderIds = {};
+  customerOrders.forEach(function(order) {
+    const id = String(order['ID Pedido'] || '').trim();
+    if (id) orderIds[id] = true;
+  });
+
+  return listRows_('Facturas', {}).filter(function(row) {
+    const invoiceCustomerPhone = cleanPhone_(row['ID Cliente'] || row.Telefono || row['TelÃ©fono'] || row['TelÃƒÂ©fono'] || row.Celular);
+    const invoiceEmail = normalizeEmail_(row.Email || row.email);
+    const orderId = String(row['ID Pedido'] || '').trim();
+    const safeInvoiceCustomerPhone = invoiceCustomerPhone || cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
+    return (safeCustomerPhone && safeInvoiceCustomerPhone === safeCustomerPhone) ||
+      (customerEmail && invoiceEmail === customerEmail) ||
+      (orderId && orderIds[orderId]);
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
+function getCustomerFavoritesForAccount_(found) {
+  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono']);
+  const customerEmail = normalizeEmail_(found.data.Email);
+  return listRows_('Favoritos', {}).filter(function(row) {
+    const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
+    const phone = cleanPhone_(row.Telefono || row['TelÃ©fono']);
+    const email = normalizeEmail_(row.Email);
+    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
+function getCustomerOrdersForAccount_(found) {
+  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const rows = listRows_('Pedidos', {});
+  return rows.filter(function(row) {
+    const phone = cleanPhone_(getCustomerPhoneValue_(row));
+    const email = normalizeEmail_(row.Email || row.email);
+    return (customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail);
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
+function getCustomerInvoicesForAccount_(found, knownOrders) {
+  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
+  const customerEmail = normalizeEmail_(found.data.Email);
+  const customerOrders = knownOrders || getCustomerOrdersForAccount_(found);
+  const orderIds = {};
+  customerOrders.forEach(function(order) {
+    const id = String(order['ID Pedido'] || '').trim();
+    if (id) orderIds[id] = true;
+  });
+
+  return listRows_('Facturas', {}).filter(function(row) {
+    const invoiceCustomerPhone = cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
+    const invoiceEmail = normalizeEmail_(row.Email || row.email);
+    const orderId = String(row['ID Pedido'] || '').trim();
+    return (customerPhone && invoiceCustomerPhone === customerPhone) ||
+      (customerEmail && invoiceEmail === customerEmail) ||
+      (orderId && orderIds[orderId]);
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
+function getCustomerFavoritesForAccount_(found) {
+  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
+  const customerEmail = normalizeEmail_(found.data.Email);
+  return listRows_('Favoritos', {}).filter(function(row) {
+    const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
+    const phone = cleanPhone_(getCustomerPhoneValue_(row));
+    const email = normalizeEmail_(row.Email);
+    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
+  }).sort(function(a, b) {
+    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
+  });
+}
+
 function getAuthenticatedCustomer_(body, params) {
   const token = String((body && body.token) || (params && params.token) || '').trim();
   return findCustomerBySessionToken_(token);
@@ -2076,9 +2198,66 @@ function publicCustomerFavorite_(favorite) {
   };
 }
 
+function getRowObjectAt_(sheet, headers, rowIndex) {
+  if (!rowIndex || rowIndex < 2) return null;
+  return rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
+}
+
+function findRowByColumnValue_(sheetName, candidateHeaders, targetValue, normalizer) {
+  const sheet = getSheet_(sheetName);
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2 || !targetValue) return null;
+
+  for (let h = 0; h < candidateHeaders.length; h++) {
+    const header = findHeader_(headers, candidateHeaders[h], sheetName) || candidateHeaders[h];
+    const colIndex = headers.indexOf(header);
+    if (colIndex < 0) continue;
+
+    const values = sheet.getRange(2, colIndex + 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const value = normalizer ? normalizer(values[i][0]) : String(values[i][0] || '').trim();
+      if (value === targetValue) {
+        const rowIndex = i + 2;
+        return { rowIndex: rowIndex, data: getRowObjectAt_(sheet, headers, rowIndex) };
+      }
+    }
+  }
+
+  return null;
+}
+
+function scanCustomerByIdentifier_(identifier) {
+  const cleanIdentifier = cleanPhone_(identifier);
+  const email = normalizeEmail_(identifier);
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const data = rowToObject_(headers, values[i]);
+    const phone = cleanPhone_(data['TelÃ©fono'] || data['Telefono']);
+    const customerEmail = normalizeEmail_(data.Email);
+    if ((cleanIdentifier && phone === cleanIdentifier) || (email && customerEmail === email)) {
+      return { rowIndex: i + 2, data: data };
+    }
+  }
+  return null;
+}
+
 function findCustomerByIdentifier_(identifier) {
   const cleanIdentifier = cleanPhone_(identifier);
   const email = normalizeEmail_(identifier);
+  if (email) {
+    const foundByEmail = findRowByColumnValue_('Clientes', ['Email'], email, normalizeEmail_);
+    if (foundByEmail) return foundByEmail;
+  }
+  if (cleanIdentifier) {
+    const foundByPhone = findRowByColumnValue_('Clientes', ['TelÃ©fono', 'Telefono', 'telefono'], cleanIdentifier, cleanPhone_);
+    if (foundByPhone) return foundByPhone;
+  }
   const sheet = getSheet_('Clientes');
   const headers = getHeaders_(sheet);
   const lastRow = sheet.getLastRow();
@@ -2096,6 +2275,35 @@ function findCustomerByIdentifier_(identifier) {
   return null;
 }
 
+function findCustomerByIdentifier_(identifier) {
+  const cleanIdentifier = cleanPhone_(identifier);
+  const email = normalizeEmail_(identifier);
+  if (email) {
+    const foundByEmail = findRowByColumnValue_('Clientes', ['Email'], email, normalizeEmail_);
+    if (foundByEmail) return foundByEmail;
+  }
+  if (cleanIdentifier) {
+    const foundByPhone = findRowByColumnValue_('Clientes', ['telefono', 'Telefono'], cleanIdentifier, cleanPhone_);
+    if (foundByPhone) return foundByPhone;
+  }
+
+  const sheet = getSheet_('Clientes');
+  const headers = getHeaders_(sheet);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
+  for (let i = 0; i < values.length; i++) {
+    const data = rowToObject_(headers, values[i]);
+    const phone = cleanPhone_(getCustomerPhoneValue_(data));
+    const customerEmail = normalizeEmail_(data.Email);
+    if ((cleanIdentifier && phone === cleanIdentifier) || (email && customerEmail === email)) {
+      return { rowIndex: i + 2, data: data };
+    }
+  }
+  return null;
+}
+
 function findCustomerRowByEmail_(email) {
   const found = findCustomerByIdentifier_(email);
   return found ? found.rowIndex : null;
@@ -2103,6 +2311,16 @@ function findCustomerRowByEmail_(email) {
 
 function findCustomerBySessionToken_(token, allowExpired) {
   if (!token) return null;
+  const foundByToken = findRowByColumnValue_('Clientes', ['Session Token'], token, function(value) {
+    return String(value || '').trim();
+  });
+  if (foundByToken) {
+    const fastExpires = new Date(foundByToken.data['Session Expira']);
+    if (!allowExpired && (!foundByToken.data['Session Expira'] || Number.isNaN(fastExpires.getTime()) || fastExpires.getTime() < Date.now())) {
+      return null;
+    }
+    return foundByToken;
+  }
   const sheet = getSheet_('Clientes');
   const headers = getHeaders_(sheet);
   const lastRow = sheet.getLastRow();

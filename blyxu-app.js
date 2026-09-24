@@ -33,6 +33,8 @@ const CUSTOMER_SESSION_KEY = 'blyxu_customer_session_v1';
 const PRODUCT_DETAIL_PREVIEW_KEY = 'blyxu_product_detail_preview_v1';
 const PRODUCTS_CACHE_TTL = 5 * 60 * 1000;
 const SITE_CONFIG_CACHE_TTL = 5 * 60 * 1000;
+const CUSTOMER_SESSION_REFRESH_TTL = 10 * 60 * 1000;
+const CUSTOMER_AUTH_TIMEOUT_MS = 12000;
 const HOME_CATEGORY_INTERVAL_MS = 3200;
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
 const LEGACY_CART_KEY = 'blyxu_cart';
@@ -41,7 +43,8 @@ const CART_STORAGE_KEYS = {
     wholesale: 'blyxu_cart_wholesale'
 };
 const IS_MOBILE_VIEWPORT = typeof window !== 'undefined' && window.innerWidth <= 640;
-const CATALOG_BATCH_SIZE = IS_MOBILE_VIEWPORT ? 6 : 12;
+const IS_WHOLESALE_PAGE = typeof document !== 'undefined' && document.body?.dataset.catalogMode === 'wholesale';
+const CATALOG_BATCH_SIZE = IS_WHOLESALE_PAGE ? (IS_MOBILE_VIEWPORT ? 4 : 6) : (IS_MOBILE_VIEWPORT ? 6 : 12);
 const IMAGE_WIDTHS = {
     default: 640,
     card: 420,
@@ -56,7 +59,14 @@ let activeCatalogMode = getInitialCartMode();
 let activeCartMode = activeCatalogMode;
 let cart = loadCart(activeCartMode);
 let showRetailPrices = localStorage.getItem(RETAIL_PRICE_VISIBILITY_KEY) !== '0';
-let siteConfig = {};
+let siteConfig = (function() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SITE_CONFIG_CACHE_KEY) || 'null');
+        return cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object' ? cached.data : {};
+    } catch (_) {
+        return {};
+    }
+})();
 let configLoadPromise = null;
 let catalogRenderToken = 0;
 let catalogBatchState = null;
@@ -1050,7 +1060,11 @@ async function loadProducts(options = {}) {
     if (usedProductCache) {
         applyPromotionsToProducts();
         if (renderCatalog) {
-            renderHomeSectionsStaggered({ renderCatalog });
+            if (IS_WHOLESALE_PAGE) {
+                renderCatalogProducts();
+            } else {
+                renderHomeSectionsStaggered({ renderCatalog });
+            }
         }
     }
 
@@ -1067,7 +1081,11 @@ async function loadProducts(options = {}) {
             Promise.all(backgroundLoads).then(() => {
                 applyPromotionsToProducts();
                 if (renderCatalog) {
-                    renderHomeSectionsStaggered({ renderCatalog });
+                    if (IS_WHOLESALE_PAGE) {
+                        renderCatalogProducts();
+                    } else {
+                        renderHomeSectionsStaggered({ renderCatalog });
+                    }
                 }
                 renderFloatingWhatsApp();
                 renderFooterSocialLinks();
@@ -1082,7 +1100,11 @@ async function loadProducts(options = {}) {
             await productsLoadPromise;
         }
         applyPromotionsToProducts();
-        await renderHomeSectionsStaggered({ renderCatalog });
+        if (IS_WHOLESALE_PAGE) {
+            renderCatalogProducts();
+        } else {
+            await renderHomeSectionsStaggered({ renderCatalog });
+        }
 
         if (configLoadPromise && !configCacheIsFresh) {
             configLoadPromise.then(() => {
@@ -1934,7 +1956,7 @@ function renderBanners(banners) {
                 ${descHtml}
                 <div class="main-banner-actions">
                     <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
-                    <a href="javascript:void(0)" onclick="openWholesaleOverlay()" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
+                    <a href="mayorista.html" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
                 </div>
                 <div class="hero-promo-inject" style="margin-top: 32px; width: 100%;"></div>
             </div>
@@ -2634,9 +2656,12 @@ function renderProducts(products, options = {}) {
         const isFeatured = featuredFirst && i === 0;
         const detailUrl = `producto.html?id=${productIndex}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`;
         const badge = getProductBadgeMarkup(p, i);
+        const detailPrepAttrs = mode === 'wholesale'
+            ? ''
+            : ` onpointerenter="prepareProductDetailPreview(${productIndex}, '${mode}')" ontouchstart="prepareProductDetailPreview(${productIndex}, '${mode}')"`;
 
         return `
-        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}" onpointerenter="prepareProductDetailPreview(${productIndex}, '${mode}')" ontouchstart="prepareProductDetailPreview(${productIndex}, '${mode}')" tabindex="0">
+        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}"${detailPrepAttrs} tabindex="0">
             <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
                 ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
@@ -3976,6 +4001,21 @@ function flushWholesaleEntryCelebration() {
 
 // -- WHOLESALE --
 function initWholesaleAccess() {
+    function goToWholesalePage(e) {
+        e?.preventDefault();
+        window.location.href = 'mayorista.html';
+    }
+
+    window.openWholesaleOverlay = goToWholesalePage;
+    document.querySelectorAll('a[href="#mayorista"]').forEach(link => {
+        link.setAttribute('href', 'mayorista.html');
+    });
+    return;
+
+    if (document.body?.dataset.catalogMode === 'wholesale') {
+        return;
+    }
+
     const overlay = document.getElementById('wholesale-overlay');
     const form = document.getElementById('wholesale-form');
     const input = document.getElementById('wholesale-key');
@@ -4004,11 +4044,16 @@ function initWholesaleAccess() {
 
     function openWholesale(e) {
         e?.preventDefault();
-        if (isUnlocking) return;
-        if (!overlay) {
-            window.location.href = 'index.html#mayorista';
+        if (hasWholesaleAuth()) {
+            window.location.href = 'mayorista.html';
             return;
         }
+        if (isUnlocking) return;
+        if (!overlay) {
+            window.location.href = 'mayorista.html';
+            return;
+        }
+        document.body.classList.add('wholesale-auth-blocked');
         error?.classList.remove('show');
         if (input) input.value = '';
         setUnlockingState(false);
@@ -4035,6 +4080,7 @@ function initWholesaleAccess() {
     function closeWholesale(goHome = false) {
         if (isUnlocking && goHome) return;
         hideBrandLoader();
+        document.body.classList.remove('wholesale-auth-blocked');
         if (overlay) {
             overlay.classList.remove('open');
             overlay.setAttribute('aria-hidden', 'true');
@@ -4064,6 +4110,7 @@ function initWholesaleAccess() {
     window.addEventListener('popstate', () => {
         if (overlay && overlay.classList.contains('open')) {
             isModalHistoryPushed = false;
+            document.body.classList.remove('wholesale-auth-blocked');
             overlay.classList.remove('open');
             overlay.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
@@ -4073,12 +4120,9 @@ function initWholesaleAccess() {
         }
     });
 
-    try {
-        localStorage.removeItem('blyxu_wholesale_access');
-    } catch (e) {}
-
     function hasWholesaleAuth() {
-        return sessionStorage.getItem('blyxu_wholesale_access') === '1';
+        // No se guarda sesión — siempre pide clave
+        return false;
     }
 
     triggers.forEach(t => {
@@ -4117,24 +4161,24 @@ function initWholesaleAccess() {
         form.addEventListener('submit', async e => {
             e.preventDefault();
             if (isUnlocking) return;
-            if (input.value.trim() !== '53') {
+            if (input.value.trim() !== '531') {
                 error?.classList.add('show');
                 input.select();
                 return;
             }
 
             setUnlockingState(true);
-            await delay(850);
-            sessionStorage.setItem('blyxu_wholesale_access', '1');
-            sessionStorage.setItem('blyxu_just_logged_in', '1');
 
             if (window.location.pathname.includes('mayorista.html')) {
                 closeWholesale(false);
                 setUnlockingState(false);
                 queueWholesaleEntryCelebration();
+                document.body.classList.remove('wholesale-auth-blocked');
+                document.body.classList.remove('wholesale-gated');
                 if (!allProducts.length && !productsLoadPromise) {
                     loadProducts({ renderCatalog: true }).then(flushWholesaleEntryCelebration).catch(() => {});
                 } else {
+                    renderCatalogProducts();
                     flushWholesaleEntryCelebration();
                 }
             } else {
@@ -4302,6 +4346,9 @@ function renderPromoWidget() {
 
 
 function initCustomCursor() {
+    document.documentElement.classList.add('native-cursor');
+    document.getElementById('blyxu-cursor')?.remove();
+    return;
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
     document.documentElement.classList.remove('native-cursor');
@@ -4455,7 +4502,8 @@ function setCustomerSession(token, cliente) {
     const session = {
         token,
         cliente,
-        savedAt: Date.now()
+        savedAt: Date.now(),
+        refreshedAt: Date.now()
     };
     localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
     renderCustomerAccountState();
@@ -4471,6 +4519,12 @@ function clearCustomerSession() {
 
 function getCurrentCustomer() {
     return getCustomerSession()?.cliente || null;
+}
+
+function isCustomerSessionFresh(session = getCustomerSession()) {
+    if (!session?.token) return false;
+    const timestamp = Number(session.refreshedAt || session.savedAt || 0);
+    return timestamp > 0 && Date.now() - timestamp < CUSTOMER_SESSION_REFRESH_TTL;
 }
 
 function getCurrentCustomerPromotion() {
@@ -4559,12 +4613,17 @@ function hydrateCustomerCheckoutFields() {
     });
 }
 
-function customerAuthRequest(action, payload) {
+function customerAuthRequest(action, payload, options = {}) {
+    const timeoutMs = Number(options.timeoutMs || CUSTOMER_AUTH_TIMEOUT_MS);
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
     return fetch(GOOGLE_SHEET_API, {
         method: 'POST',
         headers: {
             'Content-Type': 'text/plain;charset=utf-8'
         },
+        signal: controller?.signal,
         body: JSON.stringify({
             action,
             resource: 'clientes',
@@ -4582,11 +4641,21 @@ function customerAuthRequest(action, payload) {
             throw new Error(data?.error || 'No se pudo completar la solicitud.');
         }
         return data;
+    }).catch(error => {
+        if (error?.name === 'AbortError') {
+            throw new Error('La conexión tardó demasiado. Intenta nuevamente.');
+        }
+        if (error instanceof TypeError) {
+            throw new Error('No se pudo conectar con el sistema de clientes.');
+        }
+        throw error;
+    }).finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
     });
 }
 
 async function registerCustomerAccount(cliente) {
-    const registerActions = ['registrarcliente', 'registrocliente', 'customerregister'];
+    const registerActions = ['registrocliente', 'registrarcliente', 'customerregister'];
     let lastError = null;
 
     for (const action of registerActions) {
@@ -4932,6 +5001,24 @@ async function loadCustomerDashboard() {
     if (invoicesList) invoicesList.innerHTML = '<div class="customer-dashboard-empty">Cargando facturas...</div>';
     if (favoritesList) favoritesList.innerHTML = '<div class="customer-dashboard-empty">Cargando favoritos...</div>';
 
+    try {
+        const data = await customerAuthRequest('customerdashboard', { token: session.token });
+        if (data.cliente) setCustomerSession(session.token, data.cliente);
+        renderCustomerProfile();
+        renderCustomerOrdersList(data.orders || []);
+        renderCustomerInvoicesList(data.invoices || []);
+        renderCustomerFavoritesList(data.favorites || []);
+        return;
+    } catch (error) {
+        const message = normalizeSearchText(error.message);
+        if (!message.includes('accion no reconocida') && !message.includes('action not recognized')) {
+            if (ordersList) ordersList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus pedidos.')}</div>`;
+            if (invoicesList) invoicesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus facturas.')}</div>`;
+            if (favoritesList) favoritesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus favoritos.')}</div>`;
+            return;
+        }
+    }
+
     const [ordersResult, invoicesResult, favoritesResult] = await Promise.allSettled([
         customerAuthRequest('pedidoscliente', { token: session.token }),
         customerAuthRequest('facturascliente', { token: session.token }),
@@ -5028,13 +5115,7 @@ function openCustomerAuthModal(view) {
     setCustomerAuthView(view || (hasSession ? 'profile' : 'login'));
     renderCustomerProfile();
     if (hasSession) {
-        customerAuthRequest('perfilcliente', { token: session.token })
-            .then(data => {
-                setCustomerSession(session.token, data.cliente);
-                renderCustomerProfile();
-            })
-            .catch(() => clearCustomerSession())
-            .finally(loadCustomerDashboard);
+        loadCustomerDashboard();
     }
 }
 
@@ -5155,15 +5236,20 @@ function initCustomerAuth() {
 
     const session = getCustomerSession();
     if (session?.token) {
-        customerAuthRequest('perfilcliente', { token: session.token })
-            .then(data => {
-                setCustomerSession(session.token, data.cliente);
-                if (document.getElementById('customer-auth-modal')?.classList.contains('open')) {
-                    renderCustomerProfile();
-                    loadCustomerDashboard();
-                }
-            })
-            .catch(() => clearCustomerSession());
+        if (!isCustomerSessionFresh(session)) {
+            customerAuthRequest('perfilcliente', { token: session.token })
+                .then(data => {
+                    setCustomerSession(session.token, data.cliente);
+                    if (document.getElementById('customer-auth-modal')?.classList.contains('open')) {
+                        renderCustomerProfile();
+                        loadCustomerDashboard();
+                    }
+                })
+                .catch(() => clearCustomerSession());
+        } else if (document.getElementById('customer-auth-modal')?.classList.contains('open')) {
+            renderCustomerProfile();
+            loadCustomerDashboard();
+        }
     }
 }
 
@@ -5576,6 +5662,8 @@ async function checkout(skipPrompt = false) {
 }
 
 function initLoginBokehBackgrounds(options = {}) {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => canvas.remove());
+    return;
     const { onlyVisible = true } = options;
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
         const overlay = canvas.closest('.wholesale-overlay');
@@ -5598,7 +5686,9 @@ function initLoginBokehBackgrounds(options = {}) {
 
         function isActive() {
             if (document.visibilityState === 'hidden') return false;
-            return !overlay || overlay.classList.contains('open');
+            if (!overlay) return true;
+            if (overlay.style.display === 'none') return false;
+            return overlay.classList.contains('open');
         }
 
         function makeLight() {
@@ -5681,7 +5771,7 @@ function initLoginBokehBackgrounds(options = {}) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function initBlyxuApp() {
     cleanBrowserUrl();
     initLoginBokehBackgrounds();
     window.addEventListener('hashchange', cleanBrowserUrl);
@@ -5702,6 +5792,29 @@ document.addEventListener('DOMContentLoaded', () => {
         setCartMode('wholesale');
     }
 
+    const isProductDetailPage = Boolean(document.getElementById('product-detail'));
+    const isContactPage = document.body?.dataset.page === 'contact';
+    const isPaymentsPage = document.body?.dataset.page === 'pagos';
+    const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
+    const isCartPage = document.body?.dataset.page === 'carrito';
+    const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
+    const isHomePage = !isProductDetailPage && !isContactPage && !isPaymentsPage && !isOrdersLookupPage && !isCartPage && !isWholesalePage;
+
+    // No se guarda sesion — en mayorista siempre se pide clave
+    const shouldDelayWholesaleCatalog = isWholesalePage && !document.body.classList.contains('wholesale-unlocked');
+
+    // En pagos: si el overlay de login sigue activo, no inicializar nada pesado
+    const paymentsOverlayActive = isPaymentsPage && !!document.getElementById('qr-login-overlay');
+
+    if (shouldDelayWholesaleCatalog || paymentsOverlayActive) {
+        // Ocultar navbar para evitar backdrop-filter mientras se muestra el overlay
+        const navbar = document.getElementById('navbar');
+        if (navbar) navbar.style.display = 'none';
+        // Solo inicializar lo mínimo (acceso wholesale/pagos) y salir
+        if (isWholesalePage) initWholesaleAccess();
+        return;
+    }
+
     initParticles();
     initNavbar();
     initReveal();
@@ -5712,25 +5825,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initWholesaleAccess();
     initGlassSelects();
     initCustomerAuth();
-    const isProductDetailPage = Boolean(document.getElementById('product-detail'));
-    const isContactPage = document.body?.dataset.page === 'contact';
-    const isPaymentsPage = document.body?.dataset.page === 'pagos';
-    const isOrdersLookupPage = document.body?.dataset.page === 'facturas-pedidos';
-    const isCartPage = document.body?.dataset.page === 'carrito';
-    const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
-    const isHomePage = !isProductDetailPage && !isContactPage && !isPaymentsPage && !isOrdersLookupPage && !isCartPage && !isWholesalePage;
-    
-    const hasWholesaleAccess = localStorage.getItem('blyxu_wholesale_access') === '1' || sessionStorage.getItem('blyxu_wholesale_access') === '1';
-    
-    if (isWholesalePage && !hasWholesaleAccess) {
-        const overlay = document.getElementById('wholesale-overlay');
-        if (overlay && typeof window.openWholesaleOverlay === 'function') {
-            window.openWholesaleOverlay();
-        } else {
-            window.location.replace('index.html#mayorista');
-            return;
-        }
-    }
 
     renderFloatingWhatsApp();
     
@@ -5790,6 +5884,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPromoWidget();
             }).catch(() => {});
         }, 1800);
+    } else if (shouldDelayWholesaleCatalog) {
+        hydrateSiteConfigFromCache();
+        renderFooterSocialLinks();
+        renderPromoWidget();
     } else {
         loadProducts({ renderCatalog: !isProductDetailPage && !isCartPage, showLoading: !isHomePage }).then(() => {
             renderFloatingWhatsApp();
@@ -5832,7 +5930,13 @@ document.addEventListener('DOMContentLoaded', () => {
             s.classList.add('active');
         });
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBlyxuApp);
+} else {
+    initBlyxuApp();
+}
 
 
 

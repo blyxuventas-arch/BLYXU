@@ -13278,3 +13278,280 @@ body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-back-home {
     50% { transform: translateX(0) scaleX(.86); opacity: 1; }
     100% { transform: translateX(45%) scaleX(.24); opacity: .25; }
 }
+
+/* Performance override: accesos rapidos sin canvas, cursor custom, blur ni animaciones pesadas */
+html.native-cursor,
+html.native-cursor * {
+    cursor: auto !important;
+}
+
+#blyxu-cursor,
+.login-bokeh-canvas {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+#wholesale-overlay.wholesale-overlay,
+#wholesale-overlay.wholesale-overlay.open,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay.open,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay.open {
+    background: #05030a !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+#wholesale-overlay.wholesale-overlay::before,
+#wholesale-overlay.wholesale-overlay::after,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay::before,
+body[data-page="pagos"] #qr-login-overlay.wholesale-overlay::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay.wholesale-overlay::after {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+}
+
+#wholesale-overlay .wholesale-panel,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel {
+    background: #09090d !important;
+    box-shadow: 0 18px 42px rgba(0,0,0,.48) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transform: translateZ(0) !important;
+}
+
+#wholesale-overlay .wholesale-panel *,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel *,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel * {
+    filter: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+}
+
+#wholesale-overlay .wholesale-panel::before,
+#wholesale-overlay .wholesale-panel::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::before,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::before,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel::after {
+    content: none !important;
+    display: none !important;
+}
+
+#wholesale-overlay .wholesale-logo,
+body[data-page="pagos"] #qr-login-overlay .wholesale-logo,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-logo {
+    filter: none !important;
+    animation: none !important;
+}
+
+#wholesale-overlay .wholesale-form button,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button {
+    box-shadow: none !important;
+    transition: background .1s linear, border-color .1s linear !important;
+}
+
+#wholesale-overlay .wholesale-form button:hover,
+body[data-page="pagos"] #qr-login-overlay .wholesale-form button:hover,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-form button:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+#wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-page="pagos"] #qr-login-overlay .wholesale-panel.is-unlocking .wholesale-form button::after,
+body[data-catalog-mode="wholesale"] #wholesale-overlay .wholesale-panel.is-unlocking .wholesale-form button::after {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+}
+
+/* Performance override: contacto y catalogo mayorista sin efectos continuos */
+body[data-page="contact"] .bg-animation,
+body[data-page="contact"] #particles-canvas,
+body[data-catalog-mode="wholesale"] .bg-animation,
+body[data-catalog-mode="wholesale"] #particles-canvas {
+    display: none !important;
+}
+
+body[data-page="contact"] *,
+body[data-catalog-mode="wholesale"] * {
+    scroll-behavior: auto !important;
+}
+
+body[data-page="contact"] .reveal,
+body[data-page="contact"] .reveal.visible,
+body[data-catalog-mode="wholesale"] .reveal,
+body[data-catalog-mode="wholesale"] .reveal.visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+body[data-page="contact"] .contact-page {
+    overflow: visible !important;
+    background: #05030a !important;
+}
+
+body[data-page="contact"] .contact-page::before,
+body[data-page="contact"] .contact-page::after,
+body[data-page="contact"] .contact-hero-bg,
+body[data-page="contact"] .contact-card::before,
+body[data-page="contact"] .contact-hours-timeline::before {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+}
+
+body[data-page="contact"] .contact-hero-luxury,
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card,
+body[data-page="contact"] .contact-hero-content > div,
+body[data-page="contact"] .contact-hours-timeline,
+body[data-page="contact"] .contact-time-node,
+body[data-page="contact"] .contact-action,
+body[data-page="contact"] .contact-social-link,
+body[data-page="contact"] .navbar,
+body[data-page="contact"] .nav-icon,
+body[data-page="contact"] .nav-icon-btn,
+body[data-page="contact"] .customer-account-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    animation: none !important;
+    transition: none !important;
+}
+
+body[data-page="contact"] .contact-grid-luxury.contact-simple-grid .contact-card {
+    background: #111018 !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.34) !important;
+}
+
+body[data-page="contact"] .contact-hours-timeline {
+    background: #15101f !important;
+    box-shadow: none !important;
+}
+
+body[data-page="contact"] .contact-hours-timeline::after {
+    box-shadow: none !important;
+}
+
+body[data-page="contact"] .contact-time-node.active,
+body[data-page="contact"] .contact-time-node:not(.active),
+body[data-page="contact"] .contact-time-node strong,
+body[data-page="contact"] .contact-card-icon,
+body[data-page="contact"] .contact-card-icon svg {
+    animation: none !important;
+    filter: none !important;
+}
+
+body[data-catalog-mode="wholesale"] {
+    background: #05030a !important;
+}
+
+body[data-catalog-mode="wholesale"] .navbar,
+body[data-catalog-mode="wholesale"] .nav-icon,
+body[data-catalog-mode="wholesale"] .nav-icon-btn,
+body[data-catalog-mode="wholesale"] .customer-account-btn,
+body[data-catalog-mode="wholesale"] .smart-search,
+body[data-catalog-mode="wholesale"] .category-select-wrap,
+body[data-catalog-mode="wholesale"] .price-slider-wrap,
+body[data-catalog-mode="wholesale"] .product-card,
+body[data-catalog-mode="wholesale"] .product-card-quick,
+body[data-catalog-mode="wholesale"] .product-card-favorite,
+body[data-catalog-mode="wholesale"] .product-card-price,
+body[data-catalog-mode="wholesale"] .cart-sidebar,
+body[data-catalog-mode="wholesale"] .footer-search,
+body[data-catalog-mode="wholesale"] .footer-search-results {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    transition: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .product-card,
+body[data-catalog-mode="wholesale"] .product-card.featured {
+    box-shadow: 0 10px 26px rgba(0,0,0,.28) !important;
+    transform: none !important;
+    animation: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .product-card:hover,
+body[data-catalog-mode="wholesale"] .product-card:hover .product-card-img img,
+body[data-catalog-mode="wholesale"] .product-card:hover .product-card-quick,
+body[data-catalog-mode="wholesale"] .product-card:hover .product-card-favorite {
+    transform: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .product-card *,
+body[data-catalog-mode="wholesale"] .product-card::before,
+body[data-catalog-mode="wholesale"] .product-card::after,
+body[data-catalog-mode="wholesale"] .product-card-spec-bar > span,
+body[data-catalog-mode="wholesale"] .product-card-price.discount-active,
+body[data-catalog-mode="wholesale"] .product-card-badge,
+body[data-catalog-mode="wholesale"] .color-dot {
+    animation: none !important;
+    filter: none !important;
+    text-shadow: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .product-card-img img {
+    transition: none !important;
+}
+
+body[data-catalog-mode="wholesale"] .loading-container .spinner,
+body[data-catalog-mode="wholesale"] .brand-loader-card,
+body[data-catalog-mode="wholesale"] .brand-loader-progress {
+    animation: none !important;
+}
+
+body.wholesale-auth-blocked {
+    background: #05030a !important;
+    overflow: hidden !important;
+}
+
+body.wholesale-auth-blocked > :not(#wholesale-overlay):not(script):not(style):not(link):not(noscript) {
+    display: none !important;
+}
+
+body.wholesale-auth-blocked #wholesale-overlay.wholesale-overlay,
+body.wholesale-auth-blocked #wholesale-overlay.wholesale-overlay.open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    background: #05030a !important;
+}
+
+body.wholesale-auth-blocked .collection-section,
+body.wholesale-auth-blocked .catalog-shell,
+body.wholesale-auth-blocked .catalog-controls,
+body.wholesale-auth-blocked .products-grid,
+body.wholesale-auth-blocked .loading-container,
+body.wholesale-auth-blocked .footer,
+body.wholesale-auth-blocked .floating-whatsapp,
+body.wholesale-auth-blocked .cart-sidebar,
+body.wholesale-auth-blocked .cart-overlay {
+    display: none !important;
+}
+
+body.wholesale-auth-blocked .navbar {
+    opacity: .06 !important;
+    pointer-events: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+}

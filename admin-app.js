@@ -2704,8 +2704,15 @@ function initSettingsTabs() {
 }
 
 function initLoginBokehBackgrounds() {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => canvas.remove());
+    return;
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
-        if (canvas.dataset.ready === 'login-bokeh') return;
+        const overlay = canvas.closest('.wholesale-overlay');
+        if (overlay && !overlay.classList.contains('open') && overlay.style.display === 'none') return;
+        if (canvas.dataset.ready === 'login-bokeh') {
+            if (typeof canvas.__blyxuBokehStart === 'function') canvas.__blyxuBokehStart();
+            return;
+        }
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         canvas.dataset.ready = 'login-bokeh';
@@ -2716,6 +2723,14 @@ function initLoginBokehBackgrounds() {
         let width = 0;
         let height = 0;
         let dpr = 1;
+        let rafId = 0;
+
+        function isActive() {
+            if (document.visibilityState === 'hidden') return false;
+            if (!overlay) return true;
+            if (overlay.style.display === 'none') return false;
+            return overlay.classList.contains('open') || overlay.id === 'admin-login-screen';
+        }
 
         function makeLight() {
             const size = Math.random() * 170 + 120;
@@ -2758,6 +2773,10 @@ function initLoginBokehBackgrounds() {
         }
 
         function tick() {
+            if (!isActive()) {
+                rafId = 0;
+                return;
+            }
             ctx.clearRect(0, 0, width, height);
             ctx.globalCompositeOperation = 'lighter';
             lights.forEach(light => {
@@ -2774,45 +2793,60 @@ function initLoginBokehBackgrounds() {
                 }
             });
             ctx.globalCompositeOperation = 'source-over';
-            if (!reduceMotion) requestAnimationFrame(tick);
+            rafId = reduceMotion ? 0 : requestAnimationFrame(tick);
         }
 
-        resize();
-        window.addEventListener('resize', resize, { passive: true });
-        tick();
+        function start() {
+            resize();
+            if (!rafId) tick();
+        }
+
+        canvas.__blyxuBokehStart = start;
+        window.addEventListener('resize', () => {
+            if (isActive()) resize();
+        }, { passive: true });
+        document.addEventListener('visibilitychange', () => {
+            if (isActive()) start();
+        });
+        start();
     });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initLoginBokehBackgrounds();
+    let adminHeavyFeaturesReady = false;
+    function initAdminHeavyFeatures() {
+        if (adminHeavyFeaturesReady) return;
+        adminHeavyFeaturesReady = true;
+        initSettingsTabs();
+        initOrdersAdminTabs();
+        initChinaOrdersBuilder();
+        initAdminCostCalculator();
+        initRetailPriceToggle();
+        initMercadoPagoPublicToggle();
+        initContactConfigAdmin();
+        initWhatsAppConfigAdmin();
+        initInvoiceConfigAdmin();
+        initPromoConfigAdmin();
+        initHomeAdConfigAdmin();
+        initCustomerPromoAdmin();
+        initQRConfigAdmin();
+        initInventorySearch();
+        initInventoryActions();
+        initInventoryPdfExport();
+        initCarouselImageAdmin();
+        initProductImageUpload();
+        initProductGalleryUpload();
+        initColorPickers();
+        initProductMeasurementControls();
+        initProductBarcodeField();
+        resetProductForm(); // Initialize the form with auto-generated IDs
+    }
     const settingsSidebarBtn = document.querySelector('.sidebar-btn[onclick*="settings"]');
     if (settingsSidebarBtn) {
         settingsSidebarBtn.innerHTML = '<span style="font-size:18px; width:24px;">&#9881;</span> Ajustes y Banner';
     }
-    initSettingsTabs();
-    initOrdersAdminTabs();
-    initChinaOrdersBuilder();
-    initAdminCostCalculator();
-    initRetailPriceToggle();
-    initMercadoPagoPublicToggle();
-    initContactConfigAdmin();
-    initWhatsAppConfigAdmin();
-    initInvoiceConfigAdmin();
-    initPromoConfigAdmin();
-    initHomeAdConfigAdmin();
-    initCustomerPromoAdmin();
-    initQRConfigAdmin();
-    initInventorySearch();
-    initInventoryActions();
-    initInventoryPdfExport();
-    initCarouselImageAdmin();
-    initProductImageUpload();
-    initProductGalleryUpload();
-    initColorPickers();
-    initProductMeasurementControls();
-    initProductBarcodeField();
-    resetProductForm(); // Initialize the form with auto-generated IDs
     const adminPasswordInput = document.getElementById('admin-password');
     if (adminPasswordInput) adminPasswordInput.placeholder = 'Clave';
     const adminLoginButton = document.querySelector('#admin-login-form .admin-btn');
@@ -2928,18 +2962,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (pass === '2015690') {
                 loginError.style.display = 'none';
+                loginScreen.style.opacity = '0';
                 setTimeout(() => {
-                    loginScreen.style.opacity = '0';
-                    setTimeout(() => {
-                        loginScreen.style.display = 'none';
-                        mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
-                        renderAdminDashboard();
-                        Promise.allSettled([
-                            cargarInventario(),
-                            cargarPedidos()
-                        ]).then(() => renderAdminDashboard());
-                    }, 180);
-                }, 850);
+                    loginScreen.style.display = 'none';
+                    mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
+                    initAdminHeavyFeatures();
+                    renderAdminDashboard();
+                    Promise.allSettled([
+                        cargarInventario(),
+                        cargarPedidos()
+                    ]).then(() => renderAdminDashboard());
+                }, 120);
             } else {
                 loginError.style.display = 'block';
                 resetButton();

@@ -4,7 +4,14 @@ const BLYXU_WHATSAPP_PHONE = '573112368622';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const SITE_CONFIG_TTL = 5 * 60 * 1000;
 const CART_KEYS = ['blyxu_cart_retail', 'blyxu_cart_wholesale', 'blyxu_cart'];
-let siteConfig = {};
+let siteConfig = (function() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(SITE_CONFIG_CACHE_KEY) || 'null');
+        return cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object' ? cached.data : {};
+    } catch (_) {
+        return {};
+    }
+})();
 let configLoadPromise = null;
 let cart = loadLiteCart();
 
@@ -59,7 +66,7 @@ function writeConfigCache(config) {
 async function fetchSiteConfig() {
     const cached = readConfigCache();
     if (cached?.data && Date.now() - Number(cached.savedAt || 0) < SITE_CONFIG_TTL) {
-        siteConfig = cached.data;
+        siteConfig = Object.assign(siteConfig, cached.data);
         return siteConfig;
     }
 
@@ -68,8 +75,11 @@ async function fetchSiteConfig() {
             .then(response => response.json())
             .then(data => {
                 if (data?.status === 'success' && data.config) {
-                    siteConfig = data.config;
+                    siteConfig = Object.assign(siteConfig, data.config);
                     writeConfigCache(siteConfig);
+                    try {
+                        window.dispatchEvent(new CustomEvent('blyxu:config-loaded', { detail: siteConfig }));
+                    } catch (_) {}
                 }
                 return siteConfig;
             })
@@ -213,6 +223,9 @@ function initFooterPageSearch() {
 }
 
 function initCustomCursor() {
+    document.documentElement.classList.add('native-cursor');
+    document.getElementById('blyxu-cursor')?.remove();
+    return;
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
     document.documentElement.classList.remove('native-cursor');
@@ -466,6 +479,8 @@ function renderFloatingWhatsApp() {
 function renderPromoWidget() {}
 
 function initLoginBokehBackgrounds(options = {}) {
+    document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => canvas.remove());
+    return;
     const { onlyVisible = true } = options;
     document.querySelectorAll('.login-bokeh-canvas').forEach(canvas => {
         const overlay = canvas.closest('.wholesale-overlay');
@@ -488,7 +503,9 @@ function initLoginBokehBackgrounds(options = {}) {
 
         function isActive() {
             if (document.visibilityState === 'hidden') return false;
-            return !overlay || overlay.classList.contains('open');
+            if (!overlay) return true;
+            if (overlay.style.display === 'none') return false;
+            return overlay.classList.contains('open');
         }
 
         function makeLight() {
@@ -573,17 +590,38 @@ function initLoginBokehBackgrounds(options = {}) {
 
 document.addEventListener('DOMContentLoaded', () => {
     cleanBrowserUrl();
-    initLoginBokehBackgrounds();
     window.addEventListener('hashchange', cleanBrowserUrl);
-    initCustomCursor();
-    initParticles();
+
+    // Ocultar navbar para evitar backdrop-filter durante el login
+    const isPaymentsPage = document.body?.dataset.page === 'pagos';
+    const navbar = document.getElementById('navbar');
+    if (isPaymentsPage && navbar) navbar.style.display = 'none';
+
     initNavbar();
-    initReveal();
     initFooterPageSearch();
     updateCartUI();
-    fetchSiteConfig().then(() => {
-        renderContactPage();
-        renderFooterSocialLinks();
-        renderFloatingWhatsApp();
+
+    // Retrasar carga de config hasta que el overlay se cierre
+    const waitForAuth = new Promise(resolve => {
+        if (!isPaymentsPage || document.body.classList.contains('payments-unlocked')) {
+            resolve();
+            return;
+        }
+        const obs = new MutationObserver(() => {
+            if (document.body.classList.contains('payments-unlocked')) {
+                obs.disconnect();
+                if (navbar) navbar.style.display = '';
+                resolve();
+            }
+        });
+        obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    });
+
+    waitForAuth.then(() => {
+        fetchSiteConfig().then(() => {
+            renderContactPage();
+            renderFooterSocialLinks();
+            renderFloatingWhatsApp();
+        });
     });
 });

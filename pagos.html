@@ -5,77 +5,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pagos QR - BLYXU</title>
-    <meta name="description" content="Página de pagos por QR de BLYXU.">
+    <meta name="description" content="Página de pagos y transferencias de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923"></noscript>
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="preconnect" href="https://lh3.googleusercontent.com">
+    <link rel="preload" href="blyxu-style.css?v=pagos-login-clean-20260924" as="style">
+    <link rel="stylesheet" href="blyxu-style.css?v=pagos-login-clean-20260924">
+    <script>
+        // Limpiar claves guardadas — siempre pedir login
+        try {
+            localStorage.removeItem('blyxu_payments_access');
+            sessionStorage.removeItem('blyxu_payments_access');
+        } catch(e) {}
+    </script>
+
     <style>
-        /* Estilos específicos para la página de Pagos QR */
+        /* Estilos optimizados para la página de Pagos QR */
         .qr-page-section {
-            padding: 120px 24px 60px;
+            padding: 120px 20px 60px;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
+            position: relative;
+            z-index: 2;
         }
 
         .qr-card {
-            background: rgba(13, 10, 26, 0.6);
-            border: 1px solid rgba(168, 85, 247, 0.2);
+            background: rgba(14, 10, 24, 0.92);
+            border: 1px solid rgba(168, 85, 247, 0.28);
             border-radius: 24px;
-            padding: 40px;
+            padding: 36px 30px;
             text-align: center;
-            max-width: 400px;
+            max-width: 480px;
             width: 100%;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 32px rgba(168, 85, 247, 0.05);
-            backdrop-filter: blur(12px);
-            display: none; /* Se muestra solo al autenticarse */
-            animation: fadeIn 0.4s ease forwards;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 32px rgba(168, 85, 247, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: none;
+            animation: qrFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes qrFadeIn {
+            from { opacity: 0; transform: scale(0.97) translateY(8px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         .qr-card h2 {
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: 24px;
-            font-weight: 800;
+            font-size: 26px;
+            font-weight: 700;
             margin-bottom: 8px;
-            background: linear-gradient(to right, #fff, #ffd969);
-            background-clip: text;
+            background: linear-gradient(135deg, #ffffff 30%, #f3e8ff 70%, #ffd969 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
         }
 
         .qr-card p {
             font-size: 14px;
-            color: var(--text-dim);
+            color: rgba(255, 255, 255, 0.7);
             margin-bottom: 24px;
+            line-height: 1.5;
         }
 
         .qr-image-container {
-            background: #fff;
-            padding: 16px;
+            background: #ffffff;
+            padding: 14px;
             border-radius: 16px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            margin-top: 14px;
+            margin-bottom: 18px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
             position: relative;
             overflow: hidden;
-        }
-
-        .qr-image-container::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border: 2px solid rgba(168, 85, 247, 0.5);
-            border-radius: 16px;
-            pointer-events: none;
-            animation: pulseBorder 2s infinite alternate;
-        }
-
-        @keyframes pulseBorder {
-            0% { border-color: rgba(168, 85, 247, 0.2); box-shadow: inset 0 0 0 rgba(168, 85, 247, 0); }
-            100% { border-color: rgba(244, 196, 65, 0.8); box-shadow: inset 0 0 20px rgba(244, 196, 65, 0.2); }
+            display: inline-block;
+            max-width: 280px;
+            width: 100%;
         }
 
         .qr-image-container img {
@@ -86,7 +94,7 @@
         }
 
         .qr-empty-state {
-            color: var(--text-muted);
+            color: rgba(255, 255, 255, 0.5);
             font-size: 14px;
             padding: 24px 0;
             display: none;
@@ -94,179 +102,253 @@
 
         /* Overlay de Login para QR */
         #qr-login-overlay {
-            position: fixed;
-            inset: 0;
-            backdrop-filter: blur(20px);
-            z-index: 1000;
-            display: flex;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 20px !important;
+            background: #09030f !important;
+        }
+
+        html.is-payments-auth #pagos-login-screen,
+        body.payments-unlocked #pagos-login-screen {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        body.payments-auth-blocked:not(.payments-unlocked) {
+            background: #05030a !important;
+            overflow: hidden !important;
+        }
+
+        /* Mientras el overlay está activo: ocultar navbar, contenido y footer */
+        body.payments-auth-blocked:not(.payments-unlocked) .navbar,
+        body.payments-auth-blocked:not(.payments-unlocked) .qr-page-section,
+        body.payments-auth-blocked:not(.payments-unlocked) .footer {
+            display: none !important;
+        }
+
+        /* Al autenticar: mostrar todo de nuevo */
+        body.payments-unlocked .navbar { display: flex !important; }
+        body.payments-unlocked .qr-page-section { display: flex !important; }
+        body.payments-unlocked .footer { display: grid !important; }
+
+        #qr-login-overlay .wholesale-panel {
+            width: min(420px, 94vw) !important;
+            margin: 0 auto !important;
+            padding: 36px 30px 32px !important;
+            border: 1px solid rgba(168, 85, 247, 0.28) !important;
+            border-radius: 24px !important;
+            background: #0e0a18 !important;
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8) !important;
+            text-align: center !important;
+        }
+
+        #qr-login-overlay .wholesale-logo {
+            width: 64px !important;
+            height: auto !important;
+            margin: 0 auto 16px !important;
+            display: block !important;
+        }
+
+        #qr-login-overlay .wholesale-kicker {
+            margin: 0 0 6px !important;
+            color: #d8b4fe !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            letter-spacing: 2.5px !important;
+            text-transform: uppercase !important;
+        }
+
+        #qr-login-overlay h2 {
+            margin: 0 0 22px !important;
+            color: #fff !important;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 26px !important;
+            font-weight: 700 !important;
+            line-height: 1.15 !important;
+            background: linear-gradient(135deg, #ffffff 30%, #f3e8ff 70%, #ffd969 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #qr-login-overlay .wholesale-form {
+            display: grid !important;
+            gap: 14px !important;
+        }
+
+        #qr-login-overlay input {
+            width: 100% !important;
+            height: 52px !important;
+            border: 1px solid rgba(168, 85, 247, 0.35) !important;
+            border-radius: 12px !important;
+            background: rgba(0, 0, 0, 0.6) !important;
+            color: #fff !important;
+            padding: 0 16px !important;
+            font: inherit !important;
+            font-size: 20px !important;
+            text-align: center !important;
+            letter-spacing: 6px !important;
+            outline: none !important;
+            transition: border-color 0.15s !important;
+        }
+
+        #qr-login-overlay input:focus {
+            border-color: #ffd969 !important;
+        }
+
+        #qr-login-overlay button {
+            width: 100% !important;
+            height: 52px !important;
+            border: 0 !important;
+            border-radius: 12px !important;
+            background: linear-gradient(135deg, #a855f7, #c084fc) !important;
+            color: #fff !important;
+            font: inherit !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            letter-spacing: 1.5px !important;
+            text-transform: uppercase !important;
+            cursor: pointer !important;
+            box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4) !important;
+            transition: opacity 0.15s !important;
+        }
+
+        #qr-login-overlay button:hover:not(:disabled) {
+            opacity: 0.9 !important;
+        }
+
+        #qr-login-overlay button:disabled {
+            opacity: 0.6 !important;
+            cursor: wait !important;
+        }
+
+        #qr-error-msg {
+            min-height: 18px !important;
+            margin-top: 10px !important;
+            color: #fb7185 !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+        }
+
+        .qr-back-link {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            transition: opacity 0.4s ease;
-        }
-
-        .qr-login-box {
-            background: rgba(13, 10, 26, 0.8);
-            border: 1px solid rgba(168, 85, 247, 0.3);
-            border-radius: 24px;
-            padding: 40px;
-            text-align: center;
-            max-width: 360px;
-            width: 90%;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .qr-login-box h2 {
-            font-size: 18px;
-            font-weight: 800;
-            margin-bottom: 24px;
-            color: #fff;
-            letter-spacing: 1px;
-        }
-
-        .qr-login-box .form-control {
-            height: 54px;
-            border-radius: 12px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(168, 85, 247, 0.4);
-            color: #fff;
-            text-align: center;
-            letter-spacing: 4px;
-            font-size: 16px;
-            margin-bottom: 24px;
-            width: 100%;
-            transition: all 0.3s ease;
-        }
-
-        .qr-login-box .form-control:focus {
-            border-color: #ffd969;
-            box-shadow: 0 0 16px rgba(255, 217, 105, 0.2);
-            outline: none;
-        }
-
-        .qr-login-btn {
-            background: linear-gradient(135deg, #a855f7, #f4c441);
-            color: #09030f;
-            font-weight: 800;
-            border: none;
-            border-radius: 12px;
-            height: 50px;
-            width: 100%;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: transform 0.2s, filter 0.2s;
-        }
-
-        .qr-login-btn:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
-        }
-
-        .qr-error-msg {
-            color: var(--danger);
+            gap: 6px;
+            margin-top: 16px;
+            color: rgba(255, 255, 255, 0.6);
             font-size: 12px;
-            margin-top: -12px;
-            margin-bottom: 12px;
-            display: none;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .qr-back-link:hover {
+            color: #ffd969;
         }
 
-        .loading-qr-data {
-            color: #fff;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            height: 100vh;
-        }
-
-        /* Estilos para múltiples métodos de pago */
+        /* Pestañas de Métodos de Pago */
         .payment-tabs {
             display: flex;
             gap: 8px;
             overflow-x: auto;
             padding-bottom: 8px;
             margin-bottom: 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             scrollbar-width: none;
+            justify-content: center;
         }
         .payment-tabs::-webkit-scrollbar {
             display: none;
         }
         .payment-tab-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(168, 85, 247, 0.15);
-            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            color: rgba(255, 255, 255, 0.75);
             padding: 10px 18px;
             border-radius: 12px;
             cursor: pointer;
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             white-space: nowrap;
-            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
         }
         .payment-tab-btn:hover {
-            background: rgba(168, 85, 247, 0.08);
+            background: rgba(168, 85, 247, 0.15);
             color: #fff;
+            border-color: rgba(168, 85, 247, 0.4);
         }
         .payment-tab-btn.active {
-            background: var(--primary);
-            border-color: var(--primary);
+            background: linear-gradient(135deg, #a855f7, #7e22ce);
+            border-color: #c084fc;
             color: #fff;
-            box-shadow: 0 4px 15px var(--glow);
+            box-shadow: 0 4px 18px rgba(168, 85, 247, 0.45);
         }
         .payment-info-box {
-            animation: tabFadeIn 0.35s ease forwards;
-            text-align: left;
+            animation: tabFadeIn 0.3s ease forwards;
+            text-align: center;
         }
         @keyframes tabFadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(6px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .copy-box {
             display: flex;
             align-items: center;
-            background: rgba(0, 0, 0, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(168, 85, 247, 0.25);
             border-radius: 12px;
-            padding: 10px 14px;
+            padding: 8px 12px;
             margin-bottom: 16px;
-            gap: 10px;
+            gap: 8px;
         }
         .copy-text {
-            font-family: monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 15px;
             color: #ffd969;
             font-weight: 700;
             flex: 1;
             word-break: break-all;
             user-select: all;
+            text-align: left;
+            padding-left: 6px;
         }
         .copy-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
             color: #fff;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 800;
             padding: 8px 14px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .copy-btn:hover {
             background: #ffd969;
             color: #09030f;
             border-color: #ffd969;
+            transform: scale(1.03);
+        }
+        .instruction-box {
+            margin-top: 14px;
+            padding: 14px;
+            background: rgba(168, 85, 247, 0.06);
+            border: 1px solid rgba(168, 85, 247, 0.15);
+            border-radius: 12px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.5;
+            text-align: left;
         }
     </style>
 </head>
 
-<body data-page="pagos">
-    <div class="bg-animation"></div>
-    <canvas id="particles-canvas"></canvas>
+<body data-page="pagos" class="payments-auth-blocked">
 
     <nav class="navbar scrolled" id="navbar">
         <a href="index.html" class="nav-logo">
@@ -297,49 +379,43 @@
     </nav>
 
     <!-- Overlay de Login -->
-    <div class="wholesale-overlay open" id="qr-login-overlay" style="opacity: 1; pointer-events: auto; display: flex; z-index: 1000;">
-        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
-        <div class="wholesale-panel">
+    <div class="wholesale-overlay open" id="qr-login-overlay">
+        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
             <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
-            <div class="login-brand-word" aria-hidden="true">BLYXU</div>
             <div class="wholesale-kicker">ZONA SEGURA</div>
             <h2 id="qr-title">ZONA DE PAGOS</h2>
             <form class="wholesale-form" id="qr-login-form">
-                <input type="password" id="qr-password-input" placeholder="Clave" autocomplete="off" required>
-                <button type="submit">Validar</button>
+                <input type="password" id="qr-password-input" placeholder="Clave de acceso" autocomplete="off" required>
+                <button type="submit" id="qr-submit-btn">Ingresar</button>
             </form>
-            <div class="wholesale-error" id="qr-error-msg" style="display:none;">Contraseña incorrecta</div>
+            <div class="wholesale-error" id="qr-error-msg" style="display:none;">Contrase&ntilde;a incorrecta</div>
+            <a href="index.html" class="qr-back-link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Volver a la tienda</span>
+            </a>
         </div>
     </div>
 
     <!-- Contenido Principal -->
     <section class="qr-page-section">
-        <div id="qr-loading" class="loading-qr-data" style="display:none;">
-            <svg class="spinner" viewBox="0 0 50 50" style="width: 24px; height: 24px; animation: spin 2s linear infinite;">
-                <circle cx="25" cy="25" r="20" fill="none" stroke="#a855f7" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="60"></circle>
-            </svg>
-            Cargando código QR...
-        </div>
-
-        <div class="qr-card" id="qr-card-content" style="max-width: 480px; width: 100%;">
+        <div class="qr-card" id="qr-card-content">
             <h2>PAGOS BLYXU</h2>
-            <p style="margin-bottom: 20px;">Selecciona tu método de pago y sigue las instrucciones:</p>
+            <p>Selecciona tu m&eacute;todo de pago y sigue las instrucciones para realizar tu transferencia o escaneo:</p>
             
             <!-- Pestañas de Métodos de Pago -->
-            <div class="payment-tabs" id="payment-tabs">
-                <!-- Se inyectarán por JS -->
-            </div>
+            <div class="payment-tabs" id="payment-tabs"></div>
             
             <!-- Contenedor de Detalle del Método -->
-            <div id="payment-method-detail">
-                <!-- Se inyectará por JS -->
-            </div>
+            <div id="payment-method-detail"></div>
             
             <div class="qr-empty-state" id="qr-empty-state" style="display:none;">
-                El administrador aún no ha configurado opciones de pago.
+                El administrador a&uacute;n no ha configurado opciones de pago.
             </div>
 
-            <a href="index.html" class="main-banner-btn" style="width: 100%; justify-content: center; margin-top: 16px;">Volver a la tienda</a>
+            <a href="index.html" class="main-banner-btn" style="width: 100%; justify-content: center; margin-top: 20px; border-radius: 12px;">Volver a la tienda</a>
         </div>
     </section>
 
@@ -359,7 +435,7 @@
             <ul>
                 <li><a href="index.html">Inicio</a></li>
                 <li><a href="index.html#coleccion">Catalogo</a></li>
-                <li><a href="index.html#mayorista">Mayorista</a></li>
+                <li><a href="mayorista.html">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="facturas-pedidos.html">Facturas y pedidos</a></li>
             </ul>
@@ -376,7 +452,7 @@
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
                 <a href="index.html" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
                 <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Catalogo</a>
-                <a href="index.html#mayorista" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
+                <a href="mayorista.html" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="contacto.html" data-footer-search-item data-keywords="contacto horario telefono redes whatsapp">Contacto</a>
                 <a href="facturas-pedidos.html" data-footer-search-item data-keywords="facturas pedidos ordenes comprobantes">Facturas y pedidos</a>
                 <a href="#qr-card-content" data-footer-search-item data-keywords="pagos qr transferencia cuenta pagar">Pagos QR</a>
@@ -403,18 +479,19 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=perf-20260922" defer></script>
+    <script src="blyxu-lite.js?v=perf-pagos-opt-20260924" defer></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        (function() {
+            const ACCESS_KEY = 'blyxu_payments_access';
             const form = document.getElementById('qr-login-form');
             const input = document.getElementById('qr-password-input');
             const errorMsg = document.getElementById('qr-error-msg');
             const overlay = document.getElementById('qr-login-overlay');
-            const panel = overlay?.querySelector('.wholesale-panel');
             const card = document.getElementById('qr-card-content');
-            const loading = document.getElementById('qr-loading');
+            const submitBtn = document.getElementById('qr-submit-btn');
 
             window.copyToClipboard = function(text, btn) {
+                if (!text) return;
                 navigator.clipboard.writeText(text).then(() => {
                     const originalText = btn.textContent;
                     btn.textContent = '¡Copiado! ✓';
@@ -426,11 +503,19 @@
                         btn.style.background = '';
                         btn.style.borderColor = '';
                         btn.style.color = '';
-                    }, 1500);
+                    }, 1600);
                 }).catch(err => {
                     console.error('Error al copiar:', err);
                 });
             };
+
+            function isPaymentsAuthorized() {
+                try {
+                    return sessionStorage.getItem(ACCESS_KEY) === '1' || localStorage.getItem(ACCESS_KEY) === '1';
+                } catch (e) {
+                    return false;
+                }
+            }
 
             function readLocalSiteConfigCache() {
                 try {
@@ -443,70 +528,43 @@
                 }
             }
 
-            const PAYMENT_CONFIG_CACHE_MAX_AGE = 60 * 60 * 1000;
-
-            function applyRecentLocalPaymentConfig(cached) {
-                if (!cached || Date.now() - Number(cached.savedAt || 0) > PAYMENT_CONFIG_CACHE_MAX_AGE) return;
-                if (typeof siteConfig === 'undefined') return;
-
-                ['QR_Password', 'QR_Payments_JSON', 'QR_Image'].forEach(key => {
-                    if (Object.prototype.hasOwnProperty.call(cached.data, key)) {
-                        siteConfig[key] = cached.data[key];
-                    }
-                });
-                localStorage.setItem('blyxu_site_config_cache_v1', JSON.stringify(cached));
-            }
-
-            async function refreshPaymentConfig() {
-                if (typeof fetchSiteConfig !== 'function') {
-                    return typeof siteConfig !== 'undefined' ? siteConfig : {};
-                }
-
-                const recentLocalConfig = readLocalSiteConfigCache();
-                applyRecentLocalPaymentConfig(recentLocalConfig);
-
-                if (String(getSiteConfigValue('QR_Password', '')).trim()) {
-                    fetchSiteConfig()
-                        .then(() => applyRecentLocalPaymentConfig(recentLocalConfig))
-                        .catch(error => console.warn('No se pudo refrescar configuracion de pagos:', error));
-                    return siteConfig;
-                }
-
-                if (typeof configLoadPromise !== 'undefined' && configLoadPromise) {
-                    try {
-                        await configLoadPromise;
-                    } catch (error) {
-                        console.warn('No se pudo completar la carga inicial de configuracion:', error);
-                    }
-                }
-
-                await fetchSiteConfig();
-                applyRecentLocalPaymentConfig(recentLocalConfig);
-                return siteConfig;
+            function escapeHtml(text) {
+                if (!text) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
             }
 
             function renderPaymentMethods() {
+                if (!card) return;
                 card.style.display = 'block';
+
                 const tabsContainer = document.getElementById('payment-tabs');
                 const detailContainer = document.getElementById('payment-method-detail');
                 const emptyState = document.getElementById('qr-empty-state');
-                
                 if (!tabsContainer || !detailContainer || !emptyState) return;
 
+                const cachedConfig = readLocalSiteConfigCache();
+                const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
+                    ? siteConfig
+                    : (cachedConfig?.data || {});
+
                 let methods = [];
-                const jsonStr = getSiteConfigValue('QR_Payments_JSON', '');
-                const oldQrUrl = getSiteConfigValue('QR_Image', '');
-                
+                const jsonStr = currentConfig.QR_Payments_JSON || currentConfig.qr_payments_json || '';
+                const oldQrUrl = currentConfig.QR_Image || currentConfig.qr_image || '';
+
                 if (jsonStr) {
                     try {
-                        methods = JSON.parse(jsonStr);
+                        methods = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
                     } catch(e) {
                         console.error('Error parsing QR_Payments_JSON:', e);
                     }
                 }
-                
-                // Retrocompatibilidad
-                if (methods.length === 0 && oldQrUrl) {
+
+                if ((!methods || !methods.length) && oldQrUrl) {
                     methods = [{
                         name: 'Código QR de Pago',
                         type: 'qr',
@@ -516,7 +574,7 @@
                     }];
                 }
 
-                if (methods.length === 0) {
+                if (!methods || methods.length === 0) {
                     tabsContainer.style.display = 'none';
                     detailContainer.style.display = 'none';
                     emptyState.style.display = 'block';
@@ -526,11 +584,10 @@
                 emptyState.style.display = 'none';
                 tabsContainer.style.display = 'flex';
                 detailContainer.style.display = 'block';
-                
-                // Renderizar pestañas
+
                 tabsContainer.innerHTML = methods.map((m, idx) => `
-                    <button type="button" class="payment-tab-btn ${idx === 0 ? 'active' : ''}" onclick="selectPaymentTab(${idx})">
-                        ${escapeHtml(m.name)}
+                    <button type="button" class="payment-tab-btn ${idx === 0 ? 'active' : ''}" onclick="window.selectPaymentTab(${idx})">
+                        ${escapeHtml(m.name || 'Método ' + (idx + 1))}
                     </button>
                 `).join('');
 
@@ -545,9 +602,9 @@
 
                     let html = `<div class="payment-info-box">`;
 
-                    if (m.type === 'key' || m.type === 'both') {
+                    if (m.type === 'key' || m.type === 'both' || m.value) {
                         html += `
-                            <p style="margin-bottom: 8px; font-weight: 600; color: rgba(255,255,255,0.7); font-size: 13px;">Número de cuenta o llave:</p>
+                            <p style="margin-bottom: 8px; font-weight: 700; color: rgba(255,255,255,0.8); font-size: 13px;">Número de cuenta o llave:</p>
                             <div class="copy-box">
                                 <span class="copy-text">${escapeHtml(m.value)}</span>
                                 <button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHtml(m.value)}', this)">Copiar</button>
@@ -555,19 +612,19 @@
                         `;
                     }
 
-                    const qrImageUrl = typeof normalizeImageUrl === 'function' ? normalizeImageUrl(m.image) : m.image;
-                    if ((m.type === 'qr' || m.type === 'both') && qrImageUrl) {
+                    const qrImageUrl = (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(m.image) : m.image) || '';
+                    if ((m.type === 'qr' || m.type === 'both' || qrImageUrl) && qrImageUrl) {
                         html += `
-                            <p style="margin-bottom: 12px; font-weight: 600; color: rgba(255,255,255,0.7); font-size: 13px;">Código QR de Pago:</p>
+                            <p style="margin-bottom: 6px; font-weight: 700; color: rgba(255,255,255,0.8); font-size: 13px;">Código QR de Pago:</p>
                             <div class="qr-image-container">
-                                <img src="${escapeHtml(qrImageUrl)}" alt="Código QR de Pago">
+                                <img src="${escapeHtml(qrImageUrl)}" alt="Código QR de Pago" loading="lazy">
                             </div>
                         `;
                     }
 
                     if (m.instructions) {
                         html += `
-                            <div style="margin-top: 16px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                            <div class="instruction-box">
                                 💡 <strong>Instrucciones:</strong> ${escapeHtml(m.instructions)}
                             </div>
                         `;
@@ -577,68 +634,97 @@
                     detailContainer.innerHTML = html;
                 };
 
-                function escapeHtml(text) {
-                    if (!text) return '';
-                    return String(text)
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .replace(/"/g, '&quot;')
-                        .replace(/'/g, '&#039;');
-                }
-
-                // Seleccionar pestaña inicial
-                selectPaymentTab(0);
+                window.selectPaymentTab(0);
             }
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                errorMsg.style.display = 'none';
-                
-                const btn = form.querySelector('button');
-                const originalText = btn ? btn.textContent : '';
-                if (btn) {
-                    btn.textContent = 'Validando...';
-                    btn.disabled = true;
-                }
-                panel?.classList.add('is-unlocking');
-                try {
-                    await refreshPaymentConfig();
-                } catch (error) {
-                    console.warn('No se pudo refrescar configuracion de pagos:', error);
-                }
-
-                const expectedPass = String(getSiteConfigValue('QR_Password', '')).trim();
-                const enteredPass = input.value.trim();
-
-                if (!expectedPass) {
-                    errorMsg.textContent = 'El administrador no ha configurado una contraseña.';
-                    errorMsg.style.display = 'block';
-                    panel?.classList.remove('is-unlocking');
-                    if (btn) {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
-                    }
-                    return;
-                }
-
-                if (enteredPass === expectedPass) {
+            function unlockPayments() {
+                document.body.classList.remove('payments-auth-blocked');
+                document.body.classList.add('payments-unlocked');
+                // Mostrar navbar de nuevo
+                var nav = document.getElementById('navbar');
+                if (nav) nav.style.display = '';
+                if (overlay) {
                     overlay.style.opacity = '0';
-                    setTimeout(() => {
+                    overlay.classList.remove('open');
+                    overlay.setAttribute('aria-hidden', 'true');
+                    setTimeout(function() {
                         overlay.style.display = 'none';
-                        renderPaymentMethods();
-                    }, 400);
+                        overlay.remove();
+                        // Re-invocar la app para inicializar todo lo que se bloqueó
+                        if (typeof initBlyxuApp === 'function') initBlyxuApp();
+                    }, 200);
                 } else {
-                    errorMsg.textContent = 'Contraseña incorrecta';
-                    errorMsg.style.display = 'block';
-                    panel?.classList.remove('is-unlocking');
-                    if (btn) {
-                        btn.textContent = originalText;
-                        btn.disabled = false;
+                    if (typeof initBlyxuApp === 'function') initBlyxuApp();
+                }
+                renderPaymentMethods();
+            }
+
+            // Siempre pedir clave — no se guarda sesión
+            setTimeout(() => input?.focus({ preventScroll: true }), 60);
+
+            form?.addEventListener('submit', function(e) {
+                e.preventDefault();
+                if (errorMsg) errorMsg.style.display = 'none';
+
+                const enteredPass = (input?.value || '').trim();
+                const cachedConfig = readLocalSiteConfigCache();
+                const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
+                    ? siteConfig
+                    : (cachedConfig?.data || {});
+
+                const configuredPass = String(currentConfig.QR_Password || currentConfig.qr_password || (cachedConfig?.data?.QR_Password) || '2027').trim();
+
+                if (enteredPass === configuredPass) {
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Accediendo...';
+                        submitBtn.disabled = true;
+                    }
+                    unlockPayments();
+                } else {
+                    // Si la clave no coincide, verificar rápidamente si hay actualización en la nube
+                    if (typeof fetchSiteConfig === 'function') {
+                        if (submitBtn) {
+                            submitBtn.textContent = 'Validando...';
+                            submitBtn.disabled = true;
+                        }
+                        fetchSiteConfig().then(cfg => {
+                            if (submitBtn) {
+                                submitBtn.textContent = 'Ingresar';
+                                submitBtn.disabled = false;
+                            }
+                            const freshPass = String(cfg?.QR_Password || '2027').trim();
+                            if (enteredPass === freshPass) {
+                                unlockPayments();
+                            } else {
+                                if (errorMsg) errorMsg.style.display = 'block';
+                                input?.select();
+                            }
+                        }).catch(() => {
+                            if (submitBtn) {
+                                submitBtn.textContent = 'Ingresar';
+                                submitBtn.disabled = false;
+                            }
+                            if (errorMsg) errorMsg.style.display = 'block';
+                            input?.select();
+                        });
+                    } else {
+                        if (errorMsg) errorMsg.style.display = 'block';
+                        input?.select();
                     }
                 }
             });
-        });
+
+            input?.addEventListener('input', function() {
+                if (errorMsg) errorMsg.style.display = 'none';
+            });
+
+            // Cuando la configuración del sitio se termine de cargar en background, refrescar si está abierto
+            window.addEventListener('blyxu:config-loaded', function() {
+                if (isPaymentsAuthorized()) {
+                    renderPaymentMethods();
+                }
+            });
+        })();
     </script>
 </body>
 </html>

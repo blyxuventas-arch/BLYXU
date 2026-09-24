@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=mobile-nav-oval-v13-20260923"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=perf-bg-off-20260924" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=perf-bg-off-20260924"></noscript>
     <style>
         .orders-page {
             position: relative;
@@ -1383,6 +1383,85 @@
                 font-weight: 600;
             }
         }
+        /* Performance override: pagina de facturas sin fondos ni efectos persistentes */
+        body[data-page="facturas-pedidos"] {
+            background: #05030a !important;
+        }
+
+        body[data-page="facturas-pedidos"] .bg-animation,
+        body[data-page="facturas-pedidos"] #particles-canvas {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-page {
+            overflow: visible !important;
+            background: #07040d !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-page::before,
+        body[data-page="facturas-pedidos"] .orders-page::after {
+            content: none !important;
+            display: none !important;
+            animation: none !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-intro,
+        body[data-page="facturas-pedidos"] .orders-login,
+        body[data-page="facturas-pedidos"] .orders-panel,
+        body[data-page="facturas-pedidos"] .navbar,
+        body[data-page="facturas-pedidos"] .nav-icon,
+        body[data-page="facturas-pedidos"] .nav-icon-btn,
+        body[data-page="facturas-pedidos"] .customer-account-btn,
+        body[data-page="facturas-pedidos"] .footer-search,
+        body[data-page="facturas-pedidos"] .footer-search-results {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            filter: none !important;
+            animation: none !important;
+            transition: none !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-intro,
+        body[data-page="facturas-pedidos"] .orders-login,
+        body[data-page="facturas-pedidos"] .orders-panel {
+            background: #101014 !important;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, .34) !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-login.is-generating,
+        body[data-page="facturas-pedidos"] .orders-panel.open,
+        body[data-page="facturas-pedidos"] .orders-form button.is-generating::after {
+            animation: none !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-stack-stage {
+            perspective: none !important;
+            transform-style: flat !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-stack-card {
+            transition: none !important;
+            will-change: auto !important;
+            filter: none !important;
+            box-shadow: 0 14px 34px rgba(0,0,0,.34) !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-stack-card[data-stack-pos="1"],
+        body[data-page="facturas-pedidos"] .orders-stack-card[data-stack-pos="-1"],
+        body[data-page="facturas-pedidos"] .orders-stack-card[data-stack-pos="2"],
+        body[data-page="facturas-pedidos"] .orders-stack-card[data-stack-pos="3"],
+        body[data-page="facturas-pedidos"] .orders-stack-card[data-stack-pos="hidden"] {
+            filter: none !important;
+        }
+
+        body[data-page="facturas-pedidos"] .orders-stack-nav:hover,
+        body[data-page="facturas-pedidos"] .orders-form button:hover,
+        body[data-page="facturas-pedidos"] .orders-action-btn:hover {
+            transform: none !important;
+            box-shadow: none !important;
+        }
     </style>
 </head>
 
@@ -1522,7 +1601,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=perf-20260922" defer></script>
+    <script src="blyxu-lite.js?v=perf-bg-off-20260924" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
