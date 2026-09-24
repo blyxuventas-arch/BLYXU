@@ -8,11 +8,8 @@
     <meta name="description" content="Página de pagos y transferencias de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="preconnect" href="https://script.google.com">
-    <link rel="preconnect" href="https://drive.google.com">
-    <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=pagos-login-clean-20260924" as="style">
-    <link rel="stylesheet" href="blyxu-style.css?v=pagos-login-clean-20260924">
+    <link rel="preload" href="blyxu-style.css?v=cart-no-flash-20260924" as="style">
+    <link rel="stylesheet" href="blyxu-style.css?v=cart-no-flash-20260924">
     <script>
         // Limpiar claves guardadas — siempre pedir login
         try {
@@ -137,25 +134,51 @@
         body.payments-unlocked .qr-page-section { display: flex !important; }
         body.payments-unlocked .footer { display: grid !important; }
 
-        #qr-login-overlay .wholesale-panel {
+        #qr-login-overlay,
+        #qr-login-overlay::before,
+        #qr-login-overlay::after,
+        #qr-login-overlay * {
+            animation: none !important;
+        }
+
+        #qr-login-overlay {
+            left: 0 !important;
+            top: 0 !important;
+            width: 100vw !important;
+            min-height: 100dvh !important;
+            overflow: hidden !important;
+            transform: none !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        #qr-login-overlay::before,
+        #qr-login-overlay::after {
+            content: none !important;
+            display: none !important;
+        }
+
+        #qr-login-overlay .payments-login-panel {
             width: min(420px, 94vw) !important;
             margin: 0 auto !important;
             padding: 36px 30px 32px !important;
-            border: 1px solid rgba(168, 85, 247, 0.28) !important;
-            border-radius: 24px !important;
-            background: #0e0a18 !important;
-            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            border-radius: 16px !important;
+            background: #0d0b13 !important;
+            box-shadow: none !important;
             text-align: center !important;
+            transform: none !important;
+            filter: none !important;
         }
 
-        #qr-login-overlay .wholesale-logo {
+        #qr-login-overlay .payments-login-logo {
             width: 64px !important;
             height: auto !important;
             margin: 0 auto 16px !important;
             display: block !important;
         }
 
-        #qr-login-overlay .wholesale-kicker {
+        #qr-login-overlay .payments-login-kicker {
             margin: 0 0 6px !important;
             color: #d8b4fe !important;
             font-size: 11px !important;
@@ -176,7 +199,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        #qr-login-overlay .wholesale-form {
+        #qr-login-overlay .payments-login-form {
             display: grid !important;
             gap: 14px !important;
         }
@@ -184,21 +207,21 @@
         #qr-login-overlay input {
             width: 100% !important;
             height: 52px !important;
-            border: 1px solid rgba(168, 85, 247, 0.35) !important;
+            border: 1px solid rgba(255, 255, 255, 0.14) !important;
             border-radius: 12px !important;
-            background: rgba(0, 0, 0, 0.6) !important;
+            background: #15121d !important;
             color: #fff !important;
             padding: 0 16px !important;
             font: inherit !important;
-            font-size: 20px !important;
+            font-size: 18px !important;
             text-align: center !important;
-            letter-spacing: 6px !important;
+            letter-spacing: 4px !important;
             outline: none !important;
-            transition: border-color 0.15s !important;
+            transition: none !important;
         }
 
         #qr-login-overlay input:focus {
-            border-color: #ffd969 !important;
+            border-color: rgba(216, 180, 254, 0.68) !important;
         }
 
         #qr-login-overlay button {
@@ -206,20 +229,20 @@
             height: 52px !important;
             border: 0 !important;
             border-radius: 12px !important;
-            background: linear-gradient(135deg, #a855f7, #c084fc) !important;
-            color: #fff !important;
+            background: #f7f3ff !important;
+            color: #08070b !important;
             font: inherit !important;
-            font-size: 13px !important;
-            font-weight: 800 !important;
-            letter-spacing: 1.5px !important;
+            font-size: 12px !important;
+            font-weight: 950 !important;
+            letter-spacing: 0.08em !important;
             text-transform: uppercase !important;
             cursor: pointer !important;
-            box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4) !important;
-            transition: opacity 0.15s !important;
+            box-shadow: none !important;
+            transition: none !important;
         }
 
         #qr-login-overlay button:hover:not(:disabled) {
-            opacity: 0.9 !important;
+            background: #fff !important;
         }
 
         #qr-login-overlay button:disabled {
@@ -379,16 +402,16 @@
     </nav>
 
     <!-- Overlay de Login -->
-    <div class="wholesale-overlay open" id="qr-login-overlay">
-        <div class="wholesale-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
-            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
-            <div class="wholesale-kicker">ZONA SEGURA</div>
+    <div class="payments-login-overlay open" id="qr-login-overlay">
+        <div class="payments-login-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+            <img src="Logo2.png" alt="BLYXU" class="payments-login-logo" onerror="this.style.display='none'">
+            <div class="payments-login-kicker">ZONA SEGURA</div>
             <h2 id="qr-title">ZONA DE PAGOS</h2>
-            <form class="wholesale-form" id="qr-login-form">
+            <form class="payments-login-form" id="qr-login-form">
                 <input type="password" id="qr-password-input" placeholder="Clave de acceso" autocomplete="off" required>
                 <button type="submit" id="qr-submit-btn">Ingresar</button>
             </form>
-            <div class="wholesale-error" id="qr-error-msg" style="display:none;">Contrase&ntilde;a incorrecta</div>
+            <div class="payments-login-error" id="qr-error-msg" style="display:none;">Contrase&ntilde;a incorrecta</div>
             <a href="index.html" class="qr-back-link">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -479,7 +502,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=perf-pagos-opt-20260924" defer></script>
+    <script src="blyxu-lite.js?v=cart-no-flash-20260924" defer></script>
     <script>
         (function() {
             const ACCESS_KEY = 'blyxu_payments_access';
@@ -720,7 +743,7 @@
 
             // Cuando la configuración del sitio se termine de cargar en background, refrescar si está abierto
             window.addEventListener('blyxu:config-loaded', function() {
-                if (isPaymentsAuthorized()) {
+                if (document.body.classList.contains('payments-unlocked')) {
                     renderPaymentMethods();
                 }
             });

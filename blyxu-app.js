@@ -3569,6 +3569,9 @@ function openCart() {
         return;
     }
 
+    document.documentElement.style.backgroundColor = '#05030a';
+    document.body?.classList.add('cart-navigation-pending');
+
     window.location.href = normalizeCartMode(activeCartMode) === 'wholesale'
         ? 'carrito.html?modo=mayorista'
         : 'carrito.html';

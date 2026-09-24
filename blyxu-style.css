@@ -13555,3 +13555,80 @@ body.wholesale-auth-blocked .navbar {
     -webkit-backdrop-filter: none !important;
     filter: none !important;
 }
+
+/* Ajuste final: botones redondos sin flash blanco y cursor visible en contacto */
+.nav-icon,
+.nav-icon-btn,
+.customer-account-btn {
+    -webkit-tap-highlight-color: transparent !important;
+    outline: none !important;
+    touch-action: manipulation;
+}
+
+.nav-icon:active,
+.nav-icon:focus,
+.nav-icon:focus-visible,
+.nav-icon-btn:active,
+.nav-icon-btn:focus,
+.nav-icon-btn:focus-visible,
+.customer-account-btn:active,
+.customer-account-btn:focus,
+.customer-account-btn:focus-visible {
+    background: rgba(10,8,14,.54) !important;
+    border-color: rgba(216,180,254,.22) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 10px 28px rgba(0,0,0,.2) !important;
+    filter: none !important;
+    transform: none !important;
+    outline: none !important;
+}
+
+body[data-page="contact"],
+body[data-page="contact"] * {
+    cursor: auto !important;
+}
+
+body[data-page="contact"] a,
+body[data-page="contact"] button,
+body[data-page="contact"] [role="button"],
+body[data-page="contact"] label,
+body[data-page="contact"] summary,
+body[data-page="contact"] .nav-icon,
+body[data-page="contact"] .nav-icon-btn,
+body[data-page="contact"] .contact-action,
+body[data-page="contact"] .contact-social-link,
+body[data-page="contact"] .footer-social-icon-link {
+    cursor: pointer !important;
+}
+
+body[data-page="contact"] input,
+body[data-page="contact"] textarea,
+body[data-page="contact"] select,
+body[data-page="contact"] .footer-search input,
+body[data-page="contact"] .global-search-input {
+    cursor: text !important;
+}
+
+body[data-page="contact"] #blyxu-cursor {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+body[data-page="carrito"],
+body.cart-navigation-pending {
+    background: #05030a !important;
+}
+
+body.cart-navigation-pending::before {
+    content: "" !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147482999 !important;
+    display: block !important;
+    background: #05030a !important;
+    pointer-events: none !important;
+}
+
+body[data-page="carrito"] .bg-animation,
+body[data-page="carrito"] #particles-canvas {
+    background: #05030a !important;
+}

@@ -346,6 +346,8 @@ function updateCartUI() {
 }
 
 function openCart() {
+    document.documentElement.style.backgroundColor = '#05030a';
+    document.body?.classList.add('cart-navigation-pending');
     window.location.href = 'carrito.html#carrito';
 }
 
@@ -590,38 +592,36 @@ function initLoginBokehBackgrounds(options = {}) {
 
 document.addEventListener('DOMContentLoaded', () => {
     cleanBrowserUrl();
+    initCustomCursor();
     window.addEventListener('hashchange', cleanBrowserUrl);
 
-    // Ocultar navbar para evitar backdrop-filter durante el login
     const isPaymentsPage = document.body?.dataset.page === 'pagos';
     const navbar = document.getElementById('navbar');
-    if (isPaymentsPage && navbar) navbar.style.display = 'none';
 
-    initNavbar();
-    initFooterPageSearch();
-    updateCartUI();
-
-    // Retrasar carga de config hasta que el overlay se cierre
-    const waitForAuth = new Promise(resolve => {
-        if (!isPaymentsPage || document.body.classList.contains('payments-unlocked')) {
-            resolve();
-            return;
-        }
-        const obs = new MutationObserver(() => {
-            if (document.body.classList.contains('payments-unlocked')) {
-                obs.disconnect();
-                if (navbar) navbar.style.display = '';
-                resolve();
-            }
-        });
-        obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    });
-
-    waitForAuth.then(() => {
+    function initLitePageAfterAuth() {
+        if (initLitePageAfterAuth.done) return;
+        initLitePageAfterAuth.done = true;
+        if (navbar) navbar.style.display = '';
+        initNavbar();
+        initFooterPageSearch();
+        updateCartUI();
         fetchSiteConfig().then(() => {
             renderContactPage();
             renderFooterSocialLinks();
             renderFloatingWhatsApp();
         });
-    });
+    }
+
+    if (isPaymentsPage && !document.body.classList.contains('payments-unlocked')) {
+        if (navbar) navbar.style.display = 'none';
+        const obs = new MutationObserver(() => {
+            if (!document.body.classList.contains('payments-unlocked')) return;
+            obs.disconnect();
+            initLitePageAfterAuth();
+        });
+        obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        return;
+    }
+
+    initLitePageAfterAuth();
 });
