@@ -1,4 +1,4 @@
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+﻿const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
@@ -403,30 +403,73 @@ function getProductField(product, fields, fallback = '') {
     return fallback;
 }
 
-function normalizeImageUrl(value) {
+function getAdminImageTargetWidth(kindOrWidth = 'default') {
+    if (typeof kindOrWidth === 'number') return Math.max(80, Math.min(kindOrWidth, 1800));
+    const key = String(kindOrWidth || 'default');
+    const widths = {
+        thumb: 160,
+        inventory: 220,
+        card: 420,
+        banner: 1400,
+        default: 800
+    };
+    return widths[key] || widths.default;
+}
+
+function resizeAdminGoogleImageUrl(url, kindOrWidth = 'default') {
+    const src = String(url || '').trim();
+    if (!src || src.startsWith('data:') || src.startsWith('blob:')) return src;
+    const width = getAdminImageTargetWidth(kindOrWidth);
+
+    if (/drive\.google\.com\/thumbnail/i.test(src)) {
+        try {
+            const parsed = new URL(src);
+            parsed.searchParams.set('sz', `w${width}`);
+            return parsed.toString();
+        } catch (_) {
+            return src.replace(/([?&]sz=)w\d+/i, `$1w${width}`);
+        }
+    }
+
+    if (/lh3\.googleusercontent\.com\/d\//i.test(src)) {
+        if (/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i.test(src)) {
+            return src.replace(/=w\d+(?:-h\d+)?(?:-[a-z-]+)?(?=([?#]|$))/i, `=w${width}`);
+        }
+        const queryIndex = src.search(/[?#]/);
+        if (queryIndex >= 0) return `${src.slice(0, queryIndex)}=w${width}${src.slice(queryIndex)}`;
+        return `${src}=w${width}`;
+    }
+
+    return src;
+}
+
+function normalizeImageUrl(value, imageSize = 'default') {
     if (!value) return '';
 
     if (Array.isArray(value)) {
-        return normalizeImageUrl(value[0]);
+        return normalizeImageUrl(value[0], imageSize);
     }
 
     if (typeof value === 'object') {
-        return normalizeImageUrl(value.url || value.src || value.imagen || value.image || '');
+        return normalizeImageUrl(value.url || value.src || value.imagen || value.image || '', imageSize);
     }
 
     const raw = String(value).split('\n')[0].trim();
     if (!raw) return '';
 
     const firstUrl = raw.includes(',http') ? raw.split(',http')[0].trim() : raw;
-    const driveMatch = firstUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/) || firstUrl.match(/[?&]id=([^&]+)/);
+    const driveMatch =
+        firstUrl.match(/drive\.google\.com\/file\/d\/([^/]+)/) ||
+        firstUrl.match(/drive\.google\.com\/thumbnail\?(?:[^&]+&)*id=([^&#]+)/) ||
+        firstUrl.match(/[?&]id=([^&]+)/);
 
     if (firstUrl.includes('drive.google.com') && driveMatch && driveMatch[1]) {
-        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w1200`;
+        return `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveMatch[1])}&sz=w${getAdminImageTargetWidth(imageSize)}`;
     }
 
     if (firstUrl.startsWith('//')) return `https:${firstUrl}`;
 
-    return firstUrl;
+    return resizeAdminGoogleImageUrl(firstUrl, imageSize);
 }
 
 function parseAdminGalleryValue(value) {
@@ -458,6 +501,59 @@ function stringifyAdminGallery(urls) {
         cleaned.push(normalized);
     });
     return cleaned.length ? JSON.stringify(cleaned) : '';
+}
+
+function getInventoryProductImage(product, imageSize = 'inventory') {
+    const directImage = getProductField(product, [
+        'Imagen Principal',
+        'Imagen_Principal',
+        'imagenPrincipal',
+        'Imagen',
+        'imagen',
+        'Foto',
+        'foto',
+        'URL Imagen',
+        'Url Imagen',
+        'url',
+        'image',
+        'directUrl',
+        'src'
+    ], '');
+    const galleryValue = getProductField(product, [
+        'Galeria JSON',
+        'Galer\u00eda JSON',
+        'Galeria',
+        'galeria',
+        'Galer\u00eda'
+    ], product?.Galeria || '');
+    const galleryImage = parseAdminGalleryValue(galleryValue)[0] || '';
+    return normalizeImageUrl(directImage || galleryImage, imageSize) || 'Logo2.png';
+}
+
+function getInventoryImageFallbackUrl(source, imageSize = 'inventory') {
+    const src = String(source || '');
+    const driveMatch =
+        src.match(/[?&]id=([^&#]+)/) ||
+        src.match(/drive\.google\.com\/file\/d\/([^/]+)/) ||
+        src.match(/lh3\.googleusercontent\.com\/d\/([^/?&#=]+)/);
+
+    if (driveMatch?.[1] && !src.includes('lh3.googleusercontent.com')) {
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveMatch[1])}=w${getAdminImageTargetWidth(imageSize)}`;
+    }
+
+    return 'Logo2.png';
+}
+
+function handleInventoryImageError(img) {
+    if (!img) return;
+    const fallback = getInventoryImageFallbackUrl(img.currentSrc || img.src || img.dataset.src);
+    if (fallback && fallback !== 'Logo2.png' && img.dataset.fallbackTried !== 'true') {
+        img.dataset.fallbackTried = 'true';
+        img.src = fallback;
+        return;
+    }
+    img.onerror = null;
+    img.src = 'Logo2.png';
 }
 
 function getAdminGalleryUrls() {
@@ -606,8 +702,24 @@ function initProductMeasurementControls() {
 
 function normalizeGoogleProduct(product) {
     const styleValue = cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], ''));
-    const idVariacion = getProductField(product, ['ID Variacion', 'ID Variación', 'ID VariaciÃ³n', 'idVariacion', 'ID', 'id', 'SKU'], '');
+    const idVariacion = getProductField(product, ['ID Variacion', 'ID Variación', 'ID Variación', 'idVariacion', 'ID', 'id', 'SKU'], '');
     const idProducto = getProductField(product, ['ID Producto', 'ID Producto Madre', 'ID_Producto', 'ID_PRODUCTO', 'IdProducto', 'id_producto', 'idProducto'], '');
+    const gallery = parseAdminGalleryValue(getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galería JSON', 'Galeria', 'galeria'], ''));
+    const imageUrl = normalizeImageUrl(getProductField(product, [
+        'Imagen Principal',
+        'Imagen_Principal',
+        'imagenPrincipal',
+        'Imagen',
+        'imagen',
+        'Foto',
+        'foto',
+        'URL Imagen',
+        'Url Imagen',
+        'url',
+        'image',
+        'directUrl',
+        'src'
+    ], gallery[0] || ''), 'inventory');
     return {
         ...product,
         ID: getProductField(product, ['ID Variacion', 'ID Variación', 'ID', 'id'], ''),
@@ -619,12 +731,13 @@ function normalizeGoogleProduct(product) {
         Categoria: getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, ''),
         Precio: getProductField(product, ['Precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista'], 0),
-        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], 'Ambos'),
+        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'Catálogo', 'catalogo', 'Publicacion'], 'Ambos'),
         Stock: getProductField(product, ['Cantidad', 'Stock'], 0),
-        Imagen: normalizeImageUrl(getProductField(product, ['Imagen Principal', 'Imagen'], '')),
+        Imagen: imageUrl,
+        'Imagen Principal': imageUrl,
         Color: getProductField(product, ['Color'], ''),
         Stock_Inicial: getProductField(product, ['Stock Inicial', 'Stock_Inicial'], 0),
-        Galeria: parseAdminGalleryValue(getProductField(product, ['Galeria JSON', 'Galería JSON', 'Galeria'], '')),
+        Galeria: gallery,
         Descripcion: getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion'], ''),
         Tamano: getProductField(product, ['Tamano', 'Tamaño', 'Talla'], ''),
         TipoMedida: getProductField(product, ['Tipo Medida', 'TipoMedida'], ''),
@@ -676,7 +789,7 @@ function getInventoryVariationId(product) {
     return String(getProductField(product, [
         'ID Variacion',
         'ID Variación',
-        'ID VariaciÃ³n',
+        'ID Variación',
         'idVariacion',
         'ID',
         'id',
@@ -895,7 +1008,7 @@ async function saveProductListToGoogleSheets(itemsList, options = {}) {
             const itemEditOverride = item && item.__adminForceCreate ? false : fallbackEditOverride;
             saved.push(await postProductToGoogleSheets(item, itemEditOverride));
         } catch (error) {
-            const id = item?.['ID Variacion'] || item?.['ID VariaciÃ³n'] || item?.idVariacion || item?.SKU || item?.Nombre || 'sin ID';
+            const id = item?.['ID Variacion'] || item?.['ID Variación'] || item?.idVariacion || item?.SKU || item?.Nombre || 'sin ID';
             failures.push(`${id}: ${error.message || error}`);
         }
     }
@@ -1486,7 +1599,7 @@ function normalizeProductPayloadForSubmit(data) {
     delete payload.editId;
     const ids = ensureProductHierarchyIds();
     const idProducto = payload['ID Producto'] || payload['ID Producto Madre'] || payload.ID_Producto || payload.ID_PRODUCTO || payload.IdProducto || payload.id_producto || payload.idProducto || ids.idProducto;
-    const catalogo = payload.Catalogo || payload['Catálogo'] || payload['CatÃ¡logo'] || getInputValue('prod-catalogo') || 'Ambos';
+    const catalogo = payload.Catalogo || payload['Catálogo'] || payload['Catálogo'] || getInputValue('prod-catalogo') || 'Ambos';
     const cantidad = payload.Cantidad ?? payload.Stock ?? payload.stock ?? payload['Stock Inicial'] ?? '';
     const idVariacion = payload['ID Variacion'] || payload['ID Variación'] || payload.idVariacion || payload.id || ids.idVariacion;
     const categoria = getProductField(payload, PRODUCT_CATEGORY_FIELD_KEYS, getInputValue('prod-categoria'));
@@ -1508,7 +1621,7 @@ function normalizeProductPayloadForSubmit(data) {
     setProductBarcodeAliases(payload, getProductField(payload, PRODUCT_BARCODE_FIELD_KEYS, makeProductBarcode(idProducto, idVariacion)));
     payload.Catalogo = catalogo;
     payload['Catálogo'] = catalogo;
-    payload['CatÃ¡logo'] = catalogo;
+    payload['Catálogo'] = catalogo;
     payload.catalogo = catalogo;
     setProductCategoryAliases(payload, categoria);
     setProductPromotionAliases(payload, promocion);
@@ -1710,7 +1823,7 @@ function getNextVariantId(idProducto) {
     inventario.forEach(function (product) {
         const mid = String(product.idProducto || product['ID Producto'] || '').trim();
         if (mid !== motherId) return;
-        collect(product.idVariacion || product.ID || product['ID Variacion'] || product['ID VariaciÃ³n']);
+        collect(product.idVariacion || product.ID || product['ID Variacion'] || product['ID Variación']);
     });
 
     document.querySelectorAll('#variants-container .var-id').forEach(function (input) {
@@ -1758,7 +1871,7 @@ function buildVariantPayloadFromCard(card) {
         'Precio Mayor': parseAmount(card.querySelector('.var-precio-mayor')?.value || getInputValue('prod-precio-mayorista')),
         Categoria: getInputValue('prod-categoria'),
         Catalogo: getInputValue('prod-catalogo') || 'Ambos',
-        'CategorÃ­a': getInputValue('prod-categoria'),
+        'Categoría': getInputValue('prod-categoria'),
         Cantidad: stock,
         Stock: stock,
         'Stock Inicial': stock,
@@ -1766,7 +1879,7 @@ function buildVariantPayloadFromCard(card) {
         'Caracteristicas del producto': getInputValue('prod-descripcion'),
         Tamano: tamano,
         Talla: tamano,
-        'TamaÃ±o': tamano,
+        'Tamaño': tamano,
         ...buildProductMeasurementPayload(variantMeasurementData),
         Color: color,
         Estilo: estilo,
@@ -1775,10 +1888,10 @@ function buildVariantPayloadFromCard(card) {
         Imagen: imagen,
         'Imagen Principal': imagen,
         'Galeria JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
-        'GalerÃ­a JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
+        'Galería JSON': stringifyAdminGallery(getInputValue('prod-galeria')),
         Promocion: normalizePromotionValue(document.getElementById('prod-promocion')?.value || 'FALSO'),
         Estado: getInputValue('prod-estado') || 'Activo',
-        'Fecha de CreaciÃ³n': getInputValue('prod-fecha-creacion') || new Date().toISOString()
+        'Fecha de Creación': getInputValue('prod-fecha-creacion') || new Date().toISOString()
     };
 }
 
@@ -2269,7 +2382,7 @@ function renderProductPreviewOptions(activeImage = '') {
         <div class="preview-variant-list">
             ${rows.map((row, index) => `
                 <button type="button" class="preview-variant-card ${(activeIndex === -1 ? index === 0 : row.active) ? 'active' : ''}" data-preview-index="${index}" data-preview-key="${escapeHtml(row.key || '')}" data-preview-url="${escapeHtml(row.image || '')}">
-                    <img src="${escapeHtml(row.image || 'Logo2.png')}" alt="" onerror="this.src='Logo2.png'">
+                    <img src="${escapeHtml(row.image || 'Logo2.png')}" alt="" onerror="handleInventoryImageError(this)">
                     <span class="preview-variant-copy">
                         <strong>${escapeHtml(row.label || `Variante ${index + 1}`)}</strong>
                         <span>${escapeHtml(row.detail || 'Sin atributos')}</span>
@@ -2338,7 +2451,7 @@ function renderProductGalleryManager() {
     list.innerHTML = urls.map((url, index) => `
         <div class="angle-gallery-item" data-gallery-index="${index}">
             <img src="${escapeHtml(url)}" alt="Vista ${index + 1}" onerror="this.style.opacity='0.35'">
-            <button type="button" class="angle-gallery-remove" data-gallery-remove="${index}" aria-label="Quitar foto">×</button>
+            <button type="button" class="angle-gallery-remove" data-gallery-remove="${index}" aria-label="Quitar foto">&times;</button>
             <span>Vista ${index + 2}</span>
         </div>
     `).join('');
@@ -2938,6 +3051,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginError = document.getElementById('login-error');
     const loginScreen = document.getElementById('admin-login-screen');
     const mainContent = document.getElementById('admin-main-content');
+    const ADMIN_ACCESS_CODE = '2015690';
+
+
+    function syncAdminVaultState() {
+        const passwordInput = document.getElementById('admin-password');
+        const vault = loginScreen?.querySelector('[data-vault]');
+        if (!vault || !passwordInput) return;
+        const targetLength = ADMIN_ACCESS_CODE.length;
+        const len = Math.min((passwordInput.value || '').trim().length, targetLength);
+        const progress = Math.min(100, Math.round((len / targetLength) * 100));
+        vault.style.setProperty('--vault-progress', progress + '%');
+        const status = vault.querySelector('[data-vault-status]');
+        if (status) status.textContent = len ? 'Verificando credenciales...' : 'Esperando clave segura';
+    }
+
+    function markAdminVaultDenied() {
+        const vault = loginScreen?.querySelector('[data-vault]');
+        if (!vault) return;
+        vault.classList.remove('is-unlocking');
+        vault.classList.add('is-denied');
+        const status = vault.querySelector('[data-vault-status]');
+        if (status) status.textContent = 'Clave incorrecta';
+        setTimeout(function() { vault.classList.remove('is-denied'); syncAdminVaultState(); }, 520);
+    }
+
+    function playAdminVaultUnlock(done) {
+        const vault = loginScreen?.querySelector('[data-vault]');
+        if (!loginScreen || !vault) {
+            done();
+            return;
+        }
+        loginScreen.classList.add('vault-success');
+        vault.classList.add('is-unlocking');
+        vault.style.setProperty('--vault-progress', '100%');
+        const status = vault.querySelector('[data-vault-status]');
+        if (status) status.textContent = 'Acceso concedido';
+        setTimeout(done, 1050);
+    }
+    const adminPasswordInputForVault = document.getElementById('admin-password');
+    adminPasswordInputForVault?.addEventListener('input', syncAdminVaultState);
+    syncAdminVaultState();
 
     if (loginForm) {
         loginForm.addEventListener('submit', (e) => {
@@ -2945,7 +3099,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const passwordInput = document.getElementById('admin-password');
             const loginBox = document.getElementById('login-box');
             const submitButton = loginForm.querySelector('.admin-btn');
-            const pass = passwordInput.value;
+            const pass = (passwordInput.value || '').trim();
             const resetButton = () => {
                 loginBox?.classList.remove('is-unlocking');
                 if (submitButton) {
@@ -2954,16 +3108,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+            loginScreen?.classList.remove('vault-success');
+            loginScreen?.querySelector('[data-vault]')?.classList.remove('is-unlocking');
             loginBox?.classList.add('is-unlocking');
             if (submitButton) {
                 submitButton.disabled = true;
                 submitButton.textContent = 'Validando...';
             }
 
-            if (pass === '2015690') {
+            if (pass === ADMIN_ACCESS_CODE) {
                 loginError.style.display = 'none';
-                loginScreen.style.opacity = '0';
-                setTimeout(() => {
+                playAdminVaultUnlock(() => {
                     loginScreen.style.display = 'none';
                     mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
                     initAdminHeavyFeatures();
@@ -2972,9 +3127,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         cargarInventario(),
                         cargarPedidos()
                     ]).then(() => renderAdminDashboard());
-                }, 120);
+                });
             } else {
                 loginError.style.display = 'block';
+                markAdminVaultDenied();
                 resetButton();
                 // Shake effect
                 document.getElementById('login-box').style.transform = 'translateX(10px)';
@@ -3132,7 +3288,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--primary); font-weight:800;">🛠 Nueva Variante</h4>
+                <h4 style="margin:0; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--primary); font-weight:800;">Nueva variante</h4>
                 <button type="button" class="admin-btn secondary var-remove-card-btn" style="width:auto; padding:6px 12px; font-size:10px; border-radius:10px;">Cerrar / Quitar</button>
             </div>
             <div class="admin-form-grid">
@@ -3321,7 +3477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.dataset.saved = '1';
                 showToast('¡Variante guardada!');
                 btn.style.background = '#00c853';
-                btn.textContent = '✅ Guardado';
+                btn.textContent = 'Guardado';
                 setTimeout(() => {
                     btn.disabled = false;
                     btn.style.background = 'linear-gradient(135deg, #6C5CE7, #9B2CFA)';
@@ -3531,7 +3687,7 @@ function fillContactConfigForm(config) {
         const input = document.getElementById(id);
         if (input) input.value = key === 'Contacto_WhatsApp'
             ? (config?.[key] || config?.WhatsApp_Comercial || '')
-            : (config?.[key] || '');
+            : (config?.[key] || (key === 'Contacto_Dias' ? 'Lunes a Sábado' : key === 'Contacto_Horarios' ? '10:00 a.m. - 7:00 p.m.' : ''));
     });
 }
 
@@ -3551,8 +3707,12 @@ function initContactConfigAdmin() {
         }
 
         try {
+            const savedConfig = {};
             await Promise.all(CONTACT_CONFIG_FIELDS.map(([key, id]) => {
-                const value = document.getElementById(id)?.value?.trim() || '';
+                let value = document.getElementById(id)?.value?.trim() || '';
+                if (key === 'Contacto_Dias' && !value) value = 'Lunes a Sábado';
+                if (key === 'Contacto_Horarios' && !value) value = '10:00 a.m. - 7:00 p.m.';
+                savedConfig[key] = value;
                 return saveSiteConfig(key, value);
             }));
             const contactWhatsAppInput = document.getElementById('contact-config-whatsapp');
@@ -3560,9 +3720,11 @@ function initContactConfigAdmin() {
             if (contactWhatsApp) {
                 if (contactWhatsAppInput) contactWhatsAppInput.value = contactWhatsApp;
                 await saveSiteConfig('WhatsApp_Comercial', contactWhatsApp);
+                savedConfig.WhatsApp_Comercial = contactWhatsApp;
                 const commerceInput = document.getElementById('whatsapp-config-commerce');
                 if (commerceInput) commerceInput.value = contactWhatsApp;
             }
+            window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
             showToast('Contacto actualizado');
         } catch (err) {
             console.error('No se pudo guardar contacto:', err);
@@ -3602,7 +3764,7 @@ function initWhatsAppConfigAdmin() {
         const phone = normalizeWhatsAppPhone(phoneInput?.value || '');
 
         if (!phone) {
-            showToast('Ingresa un numero de WhatsApp valido');
+            showToast('Ingresa un número de WhatsApp válido');
             return;
         }
 
@@ -3951,6 +4113,7 @@ function initHomeAdConfigAdmin() {
             });
             await Promise.all(saveJobs);
             window.storeConfig = { ...(window.storeConfig || {}), ...savedConfig };
+            clearPublicProductsCache();
             showToast('Banner del home guardado correctamente');
         } catch (error) {
             console.error('Error guardando banner del home:', error);
@@ -4802,7 +4965,7 @@ function initCarouselImageAdmin() {
     }
 
     function getBannerRecordId(banner) {
-        return banner?.idVariacion || banner?.ID || banner?.['ID Variacion'] || banner?.['ID VariaciÃƒÂ³n'] || banner?.['ID VariaciÃ³n'] || '';
+        return banner?.idVariacion || banner?.ID || banner?.['ID Variacion'] || banner?.['ID Variación'] || banner?.['ID Variación'] || '';
     }
 
     function getActiveCarouselBanners() {
@@ -4906,7 +5069,7 @@ function initCarouselImageAdmin() {
                 await postProductToGoogleSheets({
                     ...banner,
                     'ID Variacion': id,
-                    'ID VariaciÃƒÂ³n': id,
+                    'ID Variación': id,
                     'ID Producto': banner.idProducto || banner['ID Producto'] || id,
                     ID_Producto: banner.idProducto || banner['ID Producto'] || id,
                     Estado: 'Inactivo'
@@ -5006,7 +5169,7 @@ function initCarouselImageAdmin() {
 
         return {
             'ID Variacion': bannerId,
-            'ID VariaciÃƒÂ³n': bannerId,
+            'ID Variación': bannerId,
             idVariacion: bannerId,
             'ID Producto': bannerId,
             ID_Producto: bannerId,
@@ -5016,7 +5179,7 @@ function initCarouselImageAdmin() {
             Categoria: 'BANNER',
             categoria: 'BANNER',
             Catalogo: 'Ambos',
-            'CategorÃ­a': 'BANNER',
+            'Categoría': 'BANNER',
             Precio: 0,
             'Precio Mayor': 0,
             'Stock Inicial': 1,
@@ -5051,17 +5214,17 @@ function initCarouselImageAdmin() {
 
         const banners = source.filter(item => {
             const category = String(item.Categoria || item.categoria || '').toUpperCase();
-            const id = item.idVariacion || item.ID || item['ID Variacion'] || item['ID VariaciÃ³n'] || '';
+            const id = item.idVariacion || item.ID || item['ID Variacion'] || item['ID Variación'] || '';
             return category === 'BANNER' && id && id !== activeId;
         });
 
         for (const banner of banners) {
-            const id = banner.idVariacion || banner.ID || banner['ID Variacion'] || banner['ID VariaciÃ³n'];
+            const id = banner.idVariacion || banner.ID || banner['ID Variacion'] || banner['ID Variación'];
             try {
                 await postProductToGoogleSheets({
                     ...banner,
                     'ID Variacion': id,
-                    'ID VariaciÃ³n': id,
+                    'ID Variación': id,
                     'ID Producto': banner.idProducto || banner['ID Producto'] || id,
                     ID_Producto: banner.idProducto || banner['ID Producto'] || id,
                     Estado: 'Inactivo'
@@ -5211,7 +5374,7 @@ function initCarouselImageAdmin() {
             const bannerId = mode === 'replace' ? fixedHomeBannerId : makeCarouselBannerId();
             const bannerPayload = {
                 'ID Variacion': bannerId,
-                'ID VariaciÃ³n': bannerId,
+                'ID Variación': bannerId,
                 idVariacion: bannerId,
                 'ID Producto': bannerId,
                 ID_Producto: bannerId,
@@ -5541,7 +5704,7 @@ function escapeHtml(value) {
 function getVariantAttributesLabel(product) {
     const attributes = [
         cleanProductStyleValue(product?.Estilo || product?.estilo),
-        product?.Tamano || product?.Talla || product?.['TamaÃ±o'] || product?.['TamaÃƒÂ±o'],
+        product?.Tamano || product?.Talla || product?.['Tamaño'] || product?.['Tamaño'],
         product?.Color || product?.color
     ]
         .map(value => String(value || '').trim())
@@ -5562,7 +5725,7 @@ function getVariantAttributesLabel(product) {
 
     const attributes = [
         cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], '')),
-        getProductField(product, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], ''),
+        getProductField(product, ['Tamano', 'Tamaño', 'Tamaño', 'Talla'], ''),
         getProductField(product, ['Color', 'color'], '')
     ]
         .map(value => String(value || '').trim())
@@ -5914,8 +6077,8 @@ function inventoryRowTemplate(p, index, itemMeta) {
         if (stockTotal === undefined) stockTotal = Number(p.Stock || p.Cantidad) || 0;
         var stockClass = stockTotal > 0 ? 'stock-positive' : 'stock-negative';
         var toggleBtnHtml = groupSize > 1
-            ? '<button class="toggle-vars-btn" onclick="toggleVariants(\'' + cleanMotherId + '\', this)">Ver ' + (groupSize - 1) + ' Variantes ▼</button>'
-            : '<span class="variant-count-badge">Producto Único</span>';
+            ? '<button class="toggle-vars-btn" onclick="toggleVariants(\'' + cleanMotherId + '\', this)">Ver ' + (groupSize - 1) + ' variantes</button>'
+            : '<span class="variant-count-badge">Producto único</span>';
 
         var catStyle = 'background:rgba(155,44,250,0.15);color:#d946ef;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;display:inline-block;';
 
@@ -5926,7 +6089,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         }
 
         return '<tr class="' + rowClass + '">'
-            + '<td><img src="' + (p.Imagen || 'Logo2.png') + '" width="46" height="46" loading="lazy" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><img src="' + (p.Imagen || 'Logo2.png') + '" width="46" height="46" loading="lazy" referrerpolicy="no-referrer" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="handleInventoryImageError(this)"></td>'
             + '<td><div style="font-weight:800;font-size:14px;color:#fff;">' + (p.Nombre || p.Producto || 'Producto General') + '</div>'
             + '<div style="font-size:10px;margin-top:5px;">' + badgeHtml
             + (groupSize > 1 ? ' <span class="variant-count-badge" style="margin-left:4px;">' + groupSize + ' variantes</span>' : '')
@@ -5936,7 +6099,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
             + '<td><div class="' + stockClass + '">' + stockTotal + '</div><div style="font-size:9px;color:rgba(255,255,255,0.35);font-weight:700;text-transform:uppercase;letter-spacing:1px;">en stock</div></td>'
             + '<td>' + toggleBtnHtml + '</td>'
             + '<td style="white-space:nowrap;"><button class="action-btn-edit" onclick="editarProducto(' + index + ')">Editar</button>'
-            + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">🗑️</button>'
+            + ' <button class="action-btn-delete-sm" onclick="eliminarProducto(' + index + ')">Eliminar</button>'
             + (groupSize > 1 ? ' <button class="action-btn-delete-sm" onclick="eliminarGrupo(\'' + cleanMotherId + '\')">Grupo</button>' : '')
             + '</td>'
             + '</tr>';
@@ -5946,7 +6109,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         var stockColor = stockVal > 0 ? '#10B981' : '#EF4444';
 
         return '<tr class="' + rowClass + '" style="display:' + displayStyle + ';">'
-            + '<td><span class="tree-connector"></span><img src="' + (p.Imagen || 'Logo2.png') + '" width="30" height="30" loading="lazy" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><span class="tree-connector"></span><img src="' + (p.Imagen || 'Logo2.png') + '" width="30" height="30" loading="lazy" referrerpolicy="no-referrer" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="handleInventoryImageError(this)"></td>'
             + '<td><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);">' + (p.Nombre || p.Producto || '') + '</div>'
             + '<div style="font-size:10px;margin-top:3px;"><span class="mother-badge-id" style="font-size:9px;">' + motherId + '</span>'
             + ' <span class="variant-badge-id">' + (p.idVariacion || p.ID || '-') + '</span>'
@@ -5973,7 +6136,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     var stockVal = Number(p.Stock || p.Cantidad || 0) || 0;
     var stockTotal = itemMeta.totalStock === undefined ? stockVal : itemMeta.totalStock;
     var stockClass = stockTotal > 0 ? 'stock-positive' : 'stock-negative';
-    var image = escapeHtml(p.Imagen || 'Logo2.png');
+    var image = escapeHtml(getInventoryProductImage(p, isChild ? 'thumb' : 'inventory'));
     var name = escapeHtml(p.Nombre || p.Producto || 'Producto General');
     var category = escapeHtml(p.Categoria || p.Color || '-');
     var idVar = getInventoryVariationId(p);
@@ -6007,7 +6170,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
         }
 
         return '<tr class="' + rowClass + '" data-product-key="' + productKey + '">'
-            + '<td><img src="' + image + '" width="46" height="46" loading="lazy" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+            + '<td><img src="' + image + '" width="46" height="46" loading="lazy" referrerpolicy="no-referrer" style="border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1);vertical-align:middle;" onerror="handleInventoryImageError(this)"></td>'
             + '<td><div style="font-weight:800;font-size:14px;color:#fff;">' + name + '</div>'
             + '<div style="font-size:10px;margin-top:5px;">' + badgeHtml
             + (groupSize > 1 ? ' <span class="variant-count-badge" style="margin-left:4px;">' + groupSize + ' variantes</span>' : '')
@@ -6025,7 +6188,7 @@ function inventoryRowTemplate(p, index, itemMeta) {
     }
 
     return '<tr class="' + rowClass + '" data-product-key="' + productKey + '" style="display:' + displayStyle + ';">'
-        + '<td><span class="tree-connector"></span><img src="' + image + '" width="30" height="30" loading="lazy" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="this.src=\'Logo2.png\'"></td>'
+        + '<td><span class="tree-connector"></span><img src="' + image + '" width="30" height="30" loading="lazy" referrerpolicy="no-referrer" style="border-radius:4px;object-fit:cover;vertical-align:middle;" onerror="handleInventoryImageError(this)"></td>'
         + '<td><div style="font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);">' + name + '</div>'
         + '<div style="font-size:10px;margin-top:3px;"><span class="mother-badge-id" style="font-size:9px;">' + escapeHtml(motherId) + '</span>'
         + ' <span class="variant-badge-id">' + escapeHtml(idVar || '-') + '</span>'
@@ -6250,7 +6413,7 @@ function buildInventoryCatalogPrintHtml(products, options = {}) {
             return `
                 <div class="catalog-card">
                     <div class="catalog-card-img-wrap">
-                        <img src="${escapeHtml(imgSrc)}" alt="" class="catalog-card-img" loading="eager" crossorigin="anonymous" onerror="this.src='Logo2.png'">
+                        <img src="${escapeHtml(imgSrc)}" alt="" class="catalog-card-img" loading="eager" crossorigin="anonymous" onerror="this.onerror=null;this.src='Logo2.png'">
                     </div>
                     <div class="catalog-card-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
                     ${metaLineHtml}
@@ -6335,8 +6498,8 @@ function getInventoryPdfReference(product) {
 function getInventoryPdfSizeValue(product) {
     const directValue = getProductField(product, [
         'Tamano',
-        'TamaÃ±o',
-        'TamaÃƒÂ±o',
+        'Tamaño',
+        'Tamaño',
         'Tamaño',
         'Talla',
         'Talla Textil',
@@ -6415,35 +6578,35 @@ async function imageUrlToPdfDataUrl(url, maxEdge = 96) {
 function drawInventoryPdfHeader(doc, meta) {
     const pageWidth = doc.internal.pageSize.getWidth();
     doc.setFillColor(18, 18, 24);
-    doc.rect(0, 0, pageWidth, 25, 'F');
+    doc.rect(0, 0, pageWidth, 27, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
-    doc.text('BLYXU - Inventario actual', 12, 10);
+    doc.text('BLYXU - Inventario actual', 10, 10.5);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(`Categoria: ${meta.categoryTitle}`, 12, 16);
-    doc.text(`Expedido: ${meta.fullDateString}`, 12, 21);
-    doc.text(`Productos: ${meta.totalProducts}`, pageWidth - 12, 16, { align: 'right' });
-    doc.text(meta.priceModeLabel, pageWidth - 12, 21, { align: 'right' });
+    doc.text(`Categoría: ${meta.categoryTitle}`, 10, 16.5);
+    doc.text(`Expedido: ${meta.fullDateString}`, 10, 22);
+    doc.text(`Productos: ${meta.totalProducts}`, pageWidth - 10, 16.5, { align: 'right' });
+    doc.text(meta.priceModeLabel, pageWidth - 10, 22, { align: 'right' });
 }
 
 function drawInventoryPdfFooter(doc, pageNumber) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setDrawColor(230, 230, 230);
-    doc.line(12, pageHeight - 12, pageWidth - 12, pageHeight - 12);
+    doc.line(10, pageHeight - 12, pageWidth - 10, pageHeight - 12);
     doc.setTextColor(120, 120, 120);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text('BLYXU - Catalogo de inventario', 12, pageHeight - 7);
-    doc.text(`Pagina ${pageNumber}`, pageWidth - 12, pageHeight - 7, { align: 'right' });
+    doc.text('BLYXU - Catálogo de inventario', 10, pageHeight - 7);
+    doc.text(`Página ${pageNumber}`, pageWidth - 10, pageHeight - 7, { align: 'right' });
 }
 
 function drawInventoryPdfTableHeader(doc, columns, y) {
     const pageWidth = doc.internal.pageSize.getWidth();
     doc.setFillColor(245, 242, 237);
-    doc.rect(12, y, pageWidth - 24, 9, 'F');
+    doc.rect(10, y, pageWidth - 20, 9, 'F');
     doc.setTextColor(65, 60, 55);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
@@ -6479,9 +6642,9 @@ async function downloadInventoryCatalogPdf() {
         .filter(group => selectedCategorySet.has(group.key))
         .map(group => group.label);
     const categoryText = selectedCategoryKeys.length === allPdfCategoryKeys.length
-        ? 'Todas las categorias'
+        ? 'Todas las categorías'
         : selectedCategoryLabels.length > 4
-            ? `${selectedCategoryLabels.length} categorias: ${selectedCategoryLabels.slice(0, 4).join(', ')}...`
+            ? `${selectedCategoryLabels.length} categorías: ${selectedCategoryLabels.slice(0, 4).join(', ')}...`
             : selectedCategoryLabels.join(', ');
 
     const showDetal = document.getElementById('inventory-pdf-show-detal')?.checked !== false;
@@ -6491,7 +6654,7 @@ async function downloadInventoryCatalogPdf() {
         : [];
 
     if (!products.length) {
-        showToast(selectedCategoryKeys.length ? 'No hay productos disponibles para exportar en estas categorias' : 'Selecciona al menos una categoria para el PDF', 'warning');
+            showToast(selectedCategoryKeys.length ? 'No hay productos disponibles para exportar en estas categorías' : 'Selecciona al menos una categoría para el PDF', 'warning');
         return;
     }
 
@@ -6535,18 +6698,18 @@ async function downloadInventoryCatalogPdf() {
 
         const bothPrices = showDetal && showMayorista;
         const columns = [
-            { key: 'image', label: 'FOTO', x: 14, w: 44 },
-            { key: 'product', label: 'PRODUCTO', x: 63, w: bothPrices ? 58 : 76 },
-            { key: 'category', label: 'CATEGORIA', x: bothPrices ? 124 : 144, w: 24 },
-            ...(showDetal ? [{ key: 'detal', label: 'DETAL', x: showMayorista ? 150 : 171, w: 22, align: 'right' }] : []),
-            ...(showMayorista ? [{ key: 'mayorista', label: 'MAYORISTA', x: 178, w: 23, align: 'right' }] : [])
+            { key: 'image', label: 'FOTO', x: 12, w: 34 },
+            { key: 'product', label: 'PRODUCTO', x: 52, w: bothPrices ? 60 : 78 },
+            { key: 'category', label: 'CATEGORÍA', x: bothPrices ? 116 : 136, w: bothPrices ? 30 : 34 },
+            ...(showDetal ? [{ key: 'detal', label: 'DETAL', x: showMayorista ? 151 : 170, w: 20, align: 'right' }] : []),
+            ...(showMayorista ? [{ key: 'mayorista', label: 'MAYORISTA', x: 176, w: 22, align: 'right' }] : [])
         ];
 
         let pageNumber = 1;
-        let y = 34;
-        const rowHeight = 42;
+        let y = 36;
+        const rowHeight = 38;
         const pageHeight = doc.internal.pageSize.getHeight();
-        const bottomLimit = pageHeight - 18;
+        const bottomLimit = pageHeight - 17;
         let lastCategoryKey = '';
 
         drawInventoryPdfHeader(doc, meta);
@@ -6563,32 +6726,32 @@ async function downloadInventoryCatalogPdf() {
                 doc.addPage();
                 pageNumber += 1;
                 drawInventoryPdfHeader(doc, meta);
-                y = 34;
+                y = 36;
                 drawInventoryPdfTableHeader(doc, columns, y);
                 y += 11;
             }
 
             if (isNewCategory) {
                 doc.setFillColor(248, 246, 252);
-                doc.rect(12, y - 1, 186, 6, 'F');
+                doc.rect(10, y - 1, 190, 6, 'F');
                 doc.setDrawColor(109, 40, 217);
-                doc.line(12, y - 1, 198, y - 1);
+                doc.line(10, y - 1, 200, y - 1);
                 doc.setTextColor(85, 65, 135);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(7.5);
-                doc.text((row.categoryLabel || row.category || 'Categoria').toUpperCase(), 14, y + 3.4);
+                doc.text((row.categoryLabel || row.category || 'Categoría').toUpperCase(), 12, y + 3.4);
                 y += 8;
                 lastCategoryKey = rowCategoryKey;
             }
 
             doc.setDrawColor(232, 232, 232);
-            doc.line(12, y - 2, 198, y - 2);
+            doc.line(10, y - 2, 200, y - 2);
 
             if (row.image) {
-                doc.addImage(row.image, 'JPEG', 14, y, 38, 38);
+                doc.addImage(row.image, 'JPEG', 12, y, 34, 34);
             } else {
                 doc.setFillColor(245, 245, 245);
-                doc.roundedRect(14, y, 38, 38, 2, 2, 'F');
+                doc.roundedRect(12, y, 34, 34, 2, 2, 'F');
             }
 
             const productCol = columns.find(item => item.key === 'product');
@@ -6605,7 +6768,7 @@ async function downloadInventoryCatalogPdf() {
             if (row.sizes) {
                 doc.setTextColor(85, 65, 135);
                 doc.setFont('helvetica', 'bold');
-                doc.text(doc.splitTextToSize(`Tamanos: ${row.sizes}`, productCol.w).slice(0, 2), productCol.x, y + 22);
+                doc.text(doc.splitTextToSize(`Tamaños: ${row.sizes}`, productCol.w).slice(0, 2), productCol.x, y + 22);
             }
 
             doc.setTextColor(45, 45, 45);
@@ -6672,7 +6835,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     var vid = getInventoryVariationId(v) || '-';
     var safeVid = escapeHtml(vid);
     var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
-    var vTamano = getProductField(v, ['Tamano', 'TamaÃƒÂ±o', 'TamaÃƒÆ’Ã‚Â±o', 'Talla'], '');
+    var vTamano = getProductField(v, ['Tamano', 'Tamaño', 'Talla'], '');
     var vTipoMedida = normalizeSearchText(v.TipoMedida || v['Tipo Medida'] || '');
     var vUnidadMedida = v.UnidadMedida || v['Unidad Medida'] || 'cm';
     var vAncho = v.Ancho || '';
@@ -6692,7 +6855,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
 
     html += '<article class="variant-edit-card" data-varid="' + safeVid + '">';
     html += '<div class="variant-edit-summary">';
-    html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="this.src=\'Logo2.png\'"></div>';
+    html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="handleInventoryImageError(this)"></div>';
     html += '<div><span>ID variante</span><strong>' + escapeHtml(vid) + '</strong></div>';
     html += '<div><span>Atributos</span><b>' + escapeHtml(getVariantAttributesLabel(v) || 'Sin atributos') + '</b>' + getColorSwatchesHtml(vColor !== '-' ? vColor : '') + '</div>';
     html += '<div><span>Stock</span><b style="color:' + (Number(vStock) > 0 ? '#10B981' : '#EF4444') + ';">' + escapeHtml(vStock) + '</b></div>';
@@ -6804,7 +6967,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
         return;
     }
 
-    var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">🔸 VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
+    var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
     container.innerHTML = buildVariantEditorCardsHtml(variantes, idProducto);
     initColorPickers(container);
     return;
@@ -6818,7 +6981,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     variantes.forEach(function (v) {
         var vid = getInventoryVariationId(v) || '-';
         var vEstilo = cleanProductStyleValue(getProductField(v, ['Estilo', 'estilo'], ''));
-        var vTamano = getProductField(v, ['Tamano', 'TamaÃ±o', 'TamaÃƒÂ±o', 'Talla'], '');
+        var vTamano = getProductField(v, ['Tamano', 'Tamaño', 'Tamaño', 'Talla'], '');
         var vTipoMedida = normalizeSearchText(v.TipoMedida || v['Tipo Medida'] || '');
         var vUnidadMedida = v.UnidadMedida || v['Unidad Medida'] || 'cm';
         var vAncho = v.Ancho || '';
@@ -6958,7 +7121,7 @@ window.guardarVarianteEditada = async function (vid, idProducto) {
         Descripcion: getInputValue('prod-descripcion'),
         Tamano: editedTamano,
         Talla: editedTamano,
-        'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
+        'Tamaño': row.querySelector('.ve-tamano')?.value || '',
         ...getVariantEditMeasurementPayload(row, editedTamano),
         Color: row.querySelector('.ve-color').value,
         Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
@@ -7012,7 +7175,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
             Descripcion: getInputValue('prod-descripcion'),
             Tamano: editedTamano,
             Talla: editedTamano,
-            'TamaÃ±o': row.querySelector('.ve-tamano')?.value || '',
+            'Tamaño': row.querySelector('.ve-tamano')?.value || '',
             ...getVariantEditMeasurementPayload(row, editedTamano),
             Color: row.querySelector('.ve-color')?.value || '',
             Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
@@ -7045,7 +7208,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
 
 function editarProducto(index) {
     var p = inventario[index];
-    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || '';
+    var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
     var idProd = getInventoryMotherId(p);
     idVar = getInventoryVariationId(p);
     var isVariant = idProd && idVar && idProd !== idVar;
@@ -7137,12 +7300,12 @@ function editarProducto(index) {
     }
     if (variantBadge) {
         if (isVariant) {
-            variantBadge.textContent = '⚡ VARIANTE (' + idVar + ')';
+            variantBadge.textContent = 'VARIANTE (' + idVar + ')';
             variantBadge.style.background = 'rgba(255,165,0,0.2)';
             variantBadge.style.color = '#FFA500';
             variantBadge.style.display = 'inline';
         } else {
-            variantBadge.textContent = '⭐ PRODUCTO PRINCIPAL (' + idProd + ')';
+            variantBadge.textContent = 'PRODUCTO PRINCIPAL (' + idProd + ')';
             variantBadge.style.background = 'rgba(155,44,250,0.2)';
             variantBadge.style.color = '#9B2CFA';
             variantBadge.style.display = 'inline';
@@ -7162,7 +7325,7 @@ function editarProducto(index) {
                 newBtn.className = 'admin-btn';
                 newBtn.id = 'btn-save-group';
                 newBtn.style.cssText = 'background:linear-gradient(135deg,#FFA500,#FF6347);margin-top:12px;';
-                newBtn.textContent = '💾 Guardar Grupo Completo (Madre + Variantes)';
+                newBtn.textContent = 'Guardar grupo completo (madre + variantes)';
                 newBtn.addEventListener('click', function () { guardarGrupoCompleto(idProd); });
                 formFooter.parentNode.insertBefore(newBtn, formFooter.nextSibling);
             }
@@ -7339,7 +7502,7 @@ async function eliminarProducto(index) {
             showToast('Eliminando "' + nombre + '"...');
             try {
                 await delFromSheet(idVar, idProd, { nombre: nombre, rowIndex: rowIndex });
-                showToast('✅ Producto "' + nombre + '" eliminado correctamente', 'success');
+                showToast('Producto "' + nombre + '" eliminado correctamente', 'success');
                 // Remove the row visually immediately for better UX
                 inventario.splice(index, 1);
                 writeInventoryCache(inventario);
@@ -7348,7 +7511,7 @@ async function eliminarProducto(index) {
                 setTimeout(function () { cargarInventario({ silent: true }); }, 2000);
             } catch (err) {
                 console.error('Error eliminando producto:', err);
-                showToast('❌ Error al eliminar: ' + err.message, 'error');
+                showToast('Error al eliminar: ' + err.message, 'error');
             }
         }
     );
@@ -7712,7 +7875,7 @@ function renderAdminDashboard() {
     setDashboardText('dash-consult-orders', String(consultOrders.length));
     setDashboardText('dash-inventory-value', getDashboardMoney(inventoryValue));
 
-    // ═══ Enhanced Low Stock with badges ═══
+    // â•â•â• Enhanced Low Stock with badges â•â•â•
     const lowStock = products
         .filter(product => getDashboardProductStock(product) <= 3)
         .sort((a, b) => getDashboardProductStock(a) - getDashboardProductStock(b))
@@ -7735,7 +7898,7 @@ function renderAdminDashboard() {
     }
     setDashboardText('dash-stock-count', String(lowStock.length));
 
-    // ═══ Enhanced Recent Orders with status dots ═══
+    // â•â•â• Enhanced Recent Orders with status dots â•â•â•
     const recentOrdersBox = document.getElementById('dash-recent-orders');
     if (recentOrdersBox) {
         const recent = [...filteredOrders]
@@ -7771,7 +7934,7 @@ function renderAdminDashboard() {
         setDashboardText('dash-orders-count', String(recent.length));
     }
 
-    // ═══ Status bars ═══
+    // â•â•â• Status bars â•â•â•
     const statusBars = document.getElementById('dash-status-bars');
     if (statusBars) {
         const statusCounts = countByDashboardValue(filteredOrders, getDashboardStatusValue);
@@ -7789,7 +7952,7 @@ function renderAdminDashboard() {
         `).join('');
     }
 
-    // ═══ Canvas: Sales Line/Area Chart ═══
+    // â•â•â• Canvas: Sales Line/Area Chart â•â•â•
     const salesByDay = {};
     filteredInvoices.forEach(invoice => {
         const date = getDashboardDateValue(invoice);
@@ -7802,7 +7965,7 @@ function renderAdminDashboard() {
     const salesEntries = Object.entries(salesByDay).slice(-12);
     drawDashboardAreaChart('dash-sales-canvas', 'dash-sales-legend', salesEntries, totalSales);
 
-    // ═══ Canvas: Category Donut Chart ═══
+    // â•â•â• Canvas: Category Donut Chart â•â•â•
     const categoryCounts = countByDashboardValue(products, product => getDashboardProductCategory(product) || 'Sin categoria');
     const categoryEntries = Object.entries(categoryCounts)
         .sort((a, b) => b[1] - a[1])
@@ -7810,7 +7973,7 @@ function renderAdminDashboard() {
     drawDashboardDonutChart('dash-category-canvas', 'dash-category-legend', categoryEntries, products.length);
 }
 
-// ═══ Canvas Drawing: Area Chart ═══
+// â•â•â• Canvas Drawing: Area Chart â•â•â•
 function drawDashboardAreaChart(canvasId, legendId, entries, total) {
     const canvas = document.getElementById(canvasId);
     const legendBox = document.getElementById(legendId);
@@ -7918,7 +8081,7 @@ function drawDashboardAreaChart(canvasId, legendId, entries, total) {
     }
 }
 
-// ═══ Canvas Drawing: Donut Chart ═══
+// â•â•â• Canvas Drawing: Donut Chart â•â•â•
 function drawDashboardDonutChart(canvasId, legendId, entries, total) {
     const canvas = document.getElementById(canvasId);
     const legendBox = document.getElementById(legendId);
@@ -8032,7 +8195,7 @@ function switchDashboardView(viewId, title) {
     }
 }
 
-// === LÓGICA DE PEDIDOS Y FACTURACIÓN DIGITAL ===
+// === LÃ“GICA DE PEDIDOS Y FACTURACIÃ“N DIGITAL ===
 const CHINA_ORDER_DRAFT_KEY = 'blyxu_admin_china_order_draft_v1';
 const CHINA_ORDER_SAVED_KEY = 'blyxu_admin_china_saved_orders_v1';
 const CHINA_ORDER_DB_NAME = 'blyxu_admin_china_orders_db';
@@ -8793,7 +8956,7 @@ async function saveCurrentChinaOrder(options = {}) {
             console.warn('Error guardando en Google Sheets:', serverErr);
         }
 
-        if (!options.silent) showToast(`✅ Pedido guardado en la nube (${record.rows.length} producto(s))`, 'success');
+        if (!options.silent) showToast(`Pedido guardado en la nube (${record.rows.length} producto(s))`, 'success');
         return record;
     } finally {
         if (saveButton && !options.silent) {
@@ -8876,15 +9039,20 @@ async function deleteSavedChinaOrder(id) {
             await writeSavedChinaOrders(next);
             if (activeChinaOrderId === id) activeChinaOrderId = '';
             renderSavedChinaOrders();
-            showToast('✅ Pedido eliminado', 'success');
+            showToast('Pedido eliminado', 'success');
         }
     );
 }
 
 function formatChinaOrderDate(value) {
+    if (!value) return new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: '2-digit' });
+    if (Number.isNaN(date.getTime())) return String(value);
+    const day = date.getDate();
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+    const month = months[date.getMonth()] || date.toLocaleDateString('es-CO', { month: 'short' });
+    const year = date.getFullYear();
+    return `${day} de ${month} de ${year}`;
 }
 
 function renderSavedChinaOrders() {
@@ -8922,56 +9090,520 @@ function renderSavedChinaOrders() {
     `).join('');
 }
 
+function getChinaOrderPrintStyles() {
+    return `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        * {
+            box-sizing: border-box !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        html, body {
+            background: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 12px;
+        }
+
+        .china-print-toolbar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 99999;
+            background: #1e1b4b;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .china-print-toolbar-title {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .china-print-toolbar-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .china-print-btn {
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .china-print-btn.primary {
+            background: #7c3aed;
+            color: #ffffff;
+        }
+        .china-print-btn.primary:hover {
+            background: #6d28d9;
+            transform: translateY(-1px);
+        }
+
+        .china-print-btn.secondary {
+            background: rgba(255,255,255,0.16);
+            color: #ffffff;
+        }
+        .china-print-btn.secondary:hover {
+            background: rgba(255,255,255,0.26);
+        }
+
+        #china-order-print-container {
+            padding: 14px 0;
+        }
+
+        .china-print-page {
+            box-sizing: border-box !important;
+            width: 100% !important;
+            max-width: 210mm !important;
+            min-height: 270mm !important;
+            margin: 0 auto 24px auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            background: #ffffff !important;
+            padding: 12mm 13mm !important;
+            border-radius: 4px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+        }
+
+        .china-print-page:last-child,
+        .china-print-page.last {
+            page-break-after: auto !important;
+            break-after: auto !important;
+            margin-bottom: 0 !important;
+        }
+
+        .china-print-page-content {
+            flex: 1 0 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        /* CABECERA PÁGINA 1 */
+        .china-print-header {
+            border: 2px solid #7c3aed !important;
+            border-radius: 14px !important;
+            padding: 12px 16px !important;
+            margin-bottom: 12px !important;
+            background: #ffffff !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            page-break-inside: avoid !important;
+        }
+
+        .china-print-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+        }
+
+        .china-print-logo-box {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
+        .china-print-logo-img {
+            height: 38px !important;
+            width: auto !important;
+            object-fit: contain !important;
+        }
+
+        .china-print-logo-title {
+            margin: 0 !important;
+            font-size: 26px !important;
+            font-weight: 900 !important;
+            color: #581c87 !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1 !important;
+        }
+
+        .china-print-title-group {
+            border-left: 2px solid #ddd6fe !important;
+            padding-left: 14px !important;
+        }
+
+        .china-print-title-group h2 {
+            margin: 0 !important;
+            font-size: 15px !important;
+            font-weight: 800 !important;
+            color: #1e1b4b !important;
+            line-height: 1.2 !important;
+        }
+
+        .china-print-title-group p {
+            margin: 2px 0 0 0 !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            color: #64748b !important;
+        }
+
+        .china-print-factory {
+            margin: 3px 0 0 0 !important;
+            font-size: 11px !important;
+            color: #475569 !important;
+        }
+
+        .china-print-factory strong {
+            color: #581c87 !important;
+            font-weight: 700 !important;
+        }
+
+        .china-print-meta {
+            text-align: right !important;
+        }
+
+        .china-print-order-id {
+            font-size: 15.5px !important;
+            font-weight: 900 !important;
+            color: #581c87 !important;
+            letter-spacing: 0.5px !important;
+            margin-bottom: 3px !important;
+        }
+
+        .china-print-meta p {
+            margin: 2px 0 0 0 !important;
+            font-size: 11px !important;
+            color: #475569 !important;
+        }
+
+        .china-print-meta strong {
+            color: #0f172a !important;
+        }
+
+        /* CABECERA COMPACTA (PÁGINA 2+) */
+        .china-print-header.compact {
+            border: 1.5px solid #7c3aed !important;
+            border-radius: 10px !important;
+            padding: 8px 16px !important;
+            margin-bottom: 12px !important;
+            background: #ffffff !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            page-break-inside: avoid !important;
+        }
+
+        .china-print-header.compact .china-print-brand {
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+        }
+
+        .china-print-header.compact h2 {
+            margin: 0 !important;
+            font-size: 14px !important;
+            font-weight: 900 !important;
+            color: #581c87 !important;
+        }
+
+        .china-print-header.compact h2 span {
+            font-weight: 600 !important;
+            font-size: 12px !important;
+            color: #7c3aed !important;
+        }
+
+        .china-print-factory-compact {
+            font-size: 11px !important;
+            color: #475569 !important;
+        }
+
+        .china-print-factory-compact strong {
+            color: #581c87 !important;
+            font-weight: 700 !important;
+        }
+
+        .china-print-order-id-compact {
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            color: #581c87 !important;
+            letter-spacing: 0.5px !important;
+        }
+
+        /* TABLA PRINCIPAL */
+        .china-print-table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            border: 1.5px solid #7c3aed !important;
+            margin: 4px 0 9px 0 !important;
+            table-layout: fixed !important;
+        }
+
+        .china-print-table thead th {
+            border: 1px solid #c4b5fd !important;
+            border-top: 1.5px solid #7c3aed !important;
+            border-bottom: 1.5px solid #7c3aed !important;
+            color: #581c87 !important;
+            background: #ffffff !important;
+            font-size: 10.5px !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            padding: 7px 5px !important;
+        }
+
+        .china-print-table tbody tr {
+            border-bottom: 1px solid #ddd6fe !important;
+            min-height: 76px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        .china-print-table td {
+            padding: 5px 6px !important;
+            vertical-align: middle !important;
+            border: 1px solid #ddd6fe !important;
+            overflow-wrap: anywhere !important;
+            word-break: normal !important;
+        }
+
+        .china-print-img {
+            width: 62px !important;
+            height: 62px !important;
+            max-width: 100% !important;
+            object-fit: cover !important;
+            background: #ffffff !important;
+            border-radius: 6px !important;
+            border: 1px solid #ddd6fe !important;
+            display: block !important;
+            margin: 0 auto !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        }
+
+        .china-print-no-photo {
+            width: 62px !important;
+            height: 62px !important;
+            border-radius: 6px !important;
+            border: 1px dashed #cbd5e1 !important;
+            background: #f8fafc !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 auto !important;
+            color: #94a3b8 !important;
+            font-size: 9px !important;
+            font-weight: 600 !important;
+        }
+
+        .china-print-prod-name {
+            font-size: 12.5px !important;
+            font-weight: 800 !important;
+            line-height: 1.35 !important;
+            color: #0f172a !important;
+            margin-bottom: 3px !important;
+            text-transform: uppercase !important;
+        }
+
+        .china-print-prod-ref {
+            font-size: 10px !important;
+            color: #64748b !important;
+            font-weight: 600 !important;
+        }
+
+        .china-print-prod-ref strong {
+            color: #334155 !important;
+            font-weight: 700 !important;
+        }
+
+        /* RESUMEN Y TOTALES */
+        .china-print-summary-wrap {
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: flex-start !important;
+            gap: 16px !important;
+            margin-top: 12px !important;
+            margin-bottom: 6px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        .china-print-notes {
+            flex: 1 !important;
+            max-width: 55% !important;
+            background: #fdf4ff !important;
+            border: 1px solid #f0abfc !important;
+            border-left: 3px solid #7c3aed !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            font-size: 10.5px !important;
+            color: #334155 !important;
+            line-height: 1.4 !important;
+        }
+
+        .china-print-notes strong {
+            display: block !important;
+            color: #581c87 !important;
+            font-size: 11px !important;
+            margin-bottom: 2px !important;
+        }
+
+        .china-print-totals-box {
+            border: 2px solid #7c3aed !important;
+            border-radius: 12px !important;
+            padding: 8px 18px !important;
+            background: #ffffff !important;
+            min-width: 210px !important;
+        }
+
+        .china-print-total-row {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 20px !important;
+            padding: 3px 0 !important;
+        }
+
+        .china-print-total-row.main span {
+            font-size: 12.5px !important;
+            font-weight: 800 !important;
+            color: #1e1b4b !important;
+        }
+
+        .china-print-total-row.main strong {
+            font-size: 14px !important;
+            font-weight: 900 !important;
+            color: #581c87 !important;
+        }
+
+        /* PIE DE PÁGINA */
+        .china-print-footer {
+            margin-top: auto !important;
+            padding-top: 6px !important;
+            border-top: 1px solid #e2e8f0 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            font-size: 9.5px !important;
+            color: #64748b !important;
+            font-weight: 500 !important;
+            page-break-inside: avoid !important;
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+
+            html, body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+
+            .china-print-toolbar {
+                display: none !important;
+            }
+
+            #china-order-print-container {
+                padding: 0 !important;
+                display: block !important;
+            }
+
+            .china-print-page {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-height: 274mm !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+
+            body.printing-china-order > :not(#china-order-print-container) {
+                display: none !important;
+            }
+
+            body.printing-china-order #china-order-print-container {
+                display: block !important;
+                visibility: visible !important;
+                position: static !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+            }
+        }
+    `;
+}
+
+function ensureChinaPrintStyles() {
+    let styleTag = document.getElementById('china-order-print-styles');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'china-order-print-styles';
+        document.head.appendChild(styleTag);
+    }
+    styleTag.textContent = getChinaOrderPrintStyles();
+}
+
 function buildChinaOrderPrintHtml(order) {
     const totals = getChinaOrderTotalsFromDraft(order);
     const showUsd = order.showUsd !== false;
     const showCop = order.showCop !== false;
     const showRef = order.showRef !== false;
     const rows = Array.isArray(order.rows) ? order.rows : [];
+    const productColumnWidth = showUsd && showCop ? 31 : (showUsd || showCop ? 55 : 79);
 
-    // Calcular tamaño de imagen y proporciones de columnas según toggles activos
-    const priceColsCount = (showUsd ? 2 : 0) + (showCop ? 1 : 0); // USD unit + subtotal + COP
-    let imgSize, photoColWidth, prodColWidth, rowsPerPage;
-    if (priceColsCount === 0) {
-        // Sin precios (máxima prioridad visual a las imágenes)
-        rowsPerPage = 4;
-        if (!showRef) {
-            imgSize = 210;
-            photoColWidth = '62%';
-            prodColWidth = '30%';
-        } else {
-            imgSize = 195;
-            photoColWidth = '54%';
-            prodColWidth = '38%';
-        }
-    } else if (priceColsCount <= 1) {
-        // Un solo precio visible
-        rowsPerPage = 5;
-        imgSize = showRef ? 140 : 150;
-        photoColWidth = showRef ? '38%' : '42%';
-        prodColWidth = showRef ? '36%' : '32%';
-    } else {
-        // Todos los precios visibles
-        rowsPerPage = 6;
-        imgSize = showRef ? 95 : 105;
-        photoColWidth = showRef ? '120px' : '130px';
-        prodColWidth = 'auto';
-    }
+    // Exactamente 6 items por página para mantener fotos grandes y esquema visual perfecto
+    const rowsPerPage = 6;
 
     const headers = [
-        `<th style="width:${photoColWidth}; text-align:center;">Foto</th>`,
-        `<th style="width:${prodColWidth}; text-align:left;">${showRef ? 'Producto / Referencia' : 'Producto'}</th>`,
-        '<th style="width:55px; text-align:center;">PCS</th>',
-        showUsd ? '<th style="width:85px; text-align:right;">Unit. USD</th>' : '',
-        showCop ? '<th style="width:95px; text-align:right;">Unit. COP</th>' : '',
-        showUsd ? '<th style="width:105px; text-align:right;">Subtotal USD</th>' : ''
+        '<th style="width:13%; text-align:center;">FOTO</th>',
+        `<th style="width:${productColumnWidth}%; text-align:left; padding-left:12px;">${showRef ? 'PRODUCTO / REFERENCIA' : 'PRODUCTO'}</th>`,
+        '<th style="width:8%; text-align:center;">PCS</th>',
+        showUsd ? '<th style="width:11%; text-align:center;">UNIT. USD</th>' : '',
+        showCop ? '<th style="width:11%; text-align:right;">UNIT. COP</th>' : '',
+        showUsd ? '<th style="width:13%; text-align:center;">SUBTOTAL USD</th>' : '',
+        showCop ? '<th style="width:13%; text-align:right;">SUBTOTAL COP</th>' : ''
     ].filter(Boolean).join('');
 
-    const totalRowsHtml = [
-        `<div class="china-print-total-row"><span>Total PCS</span><strong>${Math.round(totals.totalQuantity || 0).toLocaleString('es-CO')}</strong></div>`,
-        showUsd ? `<div class="china-print-total-row"><span>Total USD</span><strong>${formatChinaUsd(totals.totalUsd)}</strong></div>` : '',
-        showCop ? `<div class="china-print-total-row"><span>Total COP</span><strong>${formatChinaCop(totals.totalCop)}</strong></div>` : ''
-    ].filter(Boolean).join('');
+    const totalRowsHtml = `
+        <div class="china-print-total-row main">
+            <span>Total PCS</span>
+            <strong>${Math.round(totals.totalQuantity || 0).toLocaleString('es-CO')}</strong>
+        </div>
+        ${showUsd ? `
+            <div class="china-print-total-row" style="border-top:1px dashed #ddd6fe; padding-top:4px; margin-top:3px;">
+                <span style="font-size:12px; color:#475569; font-weight:600;">Total USD</span>
+                <strong style="color:#581c87; font-size:14px; font-weight:900;">${formatChinaUsd(totals.totalUsd)}</strong>
+            </div>
+        ` : ''}
+        ${showCop ? `
+            <div class="china-print-total-row" style="border-top:1px dashed #ddd6fe; padding-top:4px; margin-top:3px;">
+                <span style="font-size:12px; color:#475569; font-weight:600;">Total COP</span>
+                <strong style="color:#0f172a; font-size:13.5px; font-weight:800;">${formatChinaCop(totals.totalCop)}</strong>
+            </div>
+        ` : ''}
+    `;
 
     function chunkRowsForPrint(items) {
         const pages = [];
@@ -8988,30 +9620,33 @@ function buildChinaOrderPrintHtml(order) {
             const quantity = Math.max(0, parseChinaNumber(item.quantity || 0));
             const unitUsd = Math.max(0, parseChinaNumber(item.unitUsd || 0));
             const subtotalUsd = quantity * unitUsd;
+            const unitCop = unitUsd * (totals.rate || 0);
+            const subtotalCop = subtotalUsd * (totals.rate || 0);
             const imageSrc = formatChinaOrderImageUrl(item.image);
-            const imgStyle = `width:${imgSize}px; height:${imgSize}px; max-width:100%; object-fit:contain; background:#fff; border-radius:8px; border:1px solid #ddd6fe; display:block; margin:0 auto;`;
-            const noPhotoStyle = `width:${imgSize}px; height:${imgSize}px; max-width:100%; border-radius:8px; border:1px dashed #cbd5e1; background:#f8fafc; display:flex; align-items:center; justify-content:center; margin:0 auto; color:#94a3b8; font-size:10px; font-weight:600;`;
+
             const imageHtml = imageSrc
-                ? `<img src="${escapeHtml(imageSrc)}" alt="" loading="eager" crossorigin="anonymous" style="${imgStyle}">`
-                : `<div style="${noPhotoStyle}"><span>Sin foto</span></div>`;
+                ? `<img src="${escapeHtml(imageSrc)}" alt="" loading="eager" crossorigin="anonymous" class="china-print-img" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                   <div class="china-print-no-photo" style="display:none;"><span>Sin foto</span></div>`
+                : `<div class="china-print-no-photo"><span>Sin foto</span></div>`;
 
             const refHtml = showRef
                 ? (item.reference
-                    ? `<div class="china-print-prod-ref" style="font-size:9px; margin-top:3px; color:#6b7280;">Ref: <strong style="color:#4b5563;">${escapeHtml(item.reference)}</strong></div>`
-                    : '<div class="china-print-prod-ref" style="font-size:8px; margin-top:1px; color:#cbd5e1;">Sin ref.</div>')
+                    ? `<div class="china-print-prod-ref">Ref: <strong>${escapeHtml(item.reference)}</strong></div>`
+                    : '<div class="china-print-prod-ref" style="color:#94a3b8;">Ref: S/N</div>')
                 : '';
 
             return `
                 <tr>
-                    <td style="text-align:center; padding:5px 6px; width:${photoColWidth};">${imageHtml}</td>
-                    <td style="padding:6px 12px; vertical-align:middle; width:${prodColWidth};">
-                        <div class="china-print-prod-name" style="font-size:12.5px; font-weight:700; line-height:1.35; color:#1e1b4b;">${index + 1}. ${escapeHtml(item.product || 'Producto')}</div>
+                    <td style="text-align:center; padding:5px 5px; width:13%;">${imageHtml}</td>
+                    <td style="padding:8px 12px; vertical-align:middle;">
+                        <div class="china-print-prod-name">${index + 1}. ${escapeHtml(item.product || 'Producto sin nombre')}</div>
                         ${refHtml}
                     </td>
-                    <td style="text-align:center; font-weight:bold; font-size:12.5px; width:55px;">${quantity}</td>
-                    ${showUsd ? `<td style="text-align:right;">${formatChinaUsd(unitUsd)}</td>` : ''}
-                    ${showCop ? `<td style="text-align:right;">${formatChinaCop(unitUsd * totals.rate)}</td>` : ''}
-                    ${showUsd ? `<td style="text-align:right; font-weight:bold; color:#581c87; font-size:11.5px;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
+                    <td style="text-align:center; font-weight:800; font-size:14px; width:8%; color:#0f172a;">${quantity.toLocaleString('es-CO')}</td>
+                    ${showUsd ? `<td style="text-align:center; font-size:12px; color:#334155; font-weight:600; font-variant-numeric:tabular-nums;">${formatChinaUsd(unitUsd)}</td>` : ''}
+                    ${showCop ? `<td style="text-align:right; font-size:12px; color:#334155; font-weight:600; font-variant-numeric:tabular-nums;">${formatChinaCop(unitCop)}</td>` : ''}
+                    ${showUsd ? `<td style="text-align:center; font-weight:800; color:#581c87; font-size:13px; font-variant-numeric:tabular-nums;">${formatChinaUsd(subtotalUsd)}</td>` : ''}
+                    ${showCop ? `<td style="text-align:right; font-weight:800; color:#581c87; font-size:13px; font-variant-numeric:tabular-nums;">${formatChinaCop(subtotalCop)}</td>` : ''}
                 </tr>
             `;
         }).join('');
@@ -9029,9 +9664,10 @@ function buildChinaOrderPrintHtml(order) {
             <div class="china-print-header">
                 <div class="china-print-brand">
                     <div class="china-print-logo-box">
-                        <h1>BLYXU</h1>
+                        <img src="blyxu-invoice-logo.png" alt="BLYXU" class="china-print-logo-img" onerror="this.style.display='none';">
+                        <h1 class="china-print-logo-title">BLYXU</h1>
                     </div>
-                    <div>
+                    <div class="china-print-title-group">
                         <h2>Pedido a China</h2>
                         <p>Orden de compra proveedor</p>
                         ${order.factory ? `<p class="china-print-factory">Fábrica: <strong>${escapeHtml(order.factory)}</strong></p>` : ''}
@@ -9039,18 +9675,18 @@ function buildChinaOrderPrintHtml(order) {
                 </div>
                 <div class="china-print-meta">
                     <div class="china-print-order-id">${escapeHtml(order.id || makeChinaOrderId())}</div>
-                    <p>Fecha: <strong>${formatChinaOrderDate(order.updatedAt || new Date().toISOString())}</strong></p>
-                    ${showCop ? `<p>TRM: <strong>${formatChinaCop(totals.rate)}</strong> / USD</p>` : ''}
+                    <p>Fecha: <strong>${formatChinaOrderDate(order.updatedAt || order.createdAt || new Date().toISOString())}</strong></p>
+                    ${showCop && totals.rate ? `<p>TRM: <strong>${formatChinaCop(totals.rate)}</strong> / USD</p>` : ''}
                 </div>
             </div>
         ` : `
             <div class="china-print-header compact">
                 <div class="china-print-brand">
-                    <h2 style="margin:0; font-size:15px;">BLYXU <span style="font-weight:normal; font-size:12px; color:#6b21a8;">| Pedido a China</span></h2>
-                    ${order.factory ? `<span style="font-size:11px; color:#581c87; margin-left:10px;">Fábrica: <strong>${escapeHtml(order.factory)}</strong></span>` : ''}
+                    <h2>BLYXU <span>| Pedido a China</span></h2>
+                    ${order.factory ? `<span class="china-print-factory-compact">Fábrica: <strong>${escapeHtml(order.factory)}</strong></span>` : ''}
                 </div>
-                <div class="china-print-meta" style="display:flex; gap:12px; align-items:center;">
-                    <strong style="font-size:13px; color:#6b21a8;">${escapeHtml(order.id || makeChinaOrderId())}</strong>
+                <div class="china-print-meta compact">
+                    <strong class="china-print-order-id-compact">${escapeHtml(order.id || makeChinaOrderId())}</strong>
                 </div>
             </div>
         `;
@@ -9065,10 +9701,10 @@ function buildChinaOrderPrintHtml(order) {
                         </thead>
                         <tbody>${buildPagedItemRows(pageRows, printedRows)}</tbody>
                     </table>
-                    ${isLastPage && (totalRowsHtml || order.notes) ? `
+                    ${isLastPage ? `
                         <div class="china-print-summary-wrap">
-                            ${order.notes ? `<div class="china-print-notes"><strong>Notas del Pedido:</strong><br>${escapeHtml(order.notes)}</div>` : '<div></div>'}
-                            ${totalRowsHtml ? `<div class="china-print-totals">${totalRowsHtml}</div>` : ''}
+                            ${order.notes ? `<div class="china-print-notes"><strong>Notas del Pedido:</strong><p style="margin:0; white-space:pre-wrap;">${escapeHtml(order.notes)}</p></div>` : '<div style="flex:1;"></div>'}
+                            <div class="china-print-totals-box">${totalRowsHtml}</div>
                         </div>
                     ` : ''}
                 </div>
@@ -9120,17 +9756,98 @@ async function waitForPrintImages(container) {
     });
 
     await Promise.all(promises);
-    await new Promise(resolve => setTimeout(resolve, 80));
+    await new Promise(resolve => setTimeout(resolve, 100));
+}
+
+function openChinaOrderPrintWindow(order) {
+    if (!order) return false;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return false;
+
+    const baseUrl = window.location.href.replace(/[^/]*$/, '');
+    const htmlContent = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="${escapeHtml(baseUrl)}">
+    <title>Pedido-China-${escapeHtml(order.id || 'BLYXU')}</title>
+    <style>${getChinaOrderPrintStyles()}</style>
+</head>
+<body>
+    <div class="china-print-toolbar">
+        <div class="china-print-toolbar-title">
+            <span style="font-size:16px;">CN</span>
+            <span>Pedido a China: <strong>${escapeHtml(order.id || '')}</strong></span>
+        </div>
+        <div class="china-print-toolbar-actions">
+            <button type="button" class="china-print-btn secondary" onclick="window.close()">Cerrar</button>
+            <button type="button" class="china-print-btn primary" onclick="window.print()">Imprimir / Guardar PDF</button>
+        </div>
+    </div>
+    <div id="china-order-print-container" style="display:block !important;">
+        ${buildChinaOrderPrintHtml(order)}
+    </div>
+    <script>
+        async function initPrint() {
+            const images = Array.from(document.querySelectorAll('img'));
+            await Promise.all(images.map(img => {
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise(res => {
+                    img.onload = res;
+                    img.onerror = () => {
+                        const src = img.src || '';
+                        const driveMatch = src.match(/[?&]id=([^&#]+)/) || src.match(/lh3\\.googleusercontent\\.com\\/d\\/([^/?&#]+)/);
+                        if (driveMatch && driveMatch[1] && !img.dataset.retried) {
+                            img.dataset.retried = '1';
+                            img.src = 'https://lh3.googleusercontent.com/d/' + driveMatch[1];
+                            img.onload = res;
+                            img.onerror = res;
+                        } else {
+                            res();
+                        }
+                    };
+                    setTimeout(res, 3000);
+                });
+            }));
+            setTimeout(() => {
+                window.print();
+            }, 350);
+        }
+        window.addEventListener('load', initPrint);
+    <\/script>
+</body>
+</html>`;
+
+    printWindow.document.open();
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    return true;
 }
 
 async function printChinaOrderPdf(order) {
-    const container = document.getElementById('china-order-print-container');
-    if (!container || !order) return;
+    if (!order) return;
+
+    // Intentar abrir en ventana limpia independiente para PDF sin interferencia de estilos de panel
+    const opened = openChinaOrderPrintWindow(order);
+    if (opened) return;
+
+    // Respaldo de impresión en misma ventana si los popups están bloqueados
+    ensureChinaPrintStyles();
+
+    let container = document.getElementById('china-order-print-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'china-order-print-container';
+        document.body.appendChild(container);
+    }
     container.innerHTML = buildChinaOrderPrintHtml(order);
 
     const parent = container.parentElement;
     const nextSib = container.nextSibling;
-    document.body.appendChild(container);
+    if (container.parentElement !== document.body) {
+        document.body.appendChild(container);
+    }
 
     const previousTitle = document.title;
     document.title = 'Pedido-China-' + String(order.id || 'BLYXU').replace(/[^a-z0-9_-]/gi, '');
@@ -9142,26 +9859,25 @@ async function printChinaOrderPdf(order) {
         cleanedUp = true;
         document.body.classList.remove('printing-china-order');
         document.title = previousTitle;
-        if (parent && container.parentElement === document.body) {
+        if (parent && parent !== document.body && container.parentElement === document.body) {
             if (nextSib && parent.contains(nextSib)) parent.insertBefore(container, nextSib);
             else parent.appendChild(container);
         }
         window.removeEventListener('afterprint', cleanup);
-        window.removeEventListener('focus', cleanup);
     };
 
-    window.addEventListener('afterprint', cleanup);
-    window.addEventListener('focus', cleanup, { once: true });
+    window.addEventListener('afterprint', cleanup, { once: true });
+    setTimeout(cleanup, 45000);
 
-    // Esperar a que las imágenes se descarguen y procesen completamente
     await waitForPrintImages(container);
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     window.print();
 }
 
 async function downloadCurrentChinaOrderPdf() {
     const draft = collectChinaOrderDraft();
-    const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || '').trim());
+    const hasProduct = draft.rows.some(item => String(item.product || item.reference || item.unitUsd || item.quantity || '').trim());
     if (!hasProduct) {
         showToast('Agrega al menos un producto antes de descargar el PDF', 'warning');
         return;
@@ -9171,9 +9887,9 @@ async function downloadCurrentChinaOrderPdf() {
     const existing = currentId ? saved.find(item => String(item.id).trim() === String(currentId).trim()) : null;
     const order = makeChinaOrderRecord(draft, existing);
     activeChinaOrderId = order.id;
-    // Lanzar PDF inmediatamente con imágenes locales nítidas
+
+    showToast('Preparando PDF de pedido a China...', 'info');
     await printChinaOrderPdf(order);
-    // Guardar en segundo plano sin congelar al usuario
     saveCurrentChinaOrder({ silent: true }).catch(err => console.warn('Error en guardado segundo plano:', err));
 }
 
@@ -9780,7 +10496,7 @@ function inferOrderCustomerType(order) {
     if (id.startsWith('may-')) return 'mayor';
     if (id.startsWith('det-')) return 'detal';
 
-    const method = String(order['MÃ©todo Contacto'] || order['Metodo Contacto'] || order.Metodo || '').toLowerCase();
+    const method = String(order['Método Contacto'] || order['Metodo Contacto'] || order.Metodo || '').toLowerCase();
     const methodType = normalizeAdminCustomerType(method);
     if (methodType) return methodType;
 
@@ -9903,7 +10619,7 @@ function buildOrderRowHtml(p, idx) {
         <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
             <td data-label="Pedido" style="font-weight:700;">${escapeHtml(id)}</td>
             <td data-label="Fecha" style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
-            <td data-label="Cliente" style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['TelÃ©fono'] || p.Telefono || '')}</span></td>
+            <td data-label="Cliente" style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['Teléfono'] || p.Telefono || '')}</span></td>
             <td data-label="Total" style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
             <td data-label="Estado"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
             <td data-label="Accion" class="orders-actions-cell">
@@ -10157,7 +10873,7 @@ function formatDateForInvoiceInput(value) {
 }
 
 function getInvoiceProductId(product) {
-    return readInvoiceField(product, ['idVariacion', 'ID', 'ID Variacion', 'ID VariaciÃ³n', 'ID VariaciÃƒÂ³n', 'SKU'], '') || ('ITEM-' + Date.now());
+    return readInvoiceField(product, ['idVariacion', 'ID', 'ID Variacion', 'ID Variación', 'ID Variación', 'SKU'], '') || ('ITEM-' + Date.now());
 }
 
 function getInvoiceProductName(product) {
@@ -10165,7 +10881,7 @@ function getInvoiceProductName(product) {
 }
 
 function getInvoiceProductSku(product) {
-    return readInvoiceField(product, ['SKU', 'Referencia', 'ID Variacion', 'ID VariaciÃ³n', 'ID VariaciÃƒÂ³n'], '');
+    return readInvoiceField(product, ['SKU', 'Referencia', 'ID Variacion', 'ID Variación', 'ID Variación'], '');
 }
 
 function getInvoiceProductPrice(product) {
@@ -10259,7 +10975,7 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
             : (linkedExistingInvoice ? (linkedExistingInvoice['Estado Factura'] || linkedExistingInvoice.Estado || 'Pendiente') : 'Pendiente');
         document.getElementById('inv-edit-metodo').value = editingInvoice
             ? (p['Método Pago'] || p['Metodo Pago'] || p.pago || '')
-            : (p['MÃ©todo Contacto'] || p['Metodo Contacto'] || p.Metodo || '');
+            : (p['Método Contacto'] || p['Metodo Contacto'] || p.Metodo || '');
         document.getElementById('inv-edit-nota').value = editingInvoice ? (p.Observaciones || '') : (p['Nota Cliente'] || p.Nota || '');
         
         try {
@@ -10416,7 +11132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.innerHTML = results.map(p => {
                 const img = normalizeImageUrl(p.Imagen || (p.Galeria && p.Galeria[0]));
                 const price = getProductPrice(p, 'wholesale'); // Usa precio mayorista como default, ajustable después
-                const idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID VariaciÃ³n'] || p.Producto || '';
+                const idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || p.Producto || '';
                 // Escapando comillas simples en el nombre
                 const safeName = (p.Nombre || '').replace(/'/g, "\\'");
                 return `
@@ -10436,7 +11152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             resultsContainer.innerHTML = `
                 <div style="padding:32px 16px; color:rgba(255,255,255,0.4); text-align:center;">
-                    <div style="font-size:24px; margin-bottom:8px;">🔍</div>
+                    <div style="font-size:13px; margin-bottom:8px;">Buscar</div>
                     <div>No encontramos productos que coincidan con "${q}"</div>
                 </div>`;
             resultsContainer.classList.add('active');
@@ -10542,7 +11258,7 @@ function renderItemsFactura() {
     let total = 0;
     
     if (window.invoiceItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:rgba(248,244,255,0.45); padding:28px 16px; font-size:13px;"><div style="font-size:20px; margin-bottom:6px;">📦</div>Busca productos arriba o agrega una línea manual para comenzar</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:rgba(248,244,255,0.45); padding:28px 16px; font-size:13px;">Busca productos arriba o agrega una línea manual para comenzar</td></tr>';
         document.getElementById('inv-edit-total').textContent = '$0';
         updateInvoicePaymentSummary();
         return;
@@ -11037,10 +11753,10 @@ window.imprimirFacturaEditor = function() {
         document.getElementById('inv-company-nit').textContent = cfg['Factura_NIT'] || '000.000.000-0';
     }
     if (document.getElementById('inv-company-contact')) {
-        document.getElementById('inv-company-contact').textContent = '📱 WhatsApp: ' + (cfg['Factura_Telefono'] || '+57 311 2368622');
+        document.getElementById('inv-company-contact').textContent = 'WhatsApp: ' + (cfg['Factura_Telefono'] || '+57 311 2368622');
     }
     if (document.getElementById('inv-company-email')) {
-        document.getElementById('inv-company-email').textContent = '✉️ ' + (cfg['Factura_Email'] || 'contacto@blyxu.online');
+        document.getElementById('inv-company-email').textContent = 'Email: ' + (cfg['Factura_Email'] || 'contacto@blyxu.online');
     }
 
     // Sección de observaciones y notas
@@ -11144,28 +11860,28 @@ window.sendInvoiceWhatsAppEditor = function () {
         return `• *${item.cantidad}x* ${item.nombre} - $${sub.toLocaleString('es-CO')}`;
     }).join('\n') : '• Detalle de compra adjunto en la factura';
 
-    const msg = `✨ ¡Hola, *${nombre}*! 👋💎
-¡Muchas gracias por tu preferencia y por elegir *BLYXU Joyería & Accesorios*! ✨
+    const msg = `¡Hola, *${nombre}*!
+¡Muchas gracias por tu preferencia y por elegir *BLYXU Joyería & Accesorios*!
 
 Aquí tienes el comprobante digital oficial de tu compra *#${id}*:
 
-📋 *RESUMEN DE TU COMPRA*
+*RESUMEN DE TU COMPRA*
 ----------------------------------------
-📅 *Fecha:* ${fecha}
-👤 *Cliente:* ${nombre}
-📱 *Contacto:* ${phone || cleanPhone}
-${ciudad ? `🏙️ *Ciudad:* ${ciudad}\n` : ''}${dir ? `📍 *Dirección de Envío:* ${dir}\n` : ''}
-📦 *Productos Pedidos:*
+*Fecha:* ${fecha}
+*Cliente:* ${nombre}
+*Contacto:* ${phone || cleanPhone}
+${ciudad ? `*Ciudad:* ${ciudad}\n` : ''}${dir ? `*Dirección de Envío:* ${dir}\n` : ''}
+*Productos pedidos:*
 ${itemsText}
 
-💰 *TOTAL FACTURA:* $${total.toLocaleString('es-CO')}
+*TOTAL FACTURA:* $${total.toLocaleString('es-CO')}
 ----------------------------------------
 
-📄 *Adjunto encontrarás el documento PDF de tu factura listo para ver y guardar.*
+*Adjunto encontrarás el documento PDF de tu factura listo para ver y guardar.*
 
-💖 ¡Esperamos que disfrutes muchísimo tus accesorios! Cualquier duda estamos para ayudarte.
-🌐 *Tienda Web:* www.blyxu.online
-📱 *Soporte BLYXU:* +57 311 2368622`;
+¡Esperamos que disfrutes muchísimo tus accesorios! Cualquier duda estamos para ayudarte.
+*Tienda web:* www.blyxu.online
+*Soporte BLYXU:* +57 311 2368622`;
 
     // 1. Disparar el generador / diálogo de impresión PDF para que el usuario guarde o imprima el archivo PDF
     if (typeof window.imprimirFacturaEditor === 'function') {
@@ -11208,7 +11924,7 @@ window.openQuickInvoicePayment = function(idx) {
     modal.dataset.invoiceIndex = String(idx);
     const invoiceId = getInvoiceIdValue(invoice) || '-';
     const customer = getInvoiceCustomerName(invoice) || 'Cliente';
-    const currentMethod = invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || invoice.pago || '';
+    const currentMethod = invoice['Método Pago'] || invoice['Metodo Pago'] || invoice.pago || '';
 
     const setText = (id, value) => {
         const el = document.getElementById(id);
@@ -11322,7 +12038,7 @@ window.saveQuickInvoicePayment = async function() {
     const nextStatus = balanceAfter === 0
         ? 'Pago'
         : (paidAfter > 0 ? 'Abonada' : currentStatus);
-    const method = String(methodInput?.value || invoice['MÃ©todo Pago'] || invoice['Metodo Pago'] || invoice.pago || 'Abono').trim() || 'Abono';
+    const method = String(methodInput?.value || invoice['Método Pago'] || invoice['Metodo Pago'] || invoice.pago || 'Abono').trim() || 'Abono';
 
     if (saveBtn) {
         saveBtn.disabled = true;
@@ -11356,7 +12072,7 @@ window.saveQuickInvoicePayment = async function() {
             'Saldo Pendiente': balanceAfter,
             'Ultimo Abono': acceptedPayment,
             'Estado Factura': nextStatus,
-            'MÃ©todo Pago': method,
+            'Método Pago': method,
             pago: method
         });
 
@@ -11489,11 +12205,13 @@ window.toggleVariants = function (motherIdClass, btnEl) {
     });
     if (btnEl) {
         if (anyVisible) {
-            btnEl.innerHTML = 'Ver ' + total + ' Variantes ▼';
+            btnEl.innerHTML = 'Ver ' + total + ' variantes';
             btnEl.style.background = 'rgba(155,44,250,0.1)';
         } else {
-            btnEl.innerHTML = 'Ocultar ▲';
+            btnEl.innerHTML = 'Ocultar';
             btnEl.style.background = 'rgba(155,44,250,0.25)';
         }
     }
 };
+
+

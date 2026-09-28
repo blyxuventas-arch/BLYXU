@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -8,10 +8,10 @@
     <meta name="description" content="Página de pagos y transferencias de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="preload" href="blyxu-style.css?v=cart-no-flash-20260924" as="style">
-    <link rel="stylesheet" href="blyxu-style.css?v=cart-no-flash-20260924">
+    <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style">
+    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928">
     <script>
-        // Limpiar claves guardadas — siempre pedir login
+        // Limpiar claves guardadas - siempre pedir login
         try {
             localStorage.removeItem('blyxu_payments_access');
             sessionStorage.removeItem('blyxu_payments_access');
@@ -250,6 +250,194 @@
             cursor: wait !important;
         }
 
+        .blyxu-vault {
+            --vault-progress: 0%;
+            display: grid;
+            gap: 14px;
+            justify-items: center;
+            margin: 0 auto 20px;
+            padding: 18px 16px 16px;
+            border: 1px solid rgba(255,255,255,.09);
+            border-radius: 18px;
+            background: radial-gradient(circle at 50% 0%, rgba(244,196,65,.12), transparent 42%), #0f1015;
+            color: #f8f4ff;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .blyxu-vault::before {
+            content: "";
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(120deg, transparent 18%, rgba(244,196,65,.16), transparent 62%);
+            transform: translateX(-120%);
+            pointer-events: none;
+        }
+
+        .vault-success .blyxu-vault::before {
+            animation: vaultSweep .9s ease forwards !important;
+        }
+
+        .vault-orb {
+            width: 112px;
+            height: 112px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            position: relative;
+            background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.02) 52%, transparent 54%);
+        }
+
+        .vault-orb::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, rgba(244,196,65,.08), rgba(244,196,65,.9), rgba(168,85,247,.55), rgba(34,211,238,.7), rgba(244,196,65,.08));
+            animation: vaultSpin 6s linear infinite !important;
+            filter: drop-shadow(0 0 18px rgba(244,196,65,.18));
+        }
+
+        .vault-orb::after {
+            content: "";
+            position: absolute;
+            inset: 17px;
+            border-radius: 50%;
+            background: #111217;
+            box-shadow: inset 0 0 22px rgba(0,0,0,.75);
+        }
+
+        .vault-scan {
+            position: absolute;
+            width: 86px;
+            height: 2px;
+            z-index: 2;
+            border-radius: 99px;
+            background: linear-gradient(90deg, transparent, rgba(244,196,65,.95), transparent);
+            animation: vaultScan 2.2s ease-in-out infinite !important;
+        }
+
+        .vault-lock {
+            position: relative;
+            z-index: 3;
+            width: 34px;
+            height: 28px;
+            border-radius: 8px;
+            background: linear-gradient(180deg, #fff7c7, #f4c441);
+            box-shadow: 0 0 24px rgba(244,196,65,.28);
+        }
+
+        .vault-lock::before {
+            content: "";
+            position: absolute;
+            left: 7px;
+            top: -22px;
+            width: 20px;
+            height: 24px;
+            border: 5px solid #f8f4ff;
+            border-bottom: 0;
+            border-radius: 18px 18px 0 0;
+            transform-origin: 4px 24px;
+        }
+
+        .vault-lock::after {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 10px;
+            width: 5px;
+            height: 10px;
+            border-radius: 99px;
+            background: rgba(8,7,11,.7);
+        }
+
+        .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
+        .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
+        .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
+
+        .vault-copy strong {
+            display: block;
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: .02em;
+        }
+
+        .vault-copy span {
+            display: block;
+            margin-top: 5px;
+            color: rgba(248,244,255,.58);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .vault-key-dots {
+            display: grid;
+            grid-template-columns: repeat(var(--vault-dot-count, 4), minmax(28px, 1fr));
+            gap: 8px;
+            width: min(220px, 100%);
+        }
+
+        .vault-key-dots span {
+            height: 42px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 12px;
+            background: rgba(255,255,255,.035);
+            color: transparent;
+            font-size: 22px;
+            font-weight: 900;
+        }
+
+        .vault-key-dots span.is-lit {
+            border-color: rgba(244,196,65,.65);
+            background: rgba(244,196,65,.1);
+            color: #f4c441;
+            box-shadow: 0 0 18px rgba(244,196,65,.16);
+        }
+
+        .vault-meter {
+            width: min(240px, 100%);
+            height: 6px;
+            overflow: hidden;
+            border-radius: 99px;
+            background: rgba(255,255,255,.08);
+        }
+
+        .vault-meter span {
+            display: block;
+            width: var(--vault-progress);
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #a855f7, #22d3ee, #f4c441);
+            transition: width .18s ease;
+        }
+
+        .vault-note {
+            color: rgba(248,244,255,.46);
+            font-size: 10px;
+            font-weight: 850;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .vault-success .mayorista-login-card,
+        #qr-login-overlay.vault-success .payments-login-panel {
+            animation: vaultPanelExit 1.05s ease forwards !important;
+        }
+
+        @keyframes vaultSpin { to { transform: rotate(360deg); } }
+        @keyframes vaultScan { 0%,100% { transform: translateY(-24px); opacity:.25; } 50% { transform: translateY(24px); opacity:1; } }
+        @keyframes vaultOpen { to { transform: rotate(-38deg) translate(-4px,-2px); } }
+        @keyframes vaultSweep { to { transform: translateX(120%); } }
+        @keyframes vaultDeny { 25% { transform: translateX(7px); } 50% { transform: translateX(-7px); } 75% { transform: translateX(4px); } }
+        @keyframes vaultPanelExit { 0% { opacity:1; transform: scale(1); } 70% { opacity:1; transform: scale(1.02); } 100% { opacity:0; transform: scale(.96) translateY(-18px); } }
+
+        #qr-login-overlay .vault-orb::before { animation: vaultSpin 6s linear infinite !important; }
+        #qr-login-overlay .vault-scan { animation: vaultScan 2.2s ease-in-out infinite !important; }
+        #qr-login-overlay .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
+        #qr-login-overlay .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
+        #qr-login-overlay .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
         #qr-error-msg {
             min-height: 18px !important;
             margin-top: 10px !important;
@@ -380,7 +568,7 @@
 
         <ul class="nav-links" id="nav-links">
             <li><a href="index.html">Inicio</a></li>
-            <li><a href="index.html#coleccion">Catalogo</a></li>
+            <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
             <li><a href="mayorista.html">Mayorista</a></li>
             <li><a href="contacto.html">Contacto</a></li>
             <li><a href="pagos.html" class="active">Pagos</a></li>
@@ -404,6 +592,14 @@
     <!-- Overlay de Login -->
     <div class="payments-login-overlay open" id="qr-login-overlay">
         <div class="payments-login-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+            <div class="blyxu-vault" data-vault aria-hidden="true">
+                <div class="vault-orb"><span class="vault-scan"></span><span class="vault-lock"></span></div>
+                <div class="vault-copy"><strong>Boveda de pagos</strong><span data-vault-status>Esperando clave segura</span></div>
+                <div class="vault-key-dots" data-vault-dots></div>
+                <div class="vault-meter"><span data-vault-meter></span></div>
+                <div class="vault-note">BLYXU payment access</div>
+            </div>
+
             <img src="Logo2.png" alt="BLYXU" class="payments-login-logo" onerror="this.style.display='none'">
             <div class="payments-login-kicker">ZONA SEGURA</div>
             <h2 id="qr-title">ZONA DE PAGOS</h2>
@@ -457,7 +653,7 @@
             <h4>Navegaci&oacute;n</h4>
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="index.html#coleccion">Catalogo</a></li>
+                <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
                 <li><a href="mayorista.html">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="facturas-pedidos.html">Facturas y pedidos</a></li>
@@ -474,7 +670,7 @@
             </label>
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
                 <a href="index.html" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
-                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Catalogo</a>
+                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Cat&aacute;logo</a>
                 <a href="mayorista.html" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="contacto.html" data-footer-search-item data-keywords="contacto horario telefono redes whatsapp">Contacto</a>
                 <a href="facturas-pedidos.html" data-footer-search-item data-keywords="facturas pedidos ordenes comprobantes">Facturas y pedidos</a>
@@ -502,7 +698,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=cart-no-flash-20260924" defer></script>
+    <script src="blyxu-lite.js?v=blyxu-contact-clock-20260928" defer></script>
     <script>
         (function() {
             const ACCESS_KEY = 'blyxu_payments_access';
@@ -648,7 +844,7 @@
                     if (m.instructions) {
                         html += `
                             <div class="instruction-box">
-                                💡 <strong>Instrucciones:</strong> ${escapeHtml(m.instructions)}
+                                <strong>Instrucciones:</strong> ${escapeHtml(m.instructions)}
                             </div>
                         `;
                     }
@@ -681,28 +877,90 @@
                 }
                 renderPaymentMethods();
             }
+            function getConfiguredPaymentPass() {
+                const cachedConfig = readLocalSiteConfigCache();
+                const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
+                    ? siteConfig
+                    : (cachedConfig?.data || {});
+                return String(currentConfig.QR_Password || currentConfig.qr_password || (cachedConfig?.data?.QR_Password) || '2027').trim();
+            }
 
-            // Siempre pedir clave — no se guarda sesión
+            function ensureVaultDots(total) {
+                const vault = overlay?.querySelector('[data-vault]');
+                const dots = vault?.querySelector('[data-vault-dots]');
+                if (!vault || !dots) return;
+                const dotCount = Math.max(1, Number(total) || 1);
+                if (dots.children.length !== dotCount) {
+                    dots.innerHTML = Array.from({ length: dotCount }, function() { return '<span></span>'; }).join('');
+                }
+                vault.style.setProperty('--vault-dot-count', dotCount);
+            }
+
+            function syncVaultState() {
+                const vault = overlay?.querySelector('[data-vault]');
+                if (!vault || !input) return;
+                const targetLength = getConfiguredPaymentPass().length || 1;
+                ensureVaultDots(targetLength);
+                const len = Math.min((input.value || '').trim().length, targetLength);
+                const progress = Math.min(100, Math.round((len / targetLength) * 100));
+                vault.style.setProperty('--vault-progress', progress + '%');
+                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot, index) {
+                    dot.classList.toggle('is-lit', index < len);
+                    dot.textContent = index < len ? '•' : '';
+                });
+                const status = vault.querySelector('[data-vault-status]');
+                if (status) status.textContent = len ? 'Validando zona de pagos...' : 'Esperando clave segura';
+            }
+
+            function markVaultDenied() {
+                const vault = overlay?.querySelector('[data-vault]');
+                if (!vault) return;
+                vault.classList.remove('is-unlocking');
+                vault.classList.add('is-denied');
+                const status = vault.querySelector('[data-vault-status]');
+                if (status) status.textContent = 'Clave incorrecta';
+                setTimeout(function() { vault.classList.remove('is-denied'); syncVaultState(); }, 520);
+            }
+
+            function playVaultUnlock(done) {
+                const vault = overlay?.querySelector('[data-vault]');
+                if (!overlay || !vault) {
+                    done();
+                    return;
+                }
+                overlay.classList.add('vault-success');
+                vault.classList.add('is-unlocking');
+                vault.style.setProperty('--vault-progress', '100%');
+                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot) {
+                    dot.classList.add('is-lit');
+                    dot.textContent = '•';
+                });
+                const status = vault.querySelector('[data-vault-status]');
+                if (status) status.textContent = 'Acceso concedido';
+                setTimeout(done, 1050);
+            }
+            function grantPaymentsAccess() {
+                if (submitBtn) {
+                    submitBtn.textContent = 'Accediendo...';
+                    submitBtn.disabled = true;
+                }
+                playVaultUnlock(unlockPayments);
+            }
+
+            // Siempre pedir clave - no se guarda sesión
+            syncVaultState();
             setTimeout(() => input?.focus({ preventScroll: true }), 60);
 
             form?.addEventListener('submit', function(e) {
                 e.preventDefault();
                 if (errorMsg) errorMsg.style.display = 'none';
+                syncVaultState();
 
                 const enteredPass = (input?.value || '').trim();
-                const cachedConfig = readLocalSiteConfigCache();
-                const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
-                    ? siteConfig
-                    : (cachedConfig?.data || {});
-
-                const configuredPass = String(currentConfig.QR_Password || currentConfig.qr_password || (cachedConfig?.data?.QR_Password) || '2027').trim();
+                const configuredPass = getConfiguredPaymentPass();
 
                 if (enteredPass === configuredPass) {
-                    if (submitBtn) {
-                        submitBtn.textContent = 'Accediendo...';
-                        submitBtn.disabled = true;
-                    }
-                    unlockPayments();
+                    grantPaymentsAccess();
                 } else {
                     // Si la clave no coincide, verificar rápidamente si hay actualización en la nube
                     if (typeof fetchSiteConfig === 'function') {
@@ -717,9 +975,10 @@
                             }
                             const freshPass = String(cfg?.QR_Password || '2027').trim();
                             if (enteredPass === freshPass) {
-                                unlockPayments();
+                                grantPaymentsAccess();
                             } else {
                                 if (errorMsg) errorMsg.style.display = 'block';
+                                markVaultDenied();
                                 input?.select();
                             }
                         }).catch(() => {
@@ -728,17 +987,20 @@
                                 submitBtn.disabled = false;
                             }
                             if (errorMsg) errorMsg.style.display = 'block';
-                            input?.select();
+                                markVaultDenied();
+                                input?.select();
                         });
                     } else {
                         if (errorMsg) errorMsg.style.display = 'block';
-                        input?.select();
+                                markVaultDenied();
+                                input?.select();
                     }
                 }
             });
 
             input?.addEventListener('input', function() {
                 if (errorMsg) errorMsg.style.display = 'none';
+                syncVaultState();
             });
 
             // Cuando la configuración del sitio se termine de cargar en background, refrescar si está abierto
@@ -751,3 +1013,13 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+

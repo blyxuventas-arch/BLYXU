@@ -1,4 +1,4 @@
-// ========== BLYXU E-COMMERCE ENGINE ==========
+﻿// ========== BLYXU E-COMMERCE ENGINE ==========
 // Google Sheets integration + Cart + Particles + UI
 
 // -- CONFIG: Google Sheets --
@@ -44,10 +44,11 @@ const CART_STORAGE_KEYS = {
 };
 const IS_MOBILE_VIEWPORT = typeof window !== 'undefined' && window.innerWidth <= 640;
 const IS_WHOLESALE_PAGE = typeof document !== 'undefined' && document.body?.dataset.catalogMode === 'wholesale';
-const CATALOG_BATCH_SIZE = IS_WHOLESALE_PAGE ? (IS_MOBILE_VIEWPORT ? 4 : 6) : (IS_MOBILE_VIEWPORT ? 6 : 12);
+const CATALOG_BATCH_SIZE = 4;
+const CATALOG_INITIAL_ROWS = 4;
 const IMAGE_WIDTHS = {
     default: 640,
-    card: 420,
+    card: 360,
     banner: 760,
     spotlight: 520,
     detail: 900,
@@ -55,6 +56,25 @@ const IMAGE_WIDTHS = {
     cart: 140,
     search: 96
 };
+
+function getCatalogGridColumnCount(grid) {
+    if (!grid || typeof window === 'undefined') return CATALOG_BATCH_SIZE;
+    const styles = window.getComputedStyle(grid);
+    const columns = styles.gridTemplateColumns
+        .split(' ')
+        .map(column => column.trim())
+        .filter(column => column && column !== 'none').length;
+    if (columns > 0) return columns;
+
+    const minCardWidth = 260;
+    const gap = parseFloat(styles.columnGap || styles.gap) || 24;
+    const width = grid.clientWidth || window.innerWidth;
+    return Math.max(1, Math.floor((width + gap) / (minCardWidth + gap)));
+}
+
+function getCatalogInitialBatchSize(grid) {
+    return Math.max(CATALOG_BATCH_SIZE, getCatalogGridColumnCount(grid) * CATALOG_INITIAL_ROWS);
+}
 let activeCatalogMode = getInitialCartMode();
 let activeCartMode = activeCatalogMode;
 let cart = loadCart(activeCartMode);
@@ -83,6 +103,7 @@ let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
 let googleIdentityLoadPromise = null;
 let homeRenderToken = 0;
+let catalogLazyImageObserver = null;
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 let pendingWholesaleEntryCelebration = false;
 
@@ -407,6 +428,40 @@ function runWhenIdle(callback, timeout = 1400) {
     return setTimeout(callback, Math.min(timeout, 700));
 }
 
+function loadDeferredCatalogImage(img) {
+    if (!img) return;
+    if (catalogLazyImageObserver) catalogLazyImageObserver.unobserve(img);
+    const src = img.dataset.src;
+    if (!src) return;
+    img.src = src;
+    img.removeAttribute('data-src');
+    img.removeAttribute('data-catalog-lazy');
+}
+
+function initCatalogImageLoading(scope = document) {
+    const root = scope && typeof scope.querySelectorAll === 'function' ? scope : document;
+    const lazyImages = root.querySelectorAll('img[data-catalog-lazy][data-src]');
+    if (!lazyImages.length) return;
+
+    if (!('IntersectionObserver' in window)) {
+        lazyImages.forEach(loadDeferredCatalogImage);
+        return;
+    }
+
+    if (!catalogLazyImageObserver) {
+        catalogLazyImageObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) loadDeferredCatalogImage(entry.target);
+            });
+        }, {
+            rootMargin: IS_MOBILE_VIEWPORT ? '700px 0px' : '950px 0px',
+            threshold: 0.01
+        });
+    }
+
+    lazyImages.forEach(img => catalogLazyImageObserver.observe(img));
+}
+
 async function renderHomeSectionsStaggered(options = {}) {
     const { renderCatalog = true } = options;
     const token = ++homeRenderToken;
@@ -443,7 +498,7 @@ function renderIndexInstantShell() {
 
     const categoryTrack = document.getElementById('home-category-track');
     if (categoryTrack && categoryTrack.children.length <= 1) {
-        const categories = ['Catalogo', 'Collares', 'Pulseras', 'Aretes', 'Anillos'];
+        const categories = ['Catálogo', 'Collares', 'Pulseras', 'Aretes', 'Anillos'];
         categoryTrack.classList.remove('is-centered');
         categoryTrack.innerHTML = categories.map((category, index) => `
             <button class="home-category-pill ${index === 0 ? 'active' : ''}" type="button" data-instant-category="${escapeHtml(category)}">
@@ -475,7 +530,7 @@ function renderIndexInstantShell() {
 
     const grid = document.getElementById('products-grid');
     if (grid && !grid.children.length) {
-        grid.innerHTML = Array.from({ length: CATALOG_BATCH_SIZE }).map(() => `
+        grid.innerHTML = Array.from({ length: getCatalogInitialBatchSize(grid) }).map(() => `
             <div class="product-card reveal visible is-loading-card" aria-hidden="true">
                 <div class="product-card-img"><span class="skeleton-block skeleton-img"></span></div>
                 <div class="product-card-info">
@@ -545,6 +600,7 @@ function getImageTargetWidth(kindOrWidth = 'default') {
     const base = IMAGE_WIDTHS[key] || IMAGE_WIDTHS.default;
     if (key === 'banner' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1400;
     if (key === 'detail' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1100;
+    if ((key === 'card' || key === 'spotlight') && typeof window !== 'undefined' && window.innerWidth <= 640) return 320;
     return base;
 }
 
@@ -694,7 +750,7 @@ function normalizeGoogleProduct(product) {
         idVariacion: getProductField(product, ['ID Variaci\u00f3n', 'ID Variacion', 'ID Variación', 'idVariacion', 'id', 'SKU']),
         idProducto: getProductField(product, ['ID Producto', ' ID Producto', 'idProducto']),
         Nombre: getProductField(product, ['Nombre del Producto', 'Nombre', 'nombre', 'Producto'], 'Producto'),
-        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'CatÃ¡logo', 'catalogo', 'Publicacion'], ''),
+        Catalogo: getProductField(product, ['Catalogo', 'Catálogo', 'Catálogo', 'catalogo', 'Publicacion'], ''),
         Categoria: getProductFieldLoose(product, ['Categor\u00eda', 'Categoria', 'Categoría', 'categoria'], ''),
         Precio: getProductField(product, ['Precio', 'precio'], 0),
         Precio_Mayorista: getProductField(product, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista', 'precio_mayorista', 'Mayorista'], 0),
@@ -714,13 +770,13 @@ function normalizeGoogleProduct(product) {
         Descripcion: getProductField(product, ['Caracter\u00edsticas del producto', 'Caracteristicas del producto', 'Características del producto', 'Caractreristicas del producto', 'Descripcion', 'descripcion'], ''),
         SKU: getProductField(product, ['SKU', 'sku'], ''),
         Estado: getProductFieldLoose(product, ['Estado', 'estado'], 'Activo'),
-        Fecha_Creacion: getProductField(product, ['Fecha de Creaci\u00f3n', 'Fecha de Creacion', 'Fecha_Creacion', 'Fecha de CreaciÃ³n', 'Fecha de CreaciÃ³n', 'createdAt', 'created_at'], ''),
+        Fecha_Creacion: getProductField(product, ['Fecha de Creaci\u00f3n', 'Fecha de Creacion', 'Fecha_Creacion', 'Fecha de Creación', 'Fecha de Creación', 'createdAt', 'created_at'], ''),
         Promocion: normalizePromotionValue(getProductField(product, PRODUCT_PROMOTION_FIELD_KEYS, false))
     };
 }
 
 function getPublicProductCategory(product) {
-    return getProductField(product, ['Categoria', 'Categor\u00eda', 'CategorÃ­a', 'CategorÃƒÂ­a', 'categoria'], product?.Categoria || product?.categoria || '');
+    return getProductField(product, ['Categoria', 'Categor\u00eda', 'Categoría', 'Categoría', 'categoria'], product?.Categoria || product?.categoria || '');
 }
 
 function getPublicProductCategoryLoose(product) {
@@ -1333,8 +1389,8 @@ function getProductCreatedTime(product) {
         'Fecha_Creacion',
         'Fecha de Creaci\u00f3n',
         'Fecha de Creacion',
-        'Fecha de CreaciÃ³n',
-        'Fecha de CreaciÃ³n',
+        'Fecha de Creación',
+        'Fecha de Creación',
         'Fecha',
         'createdAt',
         'created_at'
@@ -1532,7 +1588,7 @@ function renderHomeCategories() {
         .slice(0, 8);
 
     if (!categories.length) {
-        track.innerHTML = '<a class="home-category-pill" href="#coleccion">Catalogo</a>';
+        track.innerHTML = '<a class="home-category-pill" href="#coleccion">Catálogo</a>';
         track.classList.add('is-centered');
         initHomeCategoryRing(track);
         return;
@@ -1581,22 +1637,57 @@ function renderHomeAdBanner() {
         return;
     }
 
-    const image = normalizeImageUrl(getSiteConfigValue('Home_Ad_Image', ''), 'banner');
+    const rawImage = getSiteConfigValue('Home_Ad_Image', '');
+    const carouselImage = Array.isArray(bannerProducts)
+        ? getPublicProductImage(bannerProducts.find(product => isActiveProduct(product) && getPublicProductImage(product, 'banner')), 'banner')
+        : '';
+    const imageCandidates = Array.from(new Set([
+        normalizeImageUrl(rawImage, 'banner'),
+        String(rawImage || '').trim(),
+        carouselImage,
+        'hero_necklace.png'
+    ].filter(Boolean)));
     const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
     const title = getSiteConfigValue('Home_Ad_Title', 'Brilla con tus favoritos');
     const message = getSiteConfigValue('Home_Ad_Message', 'Descubre piezas seleccionadas, promociones y anuncios especiales de BLYXU.');
     banner.style.display = '';
     const img = document.getElementById('home-ad-image');
     if (img) {
-        if (image) {
-            img.style.display = '';
-            img.loading = 'eager';
-            img.decoding = 'async';
-            img.fetchPriority = 'high';
-            img.setAttribute('fetchpriority', 'high');
-            img.src = image;
-            img.onerror = () => { img.style.display = 'none'; };
+        if (imageCandidates.length) {
+            let candidateIndex = 0;
+            const loadCandidate = () => {
+                const nextImage = imageCandidates[candidateIndex];
+                if (!nextImage) {
+                    banner.classList.add('is-empty');
+                    img.style.display = 'none';
+                    return;
+                }
+                banner.classList.remove('is-empty');
+                img.style.display = '';
+                img.loading = 'eager';
+                img.decoding = 'async';
+                img.fetchPriority = 'high';
+                img.setAttribute('fetchpriority', 'high');
+                img.referrerPolicy = 'no-referrer';
+                img.src = nextImage;
+            };
+            banner.classList.remove('is-empty');
+            img.onerror = () => {
+                const currentFallback = getImageFallbackUrl(img.currentSrc || img.src, 'banner');
+                if (currentFallback && currentFallback !== 'hero_necklace.png' && !imageCandidates.includes(currentFallback)) {
+                    imageCandidates.splice(candidateIndex + 1, 0, currentFallback);
+                }
+                candidateIndex += 1;
+                if (candidateIndex < imageCandidates.length) {
+                    loadCandidate();
+                    return;
+                }
+                banner.classList.add('is-empty');
+                img.style.display = 'none';
+            };
+            loadCandidate();
         } else {
+            banner.classList.add('is-empty');
             img.removeAttribute('src');
             img.style.display = 'none';
         }
@@ -1620,17 +1711,17 @@ function renderInventorySpotlight() {
     }
     if (marqueeSection) marqueeSection.style.display = '';
 
-    // Generate HTML for the images
     const eagerCount = IS_MOBILE_VIEWPORT ? 4 : 6;
-    const imagesHtml = candidates.map((p, index) => {
+    const getMarqueeItemHtml = (p, index, isDuplicate = false) => {
         const img = getProductImageSet(p, 'card')[0];
         const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
         const stockBadge = getProductBadgeMarkup(p);
         const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
         const price = getProductCardPriceInfo(p, 'retail').price;
         const priceText = shouldShowProductPrices('retail') ? formatMoney(price) : 'Precio por consultar';
-        const loading = index < eagerCount ? 'eager' : 'lazy';
-        const priority = index < eagerCount ? 'high' : 'low';
+        const shouldLoadEarly = !isDuplicate && index < eagerCount;
+        const loading = shouldLoadEarly ? 'eager' : 'lazy';
+        const priority = shouldLoadEarly ? 'high' : 'low';
         return `<div class="marquee-item" onclick="window.location.href='${escapeHtml(detailUrl)}'" title="${escapeHtml(p.Nombre || '')}">
                     <img src="${escapeHtml(img || 'hero_necklace.png')}" alt="${escapeHtml(name)}" loading="${loading}" decoding="async" fetchpriority="${priority}" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">
                     ${stockBadge}
@@ -1639,10 +1730,12 @@ function renderInventorySpotlight() {
                         <span>${escapeHtml(priceText)}</span>
                     </div>
                 </div>`;
-    }).join('');
+    };
 
     // Duplicate for seamless infinite scrolling on every viewport.
-    marqueeContainer.innerHTML = imagesHtml + imagesHtml;
+    marqueeContainer.innerHTML =
+        candidates.map((p, index) => getMarqueeItemHtml(p, index)).join('') +
+        candidates.map((p, index) => getMarqueeItemHtml(p, index, true)).join('');
     marqueeContainer.classList.remove('is-loading');
     marqueeContainer.classList.add('is-ready');
     
@@ -1860,9 +1953,9 @@ function initContactRequestForm(whatsapp) {
 function renderContactPage() {
     if (document.body?.dataset.page !== 'contact') return;
 
-    const days = getSiteConfigValue('Contacto_Dias', 'Lunes a Sabado');
+    const days = getSiteConfigValue('Contacto_Dias', 'Lunes a Sábado');
     const hours = getSiteConfigValue('Contacto_Horarios', '10:00 a.m. - 7:00 p.m.');
-    const note = 'Escribenos por nuestro numero oficial o visita nuestras redes sociales BLYXU.';
+    const note = 'Escríbenos por nuestro número oficial o visita nuestras redes sociales BLYXU.';
     const whatsapp = getCommerceWhatsAppPhone();
     const facebook = getSiteConfigValue('Contacto_Facebook', 'blyxu');
     const tiktok = getSiteConfigValue('Contacto_TikTok', 'blyxu');
@@ -2102,8 +2195,8 @@ function isProductNew(product) {
         'Fecha de Creación',
         'Fecha de Creacion',
         'Fecha_Creacion',
-        'Fecha de CreaciÃ³n',
-        'Fecha de CreaciÃ³n',
+        'Fecha de Creación',
+        'Fecha de Creación',
         'Fecha',
         'createdAt',
         'created_at'
@@ -2362,17 +2455,29 @@ function renderPriceFilters(options = {}) {
     const slider = document.getElementById(sliderId);
     const label = document.getElementById(labelId);
     if (!slider) return;
+    const priceWrap = slider.closest('.price-slider-wrap');
 
     const maxPrice = getCatalogMaxPrice(products, mode);
     const normalizedFilter = normalizePriceFilterValue(currentFilter, maxPrice);
     const sliderValue = normalizedFilter === 'todos' ? maxPrice : normalizedFilter;
+    const progress = maxPrice > 0 ? `${(sliderValue / maxPrice) * 100}%` : '0%';
 
     slider.min = '0';
     slider.max = String(maxPrice);
     slider.step = maxPrice > 100000 ? '10000' : '1000';
     slider.value = String(sliderValue);
     slider.disabled = maxPrice <= 0;
-    slider.style.setProperty('--price-progress', maxPrice > 0 ? `${(sliderValue / maxPrice) * 100}%` : '0%');
+    slider.style.setProperty('--price-progress', progress);
+    if (priceWrap) {
+        priceWrap.style.setProperty('--price-progress', progress);
+        priceWrap.dataset.priceMin = '$0';
+        priceWrap.dataset.priceMax = maxPrice > 0 ? formatMoney(maxPrice) : '$0';
+        priceWrap.dataset.priceCurrent = maxPrice <= 0
+            ? 'Sin precios'
+            : normalizedFilter === 'todos'
+                ? 'Todo'
+                : formatMoney(sliderValue);
+    }
 
     if (label) {
         label.textContent = maxPrice <= 0
@@ -2385,7 +2490,12 @@ function renderPriceFilters(options = {}) {
     slider.oninput = () => {
         const value = normalizePriceFilterValue(slider.value, maxPrice);
         const currentValue = value === 'todos' ? maxPrice : value;
-        slider.style.setProperty('--price-progress', maxPrice > 0 ? `${(currentValue / maxPrice) * 100}%` : '0%');
+        const currentProgress = maxPrice > 0 ? `${(currentValue / maxPrice) * 100}%` : '0%';
+        slider.style.setProperty('--price-progress', currentProgress);
+        if (priceWrap) {
+            priceWrap.style.setProperty('--price-progress', currentProgress);
+            priceWrap.dataset.priceCurrent = value === 'todos' ? 'Todo' : formatMoney(currentValue);
+        }
         if (label) label.textContent = value === 'todos' ? 'Todos los precios' : `Hasta ${formatMoney(currentValue)}`;
         onChange(value);
     };
@@ -2471,7 +2581,7 @@ function getProductMeasurementData(product) {
     let depth = String(product?.Fondo || product?.fondo || '').trim();
     let radius = String(product?.Radio || product?.radio || '').trim();
     let capacity = String(product?.Capacidad || product?.capacidad || '').trim();
-    const sizeText = String(product?.Tamano || product?.['Tamaño'] || product?.['TamaÃ±o'] || product?.tamaño || product?.Talla || '').trim();
+    const sizeText = String(product?.Tamano || product?.['Tamaño'] || product?.['Tamaño'] || product?.tamaño || product?.Talla || '').trim();
     let textileSize = String(product?.TallaTextil || product?.['Talla Textil'] || '').trim();
     let kind = normalizeSearchText(product?.TipoMedida || product?.['Tipo Medida'] || '');
     let unit = String(product?.UnidadMedida || product?.['Unidad Medida'] || '').trim();
@@ -2630,16 +2740,15 @@ function renderProducts(products, options = {}) {
         priceFilter,
         normalizeSearchText(searchQuery)
     ].join('|');
-    const previousBatch = catalogBatchMemory.get(renderKey);
-    const initialBatchSize = Math.max(
-        CATALOG_BATCH_SIZE,
-        Math.min(previousBatch?.rendered || 0, filtered.length)
-    );
-    const shouldRestoreScroll = Boolean(previousBatch?.rendered && previousBatch.rendered > CATALOG_BATCH_SIZE);
-    const previousScrollY = window.scrollY;
+    const initialBatchSize = Math.min(getCatalogInitialBatchSize(grid), filtered.length);
+    const nextBatchSize = Math.max(CATALOG_BATCH_SIZE, getCatalogGridColumnCount(grid));
 
     grid.innerHTML = '';
     let rendered = 0;
+    const immediateImageCount = initialBatchSize;
+    const shouldPrioritizeCatalogImages = mode === 'wholesale'
+        || gridId === 'wholesale-products-grid'
+        || (typeof window !== 'undefined' && window.location.hash === '#coleccion');
 
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
@@ -2659,11 +2768,17 @@ function renderProducts(products, options = {}) {
         const detailPrepAttrs = mode === 'wholesale'
             ? ''
             : ` onpointerenter="prepareProductDetailPreview(${productIndex}, '${mode}')" ontouchstart="prepareProductDetailPreview(${productIndex}, '${mode}')"`;
+        const shouldLoadImageNow = i < immediateImageCount;
+        const imagePriority = shouldLoadImageNow && shouldPrioritizeCatalogImages ? 'high' : shouldLoadImageNow ? 'auto' : 'low';
+        const imageLoading = shouldLoadImageNow && shouldPrioritizeCatalogImages ? 'eager' : 'lazy';
+        const imageSourceAttrs = shouldLoadImageNow
+            ? `src="${escapeHtml(img)}"`
+            : `data-src="${escapeHtml(img)}" data-catalog-lazy="true"`;
 
         return `
         <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}"${detailPrepAttrs} tabindex="0">
             <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
-                ${img ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
+                ${img ? `<img ${imageSourceAttrs} alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
@@ -2691,7 +2806,7 @@ function renderProducts(products, options = {}) {
         </div>`;
     }
 
-    function renderNextBatch(batchSize = CATALOG_BATCH_SIZE) {
+    function renderNextBatch(batchSize = nextBatchSize) {
         if (renderToken !== catalogRenderToken) return;
 
         grid.querySelector('.catalog-load-more-wrap')?.remove();
@@ -2705,6 +2820,7 @@ function renderProducts(products, options = {}) {
         grid.insertAdjacentHTML('beforeend', batch);
         rendered = end;
         catalogBatchMemory.set(renderKey, { rendered, total: filtered.length });
+        initCatalogImageLoading(grid);
         initReveal(grid);
 
         if (rendered < filtered.length) {
@@ -2719,9 +2835,6 @@ function renderProducts(products, options = {}) {
 
     catalogBatchState = { renderToken, renderKey, renderNextBatch };
     renderNextBatch(initialBatchSize);
-    if (shouldRestoreScroll) {
-        requestAnimationFrame(() => window.scrollTo(0, previousScrollY));
-    }
 }
 
 function loadMoreCatalogBatch(trigger) {
@@ -2836,7 +2949,7 @@ function setCatalogCartMode(mode) {
 }
 
 function getCartModeLabel(mode = activeCartMode) {
-    return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Catalogo';
+    return normalizeCartMode(mode) === 'wholesale' ? 'Mayorista' : 'Catálogo';
 }
 
 function getCartCustomerType(mode = activeCartMode) {
@@ -3049,7 +3162,7 @@ function ensureCartPreviewModal() {
     modal.setAttribute('aria-hidden', 'true');
     modal.innerHTML = `
         <div class="cart-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="cart-preview-title">
-            <button class="cart-preview-close" type="button" aria-label="Cerrar vista">×</button>
+            <button class="cart-preview-close" type="button" aria-label="Cerrar vista">&times;</button>
             <div class="cart-preview-content"></div>
         </div>
     `;
@@ -3213,7 +3326,7 @@ function setCartPaymentMethod(method) {
             wsTab.setAttribute('aria-pressed', 'true');
             mpTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.add('btn-ws-mode');
-            if (btnText) btnText.textContent = 'Finalizar Pedido por WhatsApp 💬';
+            if (btnText) btnText.textContent = 'Finalizar Pedido por WhatsApp';
             if (mpBadges) mpBadges.style.display = 'none';
             if (emailField) emailField.style.display = 'flex';
             if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
@@ -3311,7 +3424,7 @@ function updateCartUI() {
         if (!cart.length) {
             secItemsEl.innerHTML = `
                 <div class="cart-empty-state">
-                    <div class="cart-empty-icon">🛍️</div>
+                    <div class="cart-empty-icon">BLYXU</div>
                     <h3>Tu carrito ${getCartModeLabel()} está vacío ✦</h3>
                     <p>Descubre nuestras joyas y accesorios exclusivos y añade tus piezas preferidas.</p>
                     <a href="${browseCatalogUrl}" class="cart-btn-browse">Explorar Catálogo</a>
@@ -3361,7 +3474,7 @@ function updateCartUI() {
                             <span class="cart-sec-row-total">${cartItemShowsPrice(c) ? formatMoney(c.price * c.qty) : 'Por consultar'}</span>
                         </div>
                         <div class="cart-sec-act-col">
-                            <button class="cart-sec-del-btn" type="button" onclick="removeFromCart(${i})" aria-label="Eliminar producto" title="Eliminar producto">✕</button>
+                            <button class="cart-sec-del-btn" type="button" onclick="removeFromCart(${i})" aria-label="Eliminar producto" title="Eliminar producto">×</button>
                         </div>
                     </div>
                 `;
@@ -3478,7 +3591,7 @@ function updateCartUI() {
             } else {
                 newSecBtn.disabled = true;
                 const origText = newSecBtn.innerHTML;
-                newSecBtn.innerHTML = '<span>Procesando pedido... 💬</span>';
+                newSecBtn.innerHTML = '<span>Procesando pedido...</span>';
                 checkout(isWholesale).finally(() => {
                     newSecBtn.disabled = false;
                     newSecBtn.innerHTML = origText;
@@ -3739,7 +3852,7 @@ function setWholesalePriceFilter(priceFilter) {
 
 const GLOBAL_SEARCH_PAGES = [
     { title: 'Inicio', detail: 'Banner principal y novedades', href: 'index.html', keywords: 'inicio home principal novedades banner' },
-    { title: 'Catalogo', detail: 'Productos minoristas, categorias y filtros', href: 'index.html#coleccion', keywords: 'catalogo coleccion productos comprar accesorios joyeria' },
+    { title: 'Catálogo', detail: 'Productos minoristas, categorías y filtros', href: 'index.html#coleccion', keywords: 'catalogo coleccion productos comprar accesorios joyeria' },
     { title: 'Mayorista', detail: 'Acceso y catalogo por mayor', href: 'mayorista.html', keywords: 'mayorista por mayor wholesale precios acceso clave' },
     { title: 'Carrito', detail: 'Revisar productos seleccionados', href: 'carrito.html#carrito', keywords: 'carrito bolsa compra pedido checkout' },
     { title: 'Pagos', detail: 'QR, transferencia y comprobantes', href: 'pagos.html', keywords: 'pagos pagar qr transferencia cuenta comprobante mercado pago' },
@@ -3891,9 +4004,17 @@ function initCatalogSearch() {
     const input = document.getElementById('catalog-search');
     const wholesaleInput = document.getElementById('wholesale-catalog-search');
 
+    function syncSmartSearchState(inputEl) {
+        const holder = inputEl?.closest('.smart-search');
+        if (!holder) return;
+        holder.classList.toggle('has-text', Boolean((inputEl.value || '').trim()));
+    }
+
     let searchTimer = null;
     if (input) {
+        syncSmartSearchState(input);
         input.addEventListener('input', () => {
+            syncSmartSearchState(input);
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => {
                 activeSearchQuery = input.value.trim();
@@ -3909,7 +4030,9 @@ function initCatalogSearch() {
 
     let wholesaleSearchTimer = null;
     if (wholesaleInput) {
+        syncSmartSearchState(wholesaleInput);
         wholesaleInput.addEventListener('input', () => {
+            syncSmartSearchState(wholesaleInput);
             clearTimeout(wholesaleSearchTimer);
             wholesaleSearchTimer = setTimeout(() => {
                 activeWholesaleSearchQuery = wholesaleInput.value.trim();
@@ -4124,7 +4247,7 @@ function initWholesaleAccess() {
     });
 
     function hasWholesaleAuth() {
-        // No se guarda sesión — siempre pide clave
+        // No se guarda sesión - siempre pide clave
         return false;
     }
 
@@ -4307,7 +4430,7 @@ function renderPromoWidget() {
                     <p class="inline-promo-msg">${escapeHtml(message)}</p>
                 </div>
                 <div class="inline-promo-countdown" id="inline-promo-timer-${idx}" style="${promoDate ? '' : 'display:none;'}">
-                    <span class="inline-promo-timer-icon">⏳</span>
+                    <span class="inline-promo-timer-icon"></span>
                     ${renderTimeBoxes(getTimeParts(0))}
                 </div>
             </div>
@@ -4686,7 +4809,7 @@ function ensureCustomerAuthModal() {
     modal.setAttribute('aria-hidden', 'true');
     modal.innerHTML = `
         <div class="customer-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="customer-auth-title">
-            <button class="customer-auth-close" type="button" aria-label="Cerrar">×</button>
+            <button class="customer-auth-close" type="button" aria-label="Cerrar">&times;</button>
             <div class="customer-auth-brand">
                 <img src="Logo2-nav.png" alt="BLYXU" onerror="this.style.display='none'">
                 <span>Cuenta BLYXU</span>
@@ -5347,14 +5470,13 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
         console.error('Error al conectar con Mercado Pago:', error);
         const secErrorBox = document.getElementById('cart-section-form-error');
         if (secErrorBox) {
-            secErrorBox.innerHTML = `⚠️ <strong>Error en pasarela:</strong> ${escapeHtml(error.message || 'No se pudo generar el pago con Mercado Pago.')}<br><small style="margin-top:4px; display:inline-block;">Puedes seleccionar <strong>WhatsApp Directo</strong> para finalizar tu pedido con un asesor.</small>`;
+            secErrorBox.innerHTML = `<strong>Error en pasarela:</strong> ${escapeHtml(error.message || 'No se pudo generar el pago con Mercado Pago.')}<br><small style="margin-top:4px; display:inline-block;">Puedes seleccionar <strong>WhatsApp Directo</strong> para finalizar tu pedido con un asesor.</small>`;
             secErrorBox.style.display = 'block';
             secErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         if (formContainer) {
             formContainer.innerHTML = `
                 <div class="cart-customer-card cart-error-card">
-                    <div style="font-size:32px; margin-bottom:12px;">⚠️</div>
                     <h4 style="color:#ef4444;">Error en la pasarela</h4>
                     <p>${escapeHtml(error.message || 'Error al conectar con Mercado Pago. Intenta nuevamente.')}</p>
                     <button class="btn-checkout" onclick="updateCartUI()" style="margin-top:16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);">Reintentar</button>
@@ -5580,7 +5702,6 @@ async function checkout(skipPrompt = false) {
             if (formContainer) {
                 formContainer.innerHTML = `
                     <div style="text-align:center; padding:24px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px;">
-                        <div style="font-size:32px; margin-bottom:12px;">⚠️</div>
                         <h4 style="margin:0 0 8px; color:#ef4444; font-size:15px;">Error al registrar</h4>
                         <p style="margin:0 0 16px; color:rgba(255,255,255,0.6); font-size:12px;">${error.message}</p>
                         <button class="btn-checkout" onclick="closeCart()" style="background:transparent; border:1px solid rgba(255,255,255,0.2);">Cerrar</button>
@@ -5803,7 +5924,7 @@ function initBlyxuApp() {
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     const isHomePage = !isProductDetailPage && !isContactPage && !isPaymentsPage && !isOrdersLookupPage && !isCartPage && !isWholesalePage;
 
-    // No se guarda sesion — en mayorista siempre se pide clave
+    // No se guarda sesion - en mayorista siempre se pide clave
     const shouldDelayWholesaleCatalog = isWholesalePage && !document.body.classList.contains('wholesale-unlocked');
 
     // En pagos: si el overlay de login sigue activo, no inicializar nada pesado
@@ -5849,6 +5970,11 @@ function initBlyxuApp() {
     if (isHomePage) {
         hydrateSiteConfigFromCache();
         renderHomeAdBanner();
+        fetchSiteConfig({ force: true }).then(() => {
+            renderHomeAdBanner();
+            renderFooterSocialLinks();
+            renderPromoWidget();
+        }).catch(() => {});
     }
 
     if (isContactPage || isPaymentsPage || isOrdersLookupPage) {
@@ -5940,6 +6066,8 @@ if (document.readyState === 'loading') {
 } else {
     initBlyxuApp();
 }
+
+
 
 
 

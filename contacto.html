@@ -1,24 +1,25 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contacto - BLYXU</title>
-    <meta name="description" content="Horario, numero de contacto y redes sociales oficiales de BLYXU.">
+    <meta name="description" content="Horario, n&uacute;mero de contacto y redes sociales oficiales de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <meta property="og:title" content="Contacto - BLYXU">
-    <meta property="og:description" content="Horario, numero de contacto y redes sociales oficiales de BLYXU.">
+    <meta property="og:description" content="Horario, n&uacute;mero de contacto y redes sociales oficiales de BLYXU.">
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/contacto.html">
     <meta name="twitter:card" content="summary_large_image">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=cart-no-flash-20260924" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=cart-no-flash-20260924"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928"></noscript>
+    <link rel="stylesheet" href="contacto.css?v=blyxu-contact-layout-20260928">
 </head>
 
-<body data-page="contact">
+<body class="contact-v2" data-page="contact">
     <div class="bg-animation"></div>
     <canvas id="particles-canvas"></canvas>
 
@@ -29,7 +30,7 @@
 
         <ul class="nav-links" id="nav-links">
             <li><a href="index.html">Inicio</a></li>
-            <li><a href="index.html#coleccion">Catalogo</a></li>
+            <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
             <li><a href="mayorista.html">Mayorista</a></li>
             <li><a href="contacto.html" class="active">Contacto</a></li>
             <li><a href="pagos.html">Pagos</a></li>
@@ -60,46 +61,82 @@
         <section class="contact-hero contact-hero-luxury">
             <div class="contact-hero-bg"></div>
             <div class="contact-hero-content">
-                <div style="display:flex; justify-content:center; margin-bottom: 16px;">
-                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#f4c441" stroke-width="1.5">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                </div>
-                <h1>Contacto</h1>
-                <p id="contact-note">Escribenos por nuestro numero oficial o visita nuestras redes sociales BLYXU.</p>
-                <a class="contact-hero-btn" id="contact-hero-whatsapp" href="#" target="_blank" rel="noopener">Escribir ahora</a>
+                <header class="contact-hero-intro">
+                    <div class="contact-hero-mark" aria-hidden="true">
+                        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#f4c441" stroke-width="1.5">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="contact-kicker">Atenci&oacute;n BLYXU</span>
+                        <h1>Contacto</h1>
+                        <p id="contact-note">Escr&iacute;benos por nuestro n&uacute;mero oficial o visita nuestras redes sociales BLYXU.</p>
+                    </div>
+                </header>
+                <aside class="contact-hero-tools" aria-label="Opciones de contacto">
+                    <div class="contact-hero-actions" aria-label="Acciones principales de contacto">
+                        <a class="contact-hero-btn" id="contact-hero-whatsapp" href="#" target="_blank" rel="noopener">
+                            <span>Escribir ahora</span>
+                        </a>
+                        <a class="contact-secondary-btn" href="index.html#coleccion">Ver cat&aacute;logo</a>
+                    </div>
+                    <div class="contact-trust-row" aria-label="Opciones de atenci&oacute;n">
+                        <span>Respuesta por WhatsApp</span>
+                        <span>Compras minoristas y mayoristas</span>
+                        <span>Soporte de pedidos</span>
+                    </div>
+                </aside>
             </div>
         </section>
 
         <section class="contact-grid contact-grid-luxury contact-simple-grid">
             <article class="contact-card contact-schedule-card reveal" id="contact-horario">
-                <span class="contact-card-icon" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                </span>
-                <span class="contact-card-label">Horario</span>
-                <h2 id="contact-days">Lunes a Sabado</h2>
-                <p id="contact-hours">10:00 a.m. - 7:00 p.m.</p>
+                <div class="contact-card-copy">
+                    <span class="contact-card-icon" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </span>
+                    <span class="contact-card-label">Horario de atenci&oacute;n</span>
+                    <h2 id="contact-days">Lunes a S&aacute;bado</h2>
+                    <p id="contact-hours">10:00 a.m. - 7:00 p.m.</p>
+                    <div class="contact-time-panel" aria-live="polite">
+                        <span class="contact-status-pill" id="contact-open-status">Verificando horario</span>
+                        <strong class="contact-digital-clock" id="contact-live-clock" aria-label="Hora actual en Bogot&aacute;">
+                            <span class="contact-clock-char">-</span><span class="contact-clock-char">-</span><span class="contact-clock-separator">:</span><span class="contact-clock-char">-</span><span class="contact-clock-char">-</span>
+                        </strong>
+                        <small id="contact-clock-city">Bogot&aacute;, Colombia</small>
+                    </div>
+                </div>
                 <div class="contact-hours-timeline" id="contact-hours-timeline">
-                    <div class="contact-time-node active"><span>Apertura</span><strong>10:00 AM</strong></div>
-                    <div class="contact-time-node"><span>Cierre</span><strong>7:00 PM</strong></div>
+                    <div class="contact-timeline-track" aria-hidden="true">
+                        <span class="contact-timeline-progress" id="contact-timeline-progress"></span>
+                        <span class="contact-timeline-dot" id="contact-timeline-dot"></span>
+                    </div>
+                    <div class="contact-time-node active"><span>Apertura</span><strong>10:00 a.m.</strong></div>
+                    <div class="contact-time-node"><span>Cierre</span><strong>7:00 p.m.</strong></div>
                 </div>
             </article>
 
             <article class="contact-card contact-phone-card reveal" id="contact-telefono">
-                <span class="contact-card-icon" aria-hidden="true">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
-                    </svg>
-                </span>
-                <span class="contact-card-label">Numero de contacto</span>
+                <div class="contact-card-top">
+                    <span class="contact-card-icon" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </span>
+                    <span class="contact-card-label">Canal directo</span>
+                </div>
                 <h2 id="contact-phone-number">+57 311 2368622</h2>
-                <p>Atencion directa por WhatsApp.</p>
-                <a class="contact-action" id="contact-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+                <p>Consulta productos, disponibilidad, env&iacute;os o pedidos en un solo chat.</p>
+                <div class="contact-action-row">
+                    <a class="contact-action" id="contact-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+                    <a class="contact-action contact-action-soft" href="facturas-pedidos.html">Pedidos</a>
+                </div>
             </article>
 
             <article class="contact-card contact-channel-card reveal" id="contact-redes">
                 <span class="contact-card-label">Redes sociales</span>
-                <h2>Siguenos</h2>
+                <h2>Conecta con BLYXU</h2>
+                <p>Novedades, lanzamientos y detalles para regalar.</p>
                 <div class="contact-social-links">
                     <a class="contact-social-link" id="contact-facebook" href="#" target="_blank" rel="noopener" aria-label="Facebook">
                         <span class="contact-social-icon" aria-hidden="true">
@@ -135,10 +172,10 @@
             </a>
         </div>
         <div>
-            <h4>Navegacion</h4>
+            <h4>Navegaci&oacute;n</h4>
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="index.html#coleccion">Catalogo</a></li>
+                <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
                 <li><a href="mayorista.html">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="pagos.html">Pagos</a></li>
@@ -155,12 +192,12 @@
             </label>
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
                 <a href="index.html" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
-                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria collares pulseras aretes anillos">Catalogo</a>
+                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria collares pulseras aretes anillos">Cat&aacute;logo</a>
                 <a href="mayorista.html" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="pagos.html" data-footer-search-item data-keywords="pagos qr transferencia pagar">Pagos</a>
                 <a href="facturas-pedidos.html" data-footer-search-item data-keywords="facturas pedidos ordenes comprobantes">Facturas y pedidos</a>
                 <a href="#contact-horario" data-footer-search-item data-keywords="horario apertura cierre lunes sabado">Horario</a>
-                <a href="#contact-telefono" data-footer-search-item data-keywords="telefono numero contacto whatsapp escribir">Numero de contacto</a>
+                <a href="#contact-telefono" data-footer-search-item data-keywords="telefono numero contacto whatsapp escribir">N&uacute;mero de contacto</a>
                 <a href="#contact-redes" data-footer-search-item data-keywords="redes sociales facebook instagram tiktok">Redes sociales</a>
                 <a id="footer-whatsapp" href="#" target="_blank" rel="noopener" data-footer-search-item data-keywords="whatsapp chat numero telefono escribir">WhatsApp</a>
                 <span class="footer-search-empty">Sin resultados</span>
@@ -186,7 +223,16 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=cart-no-flash-20260924" defer></script>
+    <script src="blyxu-lite.js?v=blyxu-contact-clock-20260928" defer></script>
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+

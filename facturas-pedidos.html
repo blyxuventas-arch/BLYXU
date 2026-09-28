@@ -1,16 +1,16 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facturas y Pedidos - BLYXU</title>
-    <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu numero de contacto.">
+    <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu n&uacute;mero de contacto.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=perf-bg-off-20260924" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=perf-bg-off-20260924"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928"></noscript>
     <style>
         .orders-page {
             position: relative;
@@ -1476,7 +1476,7 @@
 
         <ul class="nav-links" id="nav-links">
             <li><a href="index.html">Inicio</a></li>
-            <li><a href="index.html#coleccion">Catalogo</a></li>
+            <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
             <li><a href="mayorista.html">Mayorista</a></li>
             <li><a href="contacto.html">Contacto</a></li>
             <li><a href="pagos.html">Pagos</a></li>
@@ -1509,14 +1509,14 @@
                 <div class="orders-intro">
                     <div class="orders-kicker">Panel de cliente</div>
                     <h1>Facturas y Pedidos</h1>
-                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu numero de contacto o referencia.</p>
+                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu n&uacute;mero de contacto o referencia.</p>
                 </div>
 
                 <div class="orders-login">
                     <h2>Consulta por contacto o referencia</h2>
-                    <p>Escribe el numero de contacto o el ID de factura/pedido.</p>
+                    <p>Escribe el n&uacute;mero de contacto o el ID de factura/pedido.</p>
                     <form class="orders-form" id="orders-lookup-form">
-                        <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="Numero de contacto o referencia" required>
+                        <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="N&uacute;mero de contacto o referencia" required>
                         <button type="submit" id="orders-submit-btn">Ver mi panel</button>
                         <div class="orders-status" id="orders-status" aria-live="polite"></div>
                     </form>
@@ -1555,7 +1555,7 @@
             <h4>Navegacion</h4>
             <ul>
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="index.html#coleccion">Catalogo</a></li>
+                <li><a href="index.html#coleccion">Cat&aacute;logo</a></li>
                 <li><a href="index.html#mayorista">Mayorista</a></li>
                 <li><a href="contacto.html">Contacto</a></li>
                 <li><a href="pagos.html">Pagos</a></li>
@@ -1572,7 +1572,7 @@
             </label>
             <div class="footer-search-results" id="footer-page-search-results" aria-live="polite">
                 <a href="index.html" data-footer-search-item data-keywords="inicio home principal banner">Inicio</a>
-                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Catalogo</a>
+                <a href="index.html#coleccion" data-footer-search-item data-keywords="catalogo coleccion productos joyeria">Cat&aacute;logo</a>
                 <a href="index.html#mayorista" data-footer-search-item data-keywords="mayorista precios por mayor clave acceso">Mayorista</a>
                 <a href="contacto.html" data-footer-search-item data-keywords="contacto horario telefono redes whatsapp">Contacto</a>
                 <a href="pagos.html" data-footer-search-item data-keywords="pagos qr transferencia pagar">Pagos</a>
@@ -1601,7 +1601,7 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=perf-bg-off-20260924" defer></script>
+    <script src="blyxu-lite.js?v=blyxu-contact-clock-20260928" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
@@ -1733,9 +1733,9 @@
                     'Nombre del Producto',
                     'Item',
                     'Articulo',
-                    'Artículo'
+                    'ArtÃ­culo'
                 ], '');
-                const sku = getField(order, ['SKU', 'Referencia', 'Ref', 'ID Producto', 'ID Variacion', 'ID Variación'], '');
+                const sku = getField(order, ['SKU', 'Referencia', 'Ref', 'ID Producto', 'ID Variacion', 'ID VariaciÃ³n'], '');
                 if (!name && !sku) return [];
                 const qty = Number(getField(order, ['Cantidad', 'cantidad', 'Qty', 'qty'], 1)) || 1;
                 const price = parseMoneyValue(getField(order, ['Precio', 'Precio Unitario', 'Valor Unitario', 'price'], 0));
@@ -1754,7 +1754,7 @@
                 const grouped = new Map();
                 (Array.isArray(items) ? items : []).forEach(item => {
                     const name = getField(item, ['nombre', 'Nombre', 'Producto', 'name'], 'Producto');
-                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion', 'ID Variacion', 'ID Variación'], '');
+                    const sku = getField(item, ['sku', 'SKU', 'id', 'idVariacion', 'ID Variacion', 'ID VariaciÃ³n'], '');
                     const qty = Number(getField(item, ['cantidad', 'Cantidad', 'qty', 'quantity'], 1)) || 1;
                     const price = parseMoneyValue(getField(item, ['precio', 'Precio', 'price', 'valor'], 0));
                     const image = getField(item, ['img', 'imagen', 'Imagen', 'image', 'foto', 'Foto', 'thumb'], '');
@@ -2096,7 +2096,7 @@
             function renderOrders() {
                 if (!currentOrders.length) {
                     results.classList.remove('stack-mode');
-                    results.innerHTML = '<div class="orders-empty">No encontramos pedidos asociados a ese numero de contacto.</div>';
+                    results.innerHTML = '<div class="orders-empty">No encontramos pedidos asociados a ese número de contacto.</div>';
                     return;
                 }
 
@@ -2143,7 +2143,7 @@
             function renderInvoices() {
                 if (!currentInvoices.length) {
                     results.classList.remove('stack-mode');
-                    results.innerHTML = '<div class="orders-empty">No encontramos facturas asociadas a ese numero de contacto.</div>';
+                    results.innerHTML = '<div class="orders-empty">No encontramos facturas asociadas a ese número de contacto.</div>';
                     return;
                 }
 
@@ -2209,7 +2209,7 @@
                 const total = getOrderTotal(order, items);
                 const balanceInfo = getInvoiceBalanceInfo(order, total);
                 const companyLogo = 'blyxu-invoice-logo.png';
-                const companyName = getConfigValue('Factura_Empresa', 'BLYXU Joyería & Accesorios');
+                const companyName = getConfigValue('Factura_Empresa', 'BLYXU JoyerÃ­a & Accesorios');
                 const companyNit = getConfigValue('Factura_NIT', '000.000.000-0');
                 const companyPhone = getConfigValue('Factura_Telefono', '+57 311 2368622');
                 const companyEmail = getConfigValue('Factura_Email', 'contacto@blyxu.online');
@@ -2268,8 +2268,8 @@
                             <div class="invoice-details-box inv-box-cliente">
                                 <div class="box-header-title">FACTURAR A / CLIENTE</div>
                                 <strong class="cliente-nombre-title">${escapeHtml(name)}</strong>
-                                <p><strong>Teléfono / WhatsApp:</strong> ${escapeHtml(phone || '-')}</p>
-                                <p><strong>Dirección de Envío:</strong> ${escapeHtml(address || '-')}</p>
+                                <p><strong>TelÃ©fono / WhatsApp:</strong> ${escapeHtml(phone || '-')}</p>
+                                <p><strong>DirecciÃ³n de EnvÃ­o:</strong> ${escapeHtml(address || '-')}</p>
                                 <p><strong>Ciudad:</strong> ${escapeHtml(city || '-')}</p>
                                 <p><strong>Tipo de Cliente:</strong> <span style="font-weight:900; color:#000000;">${escapeHtml(customerType || 'Detal')}</span></p>
                             </div>
@@ -2279,7 +2279,7 @@
                                 <p><strong>Empresa:</strong> ${escapeHtml(companyName)}</p>
                                 <p><strong>NIT / DOC:</strong> ${escapeHtml(companyNit)}</p>
                                 <p><strong>Soporte Inmediato:</strong> ${escapeHtml(companyPhone)}</p>
-                                <p><strong>Método de Pago:</strong> ${escapeHtml(method)}</p>
+                                <p><strong>MÃ©todo de Pago:</strong> ${escapeHtml(method)}</p>
                                 <p><strong>ID Pedido:</strong> ${escapeHtml(orderId)}</p>
                             </div>
                         </div>
@@ -2288,7 +2288,7 @@
                             <thead>
                                 <tr>
                                     <th style="width:10%; text-align:center;">CANT.</th>
-                                    <th style="width:52%;">DESCRIPCIÓN / PRODUCTO</th>
+                                    <th style="width:52%;">DESCRIPCIÃ“N / PRODUCTO</th>
                                     <th style="width:19%; text-align:right;">P. UNITARIO</th>
                                     <th style="width:19%; text-align:right;">SUBTOTAL</th>
                                 </tr>
@@ -2299,7 +2299,7 @@
                         <div class="invoice-bottom-grid">
                             <div class="invoice-notes-box">
                                 <div class="notes-title">OBSERVACIONES & NOTAS DE COMPRA</div>
-                                <p>${escapeHtml(note || 'Gracias por preferir BLYXU Joyería. Cada una de nuestras piezas cuenta con sello y garantía de autenticidad BLYXU.')}</p>
+                                <p>${escapeHtml(note || 'Gracias por preferir BLYXU JoyerÃ­a. Cada una de nuestras piezas cuenta con sello y garantÃ­a de autenticidad BLYXU.')}</p>
                             </div>
                             <div class="invoice-total-container">
                                 <div class="invoice-total-box">
@@ -2316,7 +2316,7 @@
                                         <strong>${formatMoney(balanceInfo.balance)}</strong>
                                     </div>
                                     <div class="total-sub-info">
-                                        <span>Moneda: COP ($)</span> &bull; <span>${totalQty} ${totalQty === 1 ? 'Ítem' : 'Ítems'}</span>
+                                        <span>Moneda: COP ($)</span> &bull; <span>${totalQty} ${totalQty === 1 ? 'Ãtem' : 'Ãtems'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2327,19 +2327,19 @@
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.blyxu.online" alt="QR BLYXU">
                                 <div>
                                     <strong style="font-size:13.5px; color:#000000 !important; display:block; margin-bottom:2px;">Visita nuestra tienda online oficial BLYXU</strong>
-                                    <p style="margin:0; font-size:12px; color:#52525b !important;">Escanea este código QR o haz clic en el enlace:</p>
+                                    <p style="margin:0; font-size:12px; color:#52525b !important;">Escanea este cÃ³digo QR o haz clic en el enlace:</p>
                                     <a href="https://www.blyxu.online" target="_blank" style="display:inline-block; margin-top:3px; font-size:13px; font-weight:800; color:#000000 !important; text-decoration:underline;">www.blyxu.online</a>
                                 </div>
                             </div>
                             <div style="text-align:right; font-size:12px; color:#52525b !important;">
-                                <span style="font-weight:700;">Atención & Pedidos</span><br>
+                                <span style="font-weight:700;">AtenciÃ³n & Pedidos</span><br>
                                 <strong style="font-size:13px; color:#000000 !important;">${escapeHtml(companyPhone)}</strong>
                             </div>
                         </div>
 
                         <div class="invoice-footer-line"></div>
                         <div class="invoice-footer">
-                            <p class="thank-you">Gracias por elegir BLYXU Joyería & Accesorios</p>
+                            <p class="thank-you">Gracias por elegir BLYXU JoyerÃ­a & Accesorios</p>
                             <p class="footer-subtext">Comprobante expedido digitalmente por BLYXU &bull; Tienda Web: <a href="https://www.blyxu.online" target="_blank" style="color:#52525b; font-weight:700;">www.blyxu.online</a> &bull; WhatsApp Soporte: ${escapeHtml(companyPhone)}</p>
                         </div>
                     </section>
@@ -2847,7 +2847,7 @@
                 const reference = onlyLetters(lookup);
 
                 if (comparable.length < 7 && reference.length < 3) {
-                    status.textContent = 'Escribe un numero de contacto o referencia valido.';
+                    status.textContent = 'Escribe un número de contacto o referencia válido.';
                     panel.classList.remove('open');
                     return;
                 }
@@ -2904,3 +2904,12 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
