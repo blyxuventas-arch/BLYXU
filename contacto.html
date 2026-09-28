@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Contacto - BLYXU</title>
     <meta name="description" content="Horario, n&uacute;mero de contacto y redes sociales oficiales de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928"></noscript>
-    <link rel="stylesheet" href="contacto.css?v=blyxu-contact-layout-20260928">
+    <link rel="stylesheet" href="contacto.css?v=blyxu-contact-layout-20260928-2">
 </head>
 
 <body class="contact-v2" data-page="contact">
@@ -57,7 +57,7 @@
         </div>
     </nav>
 
-    <main class="contact-page contact-concierge">
+    <main class="contact-page contact-concierge" id="contact-page">
         <section class="contact-hero contact-hero-luxury">
             <div class="contact-hero-bg"></div>
             <div class="contact-hero-content">
@@ -90,6 +90,23 @@
         </section>
 
         <section class="contact-grid contact-grid-luxury contact-simple-grid">
+            <article class="contact-card contact-phone-card reveal" id="contact-telefono">
+                <div class="contact-card-top">
+                    <span class="contact-card-icon" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </span>
+                    <span class="contact-card-label">Canal directo</span>
+                </div>
+                <h2 id="contact-phone-number">+57 311 2368622</h2>
+                <p>Consulta productos, disponibilidad, env&iacute;os o pedidos en un solo chat.</p>
+                <div class="contact-action-row">
+                    <a class="contact-action" id="contact-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
+                    <a class="contact-action contact-action-soft" href="facturas-pedidos.html">Pedidos</a>
+                </div>
+            </article>
+
             <article class="contact-card contact-schedule-card reveal" id="contact-horario">
                 <div class="contact-card-copy">
                     <span class="contact-card-icon" aria-hidden="true">
@@ -113,23 +130,6 @@
                     </div>
                     <div class="contact-time-node active"><span>Apertura</span><strong>10:00 a.m.</strong></div>
                     <div class="contact-time-node"><span>Cierre</span><strong>7:00 p.m.</strong></div>
-                </div>
-            </article>
-
-            <article class="contact-card contact-phone-card reveal" id="contact-telefono">
-                <div class="contact-card-top">
-                    <span class="contact-card-icon" aria-hidden="true">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.35 1.89.66 2.78a2 2 0 0 1-.45 2.11L8.09 9.84a16 16 0 0 0 6.07 6.07l1.23-1.23a2 2 0 0 1 2.11-.45c.89.31 1.82.53 2.78.66A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                    </span>
-                    <span class="contact-card-label">Canal directo</span>
-                </div>
-                <h2 id="contact-phone-number">+57 311 2368622</h2>
-                <p>Consulta productos, disponibilidad, env&iacute;os o pedidos en un solo chat.</p>
-                <div class="contact-action-row">
-                    <a class="contact-action" id="contact-whatsapp" href="#" target="_blank" rel="noopener">WhatsApp</a>
-                    <a class="contact-action contact-action-soft" href="facturas-pedidos.html">Pedidos</a>
                 </div>
             </article>
 

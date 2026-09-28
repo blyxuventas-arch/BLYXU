@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Producto - BLYXU</title>
     <meta name="description" content="Consulta joyas y accesorios BLYXU: piezas, colores, medidas, disponibilidad y opciones para hacer tu pedido.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
@@ -944,7 +944,7 @@
         }
     </style>
 </head>
-<body class="dark-mode">
+<body class="dark-mode product-detail-page">
 
     <div class="bg-animation"></div>
     <canvas id="particles-canvas"></canvas>
@@ -1206,9 +1206,18 @@
                 const isFreshPreview = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
                 const previewImage = preview?.imageCard || preview?.image || preview?.imageDetail || '';
                 if (isFreshPreview && preview.id === currentDetailProductId && preview.mode === detailCatalogMode && previewImage) {
+                    let previewFallbackTried = false;
                     detailImg.onerror = () => {
+                        const alternate = typeof getImageFallbackUrl === 'function'
+                            ? getImageFallbackUrl(previewImage, 'detail')
+                            : '';
+                        if (!previewFallbackTried && alternate && alternate !== previewImage && alternate !== 'hero_necklace.png') {
+                            previewFallbackTried = true;
+                            detailImg.src = alternate;
+                            return;
+                        }
                         detailImg.onerror = null;
-                        detailImg.src = 'Logo2.png';
+                        detailImg.src = 'hero_necklace.png';
                         detailImgContainer.classList.add('is-fallback');
                         detailImgContainer.style.backgroundImage = '';
                     };
@@ -1357,10 +1366,12 @@
                 link.href = src;
                 link.fetchPriority = 'high';
                 link.setAttribute('fetchpriority', 'high');
+                link.referrerPolicy = 'no-referrer';
                 document.head.appendChild(link);
 
                 const img = new Image();
                 img.decoding = 'async';
+                img.referrerPolicy = 'no-referrer';
                 img.src = src;
             }
 
@@ -1376,7 +1387,7 @@
             }
 
             function switchMainImage(src, alt) {
-                const nextSrc = src || 'Logo2.png';
+                const nextSrc = src || 'hero_necklace.png';
                 const currentSrc = detailImg.getAttribute('src') || '';
                 const isSameImage = currentSrc === nextSrc;
                 if (isSameImage && detailImg.complete && detailImg.naturalWidth > 0) return;
@@ -1404,12 +1415,29 @@
                     });
                 };
 
-                const fallback = () => {
+                let alternateTried = false;
+                const usePlaceholder = () => {
                     detailImg.onerror = null;
                     detailImg.onload = null;
-                    detailImg.src = 'Logo2.png';
+                    detailImg.src = 'hero_necklace.png';
                     detailImgContainer.classList.add('is-fallback');
                     finishSwap();
+                };
+
+                const fallback = () => {
+                    const alternate = typeof getImageFallbackUrl === 'function'
+                        ? getImageFallbackUrl(nextSrc, 'detail')
+                        : '';
+                    if (!alternateTried && alternate && alternate !== nextSrc && alternate !== 'hero_necklace.png') {
+                        alternateTried = true;
+                        preloadDetailImage(alternate);
+                        detailImg.referrerPolicy = 'no-referrer';
+                        detailImg.onerror = usePlaceholder;
+                        detailImg.onload = finishSwap;
+                        detailImg.src = alternate;
+                        return;
+                    }
+                    usePlaceholder();
                 };
 
                 if (currentSrc && !isSameImage) {
@@ -1419,6 +1447,7 @@
 
                     const preloader = new Image();
                     preloader.decoding = 'async';
+                    preloader.referrerPolicy = 'no-referrer';
                     preloader.onload = () => {
                         detailImg.onerror = fallback;
                         detailImg.onload = finishSwap;
@@ -1432,6 +1461,7 @@
 
                 detailImg.onerror = fallback;
                 detailImg.onload = finishSwap;
+                detailImg.referrerPolicy = 'no-referrer';
                 if (!isSameImage) {
                     detailImg.src = nextSrc;
                 }

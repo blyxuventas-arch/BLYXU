@@ -665,7 +665,8 @@ function getProductPreviewName(product) {
 }
 
 function getProductPreviewImage(product, imageSize = 'detail') {
-    return normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || '', imageSize);
+    const imageSet = typeof getProductImageSet === 'function' ? getProductImageSet(product, imageSize) : [];
+    return imageSet[0] || normalizeImageUrl(product?.Imagen || product?.imagen || product?.Foto || (product?.Galeria && product.Galeria[0]) || '', imageSize);
 }
 
 function prepareProductDetailPreview(productIndex, mode = 'retail') {
@@ -690,6 +691,7 @@ function prepareProductDetailPreview(productIndex, mode = 'retail') {
     if (image) {
         const img = new Image();
         img.decoding = 'async';
+        img.referrerPolicy = 'no-referrer';
         img.src = image;
     }
 }

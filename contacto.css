@@ -4,6 +4,10 @@ body.contact-v2[data-page="contact"] {
     background: #05040a !important;
 }
 
+body.contact-v2[data-page="contact"] .floating-whatsapp {
+    display: none !important;
+}
+
 body.contact-v2[data-page="contact"] .contact-page {
     width: min(1240px, calc(100% - 48px)) !important;
     min-height: 0 !important;
@@ -214,8 +218,8 @@ body.contact-v2[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
     max-width: none !important;
     margin: 0 !important;
     display: grid !important;
-    grid-template-columns: minmax(470px, 1.7fr) minmax(245px, .9fr) minmax(245px, .9fr) !important;
-    grid-template-rows: minmax(380px, auto) !important;
+    grid-template-columns: minmax(300px, 1.05fr) minmax(430px, 1.4fr) minmax(260px, .85fr) !important;
+    grid-template-rows: minmax(360px, auto) !important;
     gap: 18px !important;
     align-items: stretch !important;
 }
@@ -224,7 +228,7 @@ body.contact-v2[data-page="contact"] .contact-card {
     position: relative !important;
     width: auto !important;
     min-width: 0 !important;
-    min-height: 380px !important;
+    min-height: 360px !important;
     margin: 0 !important;
     padding: 26px !important;
     overflow: hidden !important;
@@ -294,12 +298,12 @@ body.contact-v2[data-page="contact"] .contact-card p {
 }
 
 body.contact-v2[data-page="contact"] .contact-schedule-card {
-    grid-column: 1 !important;
+    grid-column: 2 !important;
     grid-row: 1 !important;
     display: grid !important;
-    grid-template-columns: minmax(190px, .8fr) minmax(250px, 1.2fr) !important;
+    grid-template-columns: minmax(155px, .78fr) minmax(210px, 1.22fr) !important;
     grid-template-rows: 1fr !important;
-    gap: 22px !important;
+    gap: 18px !important;
     align-items: center !important;
 }
 
@@ -309,8 +313,8 @@ body.contact-v2[data-page="contact"] .contact-schedule-card .contact-card-copy {
 }
 
 body.contact-v2[data-page="contact"] .contact-schedule-card h2 {
-    max-width: 250px !important;
-    font-size: clamp(32px, 3.1vw, 42px) !important;
+    max-width: 230px !important;
+    font-size: clamp(30px, 2.6vw, 38px) !important;
 }
 
 body.contact-v2[data-page="contact"] .contact-time-panel {
@@ -343,24 +347,119 @@ body.contact-v2[data-page="contact"] .contact-digital-clock {
     justify-content: flex-start !important;
     gap: 2px !important;
     color: #fff !important;
-    font-size: clamp(38px, 4vw, 52px) !important;
+    font-size: clamp(36px, 3.2vw, 46px) !important;
     line-height: 1 !important;
     letter-spacing: 0 !important;
+}
+
+/* Layout authority: isolates this page from the legacy contact rules. */
+#contact-page .contact-grid-luxury.contact-simple-grid .contact-card {
+    min-height: 360px !important;
+    max-width: none !important;
+    padding: 26px !important;
+    align-self: stretch !important;
+    border-radius: 8px !important;
+}
+
+#contact-page .contact-card h2 {
+    margin: 10px 0 12px !important;
+    font-size: clamp(27px, 2.3vw, 34px) !important;
+    line-height: 1.04 !important;
+}
+
+#contact-page .contact-card p {
+    margin: 0 0 18px !important;
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+}
+
+#contact-page #contact-live-clock {
+    width: 100% !important;
+    height: 48px !important;
+    justify-self: start !important;
+    font-size: clamp(36px, 3.2vw, 44px) !important;
+}
+
+#contact-page .contact-schedule-card {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    grid-template-columns: minmax(155px, .78fr) minmax(210px, 1.22fr) !important;
+    gap: 18px !important;
+    align-items: center !important;
+}
+
+#contact-page .contact-schedule-card h2 {
+    max-width: 230px !important;
+    font-size: clamp(30px, 2.6vw, 38px) !important;
+}
+
+#contact-page .contact-phone-card {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+#contact-page .contact-phone-card h2 {
+    font-size: clamp(28px, 2.15vw, 34px) !important;
+    white-space: nowrap !important;
+}
+
+#contact-page .contact-channel-card {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+}
+
+@media (max-width: 1180px) {
+    #contact-page .contact-grid-luxury.contact-simple-grid .contact-card {
+        min-height: 320px !important;
+    }
+
+    #contact-page .contact-phone-card {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+    }
+
+    #contact-page .contact-channel-card {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+    }
+
+    #contact-page .contact-schedule-card {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        grid-template-columns: minmax(220px, .75fr) minmax(300px, 1.25fr) !important;
+    }
+}
+
+@media (max-width: 680px) {
+    #contact-page .contact-grid-luxury.contact-simple-grid .contact-card {
+        grid-column: 1 !important;
+        grid-row: auto !important;
+        min-height: 0 !important;
+        padding: 20px !important;
+    }
+
+    #contact-page .contact-schedule-card {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #contact-page .contact-phone-card h2 {
+        white-space: normal !important;
+    }
 }
 
 body.contact-v2[data-page="contact"] .contact-hours-timeline {
     grid-column: 2 !important;
     grid-row: 1 !important;
     width: 100% !important;
-    height: 300px !important;
-    min-height: 300px !important;
+    height: 290px !important;
+    min-height: 290px !important;
     margin: 0 !important;
     padding: 24px !important;
     border-radius: 8px !important;
 }
 
 body.contact-v2[data-page="contact"] .contact-phone-card {
-    grid-column: 2 !important;
+    grid-column: 1 !important;
     grid-row: 1 !important;
 }
 
@@ -380,6 +479,11 @@ body.contact-v2[data-page="contact"] .contact-phone-card h2,
 body.contact-v2[data-page="contact"] .contact-channel-card h2 {
     margin: 8px 0 12px !important;
     font-size: clamp(26px, 2.5vw, 34px) !important;
+}
+
+body.contact-v2[data-page="contact"] .contact-phone-card h2 {
+    font-size: clamp(28px, 2.15vw, 34px) !important;
+    white-space: nowrap !important;
 }
 
 body.contact-v2[data-page="contact"] .contact-action-row,
@@ -419,7 +523,7 @@ body.contact-v2[data-page="contact"] .contact-social-icon {
     flex-basis: 34px !important;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
     body.contact-v2[data-page="contact"] .contact-page {
         width: min(860px, calc(100% - 36px)) !important;
         padding-top: 104px !important;
@@ -437,22 +541,22 @@ body.contact-v2[data-page="contact"] .contact-social-icon {
     }
 
     body.contact-v2[data-page="contact"] .contact-grid-luxury.contact-simple-grid {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr) !important;
         grid-template-rows: auto auto !important;
-    }
-
-    body.contact-v2[data-page="contact"] .contact-schedule-card {
-        grid-column: 1 / -1 !important;
-        grid-row: 1 !important;
     }
 
     body.contact-v2[data-page="contact"] .contact-phone-card {
         grid-column: 1 !important;
-        grid-row: 2 !important;
+        grid-row: 1 !important;
     }
 
     body.contact-v2[data-page="contact"] .contact-channel-card {
         grid-column: 2 !important;
+        grid-row: 1 !important;
+    }
+
+    body.contact-v2[data-page="contact"] .contact-schedule-card {
+        grid-column: 1 / -1 !important;
         grid-row: 2 !important;
     }
 }
@@ -500,6 +604,10 @@ body.contact-v2[data-page="contact"] .contact-social-icon {
         grid-column: 1 !important;
         grid-row: auto !important;
         min-height: 0 !important;
+    }
+
+    body.contact-v2[data-page="contact"] .contact-phone-card h2 {
+        white-space: normal !important;
     }
 
     body.contact-v2[data-page="contact"] .contact-hours-timeline {
