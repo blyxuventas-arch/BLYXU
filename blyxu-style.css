@@ -1,6 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 :root {
 
-    --font-apple: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, Arial, sans-serif;
+    --font-apple: "Outfit", "Avenir Next", "Century Gothic", "Segoe UI", Arial, sans-serif;
     --bg-dark: #0a0514;
     --bg-card: #110a20;
     --primary: #9b2cfa;
@@ -16304,4 +16306,92 @@ body[data-page="contact"] .contact-social-link {
         height: 54px !important;
         font-size: 42px !important;
     }
+}
+
+/* Cursor authority: keep the system pointer visible across every page layer. */
+html,
+html body,
+html body * {
+    cursor: default !important;
+}
+
+html a,
+html button,
+html label,
+html summary,
+html select,
+html input[type="button"],
+html input[type="submit"],
+html input[type="reset"],
+html input[type="checkbox"],
+html input[type="radio"],
+html input[type="range"],
+html [role="button"],
+html [role="link"],
+html .nav-icon,
+html .nav-icon-btn,
+html .nav-logo,
+html .product-card,
+html .product-card-img,
+html .product-card-info,
+html .marquee-item,
+html .global-search-item,
+html .catalog-load-more {
+    cursor: pointer !important;
+}
+
+html input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html textarea,
+html [contenteditable="true"] {
+    cursor: text !important;
+}
+
+html button:disabled,
+html input:disabled,
+html select:disabled,
+html [aria-disabled="true"] {
+    cursor: not-allowed !important;
+}
+
+/* Soft geometric typography shared by the storefront and its catalogs. */
+html body,
+html body button,
+html body input,
+html body textarea,
+html body select {
+    font-family: var(--font-apple) !important;
+    letter-spacing: 0 !important;
+}
+
+html body * {
+    letter-spacing: 0 !important;
+}
+
+html body h1,
+html body h2,
+html body h3,
+html body .section-title,
+html body .product-info-name,
+html body .product-mobile-heading {
+    font-weight: 700 !important;
+}
+
+html body .product-card-name,
+html body .nav-links a,
+html body .nav-search-btn,
+html body .nav-account-btn,
+html body button {
+    font-weight: 600 !important;
+}
+
+html body p,
+html body input,
+html body textarea,
+html body select {
+    font-weight: 400;
+}
+
+#blyxu-cursor {
+    display: none !important;
+    visibility: hidden !important;
 }

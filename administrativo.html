@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://script.googleusercontent.com">
     <link rel="dns-prefetch" href="//script.google.com">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
         :root {
             --bg:#07030f;
             --panel:#10081c;
@@ -49,103 +51,6 @@
             background-image:linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px, transparent 1px);
             background-size:42px 42px;
             mask-image:linear-gradient(to bottom, black, transparent 88%);
-        }
-        .wholesale-overlay {
-            position:fixed;
-            inset:0;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            padding:24px;
-            background:#08080a;
-            z-index:10000;
-            transition:opacity .18s ease;
-        }
-        .wholesale-panel {
-            position:relative;
-            width:min(420px,100%);
-            padding:34px;
-            border:1px solid rgba(255,255,255,.12);
-            border-radius:18px;
-            background:rgba(15,15,18,.94);
-            box-shadow:0 40px 120px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
-            text-align:center;
-        }
-        .wholesale-logo { width:130px; margin-bottom:16px; }
-        .wholesale-kicker,.admin-kicker {
-            display:block;
-            color:rgba(255,255,255,.58);
-            font-size:10px;
-            font-weight:900;
-            letter-spacing:1.4px;
-            text-transform:uppercase;
-        }
-        .wholesale-panel h2 { margin:6px 0 22px; font-size:30px; }
-        .wholesale-form { display:grid; gap:12px; }
-        .wholesale-error { margin-top:12px; color:#fecaca; font-size:13px; font-weight:800; }
-        .loader-container {
-            height:8px;
-            margin-top:18px;
-            overflow:hidden;
-            border-radius:99px;
-            background:rgba(255,255,255,.08);
-            display:none;
-        }
-        .loader-bar {
-            height:100%;
-            width:0;
-            background:linear-gradient(90deg,var(--gold),var(--purple));
-            transition:width .32s ease;
-        }
-        .loader-text { margin-top:9px; color:var(--soft); font-size:10px; font-weight:900; letter-spacing:1px; display:none; }
-
-        /* Tamaño equilibrado y compacto exclusivo para el inicio de sesión de admin */
-        #admin-login-screen #login-box {
-            width: min(370px, 90vw);
-            padding: 28px 24px 24px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.08);
-        }
-        #admin-login-screen .wholesale-logo {
-            width: 110px;
-            margin-bottom: 12px;
-        }
-        #admin-login-screen .wholesale-kicker {
-            font-size: 9.5px;
-            letter-spacing: 1.4px;
-        }
-        #admin-login-screen h2 {
-            font-size: 22px !important;
-            margin: 4px 0 14px;
-        }
-        #admin-login-screen .wholesale-form {
-            gap: 10px;
-        }
-        #admin-login-screen input#admin-password {
-            min-height: 42px;
-            padding: 9px 13px;
-            font-size: 13px;
-            border-radius: 9px;
-        }
-        #admin-login-screen .admin-btn {
-            min-height: 42px;
-            padding: 9px 13px;
-            font-size: 13px;
-            font-weight: 750;
-            border-radius: 9px;
-            letter-spacing: .3px;
-        }
-        #admin-login-screen .wholesale-error {
-            font-size: 12px;
-            margin-top: 10px;
-        }
-        #admin-login-screen .loader-container {
-            height: 6px;
-            margin-top: 14px;
-        }
-        #admin-login-screen .loader-text {
-            font-size: 9.5px;
-            margin-top: 8px;
         }
 
         @media (max-width: 760px) {
@@ -5713,251 +5618,140 @@
             }
         }
 
-        /* Performance override: login admin sin canvas, blur, sombras ni animaciones costosas */
-        #admin-login-screen.wholesale-overlay,
-        #admin-login-screen.wholesale-overlay.open {
-            background: rgba(5, 3, 10, .96) !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            transition: opacity .1s linear !important;
+    </style>
+    <style>
+        /* ── Admin OTP Login ── */
+        #admin-login-screen {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background:
+                radial-gradient(ellipse at 65% 15%, rgba(168,85,247,.22) 0%, transparent 52%),
+                radial-gradient(ellipse at 18% 80%, rgba(34,211,238,.12) 0%, transparent 46%),
+                #07030f;
+            z-index: 10000;
+            transition: opacity .42s ease;
         }
-        #admin-login-screen.wholesale-overlay::before,
-        #admin-login-screen.wholesale-overlay::after,
-        #admin-login-screen .login-bokeh-canvas,
-        #admin-login-screen #login-box::before,
-        #admin-login-screen #login-box::after {
-            content: none !important;
-            display: none !important;
-            animation: none !important;
-        }
-        #admin-login-screen #login-box,
-        #admin-login-screen #login-box.is-unlocking {
-            background: #09090d !important;
-            border: 1px solid rgba(255,255,255,.1) !important;
-            box-shadow: 0 18px 42px rgba(0,0,0,.48) !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            filter: none !important;
-            transform: none !important;
-        }
-        #admin-login-screen #login-box *,
-        #admin-login-screen .wholesale-logo,
-        #admin-login-screen .login-brand-word,
-        #admin-login-screen .login-brand-word::after,
-        #admin-login-screen .admin-btn,
-        #admin-login-screen .admin-btn::before,
-        #admin-login-screen .admin-btn::after {
-            filter: none !important;
-            text-shadow: none !important;
-            animation: none !important;
-        }#admin-login-screen #login-box.is-unlocking .admin-btn::after {
-            content: none !important;
-            display: none !important;
-        }
-
-        #admin-login-screen #login-box .blyxu-vault {
-            --vault-progress: 0%;
-            display: grid;
-            gap: 14px;
-            justify-items: center;
-            margin: 0 auto 20px;
-            padding: 18px 16px 16px;
-            border: 1px solid rgba(255,255,255,.09);
-            border-radius: 18px;
-            background: radial-gradient(circle at 50% 0%, rgba(244,196,65,.12), transparent 42%), #0f1015;
-            color: #f8f4ff;
+        #admin-login-screen.hidden { opacity: 0; pointer-events: none; }
+        #admin-login-box {
+            position: relative;
+            width: min(400px, 90vw);
+            padding: 38px 28px 34px;
+            background: rgba(13,9,22,.95);
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 22px;
+            box-shadow: 0 32px 90px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+            text-align: center;
             overflow: hidden;
-            position: relative;
         }
-        #admin-login-screen #login-box .blyxu-vault::before {
-            content: "" !important;
-            display: block !important;
-            position: absolute;
-            inset: -1px;
-            background: linear-gradient(120deg, transparent 18%, rgba(244,196,65,.16), transparent 62%);
-            transform: translateX(-120%);
-            pointer-events: none;
+        #admin-login-box::before {
+            content: '';
+            position: absolute; inset: -2px;
+            border-radius: 24px;
+            background: conic-gradient(from var(--ring-angle,0deg),
+                transparent 75%, rgba(168,85,247,.55) 88%, rgba(168,85,247,.8) 93%, transparent 100%);
+            animation: adminRingRotate 3s linear infinite;
+            z-index: 0;
         }
-        #admin-login-screen.vault-success #login-box .blyxu-vault::before { animation: vaultSweep .9s ease forwards !important; }
-        #admin-login-screen #login-box .vault-orb {
-            width: 112px;
-            height: 112px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            position: relative;
-            background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.02) 52%, transparent 54%);
+        #admin-login-box::after {
+            content: '';
+            position: absolute; inset: 1px;
+            border-radius: 21px;
+            background: rgba(13,9,22,.97);
+            z-index: 1;
         }
-        #admin-login-screen #login-box .vault-orb::before {
-            content: "" !important;
-            display: block !important;
-            position: absolute;
-            inset: 8px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(244,196,65,.08), rgba(244,196,65,.9), rgba(168,85,247,.55), rgba(34,211,238,.7), rgba(244,196,65,.08));
-            animation: vaultSpin 6s linear infinite !important;
-            filter: drop-shadow(0 0 18px rgba(244,196,65,.18));
-        }
-        #admin-login-screen #login-box .vault-orb::after {
-            content: "" !important;
-            display: block !important;
-            position: absolute;
-            inset: 17px;
-            border-radius: 50%;
-            background: #111217;
-            box-shadow: inset 0 0 22px rgba(0,0,0,.75);
-        }
-        #admin-login-screen #login-box .vault-scan {
-            position: absolute;
-            width: 86px;
-            height: 2px;
-            z-index: 2;
-            border-radius: 99px;
-            background: linear-gradient(90deg, transparent, rgba(244,196,65,.95), transparent);
-            animation: vaultScan 2.2s ease-in-out infinite !important;
-        }
-        #admin-login-screen #login-box .vault-lock {
-            position: relative;
-            z-index: 3;
-            width: 34px;
-            height: 28px;
-            border-radius: 8px;
-            background: linear-gradient(180deg, #fff7c7, #f4c441);
-            box-shadow: 0 0 24px rgba(244,196,65,.28);
-        }
-        #admin-login-screen #login-box .vault-lock::before {
-            content: "" !important;
-            display: block !important;
-            position: absolute;
-            left: 7px;
-            top: -22px;
-            width: 20px;
-            height: 24px;
-            border: 5px solid #f8f4ff;
-            border-bottom: 0;
-            border-radius: 18px 18px 0 0;
-            transform-origin: 4px 24px;
-        }
-        #admin-login-screen #login-box .vault-lock::after {
-            content: "" !important;
-            display: block !important;
-            position: absolute;
-            left: 15px;
-            top: 10px;
-            width: 5px;
-            height: 10px;
-            border-radius: 99px;
-            background: rgba(8,7,11,.7);
-        }
-        #admin-login-screen #login-box .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
-        #admin-login-screen #login-box .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
-        #admin-login-screen #login-box .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
-        #admin-login-screen #login-box .vault-copy strong { display:block; font-size:16px; font-weight:900; letter-spacing:.02em; }
-        #admin-login-screen #login-box .vault-copy span { display:block; margin-top:5px; color:rgba(248,244,255,.58); font-size:11px; font-weight:700; }
-        #admin-login-screen #login-box .vault-meter { width:min(240px,100%); height:6px; overflow:hidden; border-radius:99px; background:rgba(255,255,255,.08); }
-        #admin-login-screen #login-box .vault-meter span { display:block; width:var(--vault-progress); height:100%; border-radius:inherit; background:linear-gradient(90deg,#a855f7,#22d3ee,#f4c441); transition:width .18s ease; }
-        #admin-login-screen #login-box .vault-note { color:rgba(248,244,255,.46); font-size:10px; font-weight:850; letter-spacing:.1em; text-transform:uppercase; }
-        #admin-login-screen.vault-success #login-box { animation: vaultPanelExit 1.05s ease forwards !important; }
-        @keyframes vaultSpin { to { transform: rotate(360deg); } }
-        @keyframes vaultScan { 0%,100% { transform: translateY(-24px); opacity:.25; } 50% { transform: translateY(24px); opacity:1; } }
-        @keyframes vaultOpen { to { transform: rotate(-38deg) translate(-4px,-2px); } }
-        @keyframes vaultSweep { to { transform: translateX(120%); } }
-        @keyframes vaultDeny { 25% { transform: translateX(7px); } 50% { transform: translateX(-7px); } 75% { transform: translateX(4px); } }
-        @keyframes vaultPanelExit { 0% { opacity:1; transform: scale(1); } 70% { opacity:1; transform: scale(1.02); } 100% { opacity:0; transform: scale(.96) translateY(-18px); } }
+        @property --ring-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes adminRingRotate { to { --ring-angle: 360deg; } }
+        #admin-login-box > * { position: relative; z-index: 2; }
 
-        /* Autoridad móvil final: evita anchos heredados y franjas laterales. */
-        html {
-            width:100%;
-            max-width:100%;
-            min-width:0;
-            overflow-x:hidden;
-            background:#05020a;
+        .admin-otp-logo { width: 70px; margin: 0 auto 10px; display: block; }
+        .admin-otp-kicker {
+            display: block; font-size: 9px; font-weight: 900; letter-spacing: 2.2px;
+            text-transform: uppercase; color: rgba(168,85,247,.85); margin-bottom: 4px;
         }
-        body {
-            width:100%;
-            max-width:100%;
-            min-width:0;
-            margin:0;
-            overflow-x:hidden;
-            background-color:#05020a;
-            padding-left:env(safe-area-inset-left);
-            padding-right:env(safe-area-inset-right);
+        .admin-otp-title {
+            margin: 0 0 6px; font-size: 24px; font-weight: 900;
+            background: linear-gradient(135deg, #fff 55%, rgba(168,85,247,.75));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        @media (max-width:760px) {
-            #admin-main-content.dashboard-layout,
-            .dashboard-main,
-            .dashboard-content-area,
-            .dashboard-section,
-            .admin-dashboard-shell,
-            .admin-dashboard-hero,
-            .dashboard-stat-grid,
-            .dashboard-main-grid,
-            .dashboard-bottom-grid,
-            .dashboard-card,
-            .dashboard-stat-card,
-            .admin-panel {
-                width:100% !important;
-                max-width:100% !important;
-                min-width:0 !important;
-                margin-left:0 !important;
-                margin-right:0 !important;
-            }
-            #admin-main-content.dashboard-layout,
-            .dashboard-main,
-            .dashboard-content-area,
-            .dashboard-section,
-            .admin-dashboard-shell {
-                overflow-x:hidden !important;
-            }
-            .dashboard-stat-grid,
-            .dashboard-main-grid,
-            .dashboard-bottom-grid {
-                display:grid !important;
-                grid-template-columns:minmax(0,1fr) !important;
-            }
-            .dashboard-content-area {
-                padding:12px !important;
-            }
-            .dashboard-card,
-            .dashboard-stat-card,
-            .admin-panel {
-                overflow-wrap:anywhere !important;
-            }
-            .admin-section-drawer {
-                max-width:calc(100vw - 48px) !important;
-            }
-            .cost-calculator-drawer {
-                width:calc(100vw - 48px) !important;
-                max-width:340px !important;
-            }
+        .admin-otp-sub { font-size: 11px; color: rgba(255,255,255,.38); margin: 0 0 26px; }
+
+        .admin-otp-row {
+            display: flex; justify-content: center; gap: 7px;
+            flex-wrap: wrap; margin-bottom: 6px;
         }
+        .admin-otp-digit {
+            width: 40px; height: 50px;
+            border: 1.5px solid rgba(255,255,255,.12);
+            border-radius: 12px;
+            background: rgba(255,255,255,.04);
+            color: #fff; font-size: 22px; font-weight: 900;
+            text-align: center; caret-color: transparent;
+            transition: border-color .18s, box-shadow .18s, transform .12s;
+            outline: none;
+        }
+        .admin-otp-digit:focus {
+            border-color: rgba(168,85,247,.75);
+            box-shadow: 0 0 0 3px rgba(168,85,247,.2), 0 0 18px rgba(168,85,247,.28);
+            transform: translateY(-2px);
+        }
+        .admin-otp-digit.filled { border-color: rgba(168,85,247,.45); color: #fff; }
+
+        .admin-otp-digit.success {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 18px rgba(16,185,129,.5) !important;
+            background: rgba(16,185,129,.1) !important;
+            color: transparent !important;
+            position: relative;
+        }
+        .admin-otp-digit.success::after {
+            content: '';
+            position: absolute; inset: 0; margin: auto;
+            width: 13px; height: 8px;
+            border-left: 2.5px solid #10b981;
+            border-bottom: 2.5px solid #10b981;
+            transform: rotate(-45deg) translate(1px, -2px);
+            animation: adminCheckPop .35s cubic-bezier(.36,1.55,.64,1) forwards;
+        }
+        @keyframes adminCheckPop {
+            0%   { opacity: 0; transform: scale(0) rotate(-45deg) translate(1px,-2px); }
+            100% { opacity: 1; transform: scale(1) rotate(-45deg) translate(1px,-2px); }
+        }
+        @keyframes adminShake {
+            0%,100% { transform: translateX(0); }
+            20%,60%  { transform: translateX(-6px); }
+            40%,80%  { transform: translateX(6px); }
+        }
+        .admin-otp-row.shake { animation: adminShake .42s ease; }
+
+        .admin-otp-error {
+            font-size: 11px; font-weight: 800; color: #fca5a5;
+            min-height: 18px; margin: 10px 0 0;
+            opacity: 0; transition: opacity .2s;
+        }
+        .admin-otp-error.visible { opacity: 1; }
     </style>
 </head>
 <body>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
 
-    <div class="wholesale-overlay open" id="admin-login-screen" style="opacity:1; pointer-events:auto; display:flex;">
-        <canvas class="login-bokeh-canvas" aria-hidden="true"></canvas>
-        <div class="wholesale-panel" id="login-box">
-            <div class="blyxu-vault" data-vault aria-hidden="true">
-                <div class="vault-orb"><span class="vault-scan"></span><span class="vault-lock"></span></div>
-                <div class="vault-copy"><strong>B&oacute;veda administrativa</strong><span data-vault-status>Esperando clave segura</span></div>
-                <div class="vault-meter"><span data-vault-meter></span></div>
-                <div class="vault-note">BLYXU command access</div>
+    <div id="admin-login-screen">
+        <div id="admin-login-box">
+            <img src="Logo2.png" alt="BLYXU" class="admin-otp-logo" onerror="this.style.display='none'">
+            <span class="admin-otp-kicker">Panel Seguro</span>
+            <h1 class="admin-otp-title">Administrador</h1>
+            <p class="admin-otp-sub">Ingresa tu clave de acceso</p>
+            <div class="admin-otp-row" id="admin-otp-row">
+                <input class="admin-otp-digit" id="adm-d0" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d1" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d2" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d3" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d4" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d5" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <input class="admin-otp-digit" id="adm-d6" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
             </div>
-
-            <img src="Logo2.png" alt="BLYXU" class="wholesale-logo" onerror="this.style.display='none'">
-            <div class="login-brand-word" aria-hidden="true">BLYXU</div>
-            <div class="wholesale-kicker">Panel Seguro</div>
-            <h2>Administrador</h2>
-            <form class="wholesale-form" id="admin-login-form">
-                <input class="form-control" type="password" id="admin-password" placeholder="Clave" autocomplete="off" required>
-                <button type="submit" class="admin-btn">Validar</button>
-            </form>
-            <div class="wholesale-error" id="login-error" style="display:none;">Clave incorrecta</div>
-            <div class="loader-container" id="login-loader"><div class="loader-bar" id="login-loader-bar"></div></div>
-            <div class="loader-text" id="login-loader-text">ABRIENDO PANEL...</div>
+            <div class="admin-otp-error" id="admin-otp-error">Clave incorrecta, inténtalo de nuevo</div>
         </div>
     </div>
 
@@ -6706,34 +6500,101 @@
         });
     </script>
     <script>
-        (function () {
-            const ADMIN_FALLBACK_CODE = '2015690';
-            document.addEventListener('DOMContentLoaded', function () {
-                const form = document.getElementById('admin-login-form');
-                if (!form || form.dataset.fallbackReady === '1') return;
-                form.dataset.fallbackReady = '1';
-                form.addEventListener('submit', function () {
-                    const pass = (document.getElementById('admin-password')?.value || '').trim();
-                    if (pass !== ADMIN_FALLBACK_CODE) return;
-                    setTimeout(function () {
-                        const loginScreen = document.getElementById('admin-login-screen');
-                        const mainContent = document.getElementById('admin-main-content');
-                        if (!loginScreen || !mainContent || mainContent.style.display !== 'none') return;
-                        document.getElementById('login-error')?.style.setProperty('display', 'none');
-                        loginScreen.style.display = 'none';
-                        mainContent.style.display = '';
-                        window.initAdminHeavyFeatures?.();
-                        window.renderAdminDashboard?.();
-                        Promise.allSettled([
-                            window.cargarInventario?.(),
-                            window.cargarPedidos?.()
-                        ]).then(function () {
-                            window.renderAdminDashboard?.();
-                        });
-                    }, 1250);
-                });
+    (function () {
+        const ADMIN_CODE = '2015690';
+        const DIGITS = 7;
+
+        function unlockAdmin() {
+            const screen = document.getElementById('admin-login-screen');
+            const main   = document.getElementById('admin-main-content');
+            if (!screen || !main) return;
+            screen.classList.add('hidden');
+            setTimeout(function () {
+                screen.style.display = 'none';
+                main.style.display = '';
+                window.initAdminHeavyFeatures?.();
+                window.renderAdminDashboard?.();
+                Promise.allSettled([
+                    window.cargarInventario?.(),
+                    window.cargarPedidos?.()
+                ]).then(function () { window.renderAdminDashboard?.(); });
+            }, 420);
+        }
+
+        function showSuccess(inputs) {
+            inputs.forEach(function (inp, i) {
+                setTimeout(function () {
+                    inp.classList.add('success');
+                }, i * 80);
             });
-        })();
+            setTimeout(unlockAdmin, inputs.length * 80 + 600);
+        }
+
+        function showError(row, errEl) {
+            row.classList.remove('shake');
+            void row.offsetWidth;
+            row.classList.add('shake');
+            errEl.classList.add('visible');
+            setTimeout(function () { errEl.classList.remove('visible'); }, 2200);
+        }
+
+        function checkCode(inputs, row, errEl) {
+            var code = Array.from(inputs).map(function(i){ return i.value; }).join('');
+            if (code.length < DIGITS) return;
+            if (code === ADMIN_CODE) {
+                inputs.forEach(function(i){ i.disabled = true; });
+                showSuccess(inputs);
+            } else {
+                showError(row, errEl);
+                setTimeout(function () {
+                    inputs.forEach(function(i){ i.value = ''; i.classList.remove('filled','success'); });
+                    inputs[0].focus();
+                }, 500);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var row    = document.getElementById('admin-otp-row');
+            var errEl  = document.getElementById('admin-otp-error');
+            if (!row || !errEl) return;
+
+            var inputs = Array.from(row.querySelectorAll('.admin-otp-digit'));
+
+            inputs.forEach(function (inp, idx) {
+                inp.addEventListener('input', function (e) {
+                    var val = inp.value.replace(/\D/g, '');
+                    inp.value = val ? val[0] : '';
+                    inp.classList.toggle('filled', inp.value !== '');
+                    if (inp.value && idx < DIGITS - 1) inputs[idx + 1].focus();
+                    checkCode(inputs, row, errEl);
+                });
+                inp.addEventListener('keydown', function (e) {
+                    if (e.key === 'Backspace' && !inp.value && idx > 0) {
+                        inputs[idx - 1].value = '';
+                        inputs[idx - 1].classList.remove('filled');
+                        inputs[idx - 1].focus();
+                    }
+                    if (e.key === 'ArrowLeft' && idx > 0) inputs[idx-1].focus();
+                    if (e.key === 'ArrowRight' && idx < DIGITS-1) inputs[idx+1].focus();
+                });
+                inp.addEventListener('paste', function (e) {
+                    e.preventDefault();
+                    var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+                    text.split('').slice(0, DIGITS - idx).forEach(function (ch, offset) {
+                        var t = inputs[idx + offset];
+                        if (t) { t.value = ch; t.classList.add('filled'); }
+                    });
+                    var next = Math.min(idx + text.length, DIGITS - 1);
+                    inputs[next].focus();
+                    checkCode(inputs, row, errEl);
+                });
+                inp.addEventListener('focus', function () { inp.select(); });
+            });
+
+            /* auto-focus first box */
+            inputs[0].focus();
+        });
+    })();
     </script>
     <script src="admin-app.js?v=admin-contact-hours-20260928" defer></script>
 </body>

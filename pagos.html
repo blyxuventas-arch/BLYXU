@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -8,8 +8,8 @@
     <meta name="description" content="Página de pagos y transferencias de BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style">
-    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928">
+    <link rel="preload" href="blyxu-style.css?v=blyxu-soft-type-favorite-20260928" as="style">
+    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-soft-type-favorite-20260928">
     <script>
         // Limpiar claves guardadas - siempre pedir login
         try {
@@ -97,7 +97,9 @@
             display: none;
         }
 
-        /* Overlay de Login para QR */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+        /* ── SCREEN GATE ───────────────────────────────── */
         #qr-login-overlay {
             position: fixed !important;
             inset: 0 !important;
@@ -106,358 +108,320 @@
             align-items: center !important;
             justify-content: center !important;
             padding: 20px !important;
-            background: #09030f !important;
+            background: #101014 !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
         }
+
+        /* kill all old overlay pseudo/animation overrides */
+        #qr-login-overlay::before,
+        #qr-login-overlay::after { content: none !important; display: none !important; }
 
         html.is-payments-auth #pagos-login-screen,
         body.payments-unlocked #pagos-login-screen {
-            display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
+            display: none !important; opacity: 0 !important;
+            visibility: hidden !important; pointer-events: none !important;
         }
 
         body.payments-auth-blocked:not(.payments-unlocked) {
-            background: #05030a !important;
+            background: #101014 !important;
             overflow: hidden !important;
         }
 
-        /* Mientras el overlay está activo: ocultar navbar, contenido y footer */
         body.payments-auth-blocked:not(.payments-unlocked) .navbar,
         body.payments-auth-blocked:not(.payments-unlocked) .qr-page-section,
-        body.payments-auth-blocked:not(.payments-unlocked) .footer {
-            display: none !important;
-        }
+        body.payments-auth-blocked:not(.payments-unlocked) .footer { display: none !important; }
 
-        /* Al autenticar: mostrar todo de nuevo */
         body.payments-unlocked .navbar { display: flex !important; }
         body.payments-unlocked .qr-page-section { display: flex !important; }
         body.payments-unlocked .footer { display: grid !important; }
 
-        #qr-login-overlay,
-        #qr-login-overlay::before,
-        #qr-login-overlay::after,
-        #qr-login-overlay * {
-            animation: none !important;
-        }
-
-        #qr-login-overlay {
-            left: 0 !important;
-            top: 0 !important;
-            width: 100vw !important;
-            min-height: 100dvh !important;
-            overflow: hidden !important;
-            transform: none !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
-        }
-
-        #qr-login-overlay::before,
-        #qr-login-overlay::after {
-            content: none !important;
-            display: none !important;
-        }
-
-        #qr-login-overlay .payments-login-panel {
-            width: min(420px, 94vw) !important;
-            margin: 0 auto !important;
-            padding: 36px 30px 32px !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            border-radius: 16px !important;
-            background: #0d0b13 !important;
-            box-shadow: none !important;
+        /* ── CARD ──────────────────────────────────────── */
+        .payments-login-panel {
+            width: min(360px, 100%) !important;
+            padding: 0 !important;
+            border: 1px solid rgba(255,255,255,.07) !important;
+            border-radius: 24px !important;
+            background: #18181c !important;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.04),
+                0 40px 100px rgba(0,0,0,.7),
+                0 8px 32px rgba(0,0,0,.4) !important;
             text-align: center !important;
+            position: relative !important;
+            overflow: hidden !important;
             transform: none !important;
             filter: none !important;
         }
 
-        #qr-login-overlay .payments-login-logo {
-            width: 64px !important;
-            height: auto !important;
-            margin: 0 auto 16px !important;
+        .pl-pill {
+            display: block;
+            width: 36px; height: 4px;
+            border-radius: 99px;
+            background: rgba(255,255,255,.12);
+            margin: 14px auto 0;
+        }
+
+        .pl-inner { padding: 24px 28px 30px; }
+
+        /* ── LOGO & TEXT ──────────────────────────────── */
+        .payments-login-logo {
             display: block !important;
+            width: 52px !important; height: auto !important;
+            object-fit: contain !important;
+            margin: 0 auto 18px !important;
+            opacity: .72 !important;
         }
 
-        #qr-login-overlay .payments-login-kicker {
+        .payments-login-kicker {
+            display: block;
+            font-size: 10px; font-weight: 500;
+            letter-spacing: .12em; text-transform: uppercase;
+            color: rgba(255,255,255,.38);
+            margin: 0 0 10px;
+        }
+
+        #qr-title {
             margin: 0 0 6px !important;
-            color: #d8b4fe !important;
-            font-size: 11px !important;
-            font-weight: 800 !important;
-            letter-spacing: 2.5px !important;
-            text-transform: uppercase !important;
-        }
-
-        #qr-login-overlay h2 {
-            margin: 0 0 22px !important;
+            font-size: 22px !important; font-weight: 700 !important;
             color: #fff !important;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 26px !important;
-            font-weight: 700 !important;
-            line-height: 1.15 !important;
-            background: linear-gradient(135deg, #ffffff 30%, #f3e8ff 70%, #ffd969 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: -.01em !important; line-height: 1.15 !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
+            background: none !important;
+            -webkit-background-clip: unset !important;
+            -webkit-text-fill-color: #fff !important;
         }
 
-        #qr-login-overlay .payments-login-form {
-            display: grid !important;
-            gap: 14px !important;
+        .pl-subtitle {
+            font-size: 13px; color: rgba(255,255,255,.38);
+            font-weight: 400; margin: 0 0 32px; line-height: 1.5;
         }
 
-        #qr-login-overlay input {
-            width: 100% !important;
-            height: 52px !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            border-radius: 12px !important;
-            background: #15121d !important;
-            color: #fff !important;
-            padding: 0 16px !important;
-            font: inherit !important;
-            font-size: 18px !important;
-            text-align: center !important;
-            letter-spacing: 4px !important;
-            outline: none !important;
-            transition: none !important;
+        /* ── VAULT STUB (hidden) ────────────────────────── */
+        .blyxu-vault { display: none !important; }
+
+        /* ── PIN ROW ───────────────────────────────────── */
+        #qr-pin-row {
+            --pin-count: 4;
+            display: grid;
+            grid-template-columns: repeat(var(--pin-count), minmax(0, 70px));
+            justify-content: center;
+            gap: 10px; margin: 0 0 28px;
         }
 
-        #qr-login-overlay input:focus {
-            border-color: rgba(216, 180, 254, 0.68) !important;
+        .qr-pin-wrap {
+            position: relative;
+            width: 100%;
+            min-width: 0;
+            border-radius: 18px;
+            padding: 2px;
+            background: rgba(255,255,255,.05);
+            transition: background .2s;
         }
 
-        #qr-login-overlay button {
-            width: 100% !important;
-            height: 52px !important;
-            border: 0 !important;
-            border-radius: 12px !important;
-            background: #f7f3ff !important;
-            color: #08070b !important;
-            font: inherit !important;
-            font-size: 12px !important;
-            font-weight: 950 !important;
-            letter-spacing: 0.08em !important;
-            text-transform: uppercase !important;
+        .qr-pin-wrap::before {
+            content: '';
+            position: absolute; inset: -1px;
+            border-radius: 20px;
+            background: conic-gradient(
+                from var(--qa, 0deg),
+                transparent 0deg,
+                rgba(255,255,255,.0) 60deg,
+                rgba(255,255,255,.9) 90deg,
+                rgba(180,140,255,.7) 110deg,
+                rgba(255,255,255,.0) 140deg,
+                transparent 360deg
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 2px;
+            opacity: 0;
+            transition: opacity .25s ease;
+        }
+
+        .qr-pin-wrap:has(.qr-pin-digit:focus)::before {
+            opacity: 1;
+            animation: qrBorderSpin 1.6s linear infinite;
+        }
+
+        .qr-pin-wrap:has(.qr-pin-digit.filled)::before {
+            opacity: .35;
+            background: conic-gradient(
+                from 45deg,
+                rgba(255,255,255,.6) 0deg, rgba(200,160,255,.4) 90deg,
+                rgba(255,255,255,.6) 180deg, rgba(200,160,255,.4) 270deg,
+                rgba(255,255,255,.6) 360deg
+            );
+            animation: none;
+        }
+
+        .qr-pin-digit {
+            position: relative;
+            width: 100%; height: 78px;
+            border-radius: 16px; border: none;
+            background: #1e1e24;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.04);
+            color: #fff;
+            font-size: 30px; font-weight: 700;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif;
+            text-align: center; outline: none;
+            caret-color: transparent;
+            -webkit-appearance: none; display: block;
+            transition: background .2s, color .2s, transform .18s cubic-bezier(.4,0,.2,1);
+        }
+
+        .qr-pin-digit:focus { background: #22222a; transform: translateY(-2px); }
+        .qr-pin-digit.filled { background: #202028; color: #fff; }
+
+        .qr-pin-digit.denied {
+            background: rgba(239,68,68,.12) !important;
+            animation: qrPinShake .38s cubic-bezier(.4,0,.2,1) !important;
+        }
+        .qr-pin-wrap:has(.qr-pin-digit.denied)::before {
+            opacity: 1 !important; animation: none !important;
+            background: conic-gradient(
+                from 0deg, rgba(239,68,68,.9) 0deg, rgba(239,68,68,.4) 90deg,
+                rgba(239,68,68,.9) 180deg, rgba(239,68,68,.4) 270deg, rgba(239,68,68,.9) 360deg
+            ) !important;
+        }
+
+        .qr-pin-digit.success-digit {
+            background: rgba(16,185,129,.1) !important;
+            color: #34d399 !important;
+            transform: scale(.94) !important;
+            transition: all .3s ease !important;
+        }
+        .qr-pin-wrap:has(.qr-pin-digit.success-digit)::before {
+            opacity: 1 !important; animation: none !important;
+            background: conic-gradient(
+                from 0deg, rgba(16,185,129,.9) 0deg, rgba(16,185,129,.4) 90deg,
+                rgba(52,211,153,.9) 180deg, rgba(16,185,129,.4) 270deg, rgba(16,185,129,.9) 360deg
+            ) !important;
+        }
+
+        /* ── FORM / BUTTON ─────────────────────────────── */
+        .payments-login-form { display: grid !important; gap: 0 !important; }
+
+        #qr-password-input {
+            position: absolute !important; opacity: 0 !important;
+            pointer-events: none !important; width: 1px !important; height: 1px !important;
+        }
+
+        #qr-submit-btn {
+            width: 100% !important; height: 50px !important;
+            border: 1.5px solid rgba(255,255,255,.10) !important;
+            border-radius: 14px !important;
+            background: rgba(255,255,255,.06) !important;
+            color: rgba(255,255,255,.8) !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
+            font-size: 13px !important; font-weight: 600 !important;
+            letter-spacing: .04em !important;
             cursor: pointer !important;
             box-shadow: none !important;
-            transition: none !important;
+            transition: background .2s, border-color .2s, color .2s !important;
         }
-
-        #qr-login-overlay button:hover:not(:disabled) {
-            background: #fff !important;
+        #qr-submit-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,.10) !important;
+            border-color: rgba(255,255,255,.18) !important;
+            color: #fff !important;
         }
+        #qr-submit-btn:disabled { opacity: 0.4 !important; cursor: wait !important; }
 
-        #qr-login-overlay button:disabled {
-            opacity: 0.6 !important;
-            cursor: wait !important;
-        }
-
-        .blyxu-vault {
-            --vault-progress: 0%;
-            display: grid;
-            gap: 14px;
-            justify-items: center;
-            margin: 0 auto 20px;
-            padding: 18px 16px 16px;
-            border: 1px solid rgba(255,255,255,.09);
-            border-radius: 18px;
-            background: radial-gradient(circle at 50% 0%, rgba(244,196,65,.12), transparent 42%), #0f1015;
-            color: #f8f4ff;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .blyxu-vault::before {
-            content: "";
-            position: absolute;
-            inset: -1px;
-            background: linear-gradient(120deg, transparent 18%, rgba(244,196,65,.16), transparent 62%);
-            transform: translateX(-120%);
-            pointer-events: none;
-        }
-
-        .vault-success .blyxu-vault::before {
-            animation: vaultSweep .9s ease forwards !important;
-        }
-
-        .vault-orb {
-            width: 112px;
-            height: 112px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            position: relative;
-            background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.02) 52%, transparent 54%);
-        }
-
-        .vault-orb::before {
-            content: "";
-            position: absolute;
-            inset: 8px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(244,196,65,.08), rgba(244,196,65,.9), rgba(168,85,247,.55), rgba(34,211,238,.7), rgba(244,196,65,.08));
-            animation: vaultSpin 6s linear infinite !important;
-            filter: drop-shadow(0 0 18px rgba(244,196,65,.18));
-        }
-
-        .vault-orb::after {
-            content: "";
-            position: absolute;
-            inset: 17px;
-            border-radius: 50%;
-            background: #111217;
-            box-shadow: inset 0 0 22px rgba(0,0,0,.75);
-        }
-
-        .vault-scan {
-            position: absolute;
-            width: 86px;
-            height: 2px;
-            z-index: 2;
-            border-radius: 99px;
-            background: linear-gradient(90deg, transparent, rgba(244,196,65,.95), transparent);
-            animation: vaultScan 2.2s ease-in-out infinite !important;
-        }
-
-        .vault-lock {
-            position: relative;
-            z-index: 3;
-            width: 34px;
-            height: 28px;
-            border-radius: 8px;
-            background: linear-gradient(180deg, #fff7c7, #f4c441);
-            box-shadow: 0 0 24px rgba(244,196,65,.28);
-        }
-
-        .vault-lock::before {
-            content: "";
-            position: absolute;
-            left: 7px;
-            top: -22px;
-            width: 20px;
-            height: 24px;
-            border: 5px solid #f8f4ff;
-            border-bottom: 0;
-            border-radius: 18px 18px 0 0;
-            transform-origin: 4px 24px;
-        }
-
-        .vault-lock::after {
-            content: "";
-            position: absolute;
-            left: 15px;
-            top: 10px;
-            width: 5px;
-            height: 10px;
-            border-radius: 99px;
-            background: rgba(8,7,11,.7);
-        }
-
-        .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
-        .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
-        .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
-
-        .vault-copy strong {
-            display: block;
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: .02em;
-        }
-
-        .vault-copy span {
-            display: block;
-            margin-top: 5px;
-            color: rgba(248,244,255,.58);
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .vault-key-dots {
-            display: grid;
-            grid-template-columns: repeat(var(--vault-dot-count, 4), minmax(28px, 1fr));
-            gap: 8px;
-            width: min(220px, 100%);
-        }
-
-        .vault-key-dots span {
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 12px;
-            background: rgba(255,255,255,.035);
-            color: transparent;
-            font-size: 22px;
-            font-weight: 900;
-        }
-
-        .vault-key-dots span.is-lit {
-            border-color: rgba(244,196,65,.65);
-            background: rgba(244,196,65,.1);
-            color: #f4c441;
-            box-shadow: 0 0 18px rgba(244,196,65,.16);
-        }
-
-        .vault-meter {
-            width: min(240px, 100%);
-            height: 6px;
-            overflow: hidden;
-            border-radius: 99px;
-            background: rgba(255,255,255,.08);
-        }
-
-        .vault-meter span {
-            display: block;
-            width: var(--vault-progress);
-            height: 100%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, #a855f7, #22d3ee, #f4c441);
-            transition: width .18s ease;
-        }
-
-        .vault-note {
-            color: rgba(248,244,255,.46);
-            font-size: 10px;
-            font-weight: 850;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-        }
-
-        .vault-success .mayorista-login-card,
-        #qr-login-overlay.vault-success .payments-login-panel {
-            animation: vaultPanelExit 1.05s ease forwards !important;
-        }
-
-        @keyframes vaultSpin { to { transform: rotate(360deg); } }
-        @keyframes vaultScan { 0%,100% { transform: translateY(-24px); opacity:.25; } 50% { transform: translateY(24px); opacity:1; } }
-        @keyframes vaultOpen { to { transform: rotate(-38deg) translate(-4px,-2px); } }
-        @keyframes vaultSweep { to { transform: translateX(120%); } }
-        @keyframes vaultDeny { 25% { transform: translateX(7px); } 50% { transform: translateX(-7px); } 75% { transform: translateX(4px); } }
-        @keyframes vaultPanelExit { 0% { opacity:1; transform: scale(1); } 70% { opacity:1; transform: scale(1.02); } 100% { opacity:0; transform: scale(.96) translateY(-18px); } }
-
-        #qr-login-overlay .vault-orb::before { animation: vaultSpin 6s linear infinite !important; }
-        #qr-login-overlay .vault-scan { animation: vaultScan 2.2s ease-in-out infinite !important; }
-        #qr-login-overlay .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
-        #qr-login-overlay .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
-        #qr-login-overlay .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
+        /* ── ERROR ────────────────────────────────────── */
         #qr-error-msg {
-            min-height: 18px !important;
-            margin-top: 10px !important;
-            color: #fb7185 !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
+            font-size: 12px !important; font-weight: 500 !important;
+            color: rgba(252,165,165,.85) !important;
+            min-height: 16px !important; margin: 0 0 16px !important;
+            display: none;
+            letter-spacing: .01em !important;
         }
 
+        /* ── BACK LINK ────────────────────────────────── */
         .qr-back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 16px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
-            text-decoration: none;
-            transition: color 0.2s;
+            display: inline-flex; align-items: center; gap: 5px;
+            margin-top: 20px;
+            color: rgba(255,255,255,.28); font-size: 11.5px;
+            font-weight: 400; text-decoration: none;
+            letter-spacing: .01em; transition: color .18s;
         }
-        .qr-back-link:hover {
-            color: #ffd969;
+        .qr-back-link:hover { color: rgba(255,255,255,.6); }
+
+        /* ── SUCCESS SCREEN ────────────────────────────── */
+        #qr-success-overlay {
+            position: fixed; inset: 0; z-index: 999999;
+            display: none; align-items: center; justify-content: center;
+            background: #101014;
+        }
+        #qr-success-overlay.active {
+            display: flex;
+            animation: qrScrnFadeIn .35s ease both;
+        }
+        .qr-success-card {
+            width: min(360px, calc(100% - 40px));
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 24px; background: #18181c;
+            box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 40px 100px rgba(0,0,0,.7);
+            overflow: hidden;
+            animation: qrCardPopIn .45s cubic-bezier(.34,1.3,.64,1) .05s both;
+        }
+        .qr-success-inner {
+            padding: 20px 28px 36px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .qr-check-box {
+            width: 72px; height: 72px;
+            border-radius: 20px;
+            border: 1.5px solid rgba(16,185,129,.45);
+            background: linear-gradient(160deg, rgba(16,185,129,.16), rgba(16,185,129,.06));
+            box-shadow: 0 0 0 8px rgba(16,185,129,.06), 0 0 40px rgba(16,185,129,.22),
+                        inset 0 1px 0 rgba(16,185,129,.2);
+            display: grid; place-items: center;
+            margin: 28px 0 24px;
+            animation: qrCheckBoxPop .5s cubic-bezier(.34,1.4,.64,1) .15s both;
+        }
+        .qr-check-box svg {
+            width: 32px; height: 32px;
+            stroke: #34d399; stroke-width: 2.5;
+            stroke-linecap: round; stroke-linejoin: round; fill: none;
+        }
+        .qr-check-box svg path {
+            stroke-dasharray: 40; stroke-dashoffset: 40;
+            animation: qrDrawCheck .4s ease .45s forwards;
+        }
+        .qr-success-title {
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif;
+            font-size: 22px; font-weight: 700;
+            color: #34d399; letter-spacing: -.01em;
+            margin: 0 0 8px;
+            animation: qrFadeSlideUp .4s ease .3s both;
+        }
+        .qr-success-sub {
+            font-size: 13px; color: rgba(255,255,255,.36);
+            font-weight: 400;
+            animation: qrFadeSlideUp .4s ease .4s both;
+        }
+
+        /* ── KEYFRAMES ───────────────────────────────────── */
+        @property --qa {
+            syntax: '<angle>'; inherits: false; initial-value: 0deg;
+        }
+        @keyframes qrBorderSpin { from { --qa: 0deg; } to { --qa: 360deg; } }
+        @keyframes qrPinShake {
+            0%,100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+            60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+        }
+        @keyframes qrScrnFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes qrCardPopIn {
+            from { opacity: 0; transform: scale(.92) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes qrCheckBoxPop {
+            from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes qrDrawCheck { to { stroke-dashoffset: 0; } }
+        @keyframes qrFadeSlideUp {
+            from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); }
         }
 
         /* Pestañas de Métodos de Pago */
@@ -556,6 +520,36 @@
             line-height: 1.5;
             text-align: left;
         }
+
+        @media (max-width: 480px) {
+            #qr-login-overlay {
+                padding: 14px !important;
+            }
+
+            .payments-login-panel {
+                width: min(360px, 100%) !important;
+            }
+
+            .pl-inner {
+                padding: 22px 16px 26px;
+            }
+
+            #qr-pin-row {
+                width: 100%;
+                gap: 8px;
+            }
+
+            .qr-pin-digit {
+                height: 70px;
+                border-radius: 14px;
+                font-size: 27px;
+            }
+
+            .qr-pin-wrap,
+            .qr-pin-wrap::before {
+                border-radius: 16px;
+            }
+        }
     </style>
 </head>
 
@@ -589,32 +583,55 @@
         </div>
     </nav>
 
-    <!-- Overlay de Login -->
+    <!-- ===== SUCCESS SCREEN ===== -->
+    <div id="qr-success-overlay">
+        <div class="qr-success-card">
+            <span class="pl-pill"></span>
+            <div class="qr-success-inner">
+                <div class="qr-check-box">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div class="qr-success-title">Verificado</div>
+                <div class="qr-success-sub">Accediendo a la zona de pagos&hellip;</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOGIN OVERLAY ===== -->
     <div class="payments-login-overlay open" id="qr-login-overlay">
         <div class="payments-login-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
-            <div class="blyxu-vault" data-vault aria-hidden="true">
-                <div class="vault-orb"><span class="vault-scan"></span><span class="vault-lock"></span></div>
-                <div class="vault-copy"><strong>Boveda de pagos</strong><span data-vault-status>Esperando clave segura</span></div>
-                <div class="vault-key-dots" data-vault-dots></div>
-                <div class="vault-meter"><span data-vault-meter></span></div>
-                <div class="vault-note">BLYXU payment access</div>
-            </div>
+            <span class="pl-pill"></span>
+            <div class="pl-inner">
+                <!-- Vault stub (hidden, for JS compat) -->
+                <div class="blyxu-vault" data-vault aria-hidden="true" style="display:none">
+                    <div data-vault-dots></div>
+                    <span data-vault-status></span>
+                </div>
 
-            <img src="Logo2.png" alt="BLYXU" class="payments-login-logo" onerror="this.style.display='none'">
-            <div class="payments-login-kicker">ZONA SEGURA</div>
-            <h2 id="qr-title">ZONA DE PAGOS</h2>
-            <form class="payments-login-form" id="qr-login-form">
-                <input type="password" id="qr-password-input" placeholder="Clave de acceso" autocomplete="off" required>
-                <button type="submit" id="qr-submit-btn">Ingresar</button>
-            </form>
-            <div class="payments-login-error" id="qr-error-msg" style="display:none;">Contrase&ntilde;a incorrecta</div>
-            <a href="index.html" class="qr-back-link">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-                <span>Volver a la tienda</span>
-            </a>
+                <!-- Logo & text -->
+                <img src="Logo2.png" alt="BLYXU" class="payments-login-logo" onerror="this.style.display='none'">
+                <div class="payments-login-kicker">BLYXU &middot; Zona Segura</div>
+                <h2 id="qr-title">Zona de Pagos</h2>
+                <p class="pl-subtitle">Acceso exclusivo &mdash; ingresa tu clave para continuar.</p>
+
+                <!-- PIN boxes (built by JS) -->
+                <div id="qr-pin-row" role="group" aria-label="Clave de acceso"></div>
+
+                <form class="payments-login-form" id="qr-login-form">
+                    <input type="text" id="qr-password-input"
+                           autocomplete="off" tabindex="-1" aria-hidden="true">
+                    <div id="qr-error-msg">Clave incorrecta &mdash; int&eacute;ntalo de nuevo</div>
+                    <button type="submit" id="qr-submit-btn">Ingresar a pagos</button>
+                </form>
+
+                <a href="index.html" class="qr-back-link">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Volver a la tienda
+                </a>
+            </div>
         </div>
     </div>
 
@@ -698,16 +715,19 @@
         </div>
     </footer>
 
-    <script src="blyxu-lite.js?v=blyxu-contact-clock-20260928" defer></script>
+    <script src="blyxu-lite.js?v=blyxu-payments-pin-20260928" defer></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
         (function() {
             const ACCESS_KEY = 'blyxu_payments_access';
-            const form = document.getElementById('qr-login-form');
-            const input = document.getElementById('qr-password-input');
-            const errorMsg = document.getElementById('qr-error-msg');
-            const overlay = document.getElementById('qr-login-overlay');
-            const card = document.getElementById('qr-card-content');
-            const submitBtn = document.getElementById('qr-submit-btn');
+            const form       = document.getElementById('qr-login-form');
+            const hiddenInput = document.getElementById('qr-password-input');
+            const errorMsg   = document.getElementById('qr-error-msg');
+            const overlay    = document.getElementById('qr-login-overlay');
+            const successOverlay = document.getElementById('qr-success-overlay');
+            const pinRow     = document.getElementById('qr-pin-row');
+            const card       = document.getElementById('qr-card-content');
+            const submitBtn  = document.getElementById('qr-submit-btn');
 
             window.copyToClipboard = function(text, btn) {
                 if (!text) return;
@@ -723,293 +743,250 @@
                         btn.style.borderColor = '';
                         btn.style.color = '';
                     }, 1600);
-                }).catch(err => {
-                    console.error('Error al copiar:', err);
-                });
+                }).catch(err => console.error('Error al copiar:', err));
             };
-
-            function isPaymentsAuthorized() {
-                try {
-                    return sessionStorage.getItem(ACCESS_KEY) === '1' || localStorage.getItem(ACCESS_KEY) === '1';
-                } catch (e) {
-                    return false;
-                }
-            }
 
             function readLocalSiteConfigCache() {
                 try {
                     const cached = JSON.parse(localStorage.getItem('blyxu_site_config_cache_v1') || 'null');
-                    return cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object'
-                        ? cached
-                        : null;
-                } catch (error) {
-                    return null;
-                }
+                    return cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object' ? cached : null;
+                } catch (e) { return null; }
             }
 
             function escapeHtml(text) {
                 if (!text) return '';
                 return String(text)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#039;');
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             }
 
-            function renderPaymentMethods() {
-                if (!card) return;
-                card.style.display = 'block';
-
-                const tabsContainer = document.getElementById('payment-tabs');
-                const detailContainer = document.getElementById('payment-method-detail');
-                const emptyState = document.getElementById('qr-empty-state');
-                if (!tabsContainer || !detailContainer || !emptyState) return;
-
+            function getConfiguredPaymentPass() {
                 const cachedConfig = readLocalSiteConfigCache();
                 const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
-                    ? siteConfig
-                    : (cachedConfig?.data || {});
+                    ? siteConfig : (cachedConfig?.data || {});
+                return String(currentConfig.QR_Password || currentConfig.qr_password || (cachedConfig?.data?.QR_Password) || '2027').trim();
+            }
 
-                let methods = [];
-                const jsonStr = currentConfig.QR_Payments_JSON || currentConfig.qr_payments_json || '';
-                const oldQrUrl = currentConfig.QR_Image || currentConfig.qr_image || '';
+            // ===== BUILD PIN BOXES =====
+            let pinDigits = [];
 
-                if (jsonStr) {
-                    try {
-                        methods = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
-                    } catch(e) {
-                        console.error('Error parsing QR_Payments_JSON:', e);
+            function buildPinBoxes(pass) {
+                const len = pass.length || 4;
+                pinRow.innerHTML = '';
+                pinRow.style.setProperty('--pin-count', len);
+                pinDigits = [];
+                for (let i = 0; i < len; i++) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'qr-pin-wrap';
+                    const box = document.createElement('input');
+                    box.type = 'text';
+                    box.inputMode = 'numeric';
+                    box.maxLength = 1;
+                    box.pattern = '[0-9]*';
+                    box.className = 'qr-pin-digit';
+                    box.setAttribute('aria-label', 'Dígito ' + (i + 1));
+                    box.autocomplete = 'off';
+                    box.id = 'qr-pin-d' + i;
+                    attachPinListeners(box, i, len);
+                    wrap.appendChild(box);
+                    pinRow.appendChild(wrap);
+                    pinDigits.push(box);
+                }
+            }
+
+            function attachPinListeners(box, idx, total) {
+                box.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace') {
+                        if (box.value === '' && idx > 0) {
+                            pinDigits[idx-1].value = '';
+                            pinDigits[idx-1].classList.remove('filled');
+                            pinDigits[idx-1].focus();
+                        } else { box.value = ''; box.classList.remove('filled'); }
+                        syncHidden(); e.preventDefault();
+                    } else if (e.key === 'ArrowLeft' && idx > 0) { pinDigits[idx-1].focus(); }
+                    else if (e.key === 'ArrowRight' && idx < total-1) { pinDigits[idx+1].focus(); }
+                    else if (e.key === 'Enter') { form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true})); }
+                });
+                box.addEventListener('input', function() {
+                    const val = box.value.replace(/[^0-9]/g, '');
+                    box.value = val.slice(-1);
+                    if (box.value) {
+                        box.classList.add('filled');
+                        if (idx < total-1) pinDigits[idx+1].focus();
+                    } else { box.classList.remove('filled'); }
+                    syncHidden();
+                    if (getPinValue().length === total) {
+                        setTimeout(function() {
+                            form.dispatchEvent(new Event('submit', {bubbles:true, cancelable:true}));
+                        }, 120);
                     }
-                }
-
-                if ((!methods || !methods.length) && oldQrUrl) {
-                    methods = [{
-                        name: 'Código QR de Pago',
-                        type: 'qr',
-                        value: '',
-                        image: oldQrUrl,
-                        instructions: 'Escanea el código QR desde tu aplicación bancaria para realizar el pago.'
-                    }];
-                }
-
-                if (!methods || methods.length === 0) {
-                    tabsContainer.style.display = 'none';
-                    detailContainer.style.display = 'none';
-                    emptyState.style.display = 'block';
-                    return;
-                }
-
-                emptyState.style.display = 'none';
-                tabsContainer.style.display = 'flex';
-                detailContainer.style.display = 'block';
-
-                tabsContainer.innerHTML = methods.map((m, idx) => `
-                    <button type="button" class="payment-tab-btn ${idx === 0 ? 'active' : ''}" onclick="window.selectPaymentTab(${idx})">
-                        ${escapeHtml(m.name || 'Método ' + (idx + 1))}
-                    </button>
-                `).join('');
-
-                window.selectPaymentTab = function(index) {
-                    const buttons = tabsContainer.querySelectorAll('.payment-tab-btn');
-                    buttons.forEach((btn, idx) => {
-                        btn.classList.toggle('active', idx === index);
+                });
+                box.addEventListener('focus', function() { box.select(); });
+                box.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                    pasted.split('').forEach(function(ch, ci) {
+                        if (idx+ci < total) { pinDigits[idx+ci].value = ch; pinDigits[idx+ci].classList.add('filled'); }
                     });
+                    pinDigits[Math.min(idx+pasted.length, total-1)].focus();
+                    syncHidden();
+                });
+            }
 
-                    const m = methods[index];
-                    if (!m) return;
+            function getPinValue() { return pinDigits.map(d => d.value).join(''); }
+            function syncHidden() {
+                if (hiddenInput) hiddenInput.value = getPinValue();
+                if (errorMsg) errorMsg.style.display = 'none';
+            }
 
-                    let html = `<div class="payment-info-box">`;
+            // ===== SUCCESS ANIMATION =====
+            function playSuccessAnimation(done) {
+                pinDigits.forEach(function(d, i) {
+                    setTimeout(function() { d.classList.add('success-digit'); }, i * 90);
+                });
+                setTimeout(function() {
+                    overlay.style.transition = 'opacity .3s ease';
+                    overlay.style.opacity = '0';
+                }, 380);
+                setTimeout(function() {
+                    successOverlay.classList.add('active');
+                    setTimeout(function() { done(); }, 1400);
+                }, 680);
+            }
 
-                    if (m.type === 'key' || m.type === 'both' || m.value) {
-                        html += `
-                            <p style="margin-bottom: 8px; font-weight: 700; color: rgba(255,255,255,0.8); font-size: 13px;">Número de cuenta o llave:</p>
-                            <div class="copy-box">
-                                <span class="copy-text">${escapeHtml(m.value)}</span>
-                                <button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHtml(m.value)}', this)">Copiar</button>
-                            </div>
-                        `;
-                    }
+            function markDenied() {
+                pinDigits.forEach(function(d) {
+                    d.classList.add('denied');
+                    setTimeout(function() { d.classList.remove('denied','filled'); d.value = ''; }, 420);
+                });
+                setTimeout(function() { if (pinDigits[0]) pinDigits[0].focus(); }, 440);
+            }
 
-                    const qrImageUrl = (typeof normalizeImageUrl === 'function' ? normalizeImageUrl(m.image) : m.image) || '';
-                    if ((m.type === 'qr' || m.type === 'both' || qrImageUrl) && qrImageUrl) {
-                        html += `
-                            <p style="margin-bottom: 6px; font-weight: 700; color: rgba(255,255,255,0.8); font-size: 13px;">Código QR de Pago:</p>
-                            <div class="qr-image-container">
-                                <img src="${escapeHtml(qrImageUrl)}" alt="Código QR de Pago" loading="lazy">
-                            </div>
-                        `;
-                    }
-
-                    if (m.instructions) {
-                        html += `
-                            <div class="instruction-box">
-                                <strong>Instrucciones:</strong> ${escapeHtml(m.instructions)}
-                            </div>
-                        `;
-                    }
-
-                    html += `</div>`;
-                    detailContainer.innerHTML = html;
-                };
-
-                window.selectPaymentTab(0);
+            function grantPaymentsAccess() {
+                if (submitBtn) { submitBtn.textContent = 'Verificando...'; submitBtn.disabled = true; }
+                playSuccessAnimation(unlockPayments);
             }
 
             function unlockPayments() {
                 document.body.classList.remove('payments-auth-blocked');
                 document.body.classList.add('payments-unlocked');
-                // Mostrar navbar de nuevo
                 var nav = document.getElementById('navbar');
                 if (nav) nav.style.display = '';
                 if (overlay) {
-                    overlay.style.opacity = '0';
-                    overlay.classList.remove('open');
-                    overlay.setAttribute('aria-hidden', 'true');
-                    setTimeout(function() {
-                        overlay.style.display = 'none';
-                        overlay.remove();
-                        // Re-invocar la app para inicializar todo lo que se bloqueó
-                        if (typeof initBlyxuApp === 'function') initBlyxuApp();
-                    }, 200);
+                    overlay.style.display = 'none';
+                    overlay.remove();
+                    if (typeof initBlyxuApp === 'function') initBlyxuApp();
                 } else {
                     if (typeof initBlyxuApp === 'function') initBlyxuApp();
                 }
+                if (successOverlay) successOverlay.remove();
                 renderPaymentMethods();
             }
-            function getConfiguredPaymentPass() {
+
+            function renderPaymentMethods() {
+                if (!card) return;
+                card.style.display = 'block';
+                const tabsContainer = document.getElementById('payment-tabs');
+                const detailContainer = document.getElementById('payment-method-detail');
+                const emptyState = document.getElementById('qr-empty-state');
+                if (!tabsContainer || !detailContainer || !emptyState) return;
                 const cachedConfig = readLocalSiteConfigCache();
                 const currentConfig = (typeof siteConfig !== 'undefined' && siteConfig && Object.keys(siteConfig).length)
-                    ? siteConfig
-                    : (cachedConfig?.data || {});
-                return String(currentConfig.QR_Password || currentConfig.qr_password || (cachedConfig?.data?.QR_Password) || '2027').trim();
-            }
-
-            function ensureVaultDots(total) {
-                const vault = overlay?.querySelector('[data-vault]');
-                const dots = vault?.querySelector('[data-vault-dots]');
-                if (!vault || !dots) return;
-                const dotCount = Math.max(1, Number(total) || 1);
-                if (dots.children.length !== dotCount) {
-                    dots.innerHTML = Array.from({ length: dotCount }, function() { return '<span></span>'; }).join('');
+                    ? siteConfig : (cachedConfig?.data || {});
+                let methods = [];
+                const jsonStr = currentConfig.QR_Payments_JSON || currentConfig.qr_payments_json || '';
+                const oldQrUrl = currentConfig.QR_Image || currentConfig.qr_image || '';
+                if (jsonStr) {
+                    try { methods = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr; }
+                    catch(e) { console.error('Error parsing QR_Payments_JSON:', e); }
                 }
-                vault.style.setProperty('--vault-dot-count', dotCount);
-            }
-
-            function syncVaultState() {
-                const vault = overlay?.querySelector('[data-vault]');
-                if (!vault || !input) return;
-                const targetLength = getConfiguredPaymentPass().length || 1;
-                ensureVaultDots(targetLength);
-                const len = Math.min((input.value || '').trim().length, targetLength);
-                const progress = Math.min(100, Math.round((len / targetLength) * 100));
-                vault.style.setProperty('--vault-progress', progress + '%');
-                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot, index) {
-                    dot.classList.toggle('is-lit', index < len);
-                    dot.textContent = index < len ? '•' : '';
-                });
-                const status = vault.querySelector('[data-vault-status]');
-                if (status) status.textContent = len ? 'Validando zona de pagos...' : 'Esperando clave segura';
-            }
-
-            function markVaultDenied() {
-                const vault = overlay?.querySelector('[data-vault]');
-                if (!vault) return;
-                vault.classList.remove('is-unlocking');
-                vault.classList.add('is-denied');
-                const status = vault.querySelector('[data-vault-status]');
-                if (status) status.textContent = 'Clave incorrecta';
-                setTimeout(function() { vault.classList.remove('is-denied'); syncVaultState(); }, 520);
-            }
-
-            function playVaultUnlock(done) {
-                const vault = overlay?.querySelector('[data-vault]');
-                if (!overlay || !vault) {
-                    done();
-                    return;
+                if ((!methods || !methods.length) && oldQrUrl) {
+                    methods = [{ name: 'Código QR de Pago', type: 'qr', value: '', image: oldQrUrl,
+                        instructions: 'Escanea el código QR desde tu aplicación bancaria para realizar el pago.' }];
                 }
-                overlay.classList.add('vault-success');
-                vault.classList.add('is-unlocking');
-                vault.style.setProperty('--vault-progress', '100%');
-                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot) {
-                    dot.classList.add('is-lit');
-                    dot.textContent = '•';
-                });
-                const status = vault.querySelector('[data-vault-status]');
-                if (status) status.textContent = 'Acceso concedido';
-                setTimeout(done, 1050);
-            }
-            function grantPaymentsAccess() {
-                if (submitBtn) {
-                    submitBtn.textContent = 'Accediendo...';
-                    submitBtn.disabled = true;
+                if (!methods || methods.length === 0) {
+                    tabsContainer.style.display = 'none'; detailContainer.style.display = 'none';
+                    emptyState.style.display = 'block'; return;
                 }
-                playVaultUnlock(unlockPayments);
+                emptyState.style.display = 'none';
+                tabsContainer.style.display = 'flex'; detailContainer.style.display = 'block';
+                tabsContainer.innerHTML = methods.map((m, idx) =>
+                    `<button type="button" class="payment-tab-btn ${idx===0?'active':''}" onclick="window.selectPaymentTab(${idx})">${escapeHtml(m.name||'Método '+(idx+1))}</button>`
+                ).join('');
+                window.selectPaymentTab = function(index) {
+                    tabsContainer.querySelectorAll('.payment-tab-btn').forEach((btn,idx) => btn.classList.toggle('active', idx===index));
+                    const m = methods[index]; if (!m) return;
+                    let html = '<div class="payment-info-box">';
+                    if (m.type==='key'||m.type==='both'||m.value) {
+                        html += `<p style="margin-bottom:8px;font-weight:700;color:rgba(255,255,255,0.8);font-size:13px;">Número de cuenta o llave:</p>
+                        <div class="copy-box"><span class="copy-text">${escapeHtml(m.value)}</span>
+                        <button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHtml(m.value)}',this)">Copiar</button></div>`;
+                    }
+                    const qrImageUrl = (typeof normalizeImageUrl==='function'?normalizeImageUrl(m.image):m.image)||'';
+                    if ((m.type==='qr'||m.type==='both'||qrImageUrl)&&qrImageUrl) {
+                        html += `<p style="margin-bottom:6px;font-weight:700;color:rgba(255,255,255,0.8);font-size:13px;">Código QR de Pago:</p>
+                        <div class="qr-image-container"><img src="${escapeHtml(qrImageUrl)}" alt="Código QR de Pago" loading="lazy"></div>`;
+                    }
+                    if (m.instructions) {
+                        html += `<div class="instruction-box"><strong>Instrucciones:</strong> ${escapeHtml(m.instructions)}</div>`;
+                    }
+                    html += '</div>'; detailContainer.innerHTML = html;
+                };
+                window.selectPaymentTab(0);
             }
 
-            // Siempre pedir clave - no se guarda sesión
-            syncVaultState();
-            setTimeout(() => input?.focus({ preventScroll: true }), 60);
+            // ===== INIT =====
+            // Build PIN boxes based on configured password length
+            const initialPass = getConfiguredPaymentPass();
+            buildPinBoxes(initialPass);
+            setTimeout(function() { if (pinDigits[0]) pinDigits[0].focus({ preventScroll: true }); }, 80);
 
             form?.addEventListener('submit', function(e) {
                 e.preventDefault();
                 if (errorMsg) errorMsg.style.display = 'none';
-                syncVaultState();
-
-                const enteredPass = (input?.value || '').trim();
+                const enteredPass  = getPinValue();
                 const configuredPass = getConfiguredPaymentPass();
 
                 if (enteredPass === configuredPass) {
                     grantPaymentsAccess();
                 } else {
-                    // Si la clave no coincide, verificar rápidamente si hay actualización en la nube
                     if (typeof fetchSiteConfig === 'function') {
-                        if (submitBtn) {
-                            submitBtn.textContent = 'Validando...';
-                            submitBtn.disabled = true;
-                        }
+                        if (submitBtn) { submitBtn.textContent = 'Validando...'; submitBtn.disabled = true; }
                         fetchSiteConfig().then(cfg => {
-                            if (submitBtn) {
-                                submitBtn.textContent = 'Ingresar';
-                                submitBtn.disabled = false;
-                            }
+                            if (submitBtn) { submitBtn.textContent = 'Ingresar a pagos'; submitBtn.disabled = false; }
                             const freshPass = String(cfg?.QR_Password || '2027').trim();
                             if (enteredPass === freshPass) {
                                 grantPaymentsAccess();
                             } else {
+                                // Rebuild boxes if pass length changed
+                                if (freshPass.length !== pinDigits.length) buildPinBoxes(freshPass);
                                 if (errorMsg) errorMsg.style.display = 'block';
-                                markVaultDenied();
-                                input?.select();
+                                markDenied();
                             }
                         }).catch(() => {
-                            if (submitBtn) {
-                                submitBtn.textContent = 'Ingresar';
-                                submitBtn.disabled = false;
-                            }
+                            if (submitBtn) { submitBtn.textContent = 'Ingresar a pagos'; submitBtn.disabled = false; }
                             if (errorMsg) errorMsg.style.display = 'block';
-                                markVaultDenied();
-                                input?.select();
+                            markDenied();
                         });
                     } else {
                         if (errorMsg) errorMsg.style.display = 'block';
-                                markVaultDenied();
-                                input?.select();
+                        markDenied();
                     }
                 }
             });
 
-            input?.addEventListener('input', function() {
-                if (errorMsg) errorMsg.style.display = 'none';
-                syncVaultState();
-            });
-
-            // Cuando la configuración del sitio se termine de cargar en background, refrescar si está abierto
             window.addEventListener('blyxu:config-loaded', function() {
                 if (document.body.classList.contains('payments-unlocked')) {
                     renderPaymentMethods();
+                } else {
+                    // Rebuild boxes in case password length differs
+                    const newPass = getConfiguredPaymentPass();
+                    if (newPass.length !== pinDigits.length) buildPinBoxes(newPass);
                 }
             });
         })();
+        }); // DOMContentLoaded
+
     </script>
 </body>
 </html>

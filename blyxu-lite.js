@@ -159,14 +159,17 @@ function splitContactHours(hours) {
     };
 }
 
-function isTodayInContactDays(days) {
+function isContactDayEnabled(days, dayKey) {
     const normalized = normalizeSearchText(days);
-    const today = new Date().toLocaleDateString('es-CO', { weekday: 'long', timeZone: 'America/Bogota' });
-    const todayKey = normalizeSearchText(today);
     if (!normalized) return true;
-    if (normalized.includes('lunes a sabado')) return todayKey !== 'domingo';
+    if (normalized.includes('lunes a sabado')) return dayKey !== 'domingo';
     if (normalized.includes('lunes a domingo') || normalized.includes('todos')) return true;
-    return normalized.includes(todayKey);
+    return normalized.includes(dayKey);
+}
+
+function isTodayInContactDays(days) {
+    const today = new Date().toLocaleDateString('es-CO', { weekday: 'long', timeZone: 'America/Bogota' });
+    return isContactDayEnabled(days, normalizeSearchText(today));
 }
 
 function getBogotaTimeParts(date = new Date()) {
@@ -174,6 +177,7 @@ function getBogotaTimeParts(date = new Date()) {
         weekday: 'long',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
         hour12: false,
         timeZone: 'America/Bogota'
     }).formatToParts(date);
@@ -181,7 +185,8 @@ function getBogotaTimeParts(date = new Date()) {
     return {
         weekday: normalizeSearchText(parts.find(part => part.type === 'weekday')?.value || ''),
         hour: rawHour === 24 ? 0 : rawHour,
-        minute: Number(parts.find(part => part.type === 'minute')?.value || 0)
+        minute: Number(parts.find(part => part.type === 'minute')?.value || 0),
+        second: Number(parts.find(part => part.type === 'second')?.value || 0)
     };
 }
 
@@ -216,22 +221,36 @@ function renderContactTimeline(hours) {
     const timeline = document.getElementById('contact-hours-timeline');
     if (!timeline) return;
     const { open, close } = splitContactHours(hours);
-    const nodes = [
-        ['Apertura', formatContactTimeLabel(open), true],
-        ['Cierre', formatContactTimeLabel(close), false]
-    ].map(([label, value, active]) => `
-        <div class="contact-time-node ${active ? 'active' : ''}">
-            <span>${escapeHtml(label)}</span>
-            <strong>${escapeHtml(value)}</strong>
-        </div>
-    `).join('');
-    timeline.innerHTML = `
-        <div class="contact-timeline-track" aria-hidden="true">
-            <span class="contact-timeline-progress" id="contact-timeline-progress"></span>
-            <span class="contact-timeline-dot" id="contact-timeline-dot"></span>
-        </div>
-        ${nodes}
-    `;
+    setTextById('contact-open-time', formatContactTimeLabel(open));
+    setTextById('contact-close-time', formatContactTimeLabel(close));
+
+    const ticks = document.getElementById('contact-clock-ticks');
+    if (ticks && !ticks.children.length) {
+        ticks.innerHTML = Array.from({ length: 60 }, (_, index) =>
+            `<i class="contact-clock-tick" style="--tick:${index}" aria-hidden="true"></i>`
+        ).join('');
+    }
+}
+
+function renderContactWeek(days) {
+    const week = document.getElementById('contact-week');
+    if (!week) return;
+    const today = getBogotaTimeParts().weekday;
+    const labels = [
+        ['lunes', 'Lun'],
+        ['martes', 'Mar'],
+        ['miercoles', 'Mié'],
+        ['jueves', 'Jue'],
+        ['viernes', 'Vie'],
+        ['sabado', 'Sáb'],
+        ['domingo', 'Dom']
+    ];
+    week.innerHTML = labels.map(([key, label]) => {
+        const classNames = ['contact-day'];
+        if (isContactDayEnabled(days, key)) classNames.push('is-service-day');
+        if (today === key) classNames.push('is-today');
+        return `<span class="${classNames.join(' ')}" data-day="${key}">${label}</span>`;
+    }).join('');
 }
 
 function startContactClock(days, hours) {
@@ -247,7 +266,7 @@ function startContactClock(days, hours) {
     const closeMinutes = parseContactTimeToMinutes(close);
 
     function tick() {
-        const { hour, minute, weekday } = getBogotaTimeParts();
+        const { hour, minute, second, weekday } = getBogotaTimeParts();
         const clockValue = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
         setRollingClockValue(clock, clockValue);
 
@@ -277,6 +296,11 @@ function startContactClock(days, hours) {
             timeline.classList.toggle('is-open', isOpen);
             timeline.classList.toggle('is-closed', !isOpen);
             timeline.classList.toggle('is-sunday', weekday === 'domingo');
+            const activeTicks = Math.round(progress * 60);
+            timeline.querySelectorAll('.contact-clock-tick').forEach((tick, index) => {
+                tick.classList.toggle('is-active', validDay && index < activeTicks);
+                tick.classList.toggle('is-sweep', index === second);
+            });
         }
     }
 
@@ -304,6 +328,7 @@ function renderContactPage() {
     setLinkById('contact-tiktok', normalizeSocialUrl(getSiteConfigValue('Contacto_TikTok', 'blyxu'), 'https://www.tiktok.com/@'));
     setLinkById('contact-instagram', normalizeSocialUrl(getSiteConfigValue('Contacto_Instagram', 'blyxu'), 'https://instagram.com/'));
     renderContactTimeline(hours);
+    renderContactWeek(days);
     startContactClock(days, hours);
 }
 

@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928">
+    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-soft-type-favorite-20260928">
     <style>
         /* STUDIO NOIR PRODUCT DETAIL */
         .product-detail-luxury {
@@ -630,6 +630,10 @@
             color: #f87171 !important;
         }
 
+        .product-favorite-mobile {
+            display: none;
+        }
+
         .product-detail-luxury .btn-consult-direct {
             width: fit-content !important;
             min-height: 42px;
@@ -836,6 +840,28 @@
                 grid-row: 2 !important;
                 width: 100%;
                 border-radius: 18px !important;
+            }
+            .product-detail-luxury .product-title-row .btn-save-favorite-detail {
+                display: none !important;
+            }
+            .product-detail-luxury .product-favorite-mobile {
+                display: inline-flex !important;
+                position: absolute;
+                top: 14px;
+                right: 14px;
+                z-index: 5;
+                width: 48px;
+                height: 48px;
+                min-height: 48px;
+                background: rgba(10, 10, 13, 0.72) !important;
+                border-color: rgba(255, 255, 255, 0.3) !important;
+                box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+                -webkit-backdrop-filter: blur(14px);
+                backdrop-filter: blur(14px);
+            }
+            .product-detail-luxury .product-favorite-mobile svg {
+                width: 23px;
+                height: 23px;
             }
             .product-detail-luxury .product-thumbnails {
                 grid-column: 1 !important;
@@ -1050,6 +1076,10 @@
                         document.write(`<img src="${escapeAttr(initialSrc)}" alt="${escapeAttr(initialName)}" id="detail-img" class="is-ready" loading="eager" decoding="sync" fetchpriority="high" referrerpolicy="no-referrer">`);
                     })();
                 </script>
+                <button class="btn-save-favorite-detail product-favorite-mobile" id="btn-save-favorite-detail-mobile" type="button" aria-label="Guardar favorito" title="Guardar favorito">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span>Guardar favorito</span>
+                </button>
             </div>
             <div class="product-thumbnails" id="detail-thumbnails"></div>
         </section>
@@ -1179,7 +1209,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=blyxu-contact-clock-20260928" defer></script>
+    <script src="blyxu-app.js?v=blyxu-soft-type-favorite-20260928" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1198,6 +1228,7 @@
             const variationContainer = document.getElementById('product-variations');
             const cartBtn = document.getElementById('btn-add-to-cart-detail');
             const favoriteBtn = document.getElementById('btn-save-favorite-detail');
+            const favoriteMobileBtn = document.getElementById('btn-save-favorite-detail-mobile');
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
 
@@ -1686,6 +1717,9 @@
                 };
                 if (favoriteBtn) {
                     favoriteBtn.onclick = () => saveCustomerFavorite(productId, favoriteBtn);
+                }
+                if (favoriteMobileBtn) {
+                    favoriteMobileBtn.onclick = () => saveCustomerFavorite(productId, favoriteMobileBtn);
                 }
                 cartBtn.closest('.product-info-actions')?.classList.remove('has-online-payment');
 

@@ -46,6 +46,7 @@ const IS_MOBILE_VIEWPORT = typeof window !== 'undefined' && window.innerWidth <=
 const IS_WHOLESALE_PAGE = typeof document !== 'undefined' && document.body?.dataset.catalogMode === 'wholesale';
 const CATALOG_BATCH_SIZE = 4;
 const CATALOG_INITIAL_ROWS = 4;
+const CATALOG_LOAD_MORE_ROWS = 3;
 const IMAGE_WIDTHS = {
     default: 640,
     card: 360,
@@ -2743,7 +2744,7 @@ function renderProducts(products, options = {}) {
         normalizeSearchText(searchQuery)
     ].join('|');
     const initialBatchSize = Math.min(getCatalogInitialBatchSize(grid), filtered.length);
-    const nextBatchSize = Math.max(CATALOG_BATCH_SIZE, getCatalogGridColumnCount(grid));
+    const nextBatchSize = Math.max(1, getCatalogGridColumnCount(grid)) * CATALOG_LOAD_MORE_ROWS;
 
     grid.innerHTML = '';
     let rendered = 0;
@@ -5198,11 +5199,13 @@ async function saveCustomerFavorite(productIndex, sourceButton = null) {
             token: session.token,
             producto: getProductIdentity(product, Number(productIndex))
         });
-        if (btn) {
-            btn.classList.add('is-saved');
-            btn.setAttribute('aria-label', 'Guardado en favoritos');
-            btn.title = 'Guardado en favoritos';
-        }
+        const detailFavoriteButtons = document.querySelectorAll('.product-detail-luxury .btn-save-favorite-detail');
+        const buttonsToUpdate = detailFavoriteButtons.length ? detailFavoriteButtons : (btn ? [btn] : []);
+        buttonsToUpdate.forEach(button => {
+            button.classList.add('is-saved');
+            button.setAttribute('aria-label', 'Guardado en favoritos');
+            button.title = 'Guardado en favoritos';
+        });
         setCustomerAuthMessage('');
     } catch (error) {
         openCustomerAuthModal('profile');

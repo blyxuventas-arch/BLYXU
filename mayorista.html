@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -16,9 +16,9 @@
     <link rel="preconnect" href="https://script.google.com">
     <link rel="preconnect" href="https://drive.google.com">
     <link rel="preconnect" href="https://lh3.googleusercontent.com">
-    <link rel="preload" href="blyxu-style.css?v=blyxu-contact-clock-20260928" as="style">
-    <link rel="preload" href="blyxu-app.js?v=blyxu-contact-clock-20260928" as="script">
-    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-contact-clock-20260928" data-blyxu-main-style="1">
+    <link rel="preload" href="blyxu-style.css?v=blyxu-soft-type-favorite-20260928" as="style">
+    <link rel="preload" href="blyxu-app.js?v=blyxu-soft-type-favorite-20260928" as="script">
+    <link rel="stylesheet" href="blyxu-style.css?v=blyxu-soft-type-favorite-20260928" data-blyxu-main-style="1">
     <script>
         // Limpiar claves guardadas - siempre pedir login
         try {
@@ -28,11 +28,13 @@
         } catch(e) {}
     </script>
     <style>
-        /* Login mayorista limpio y aislado */
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+        /* ── GATE ─────────────────────────────────────────── */
         body.wholesale-gated:not(.wholesale-unlocked) {
             min-height: 100vh;
             overflow: hidden;
-            background: #05030a !important;
+            background: #101014 !important;
         }
 
         body.wholesale-gated:not(.wholesale-unlocked) .navbar,
@@ -44,6 +46,7 @@
             display: none !important;
         }
 
+        /* ── SCREEN ───────────────────────────────────────── */
         #mayorista-login-screen {
             position: fixed !important;
             inset: 0 !important;
@@ -51,312 +54,422 @@
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: 22px !important;
-            background: #09030f !important;
-            color: #fff !important;
+            padding: 20px !important;
+            background: #101014 !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
         }
 
         body.wholesale-unlocked #mayorista-login-screen {
             display: none !important;
         }
 
+        /* ── CARD ─────────────────────────────────────────── */
         .mayorista-login-card {
-            width: min(390px, 100%) !important;
-            padding: 34px 28px 28px !important;
-            border: 1px solid rgba(255, 255, 255, 0.12) !important;
-            border-radius: 16px !important;
-            background: #0d0b13 !important;
-            box-shadow: none !important;
+            width: min(360px, 100%) !important;
+            padding: 0 !important;
+            border: 1px solid rgba(255,255,255,.07) !important;
+            border-radius: 24px !important;
+            background: #18181c !important;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.04),
+                0 40px 100px rgba(0,0,0,.7),
+                0 8px 32px rgba(0,0,0,.4) !important;
             text-align: center !important;
             position: relative !important;
+            overflow: hidden !important;
         }
 
-        .mayorista-login-card *,
-        .mayorista-login-card::before,
-        .mayorista-login-card::after {
-            transition: none !important;
-            filter: none !important;
-            text-shadow: none !important;
-        }
-
-        .blyxu-vault {
-            --vault-progress: 0%;
-            display: grid;
-            gap: 14px;
-            justify-items: center;
-            margin: 0 auto 20px;
-            padding: 18px 16px 16px;
-            border: 1px solid rgba(255,255,255,.09);
-            border-radius: 18px;
-            background: radial-gradient(circle at 50% 0%, rgba(244,196,65,.12), transparent 42%), #0f1015;
-            color: #f8f4ff;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .blyxu-vault::before {
-            content: "";
-            position: absolute;
-            inset: -1px;
-            background: linear-gradient(120deg, transparent 18%, rgba(244,196,65,.16), transparent 62%);
-            transform: translateX(-120%);
-            pointer-events: none;
-        }
-
-        .vault-success .blyxu-vault::before {
-            animation: vaultSweep .9s ease forwards !important;
-        }
-
-        .vault-orb {
-            width: 112px;
-            height: 112px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            position: relative;
-            background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.02) 52%, transparent 54%);
-        }
-
-        .vault-orb::before {
-            content: "";
-            position: absolute;
-            inset: 8px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(244,196,65,.08), rgba(244,196,65,.9), rgba(168,85,247,.55), rgba(34,211,238,.7), rgba(244,196,65,.08));
-            animation: vaultSpin 6s linear infinite !important;
-            filter: drop-shadow(0 0 18px rgba(244,196,65,.18));
-        }
-
-        .vault-orb::after {
-            content: "";
-            position: absolute;
-            inset: 17px;
-            border-radius: 50%;
-            background: #111217;
-            box-shadow: inset 0 0 22px rgba(0,0,0,.75);
-        }
-
-        .vault-scan {
-            position: absolute;
-            width: 86px;
-            height: 2px;
-            z-index: 2;
-            border-radius: 99px;
-            background: linear-gradient(90deg, transparent, rgba(244,196,65,.95), transparent);
-            animation: vaultScan 2.2s ease-in-out infinite !important;
-        }
-
-        .vault-lock {
-            position: relative;
-            z-index: 3;
-            width: 34px;
-            height: 28px;
-            border-radius: 8px;
-            background: linear-gradient(180deg, #fff7c7, #f4c441);
-            box-shadow: 0 0 24px rgba(244,196,65,.28);
-        }
-
-        .vault-lock::before {
-            content: "";
-            position: absolute;
-            left: 7px;
-            top: -22px;
-            width: 20px;
-            height: 24px;
-            border: 5px solid #f8f4ff;
-            border-bottom: 0;
-            border-radius: 18px 18px 0 0;
-            transform-origin: 4px 24px;
-        }
-
-        .vault-lock::after {
-            content: "";
-            position: absolute;
-            left: 15px;
-            top: 10px;
-            width: 5px;
-            height: 10px;
-            border-radius: 99px;
-            background: rgba(8,7,11,.7);
-        }
-
-        .blyxu-vault.is-unlocking .vault-orb::before { animation-duration: .8s !important; }
-        .blyxu-vault.is-unlocking .vault-lock::before { animation: vaultOpen .7s ease forwards !important; }
-        .blyxu-vault.is-denied .vault-orb { animation: vaultDeny .32s ease !important; }
-
-        .vault-copy strong {
+        /* Top pill / drag handle */
+        .ml-pill {
             display: block;
-            font-size: 16px;
-            font-weight: 900;
-            letter-spacing: .02em;
-        }
-
-        .vault-copy span {
-            display: block;
-            margin-top: 5px;
-            color: rgba(248,244,255,.58);
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .vault-key-dots {
-            display: grid;
-            grid-template-columns: repeat(var(--vault-dot-count, 4), minmax(28px, 1fr));
-            gap: 8px;
-            width: min(220px, 100%);
-        }
-
-        .vault-key-dots span {
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 12px;
-            background: rgba(255,255,255,.035);
-            color: transparent;
-            font-size: 22px;
-            font-weight: 900;
-        }
-
-        .vault-key-dots span.is-lit {
-            border-color: rgba(244,196,65,.65);
-            background: rgba(244,196,65,.1);
-            color: #f4c441;
-            box-shadow: 0 0 18px rgba(244,196,65,.16);
-        }
-
-        .vault-meter {
-            width: min(240px, 100%);
-            height: 6px;
-            overflow: hidden;
+            width: 36px;
+            height: 4px;
             border-radius: 99px;
-            background: rgba(255,255,255,.08);
+            background: rgba(255,255,255,.12);
+            margin: 14px auto 0;
         }
 
-        .vault-meter span {
-            display: block;
-            width: var(--vault-progress);
-            height: 100%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, #a855f7, #22d3ee, #f4c441);
-            transition: width .18s ease;
+        /* ── CARD INNER PADDING ───────────────────────────── */
+        .ml-inner {
+            padding: 24px 28px 30px;
         }
 
-        .vault-note {
-            color: rgba(248,244,255,.46);
-            font-size: 10px;
-            font-weight: 850;
-            letter-spacing: .1em;
-            text-transform: uppercase;
-        }
-
-        .vault-success .mayorista-login-card,
-        #qr-login-overlay.vault-success .payments-login-panel {
-            animation: vaultPanelExit 1.05s ease forwards !important;
-        }
-
-        @keyframes vaultSpin { to { transform: rotate(360deg); } }
-        @keyframes vaultScan { 0%,100% { transform: translateY(-24px); opacity:.25; } 50% { transform: translateY(24px); opacity:1; } }
-        @keyframes vaultOpen { to { transform: rotate(-38deg) translate(-4px,-2px); } }
-        @keyframes vaultSweep { to { transform: translateX(120%); } }
-        @keyframes vaultDeny { 25% { transform: translateX(7px); } 50% { transform: translateX(-7px); } 75% { transform: translateX(4px); } }
-        @keyframes vaultPanelExit { 0% { opacity:1; transform: scale(1); } 70% { opacity:1; transform: scale(1.02); } 100% { opacity:0; transform: scale(.96) translateY(-18px); } }
+        /* ── LOGO ─────────────────────────────────────────── */
         .mayorista-login-logo {
             display: block !important;
-            width: 86px !important;
-            max-height: 52px !important;
+            width: 52px !important;
             height: auto !important;
             object-fit: contain !important;
-            margin: 0 auto 20px !important;
+            margin: 0 auto 18px !important;
+            opacity: .72 !important;
         }
 
+        /* ── TEXT ─────────────────────────────────────────── */
         .mayorista-login-kicker {
-            margin: 0 0 8px !important;
-            color: rgba(216, 180, 254, 0.84) !important;
-            font-size: 11px !important;
-            font-weight: 850 !important;
-            letter-spacing: 0.14em !important;
-            text-transform: uppercase !important;
+            display: block;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,.38);
+            margin: 0 0 10px;
         }
 
         #mayorista-login-title {
-            margin: 0 0 22px !important;
+            margin: 0 0 6px !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
             color: #fff !important;
-            font-size: 24px !important;
-            font-weight: 850 !important;
-            line-height: 1.1 !important;
-            letter-spacing: 0 !important;
+            letter-spacing: -.01em !important;
+            line-height: 1.15 !important;
         }
 
+        .ml-subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,.38);
+            font-weight: 400;
+            margin: 0 0 32px;
+            line-height: 1.5;
+        }
+
+        /* ── VAULT (hidden, kept for JS compat) ───────────── */
+        .blyxu-vault { display: none !important; }
+
+        /* ── PIN ROW ──────────────────────────────────────── */
+        .pin-entry-row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 0 0 28px;
+        }
+
+        /* Wrapper enables the border-glow pseudo-element */
+        .pin-wrap {
+            position: relative;
+            border-radius: 18px;
+            padding: 2px;                   /* space for the glow border */
+            background: rgba(255,255,255,.05);
+            transition: background .2s;
+        }
+
+        /* The spinning conic-gradient light that traces the border */
+        .pin-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 20px;
+            background: conic-gradient(
+                from var(--a, 0deg),
+                transparent 0deg,
+                rgba(255,255,255,.0) 60deg,
+                rgba(255,255,255,.9) 90deg,
+                rgba(180,140,255,.7) 110deg,
+                rgba(255,255,255,.0) 140deg,
+                transparent 360deg
+            );
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 2px;
+            opacity: 0;
+            transition: opacity .25s ease;
+        }
+
+        /* Spin only when the box inside is focused */
+        .pin-wrap:has(.pin-digit:focus)::before {
+            opacity: 1;
+            animation: borderSpin 1.6s linear infinite;
+        }
+
+        /* Also show glow when filled (static, no spin) */
+        .pin-wrap:has(.pin-digit.filled)::before {
+            opacity: .35;
+            background: conic-gradient(
+                from 45deg,
+                rgba(255,255,255,.6) 0deg,
+                rgba(200,160,255,.4) 90deg,
+                rgba(255,255,255,.6) 180deg,
+                rgba(200,160,255,.4) 270deg,
+                rgba(255,255,255,.6) 360deg
+            );
+            animation: none;
+        }
+
+        .pin-digit {
+            position: relative;
+            width: 70px;
+            height: 78px;
+            border-radius: 16px;
+            border: none;
+            /* Inset 3-D dark surface */
+            background: #1e1e24;
+            box-shadow:
+                inset 0 2px 4px rgba(0,0,0,.45),
+                inset 0 -1px 0 rgba(255,255,255,.04);
+            color: #fff;
+            font-size: 30px;
+            font-weight: 700;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif;
+            text-align: center;
+            outline: none;
+            caret-color: transparent;
+            -webkit-appearance: none;
+            display: block;
+            transition: background .2s, color .2s, transform .18s cubic-bezier(.4,0,.2,1);
+        }
+
+        /* Focused box lifts slightly */
+        .pin-digit:focus {
+            background: #22222a;
+            transform: translateY(-2px);
+        }
+
+        /* Filled box */
+        .pin-digit.filled {
+            background: #202028;
+            color: #fff;
+        }
+
+        /* Fan animation when typing */
+        .pin-digit.fan-in {
+            animation: pinFanIn .22s cubic-bezier(.34,1.4,.64,1) both;
+        }
+
+        /* Error shake */
+        .pin-digit.denied {
+            background: rgba(239,68,68,.12) !important;
+            animation: pinShake .38s cubic-bezier(.4,0,.2,1) !important;
+        }
+        .pin-wrap:has(.pin-digit.denied)::before {
+            opacity: 1 !important;
+            animation: none !important;
+            background: conic-gradient(
+                from 0deg,
+                rgba(239,68,68,.9) 0deg,
+                rgba(239,68,68,.4) 90deg,
+                rgba(239,68,68,.9) 180deg,
+                rgba(239,68,68,.4) 270deg,
+                rgba(239,68,68,.9) 360deg
+            ) !important;
+        }
+
+        /* Success state */
+        .pin-digit.success-digit {
+            background: rgba(16,185,129,.1) !important;
+            color: #34d399 !important;
+            transform: scale(.94) !important;
+            transition: all .3s ease !important;
+        }
+        .pin-wrap:has(.pin-digit.success-digit)::before {
+            opacity: 1 !important;
+            animation: none !important;
+            background: conic-gradient(
+                from 0deg,
+                rgba(16,185,129,.9) 0deg,
+                rgba(16,185,129,.4) 90deg,
+                rgba(52,211,153,.9) 180deg,
+                rgba(16,185,129,.4) 270deg,
+                rgba(16,185,129,.9) 360deg
+            ) !important;
+        }
+
+        /* ── FORM / BUTTON ────────────────────────────────── */
         .mayorista-login-form {
             display: grid !important;
-            gap: 14px !important;
+            gap: 0 !important;
         }
 
         #mayorista-access-key {
-            width: 100% !important;
-            height: 52px !important;
-            border: 1px solid rgba(255, 255, 255, 0.14) !important;
-            border-radius: 12px !important;
-            background: #15121d !important;
-            color: #fff !important;
-            padding: 0 16px !important;
-            font: inherit !important;
-            font-size: 18px !important;
-            text-align: center !important;
-            letter-spacing: 4px !important;
-            outline: none !important;
-        }
-
-        #mayorista-access-key:focus {
-            border-color: rgba(216, 180, 254, 0.68) !important;
+            position: absolute !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            width: 1px !important;
+            height: 1px !important;
         }
 
         .mayorista-login-button {
             width: 100% !important;
-            height: 52px !important;
-            border: 0 !important;
-            border-radius: 12px !important;
-            background: #f7f3ff !important;
-            color: #08070b !important;
-            font: inherit !important;
-            font-size: 12px !important;
-            font-weight: 950 !important;
-            letter-spacing: 0.08em !important;
-            text-transform: uppercase !important;
+            height: 50px !important;
+            border: 1.5px solid rgba(255,255,255,.10) !important;
+            border-radius: 14px !important;
+            background: rgba(255,255,255,.06) !important;
+            color: rgba(255,255,255,.8) !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            letter-spacing: .04em !important;
             cursor: pointer !important;
+            transition: background .2s, border-color .2s, color .2s !important;
+        }
+
+        .mayorista-login-button:hover {
+            background: rgba(255,255,255,.10) !important;
+            border-color: rgba(255,255,255,.18) !important;
+            color: #fff !important;
         }
 
         .mayorista-login-button:disabled {
-            opacity: 0.6 !important;
+            opacity: 0.4 !important;
             cursor: wait !important;
         }
 
+        /* ── ERROR ────────────────────────────────────────── */
         .mayorista-login-error {
-            min-height: 18px !important;
-            margin-top: 10px !important;
-            color: #fb7185 !important;
-            font-size: 13px !important;
-            font-weight: 700 !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            color: rgba(252,165,165,.85) !important;
+            min-height: 16px !important;
+            margin: 0 0 16px !important;
             visibility: hidden !important;
+            letter-spacing: .01em !important;
         }
 
         .mayorista-login-error.show {
             visibility: visible !important;
         }
 
+        /* ── BACK LINK ────────────────────────────────────── */
         .mayorista-login-back {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            margin-top: 16px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
+            gap: 5px;
+            margin-top: 20px;
+            color: rgba(255,255,255,.28);
+            font-size: 11.5px;
+            font-weight: 400;
             text-decoration: none;
+            letter-spacing: .01em;
+            transition: color .18s;
         }
 
-        .mayorista-login-back:hover {
-            color: #ffd969;
+        .mayorista-login-back:hover { color: rgba(255,255,255,.6); }
+
+        /* ── SUCCESS SCREEN (replaces card) ───────────────── */
+        #mayorista-success-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #101014;
+        }
+
+        #mayorista-success-overlay.active {
+            display: flex;
+            animation: scrnFadeIn .35s ease both;
+        }
+
+        /* Success card — same style as login card */
+        .ml-success-card {
+            width: min(360px, calc(100% - 40px));
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 24px;
+            background: #18181c;
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,.04),
+                0 40px 100px rgba(0,0,0,.7);
+            overflow: hidden;
+            animation: cardPopIn .45s cubic-bezier(.34,1.3,.64,1) .05s both;
+        }
+
+        .ml-success-inner {
+            padding: 20px 28px 36px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* Glowing rounded-square checkmark (exact reference style) */
+        .ml-check-box {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            border: 1.5px solid rgba(16,185,129,.45);
+            background:
+                linear-gradient(160deg, rgba(16,185,129,.16), rgba(16,185,129,.06));
+            box-shadow:
+                0 0 0 8px rgba(16,185,129,.06),
+                0 0 40px rgba(16,185,129,.22),
+                inset 0 1px 0 rgba(16,185,129,.2);
+            display: grid;
+            place-items: center;
+            margin: 28px 0 24px;
+            animation: checkBoxPop .5s cubic-bezier(.34,1.4,.64,1) .15s both;
+        }
+
+        .ml-check-box svg {
+            width: 32px;
+            height: 32px;
+            stroke: #34d399;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+
+        .ml-check-box svg path {
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+            animation: drawCheck .4s ease .45s forwards;
+        }
+
+        .ml-success-title {
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #34d399;
+            letter-spacing: -.01em;
+            margin: 0 0 8px;
+            animation: fadeSlideUp .4s ease .3s both;
+        }
+
+        .ml-success-sub {
+            font-size: 13px;
+            color: rgba(255,255,255,.36);
+            font-weight: 400;
+            animation: fadeSlideUp .4s ease .4s both;
+        }
+
+        /* ── KEYFRAMES ────────────────────────────────────── */
+        @keyframes pinFanIn {
+            from { opacity: 0; transform: translateY(8px) scale(.92); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes pinShake {
+            0%,100% { transform: translateX(0); }
+            20%  { transform: translateX(-6px); }
+            40%  { transform: translateX(5px); }
+            60%  { transform: translateX(-4px); }
+            80%  { transform: translateX(3px); }
+        }
+        @keyframes borderSpin {
+            from { --a: 0deg; }
+            to   { --a: 360deg; }
+        }
+        @property --a {
+            syntax: '<angle>';
+            inherits: false;
+            initial-value: 0deg;
+        }
+        @keyframes scrnFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes cardPopIn {
+            from { opacity: 0; transform: scale(.92) translateY(16px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes checkBoxPop {
+            from { opacity: 0; transform: scale(.6); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes drawCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -529,33 +642,59 @@
         </div>
     </div>
 
-    <!-- ===== ACCESO MAYORISTA LIMPIO ===== -->
+    <!-- ===== SUCCESS SCREEN ===== -->
+    <div id="mayorista-success-overlay">
+        <div class="ml-success-card">
+            <span class="ml-pill"></span>
+            <div class="ml-success-inner">
+                <div class="ml-check-box">
+                    <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div class="ml-success-title">Verificado</div>
+                <div class="ml-success-sub">Configurando tu acceso&hellip;</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOGIN SCREEN ===== -->
     <div id="mayorista-login-screen" aria-hidden="false">
         <div class="mayorista-login-card" role="dialog" aria-modal="true" aria-labelledby="mayorista-login-title">
-            <img src="Logo2.png" alt="BLYXU" class="mayorista-login-logo" onerror="this.style.display='none'">
-            <div class="mayorista-login-kicker">Acceso Exclusivo</div>
-            <h2 id="mayorista-login-title">Mayoristas BLYXU</h2>
+            <span class="ml-pill"></span>
+            <div class="ml-inner">
+                <!-- Logo -->
+                <img src="Logo2.png" alt="BLYXU" class="mayorista-login-logo" onerror="this.style.display='none'">
 
-            <div class="blyxu-vault" data-vault aria-hidden="true">
-                <div class="vault-orb"><span class="vault-scan"></span><span class="vault-lock"></span></div>
-                <div class="vault-copy"><strong>Boveda mayorista</strong><span data-vault-status>Esperando clave segura</span></div>
-                <div class="vault-key-dots" data-vault-dots></div>
-                <div class="vault-meter"><span data-vault-meter></span></div>
-                <div class="vault-note">BLYXU secure access</div>
+                <!-- Texts -->
+                <span class="mayorista-login-kicker">BLYXU &middot; Acceso Exclusivo</span>
+                <h2 id="mayorista-login-title">Ingresa tu clave</h2>
+                <p class="ml-subtitle">Portal mayorista &mdash; solo para clientes autorizados.</p>
+
+                <!-- Vault stub (hidden, kept for JS) -->
+                <div class="blyxu-vault" data-vault aria-hidden="true" style="display:none">
+                    <div data-vault-dots></div>
+                    <span data-vault-status></span>
+                </div>
+
+                <!-- PIN boxes -->
+                <div class="pin-entry-row" id="pin-entry-row" role="group" aria-label="Clave de acceso"></div>
+
+                <form class="mayorista-login-form" id="mayorista-login-form">
+                    <input type="password" inputmode="numeric" id="mayorista-access-key"
+                           autocomplete="off" tabindex="-1" aria-hidden="true">
+                    <div class="mayorista-login-error" id="mayorista-login-error">Clave incorrecta &mdash; int&eacute;ntalo de nuevo</div>
+                    <button class="mayorista-login-button" type="submit" id="mayorista-login-submit">
+                        Ingresar al cat&aacute;logo
+                    </button>
+                </form>
+
+                <a href="index.html" class="mayorista-login-back">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Volver a la tienda p&uacute;blica
+                </a>
             </div>
-
-            <form class="mayorista-login-form" id="mayorista-login-form">
-                <input type="password" inputmode="numeric" id="mayorista-access-key" placeholder="Clave de acceso" autocomplete="off" required>
-                <button class="mayorista-login-button" type="submit" id="mayorista-login-submit">Ingresar al Cat&aacute;logo</button>
-            </form>
-            <div class="mayorista-login-error" id="mayorista-login-error">Clave de acceso incorrecta</div>
-            <a href="index.html" class="mayorista-login-back">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-                <span>Volver a la tienda p&uacute;blica</span>
-            </a>
         </div>
     </div>
 
@@ -570,44 +709,112 @@
     </div>
 
     <!-- Carga diferida optimizada de la aplicacion -->
-    <script src="blyxu-app.js?v=blyxu-contact-clock-20260928" defer></script>
+    <script src="blyxu-app.js?v=blyxu-soft-type-favorite-20260928" defer></script>
     <script>
         (function() {
             const body = document.body;
             const overlay = document.getElementById('mayorista-login-screen');
             const form = document.getElementById('mayorista-login-form');
-            const input = document.getElementById('mayorista-access-key');
+            const hiddenInput = document.getElementById('mayorista-access-key');
             const error = document.getElementById('mayorista-login-error');
             const submitBtn = document.getElementById('mayorista-login-submit');
+            const successOverlay = document.getElementById('mayorista-success-overlay');
+            const pinRow = document.getElementById('pin-entry-row');
 
-            function unlockWholesaleInterface() {
-                body.classList.remove('wholesale-gated');
-                body.classList.add('wholesale-unlocked');
-                if (overlay) {
-                    overlay.setAttribute('aria-hidden', 'true');
-                    overlay.remove();
-                }
-            }
-
-            function loadWholesaleCatalogWhenReady(attempts) {
-                if (typeof loadProducts === 'function') {
-                    loadProducts({ renderCatalog: true }).catch(function() {});
-                    return;
-                }
-
-                if (typeof renderCatalogProducts === 'function') {
-                    renderCatalogProducts();
-                    return;
-                }
-
-                if (attempts > 0) {
-                    setTimeout(function() {
-                        loadWholesaleCatalogWhenReady(attempts - 1);
-                    }, 120);
-                }
-            }
             const ACCESS_CODE = '531';
+            const PIN_LENGTH = ACCESS_CODE.length;
 
+            // ===== BUILD PIN BOXES =====
+            const pinDigits = [];
+            for (let i = 0; i < PIN_LENGTH; i++) {
+                const wrap = document.createElement('div');
+                wrap.className = 'pin-wrap';
+
+                const box = document.createElement('input');
+                box.type = 'text';           /* visible numbers */
+                box.inputMode = 'numeric';
+                box.maxLength = 1;
+                box.pattern = '[0-9]*';
+                box.className = 'pin-digit';
+                box.setAttribute('aria-label', 'Dígito ' + (i + 1));
+                box.autocomplete = 'off';
+                box.id = 'pin-d' + i;
+                wrap.appendChild(box);
+                pinRow.appendChild(wrap);
+                pinDigits.push(box);
+            }
+
+            function getPinValue() {
+                return pinDigits.map(function(d) { return d.value; }).join('');
+            }
+
+            function syncHidden() {
+                hiddenInput.value = getPinValue();
+                syncVaultState();
+                error.classList.remove('show');
+            }
+
+            // Navigate between boxes
+            pinDigits.forEach(function(box, idx) {
+                box.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace') {
+                        if (box.value === '' && idx > 0) {
+                            pinDigits[idx - 1].value = '';
+                            pinDigits[idx - 1].focus();
+                            pinDigits[idx - 1].classList.remove('filled');
+                        } else {
+                            box.value = '';
+                            box.classList.remove('filled');
+                        }
+                        syncHidden();
+                        e.preventDefault();
+                    } else if (e.key === 'ArrowLeft' && idx > 0) {
+                        pinDigits[idx - 1].focus();
+                    } else if (e.key === 'ArrowRight' && idx < PIN_LENGTH - 1) {
+                        pinDigits[idx + 1].focus();
+                    } else if (e.key === 'Enter') {
+                        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    }
+                });
+
+                box.addEventListener('input', function() {
+                    const val = box.value.replace(/[^0-9]/g, '');
+                    box.value = val.slice(-1);
+                    if (box.value) {
+                        box.classList.add('filled');
+                        if (idx < PIN_LENGTH - 1) pinDigits[idx + 1].focus();
+                    } else {
+                        box.classList.remove('filled');
+                    }
+                    syncHidden();
+                    // Auto-submit when all filled
+                    if (getPinValue().length === PIN_LENGTH) {
+                        setTimeout(function() {
+                            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                        }, 120);
+                    }
+                });
+
+                box.addEventListener('focus', function() {
+                    box.select();
+                });
+
+                box.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+                    pasted.split('').forEach(function(ch, ci) {
+                        if (idx + ci < PIN_LENGTH) {
+                            pinDigits[idx + ci].value = ch;
+                            pinDigits[idx + ci].classList.add('filled');
+                        }
+                    });
+                    const next = Math.min(idx + pasted.length, PIN_LENGTH - 1);
+                    pinDigits[next].focus();
+                    syncHidden();
+                });
+            });
+
+            // ===== VAULT SYNC =====
             function ensureVaultDots(total) {
                 const vault = overlay?.querySelector('[data-vault]');
                 const dots = vault?.querySelector('[data-vault-dots]');
@@ -621,82 +828,96 @@
 
             function syncVaultState() {
                 const vault = overlay?.querySelector('[data-vault]');
-                if (!vault || !input) return;
-                const targetLength = ACCESS_CODE.length;
-                ensureVaultDots(targetLength);
-                const len = Math.min((input.value || '').trim().length, targetLength);
-                const progress = Math.min(100, Math.round((len / targetLength) * 100));
+                if (!vault) return;
+                const len = Math.min(getPinValue().length, PIN_LENGTH);
+                const progress = Math.min(100, Math.round((len / PIN_LENGTH) * 100));
+                ensureVaultDots(PIN_LENGTH);
                 vault.style.setProperty('--vault-progress', progress + '%');
-                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot, index) {
-                    dot.classList.toggle('is-lit', index < len);
-                    dot.textContent = index < len ? '•' : '';
-                });
                 const status = vault.querySelector('[data-vault-status]');
                 if (status) status.textContent = len ? 'Leyendo firma de acceso...' : 'Esperando clave segura';
             }
 
             function markVaultDenied() {
-                const vault = overlay?.querySelector('[data-vault]');
-                if (!vault) return;
-                vault.classList.remove('is-unlocking');
-                vault.classList.add('is-denied');
-                const status = vault.querySelector('[data-vault-status]');
-                if (status) status.textContent = 'Clave incorrecta';
-                setTimeout(function() { vault.classList.remove('is-denied'); syncVaultState(); }, 520);
+                // Shake & clear PIN boxes
+                pinDigits.forEach(function(d) {
+                    d.classList.add('denied');
+                    setTimeout(function() {
+                        d.classList.remove('denied', 'filled');
+                        d.value = '';
+                    }, 420);
+                });
+                setTimeout(function() { pinDigits[0].focus(); }, 440);
             }
 
-            function playVaultUnlock(done) {
-                const vault = overlay?.querySelector('[data-vault]');
-                if (!overlay || !vault) {
-                    done();
+            // ===== SUCCESS ANIMATION (minimal: boxes collapse → verified card) =====
+            function playSuccessAnimation(done) {
+                // Step 1 – mark boxes green sequentially
+                pinDigits.forEach(function(d, i) {
+                    setTimeout(function() { d.classList.add('success-digit'); }, i * 90);
+                });
+
+                // Step 2 – fade out login card, show verified card
+                setTimeout(function() {
+                    overlay.style.transition = 'opacity .3s ease';
+                    overlay.style.opacity = '0';
+                }, 380);
+
+                setTimeout(function() {
+                    successOverlay.classList.add('active');
+                    setTimeout(function() { done(); }, 1400);
+                }, 680);
+            }
+
+            function unlockWholesaleInterface() {
+                body.classList.remove('wholesale-gated');
+                body.classList.add('wholesale-unlocked');
+                if (overlay) {
+                    overlay.setAttribute('aria-hidden', 'true');
+                    overlay.remove();
+                }
+                if (successOverlay) successOverlay.remove();
+            }
+
+            function loadWholesaleCatalogWhenReady(attempts) {
+                if (typeof loadProducts === 'function') {
+                    loadProducts({ renderCatalog: true }).catch(function() {});
                     return;
                 }
-                overlay.classList.add('vault-success');
-                vault.classList.add('is-unlocking');
-                vault.style.setProperty('--vault-progress', '100%');
-                vault.querySelectorAll('[data-vault-dots] span').forEach(function(dot) {
-                    dot.classList.add('is-lit');
-                    dot.textContent = '•';
-                });
-                const status = vault.querySelector('[data-vault-status]');
-                if (status) status.textContent = 'Acceso concedido';
-                setTimeout(done, 1050);
+                if (typeof renderCatalogProducts === 'function') {
+                    renderCatalogProducts();
+                    return;
+                }
+                if (attempts > 0) {
+                    setTimeout(function() { loadWholesaleCatalogWhenReady(attempts - 1); }, 120);
+                }
             }
-            // Siempre pedir clave - no se guarda sesión
+
+            // ===== INIT =====
             body.classList.add('wholesale-gated');
             overlay?.setAttribute('aria-hidden', 'false');
             syncVaultState();
-            setTimeout(() => input?.focus({ preventScroll: true }), 50);
+            setTimeout(function() { pinDigits[0] && pinDigits[0].focus({ preventScroll: true }); }, 80);
 
             form?.addEventListener('submit', function(e) {
                 e.preventDefault();
-                const entered = (input?.value || '').trim();
+                const entered = getPinValue();
                 if (entered !== ACCESS_CODE) {
                     error?.classList.add('show');
                     markVaultDenied();
-                    input?.select();
                     return;
                 }
 
                 if (submitBtn) {
-                    submitBtn.textContent = 'Ingresando...';
+                    submitBtn.textContent = 'Verificando...';
                     submitBtn.disabled = true;
                 }
 
-                playVaultUnlock(function() {
+                playSuccessAnimation(function() {
                     unlockWholesaleInterface();
-
-                    // Mostrar navbar y cargar catalogo despues de autenticarse
                     var navbar = document.getElementById('navbar');
                     if (navbar) navbar.style.display = '';
-
                     loadWholesaleCatalogWhenReady(40);
                 });
-            });
-
-            input?.addEventListener('input', function() {
-                error?.classList.remove('show');
-                syncVaultState();
             });
         })();
     </script>
