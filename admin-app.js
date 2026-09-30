@@ -1387,7 +1387,7 @@ function setProductBarcodeScanMode(enabled) {
             input.value = '';
         }
         input.dataset.autoBarcode = '0';
-        if (hint) hint.textContent = 'Escanea la marquilla real o escribe el codigo; si lo dejas apagado se asigna automatico.';
+        if (hint) hint.textContent = 'Abre la camara: detecta el codigo en vivo y lo convierte automaticamente en el QR del producto.';
     } else {
         input.dataset.autoBarcode = '1';
         updateProductBarcodeField(true);
@@ -1408,9 +1408,9 @@ function initProductBarcodeField() {
                 <label>Codigo de barras</label>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Automatico o escaneado">
-                    <button type="button" class="admin-btn secondary" id="btn-scan-product-barcode" style="min-width:118px;">Escanear</button>
+                    <button type="button" class="admin-btn secondary" id="btn-scan-product-barcode" style="min-width:118px;">Detectar codigo</button>
                 </div>
-                <small class="field-hint">Puedes escanear la marquilla real con el celular o dejar el codigo interno automatico.</small>
+                <small class="field-hint">La camara se abre en vivo, detecta la marquilla y la convierte en el QR del producto.</small>
             </div>
         `);
         barcodeInput = document.getElementById('prod-barcode');
@@ -1517,23 +1517,23 @@ function buildBarcodeScannerModal() {
     modal.innerHTML = `
         <div class="modal-card barcode-scanner-card">
             <div class="barcode-scanner-head">
-                <div><span class="admin-kicker">Camara del dispositivo</span><h2>Escanear QR o codigo</h2></div>
+                <div><span class="admin-kicker">Lectura automatica en vivo</span><h2>Detector inteligente</h2></div>
                 <button type="button" class="admin-btn secondary" data-barcode-close>Cerrar</button>
             </div>
-            <div id="barcode-scanner-status" class="barcode-scanner-status">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
+            <div id="barcode-scanner-status" class="barcode-scanner-status" aria-live="polite">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
             <div class="barcode-scanner-stage">
-                <video id="barcode-scanner-video" playsinline muted></video>
+                <video id="barcode-scanner-video" playsinline muted autoplay></video>
                 <div id="barcode-scanner-reader"></div>
                 <div class="barcode-scanner-guide" aria-hidden="true"><span></span></div>
             </div>
-            <div class="barcode-scanner-file-row">
-                <label class="admin-btn secondary" for="barcode-scanner-image">Tomar foto o elegir imagen</label>
-                <input type="file" id="barcode-scanner-image" accept="image/*" capture="environment" hidden>
-                <small>Util si el navegador no permite video en vivo.</small>
+            <div class="barcode-live-readout" id="barcode-live-readout" aria-live="polite">
+                <span>Buscando codigo...</span>
+                <strong id="barcode-live-value">Apunta al codigo de barras o QR</strong>
+                <small id="barcode-live-format">QR · EAN · UPC · CODE 128 · CODE 39 · ITF</small>
             </div>
             <div class="barcode-scanner-manual-row">
-                <input class="form-control" id="barcode-scanner-manual" placeholder="Escribir referencia manualmente">
-                <button type="button" class="admin-btn" id="barcode-scanner-use-manual">Usar referencia</button>
+                <input class="form-control" id="barcode-scanner-manual" inputmode="text" autocomplete="off" placeholder="Referencia manual (respaldo)">
+                <button type="button" class="admin-btn" id="barcode-scanner-use-manual">Confirmar</button>
             </div>
         </div>
     `;
@@ -1563,15 +1563,71 @@ function getBarcodeCameraErrorMessage(error) {
     const name = String(error?.name || '');
     const message = String(error?.message || error || '');
     if (/NotAllowed|Permission|denied/i.test(`${name} ${message}`)) {
-        return 'Permiso de camara rechazado. Habilitalo en los ajustes del navegador o usa una foto / referencia manual.';
+        return 'Permiso de camara rechazado. Habilitalo en los ajustes del navegador o escribe la referencia manualmente.';
     }
     if (!window.isSecureContext) {
-        return 'La camara del celular requiere abrir BLYXU con HTTPS. Tambien puedes tomar una foto o escribir la referencia.';
+        return 'La camara del celular requiere abrir BLYXU con HTTPS. Mientras tanto puedes escribir la referencia manualmente.';
     }
-    return 'No se pudo abrir la camara. Usa una foto del codigo o escribe la referencia manualmente.';
+    return 'No se pudo abrir la camara. Revisa sus permisos o escribe la referencia manualmente.';
 }
 
-async function startHtml5BarcodeCamera(reader, video, status, useCode) {
+function getBarcodeFormatLabel(format) {
+    const normalized = String(format || '').trim().toLowerCase().replace(/[-\s]/g, '_');
+    const labels = {
+        qr_code: 'QR',
+        qr: 'QR',
+        code_128: 'CODE 128',
+        code_39: 'CODE 39',
+        ean_13: 'EAN-13',
+        ean_8: 'EAN-8',
+        upc_a: 'UPC-A',
+        upc_e: 'UPC-E',
+        itf: 'ITF'
+    };
+    return labels[normalized] || String(format || 'Codigo').toUpperCase();
+}
+
+function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed }) {
+    let candidate = '';
+    let candidateHits = 0;
+    let lastSeenAt = 0;
+    let confirmed = false;
+
+    return (rawCode, format = '') => {
+        if (confirmed) return true;
+        const cleanCode = normalizeBarcodeValue(rawCode);
+        if (!cleanCode) return false;
+
+        const now = Date.now();
+        if (candidate === cleanCode && now - lastSeenAt < 1600) {
+            candidateHits += 1;
+        } else {
+            candidate = cleanCode;
+            candidateHits = 1;
+        }
+        lastSeenAt = now;
+
+        if (valueLabel) valueLabel.textContent = cleanCode;
+        if (formatLabel) {
+            formatLabel.textContent = `${getBarcodeFormatLabel(format)} · Verificando ${Math.min(candidateHits, 2)}/2`;
+        }
+        readout?.classList.add('is-detected');
+
+        if (candidateHits < 2) {
+            if (status) status.textContent = 'Codigo detectado. Mantenlo quieto un instante para confirmarlo.';
+            return false;
+        }
+
+        confirmed = true;
+        readout?.classList.add('is-confirmed');
+        if (formatLabel) formatLabel.textContent = `${getBarcodeFormatLabel(format)} · Lectura confirmada`;
+        if (status) status.textContent = 'Codigo confirmado. Generando su referencia QR...';
+        window.setTimeout(() => onConfirmed(cleanCode), 180);
+        return true;
+    };
+}
+
+async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode) {
     await loadHtml5QrcodeLibrary();
     if (typeof window.Html5Qrcode !== 'function') return false;
     if (video) video.style.display = 'none';
@@ -1592,7 +1648,10 @@ async function startHtml5BarcodeCamera(reader, video, status, useCode) {
             }),
             aspectRatio: 1.333334
         },
-        decodedText => useCode(decodedText),
+        (decodedText, decodedResult) => {
+            const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
+            handleDetectedCode(decodedText, detectedFormat);
+        },
         () => {}
     );
     if (!reader?.isConnected) {
@@ -1601,51 +1660,8 @@ async function startHtml5BarcodeCamera(reader, video, status, useCode) {
         if (activeHtml5BarcodeScanner === scanner) activeHtml5BarcodeScanner = null;
         return true;
     }
-    if (status) status.textContent = 'Camara activa. Acerca el QR o codigo hasta que quede dentro del marco.';
+    if (status) status.textContent = 'Camara activa. La lectura es automatica: manten el codigo dentro del marco.';
     return true;
-}
-
-async function scanBarcodeImageFile(file, status, useCode) {
-    if (!file) return;
-    if (status) status.textContent = 'Leyendo la imagen...';
-
-    try {
-        if (activeHtml5BarcodeScanner) {
-            try { await activeHtml5BarcodeScanner.stop(); } catch (error) {}
-            try { activeHtml5BarcodeScanner.clear(); } catch (error) {}
-            activeHtml5BarcodeScanner = null;
-        }
-        if (typeof window.Html5Qrcode === 'function') {
-            const formatsToSupport = getHtml5BarcodeFormats();
-            const scanner = new window.Html5Qrcode('barcode-scanner-reader', { formatsToSupport });
-            activeHtml5BarcodeScanner = scanner;
-            const decodedText = await scanner.scanFile(file, true);
-            useCode(decodedText);
-            return;
-        }
-        if ('BarcodeDetector' in window && typeof createImageBitmap === 'function') {
-            const image = await createImageBitmap(file);
-            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code'] });
-            const codes = await detector.detect(image);
-            image.close?.();
-            if (codes?.length) {
-                useCode(codes[0].rawValue || codes[0].rawText || '');
-                return;
-            }
-        }
-        await loadHtml5QrcodeLibrary();
-        if (typeof window.Html5Qrcode === 'function') {
-            const formatsToSupport = getHtml5BarcodeFormats();
-            const scanner = new window.Html5Qrcode('barcode-scanner-reader', { formatsToSupport });
-            activeHtml5BarcodeScanner = scanner;
-            const decodedText = await scanner.scanFile(file, true);
-            useCode(decodedText);
-            return;
-        }
-        throw new Error('Codigo no detectado');
-    } catch (error) {
-        if (status) status.textContent = 'No se encontro un codigo legible. Intenta con mas luz, acerca la foto o escribe la referencia.';
-    }
 }
 
 async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
@@ -1655,7 +1671,9 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
     const status = modal.querySelector('#barcode-scanner-status');
     const manualInput = modal.querySelector('#barcode-scanner-manual');
     const reader = modal.querySelector('#barcode-scanner-reader');
-    const imageInput = modal.querySelector('#barcode-scanner-image');
+    const readout = modal.querySelector('#barcode-live-readout');
+    const valueLabel = modal.querySelector('#barcode-live-value');
+    const formatLabel = modal.querySelector('#barcode-live-format');
     const useCode = code => {
         const cleanCode = normalizeBarcodeValue(code);
         if (!cleanCode) return;
@@ -1668,6 +1686,13 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
         showToast('Referencia capturada', 'success');
         closeBarcodeScanner();
     };
+    const handleDetectedCode = createStableBarcodeHandler({
+        status,
+        readout,
+        valueLabel,
+        formatLabel,
+        onConfirmed: useCode
+    });
 
     modal.querySelector('#barcode-scanner-use-manual')?.addEventListener('click', () => useCode(manualInput?.value || ''));
     manualInput?.addEventListener('keydown', event => {
@@ -1676,21 +1701,22 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             useCode(manualInput.value);
         }
     });
-    imageInput?.addEventListener('change', () => {
-        scanBarcodeImageFile(imageInput.files?.[0], status, useCode);
-    });
-
     const permissionHintTimer = setTimeout(() => {
         if (scannerSession === barcodeScannerSession && modal.isConnected && status) {
-            status.textContent = 'Si no aparece el permiso de camara, revisa los ajustes del navegador. Tambien puedes tomar una foto o escribir la referencia.';
+            status.textContent = 'Si no aparece el permiso de camara, revisa los ajustes del navegador. La referencia manual queda disponible como respaldo.';
         }
     }, 6500);
 
     try {
         if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
-            const detector = new BarcodeDetector({
-                formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code']
-            });
+            const requestedFormats = ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code'];
+            const supportedFormats = typeof BarcodeDetector.getSupportedFormats === 'function'
+                ? await BarcodeDetector.getSupportedFormats()
+                : requestedFormats;
+            const detectorFormats = requestedFormats.filter(format => supportedFormats.includes(format));
+            const detector = detectorFormats.length
+                ? new BarcodeDetector({ formats: detectorFormats })
+                : new BarcodeDetector();
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' },
@@ -1705,17 +1731,23 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             }
             activeBarcodeScannerStream = stream;
             video.srcObject = activeBarcodeScannerStream;
-            await video.play();
             clearTimeout(permissionHintTimer);
-            if (status) status.textContent = 'Camara activa. Acerca el QR o codigo hasta que quede dentro del marco.';
+            if (status) status.textContent = 'Camara activa. La lectura es automatica: manten el codigo dentro del marco.';
 
+            let lastDetectionAt = 0;
             const scan = async () => {
                 if (!document.getElementById('barcode-scanner-modal')) return;
+                const now = performance.now();
+                if (now - lastDetectionAt < 90) {
+                    activeBarcodeScannerFrame = requestAnimationFrame(scan);
+                    return;
+                }
+                lastDetectionAt = now;
                 try {
                     const codes = await detector.detect(video);
                     if (codes && codes.length) {
-                        useCode(codes[0].rawValue || codes[0].rawText || '');
-                        return;
+                        const detectedCode = codes[0];
+                        if (handleDetectedCode(detectedCode.rawValue || detectedCode.rawText || '', detectedCode.format || '')) return;
                     }
                 } catch (error) {}
                 activeBarcodeScannerFrame = requestAnimationFrame(scan);
@@ -1724,7 +1756,7 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             return;
         }
 
-        if (await startHtml5BarcodeCamera(reader, video, status, useCode)) {
+        if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode)) {
             clearTimeout(permissionHintTimer);
             return;
         }

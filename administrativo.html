@@ -920,17 +920,45 @@
             from { transform:translateY(-52px); }
             to { transform:translateY(52px); }
         }
-        .barcode-scanner-file-row {
+        .barcode-live-readout {
             display:grid;
-            grid-template-columns:auto 1fr;
-            align-items:center;
-            gap:10px;
+            gap:4px;
             margin-top:12px;
+            padding:12px 14px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:8px;
+            background:rgba(255,255,255,.035);
+            transition:border-color .2s ease, background .2s ease, box-shadow .2s ease;
         }
-        .barcode-scanner-file-row small {
-            color:rgba(244,242,238,.48);
+        .barcode-live-readout > span {
+            color:rgba(244,242,238,.52);
+            font-size:10px;
+            font-weight:800;
+            letter-spacing:0;
+            text-transform:uppercase;
+        }
+        .barcode-live-readout strong {
+            overflow:hidden;
+            color:#f4f2ee;
+            font-family:ui-monospace, SFMono-Regular, Consolas, monospace;
+            font-size:15px;
+            line-height:1.35;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .barcode-live-readout small {
+            color:rgba(244,242,238,.5);
             font-size:11px;
-            line-height:1.3;
+        }
+        .barcode-live-readout.is-detected {
+            border-color:rgba(241,196,69,.5);
+            background:rgba(241,196,69,.07);
+            box-shadow:0 0 22px rgba(241,196,69,.08);
+        }
+        .barcode-live-readout.is-confirmed {
+            border-color:rgba(56,211,137,.55);
+            background:rgba(56,211,137,.08);
+            box-shadow:0 0 24px rgba(56,211,137,.1);
         }
         .barcode-scanner-manual-row {
             display:grid;
@@ -945,9 +973,7 @@
             .barcode-scanner-stage video,
             #barcode-scanner-reader,
             #barcode-scanner-reader video { min-height:260px; }
-            .barcode-scanner-file-row,
             .barcode-scanner-manual-row { grid-template-columns:1fr; }
-            .barcode-scanner-file-row .admin-btn,
             .barcode-scanner-manual-row .admin-btn { width:100%; }
         }
         .product-qr-generator img {
@@ -6690,7 +6716,7 @@
                                 <div class="product-config-card identity-card">
                                     <div class="config-card-heading"><span class="config-card-index">01</span><div><h3>Producto y venta</h3><p>Un solo bloque para identificar el producto, poner precio y definir donde se publica.</p></div></div>
                                     <div class="admin-form-grid">
-                                        <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> Escanear</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automático" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Escanear</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small><div class="product-qr-generator" id="prod-qr-generator"><img id="prod-generated-qr" alt="QR automatico del producto"><div class="product-qr-generator-copy"><span>QR autom&aacute;tico</span><strong id="prod-generated-qr-code">Generando referencia...</strong><small>Este mismo c&oacute;digo identifica el producto en inventario y Caja r&aacute;pida.</small></div><button type="button" class="admin-btn secondary" id="btn-preview-product-qr">Ver QR</button></div></div>
+                                        <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> C&oacute;digo f&iacute;sico</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automático" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Detectar c&oacute;digo</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small><div class="product-qr-generator" id="prod-qr-generator"><img id="prod-generated-qr" alt="QR automatico del producto"><div class="product-qr-generator-copy"><span>QR autom&aacute;tico</span><strong id="prod-generated-qr-code">Generando referencia...</strong><small>Este mismo c&oacute;digo identifica el producto en inventario y Caja r&aacute;pida.</small></div><button type="button" class="admin-btn secondary" id="btn-preview-product-qr">Ver QR</button></div></div>
                                         <div class="form-group"><label>Nombre del producto</label><input type="text" class="form-control" id="prod-nombre" name="Nombre" placeholder="Ej: Collar luna dorado" required><small class="field-hint">Es el nombre visible para el cliente.</small></div>
                                         <div class="form-group"><label>Categoria</label><input type="text" class="form-control" id="prod-categoria" name="Categoria" list="admin-category-options" placeholder="Escribe o elige una categoria" required><datalist id="admin-category-options"><option value="Collares"></option><option value="Pulseras"></option><option value="Aretes"></option><option value="Anillos"></option><option value="Sets"></option><option value="Dijes"></option><option value="BANNER"></option></datalist><small class="field-hint">Ayuda a ordenar tienda e inventario.</small></div>
                                         <div class="form-group"><label>Catálogo</label><select class="form-control" id="prod-catalogo" name="Catálogo"><option value="Ambos">Minorista y Mayorista</option><option value="Minorista">Solo Minorista</option><option value="Mayorista">Solo Mayorista</option></select><small class="field-hint">Define en que catalogo se publica.</small></div>
@@ -7417,7 +7443,7 @@
         });
     })();
     </script>
-    <script src="admin-app.js?v=admin-product-qr-mobile-20260929-7" defer></script>
+    <script src="admin-app.js?v=admin-live-barcode-to-qr-20260929-9" defer></script>
 </body>
 </html>
 
