@@ -869,7 +869,7 @@
             min-height:42px;
             display:flex;
             align-items:center;
-            margin-bottom:10px;
+            margin-bottom:0;
             padding:10px 12px;
             border:1px solid rgba(216,209,194,.18);
             border-radius:8px;
@@ -878,6 +878,18 @@
             font-size:12px;
             line-height:1.4;
         }
+        .barcode-scanner-status-wrap {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            align-items:stretch;
+            gap:8px;
+            margin-bottom:10px;
+        }
+        .barcode-camera-retry {
+            min-width:132px;
+            padding:9px 12px;
+        }
+        .barcode-camera-retry[hidden] { display:none!important; }
         .barcode-scanner-stage {
             position:relative;
             width:100%;
@@ -1002,10 +1014,14 @@
             }
             .barcode-scanner-status {
                 min-height:0;
-                margin-bottom:8px;
                 padding:9px 10px;
                 font-size:11px;
             }
+            .barcode-scanner-status-wrap {
+                grid-template-columns:1fr;
+                margin-bottom:8px;
+            }
+            .barcode-camera-retry { width:100%; }
             .barcode-scanner-stage,
             .barcode-scanner-stage video,
             #barcode-scanner-reader,
@@ -6087,34 +6103,55 @@
             .admin-section-drawer {
                 display: block !important;
                 position: fixed !important;
-                left: -262px !important;
-                top: 124px !important;
+                left: 0 !important;
+                top: 104px !important;
                 z-index: 90 !important;
                 width: 262px !important;
                 max-width: calc(100vw - 54px) !important;
-                transition: left .22s ease !important;
+                transform: translateX(calc(-100% - 8px)) !important;
+                transition: transform .22s ease !important;
             }
             .admin-section-drawer.open {
-                left: 0 !important;
+                transform: translateX(0) !important;
             }
             .admin-section-tab {
                 position: absolute !important;
-                right: -42px !important;
-                top: 18px !important;
-                width: 42px !important;
-                min-height: 132px !important;
+                right: -116px !important;
+                top: 12px !important;
+                width: 108px !important;
+                height: 42px !important;
+                min-height: 42px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 9px !important;
+                padding: 0 12px !important;
                 border: 1px solid rgba(255,255,255,.12) !important;
-                border-left: 0 !important;
-                border-radius: 0 18px 18px 0 !important;
+                border-radius: 8px !important;
                 background: rgba(17,17,20,.96) !important;
                 color: #f8f4ff !important;
-                font-size: 11px !important;
-                font-weight: 950 !important;
-                letter-spacing: 1.5px !important;
+                font-size: 10px !important;
+                font-weight: 900 !important;
+                letter-spacing: 0 !important;
                 text-transform: uppercase !important;
-                writing-mode: vertical-rl !important;
-                transform: rotate(180deg) !important;
-                box-shadow: 18px 18px 52px rgba(0,0,0,.34) !important;
+                writing-mode: horizontal-tb !important;
+                transform: none !important;
+                box-shadow: 12px 16px 38px rgba(0,0,0,.34) !important;
+                white-space: nowrap !important;
+                transition: opacity .15s ease !important;
+            }
+            .admin-section-tab::before {
+                content: '' !important;
+                width: 14px !important;
+                height: 2px !important;
+                flex: 0 0 14px !important;
+                border-radius: 2px !important;
+                background: currentColor !important;
+                box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor !important;
+            }
+            .admin-section-drawer.open .admin-section-tab {
+                opacity: 0 !important;
+                pointer-events: none !important;
             }
             .admin-section-panel {
                 max-height: calc(100vh - 158px) !important;
@@ -7505,7 +7542,7 @@
         });
     })();
     </script>
-    <script src="admin-app.js?v=admin-live-barcode-to-qr-20260929-9" defer></script>
+    <script src="admin-app.js?v=admin-camera-mobile-fix-20260930-13" defer></script>
 </body>
 </html>
 

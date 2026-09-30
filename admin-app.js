@@ -1471,7 +1471,7 @@ function loadHtml5QrcodeLibrary() {
 
     html5QrcodeLoadPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.src = 'html5-qrcode.min.js?v=2.3.8';
         script.async = true;
         script.onload = () => resolve(typeof window.Html5Qrcode === 'function');
         script.onerror = () => reject(new Error('No se pudo cargar el lector compatible'));
@@ -1520,7 +1520,10 @@ function buildBarcodeScannerModal() {
                 <div><span class="admin-kicker">Lectura automatica en vivo</span><h2>Detector inteligente</h2></div>
                 <button type="button" class="admin-btn secondary" data-barcode-close>Cerrar</button>
             </div>
-            <div id="barcode-scanner-status" class="barcode-scanner-status" aria-live="polite">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
+            <div class="barcode-scanner-status-wrap">
+                <div id="barcode-scanner-status" class="barcode-scanner-status" aria-live="polite">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
+                <button type="button" class="admin-btn secondary barcode-camera-retry" id="barcode-camera-retry" hidden>Reintentar camara</button>
+            </div>
             <div class="barcode-scanner-stage">
                 <video id="barcode-scanner-video" playsinline muted autoplay></video>
                 <div id="barcode-scanner-reader"></div>
@@ -1562,13 +1565,22 @@ function getHtml5BarcodeFormats() {
 function getBarcodeCameraErrorMessage(error) {
     const name = String(error?.name || '');
     const message = String(error?.message || error || '');
-    if (/NotAllowed|Permission|denied/i.test(`${name} ${message}`)) {
-        return 'Permiso de camara rechazado. Habilitalo en los ajustes del navegador o escribe la referencia manualmente.';
-    }
     if (!window.isSecureContext) {
-        return 'La camara del celular requiere abrir BLYXU con HTTPS. Mientras tanto puedes escribir la referencia manualmente.';
+        return 'La camara esta autorizada, pero el navegador la bloquea porque esta pagina no usa HTTPS. Abre BLYXU desde su direccion segura.';
     }
-    return 'No se pudo abrir la camara. Revisa sus permisos o escribe la referencia manualmente.';
+    if (/NotAllowed|Permission|denied/i.test(`${name} ${message}`)) {
+        return 'El navegador no entrego acceso a la camara. Revisa el permiso de este sitio y pulsa Reintentar camara.';
+    }
+    if (/NotReadable|TrackStart|Could not start|Abort/i.test(`${name} ${message}`)) {
+        return 'La camara esta permitida pero no pudo iniciar. Cierra otras apps que la usen y pulsa Reintentar camara.';
+    }
+    if (/NotFound|DevicesNotFound/i.test(`${name} ${message}`)) {
+        return 'No se encontro una camara disponible en este dispositivo.';
+    }
+    if (/Overconstrained|ConstraintNotSatisfied/i.test(`${name} ${message}`)) {
+        return 'La camara no acepta el modo solicitado. Pulsa Reintentar para abrirla en modo compatible.';
+    }
+    return 'No se pudo iniciar el video de la camara. Pulsa Reintentar camara o usa la referencia manual.';
 }
 
 function getBarcodeFormatLabel(format) {
@@ -1590,18 +1602,14 @@ function getBarcodeFormatLabel(format) {
 function getBarcodeVideoConstraints() {
     return {
         facingMode: { ideal: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        frameRate: { ideal: 30, max: 30 },
-        focusMode: { ideal: 'continuous' }
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
     };
 }
 
 function getBasicBarcodeVideoConstraints() {
     return {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        facingMode: { ideal: 'environment' }
     };
 }
 
@@ -1630,6 +1638,33 @@ async function optimizeBarcodeCameraStream(stream) {
     try {
         await track.applyConstraints({ advanced });
     } catch (error) {}
+}
+
+function attachBarcodeCameraStream(video, stream, { status, retryButton, scannerSession } = {}) {
+    if (!video) throw new DOMException('Vista de camara no disponible', 'NotReadableError');
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.srcObject = stream;
+
+    const startPlayback = () => {
+        if (!video.paused) return;
+        try {
+            Promise.resolve(video.play()).catch(() => {});
+        } catch (error) {}
+    };
+    if (video.readyState >= 1) startPlayback();
+    else video.addEventListener('loadedmetadata', startPlayback, { once: true });
+
+    window.setTimeout(() => {
+        if (scannerSession !== barcodeScannerSession || !video.isConnected) return;
+        if (video.videoWidth > 0 && video.videoHeight > 0) return;
+        startPlayback();
+        if (status) status.textContent = 'La camara esta abierta pero aun no entrega imagen. Pulsa Reintentar camara si continua en negro.';
+        if (retryButton) retryButton.hidden = false;
+    }, 4500);
 }
 
 function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed }) {
@@ -1714,6 +1749,7 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
     const status = modal.querySelector('#barcode-scanner-status');
     const manualInput = modal.querySelector('#barcode-scanner-manual');
     const reader = modal.querySelector('#barcode-scanner-reader');
+    const retryButton = modal.querySelector('#barcode-camera-retry');
     const readout = modal.querySelector('#barcode-live-readout');
     const valueLabel = modal.querySelector('#barcode-live-value');
     const formatLabel = modal.querySelector('#barcode-live-format');
@@ -1744,9 +1780,13 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             useCode(manualInput.value);
         }
     });
+    retryButton?.addEventListener('click', () => {
+        openBarcodeScanner({ targetInputId, onDetected });
+    });
     const permissionHintTimer = setTimeout(() => {
         if (scannerSession === barcodeScannerSession && modal.isConnected && status) {
-            status.textContent = 'Si no aparece el permiso de camara, revisa los ajustes del navegador. La referencia manual queda disponible como respaldo.';
+            status.textContent = 'La camara esta tardando en iniciar. Revisa el permiso del sitio o pulsa Reintentar camara.';
+            if (retryButton) retryButton.hidden = false;
         }
     }, 6500);
 
@@ -1760,17 +1800,26 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             const detector = detectorFormats.length
                 ? new BarcodeDetector({ formats: detectorFormats })
                 : new BarcodeDetector();
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: getBarcodeVideoConstraints(),
-                audio: false
-            });
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: getBarcodeVideoConstraints(),
+                    audio: false
+                });
+            } catch (error) {
+                if (!/Overconstrained|ConstraintNotSatisfied/i.test(String(error?.name || error || ''))) throw error;
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: getBasicBarcodeVideoConstraints(),
+                    audio: false
+                });
+            }
             if (scannerSession !== barcodeScannerSession || !modal.isConnected) {
                 stream.getTracks().forEach(track => track.stop());
                 return;
             }
             activeBarcodeScannerStream = stream;
             await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
-            video.srcObject = activeBarcodeScannerStream;
+            attachBarcodeCameraStream(video, activeBarcodeScannerStream, { status, retryButton, scannerSession });
             clearTimeout(permissionHintTimer);
             if (status) status.textContent = 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
 
@@ -1802,9 +1851,34 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
         }
         throw new Error('Escaner no disponible');
     } catch (error) {
+        let scannerError = error;
+        const errorSignature = `${error?.name || ''} ${error?.message || error || ''}`;
+        const canUseCompatibleReader = window.isSecureContext &&
+            !/NotAllowed|Permission|denied|Security|NotReadable|TrackStart|NotFound|DevicesNotFound/i.test(errorSignature);
+
+        if (canUseCompatibleReader) {
+            if (activeBarcodeScannerStream) {
+                activeBarcodeScannerStream.getTracks().forEach(track => track.stop());
+                activeBarcodeScannerStream = null;
+            }
+            if (video) {
+                video.srcObject = null;
+                video.style.display = 'none';
+            }
+            try {
+                if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode)) {
+                    clearTimeout(permissionHintTimer);
+                    return;
+                }
+            } catch (fallbackError) {
+                scannerError = fallbackError;
+            }
+        }
+
         clearTimeout(permissionHintTimer);
         if (scannerSession !== barcodeScannerSession || !modal.isConnected) return;
-        if (status) status.textContent = getBarcodeCameraErrorMessage(error);
+        if (status) status.textContent = getBarcodeCameraErrorMessage(scannerError);
+        if (retryButton) retryButton.hidden = false;
         if (video) video.style.display = 'none';
         if (reader) reader.style.display = 'none';
     }
