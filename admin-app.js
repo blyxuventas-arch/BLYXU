@@ -1350,6 +1350,23 @@ function updateProductBarcodeField(force = false) {
         barcodeInput.value = generated;
         barcodeInput.dataset.autoBarcode = '1';
     }
+    updateProductQrPreview();
+}
+
+function updateProductQrPreview() {
+    const barcodeInput = document.getElementById('prod-barcode');
+    const image = document.getElementById('prod-generated-qr');
+    const codeLabel = document.getElementById('prod-generated-qr-code');
+    const code = normalizeBarcodeValue(barcodeInput?.value || makeProductBarcode(
+        getInputValue('prod-id-producto'),
+        getInputValue('prod-id')
+    ));
+
+    if (codeLabel) codeLabel.textContent = code || 'Generando referencia...';
+    if (image) {
+        image.hidden = !code;
+        if (code) image.src = getInventoryQrImageUrl(code, 240);
+    }
 }
 
 function setProductBarcodeScanMode(enabled) {
@@ -1376,6 +1393,7 @@ function setProductBarcodeScanMode(enabled) {
         updateProductBarcodeField(true);
         if (hint) hint.textContent = 'Se genera solo para unir todas las variantes y asigna codigo interno automatico.';
     }
+    updateProductQrPreview();
 }
 
 function initProductBarcodeField() {
@@ -1408,6 +1426,7 @@ function initProductBarcodeField() {
     barcodeInput?.addEventListener('input', () => {
         const scanModeEnabled = document.getElementById('prod-barcode-scan-mode')?.checked === true;
         barcodeInput.dataset.autoBarcode = scanModeEnabled && barcodeInput.value.trim() ? '0' : '1';
+        updateProductQrPreview();
     });
     document.getElementById('prod-barcode-scan-mode')?.addEventListener('change', event => {
         setProductBarcodeScanMode(event.target.checked);
@@ -1422,9 +1441,13 @@ function initProductBarcodeField() {
                     input.value = normalizeBarcodeValue(code);
                     input.dataset.autoBarcode = '0';
                     setProductBarcodeScanMode(true);
+                    updateProductQrPreview();
                 }
             }
         });
+    });
+    document.getElementById('btn-preview-product-qr')?.addEventListener('click', () => {
+        window.openProductFormQrPreview?.();
     });
 
     ['prod-id-producto', 'prod-id'].forEach(id => {
@@ -1433,12 +1456,36 @@ function initProductBarcodeField() {
     });
     updateProductBarcodeField();
     setProductBarcodeScanMode(false);
+    updateProductQrPreview();
 }
 
 let activeBarcodeScannerStream = null;
 let activeBarcodeScannerFrame = null;
+let activeHtml5BarcodeScanner = null;
+let html5QrcodeLoadPromise = null;
+let barcodeScannerSession = 0;
+
+function loadHtml5QrcodeLibrary() {
+    if (typeof window.Html5Qrcode === 'function') return Promise.resolve(true);
+    if (html5QrcodeLoadPromise) return html5QrcodeLoadPromise;
+
+    html5QrcodeLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.async = true;
+        script.onload = () => resolve(typeof window.Html5Qrcode === 'function');
+        script.onerror = () => reject(new Error('No se pudo cargar el lector compatible'));
+        document.head.appendChild(script);
+    }).catch(error => {
+        html5QrcodeLoadPromise = null;
+        throw error;
+    });
+    return html5QrcodeLoadPromise;
+}
 
 function closeBarcodeScanner() {
+    barcodeScannerSession += 1;
+    document.getElementById('barcode-scanner-modal')?.remove();
     if (activeBarcodeScannerFrame) {
         cancelAnimationFrame(activeBarcodeScannerFrame);
         activeBarcodeScannerFrame = null;
@@ -1447,7 +1494,19 @@ function closeBarcodeScanner() {
         activeBarcodeScannerStream.getTracks().forEach(track => track.stop());
         activeBarcodeScannerStream = null;
     }
-    document.getElementById('barcode-scanner-modal')?.remove();
+    if (activeHtml5BarcodeScanner) {
+        const scanner = activeHtml5BarcodeScanner;
+        activeHtml5BarcodeScanner = null;
+        try {
+            Promise.resolve(scanner.stop?.())
+                .catch(() => {})
+                .finally(() => {
+                    try { scanner.clear?.(); } catch (error) {}
+                });
+        } catch (error) {
+            try { scanner.clear?.(); } catch (clearError) {}
+        }
+    }
 }
 
 function buildBarcodeScannerModal() {
@@ -1456,16 +1515,25 @@ function buildBarcodeScannerModal() {
     modal.id = 'barcode-scanner-modal';
     modal.className = 'modal open';
     modal.innerHTML = `
-        <div class="modal-card" style="max-width:460px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
-                <h2 style="margin:0;">Escanear codigo</h2>
+        <div class="modal-card barcode-scanner-card">
+            <div class="barcode-scanner-head">
+                <div><span class="admin-kicker">Camara del dispositivo</span><h2>Escanear QR o codigo</h2></div>
                 <button type="button" class="admin-btn secondary" data-barcode-close>Cerrar</button>
             </div>
-            <div id="barcode-scanner-status" class="field-hint" style="margin-bottom:10px;">Apunta la camara a la marquilla del producto.</div>
-            <video id="barcode-scanner-video" playsinline muted style="width:100%;min-height:260px;border-radius:12px;background:#05020a;object-fit:cover;border:1px solid rgba(255,255,255,.12);"></video>
-            <div style="display:grid;gap:8px;margin-top:12px;">
-                <input class="form-control" id="barcode-scanner-manual" placeholder="Escribir codigo manualmente">
-                <button type="button" class="admin-btn" id="barcode-scanner-use-manual">Usar codigo</button>
+            <div id="barcode-scanner-status" class="barcode-scanner-status">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
+            <div class="barcode-scanner-stage">
+                <video id="barcode-scanner-video" playsinline muted></video>
+                <div id="barcode-scanner-reader"></div>
+                <div class="barcode-scanner-guide" aria-hidden="true"><span></span></div>
+            </div>
+            <div class="barcode-scanner-file-row">
+                <label class="admin-btn secondary" for="barcode-scanner-image">Tomar foto o elegir imagen</label>
+                <input type="file" id="barcode-scanner-image" accept="image/*" capture="environment" hidden>
+                <small>Util si el navegador no permite video en vivo.</small>
+            </div>
+            <div class="barcode-scanner-manual-row">
+                <input class="form-control" id="barcode-scanner-manual" placeholder="Escribir referencia manualmente">
+                <button type="button" class="admin-btn" id="barcode-scanner-use-manual">Usar referencia</button>
             </div>
         </div>
     `;
@@ -1476,11 +1544,118 @@ function buildBarcodeScannerModal() {
     return modal;
 }
 
+function getHtml5BarcodeFormats() {
+    const formats = window.Html5QrcodeSupportedFormats;
+    if (!formats) return [];
+    return [
+        formats.QR_CODE,
+        formats.CODE_128,
+        formats.CODE_39,
+        formats.EAN_13,
+        formats.EAN_8,
+        formats.UPC_A,
+        formats.UPC_E,
+        formats.ITF
+    ].filter(value => Number.isFinite(value));
+}
+
+function getBarcodeCameraErrorMessage(error) {
+    const name = String(error?.name || '');
+    const message = String(error?.message || error || '');
+    if (/NotAllowed|Permission|denied/i.test(`${name} ${message}`)) {
+        return 'Permiso de camara rechazado. Habilitalo en los ajustes del navegador o usa una foto / referencia manual.';
+    }
+    if (!window.isSecureContext) {
+        return 'La camara del celular requiere abrir BLYXU con HTTPS. Tambien puedes tomar una foto o escribir la referencia.';
+    }
+    return 'No se pudo abrir la camara. Usa una foto del codigo o escribe la referencia manualmente.';
+}
+
+async function startHtml5BarcodeCamera(reader, video, status, useCode) {
+    await loadHtml5QrcodeLibrary();
+    if (typeof window.Html5Qrcode !== 'function') return false;
+    if (video) video.style.display = 'none';
+    if (reader) reader.style.display = 'block';
+    const formatsToSupport = getHtml5BarcodeFormats();
+    const scanner = new window.Html5Qrcode('barcode-scanner-reader', {
+        formatsToSupport,
+        useBarCodeDetectorIfSupported: true
+    });
+    activeHtml5BarcodeScanner = scanner;
+    await scanner.start(
+        { facingMode: 'environment' },
+        {
+            fps: 10,
+            qrbox: (width, height) => ({
+                width: Math.max(220, Math.min(320, Math.floor(width * 0.82))),
+                height: Math.max(150, Math.min(240, Math.floor(height * 0.58)))
+            }),
+            aspectRatio: 1.333334
+        },
+        decodedText => useCode(decodedText),
+        () => {}
+    );
+    if (!reader?.isConnected) {
+        try { await scanner.stop(); } catch (error) {}
+        try { scanner.clear(); } catch (error) {}
+        if (activeHtml5BarcodeScanner === scanner) activeHtml5BarcodeScanner = null;
+        return true;
+    }
+    if (status) status.textContent = 'Camara activa. Acerca el QR o codigo hasta que quede dentro del marco.';
+    return true;
+}
+
+async function scanBarcodeImageFile(file, status, useCode) {
+    if (!file) return;
+    if (status) status.textContent = 'Leyendo la imagen...';
+
+    try {
+        if (activeHtml5BarcodeScanner) {
+            try { await activeHtml5BarcodeScanner.stop(); } catch (error) {}
+            try { activeHtml5BarcodeScanner.clear(); } catch (error) {}
+            activeHtml5BarcodeScanner = null;
+        }
+        if (typeof window.Html5Qrcode === 'function') {
+            const formatsToSupport = getHtml5BarcodeFormats();
+            const scanner = new window.Html5Qrcode('barcode-scanner-reader', { formatsToSupport });
+            activeHtml5BarcodeScanner = scanner;
+            const decodedText = await scanner.scanFile(file, true);
+            useCode(decodedText);
+            return;
+        }
+        if ('BarcodeDetector' in window && typeof createImageBitmap === 'function') {
+            const image = await createImageBitmap(file);
+            const detector = new BarcodeDetector({ formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code'] });
+            const codes = await detector.detect(image);
+            image.close?.();
+            if (codes?.length) {
+                useCode(codes[0].rawValue || codes[0].rawText || '');
+                return;
+            }
+        }
+        await loadHtml5QrcodeLibrary();
+        if (typeof window.Html5Qrcode === 'function') {
+            const formatsToSupport = getHtml5BarcodeFormats();
+            const scanner = new window.Html5Qrcode('barcode-scanner-reader', { formatsToSupport });
+            activeHtml5BarcodeScanner = scanner;
+            const decodedText = await scanner.scanFile(file, true);
+            useCode(decodedText);
+            return;
+        }
+        throw new Error('Codigo no detectado');
+    } catch (error) {
+        if (status) status.textContent = 'No se encontro un codigo legible. Intenta con mas luz, acerca la foto o escribe la referencia.';
+    }
+}
+
 async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
     const modal = buildBarcodeScannerModal();
+    const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
     const status = modal.querySelector('#barcode-scanner-status');
     const manualInput = modal.querySelector('#barcode-scanner-manual');
+    const reader = modal.querySelector('#barcode-scanner-reader');
+    const imageInput = modal.querySelector('#barcode-scanner-image');
     const useCode = code => {
         const cleanCode = normalizeBarcodeValue(code);
         if (!cleanCode) return;
@@ -1490,48 +1665,76 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             const target = document.getElementById(targetInputId);
             if (target) target.value = cleanCode;
         }
-        showToast('Codigo de barras capturado', 'success');
+        showToast('Referencia capturada', 'success');
         closeBarcodeScanner();
     };
 
     modal.querySelector('#barcode-scanner-use-manual')?.addEventListener('click', () => useCode(manualInput?.value || ''));
+    manualInput?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            useCode(manualInput.value);
+        }
+    });
+    imageInput?.addEventListener('change', () => {
+        scanBarcodeImageFile(imageInput.files?.[0], status, useCode);
+    });
 
-    if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
-        if (status) status.textContent = 'Tu navegador no permite escaneo automatico aqui. Escribe o pega el codigo de la marquilla.';
-        if (video) video.style.display = 'none';
-        manualInput?.focus();
-        return;
-    }
+    const permissionHintTimer = setTimeout(() => {
+        if (scannerSession === barcodeScannerSession && modal.isConnected && status) {
+            status.textContent = 'Si no aparece el permiso de camara, revisa los ajustes del navegador. Tambien puedes tomar una foto o escribir la referencia.';
+        }
+    }, 6500);
 
     try {
-        const detector = new BarcodeDetector({
-            formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code']
-        });
-        activeBarcodeScannerStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: 'environment' } },
-            audio: false
-        });
-        video.srcObject = activeBarcodeScannerStream;
-        await video.play();
-
-        const scan = async () => {
-            if (!document.getElementById('barcode-scanner-modal')) return;
-            try {
-                const codes = await detector.detect(video);
-                if (codes && codes.length) {
-                    useCode(codes[0].rawValue || codes[0].rawText || '');
-                    return;
-                }
-            } catch (error) {
-                if (status) status.textContent = 'No se pudo leer la imagen. Ajusta luz/enfoque o escribe el codigo manualmente.';
+        if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
+            const detector = new BarcodeDetector({
+                formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code']
+            });
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+            if (scannerSession !== barcodeScannerSession || !modal.isConnected) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
             }
-            activeBarcodeScannerFrame = requestAnimationFrame(scan);
-        };
-        scan();
+            activeBarcodeScannerStream = stream;
+            video.srcObject = activeBarcodeScannerStream;
+            await video.play();
+            clearTimeout(permissionHintTimer);
+            if (status) status.textContent = 'Camara activa. Acerca el QR o codigo hasta que quede dentro del marco.';
+
+            const scan = async () => {
+                if (!document.getElementById('barcode-scanner-modal')) return;
+                try {
+                    const codes = await detector.detect(video);
+                    if (codes && codes.length) {
+                        useCode(codes[0].rawValue || codes[0].rawText || '');
+                        return;
+                    }
+                } catch (error) {}
+                activeBarcodeScannerFrame = requestAnimationFrame(scan);
+            };
+            scan();
+            return;
+        }
+
+        if (await startHtml5BarcodeCamera(reader, video, status, useCode)) {
+            clearTimeout(permissionHintTimer);
+            return;
+        }
+        throw new Error('Escaner no disponible');
     } catch (error) {
-        if (status) status.textContent = 'No se pudo abrir la camara. Revisa permisos o escribe el codigo manualmente.';
+        clearTimeout(permissionHintTimer);
+        if (scannerSession !== barcodeScannerSession || !modal.isConnected) return;
+        if (status) status.textContent = getBarcodeCameraErrorMessage(error);
         if (video) video.style.display = 'none';
-        manualInput?.focus();
+        if (reader) reader.style.display = 'none';
     }
 }
 
@@ -2926,36 +3129,71 @@ function initLoginBokehBackgrounds() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('click', event => {
+        const button = event.target.closest('.sidebar-btn[data-view]');
+        if (!button) return;
+        const label = button.textContent.replace(/^\s*[A-Z]{2}\s*/, '').trim() || 'Panel';
+        switchDashboardView(button.dataset.view, label);
+    });
+    document.addEventListener('click', event => {
+        const inventoryQrButton = event.target.closest('[data-inventory-action="qr"]');
+        if (inventoryQrButton) {
+            window.openInventoryQrTicket?.(inventoryQrButton.dataset.productKey || '');
+            return;
+        }
+        const control = event.target.closest('[data-inventory-qr-action]');
+        if (!control) return;
+        const actions = {
+            close: window.closeInventoryQrTicket,
+            copy: window.copyInventoryQrReference,
+            image: window.openInventoryQrImage,
+            print: window.printInventoryQrTicket
+        };
+        actions[control.dataset.inventoryQrAction]?.();
+    });
+    document.addEventListener('change', event => {
+        if (event.target.matches('[data-qr-option]')) window.updateInventoryQrPreviewOptions?.();
+    });
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initLoginBokehBackgrounds();
     let adminHeavyFeaturesReady = false;
     function initAdminHeavyFeatures() {
         if (adminHeavyFeaturesReady) return;
         adminHeavyFeaturesReady = true;
-        initSettingsTabs();
-        initOrdersAdminTabs();
-        initChinaOrdersBuilder();
-        initAdminCostCalculator();
-        initRetailPriceToggle();
-        initMercadoPagoPublicToggle();
-        initContactConfigAdmin();
-        initWhatsAppConfigAdmin();
-        initInvoiceConfigAdmin();
-        initPromoConfigAdmin();
-        initHomeAdConfigAdmin();
-        initCustomerPromoAdmin();
-        initQRConfigAdmin();
-        initInventorySearch();
-        initInventoryActions();
-        initInventoryPdfExport();
-        initCarouselImageAdmin();
-        initProductImageUpload();
-        initProductGalleryUpload();
-        initColorPickers();
-        initProductMeasurementControls();
-        initProductBarcodeField();
-        resetProductForm(); // Initialize the form with auto-generated IDs
+        const initializers = [
+            initOrdersAdminTabs,
+            initSettingsTabs,
+            initChinaOrdersBuilder,
+            initAdminCostCalculator,
+            initRetailPriceToggle,
+            initMercadoPagoPublicToggle,
+            initContactConfigAdmin,
+            initWhatsAppConfigAdmin,
+            initInvoiceConfigAdmin,
+            initPromoConfigAdmin,
+            initHomeAdConfigAdmin,
+            initCustomerPromoAdmin,
+            initQRConfigAdmin,
+            initInventorySearch,
+            initInventoryActions,
+            initInventoryPdfExport,
+            initCarouselImageAdmin,
+            initProductImageUpload,
+            initProductGalleryUpload,
+            initColorPickers,
+            initProductMeasurementControls,
+            initProductBarcodeField,
+            resetProductForm
+        ];
+        initializers.forEach(initializer => {
+            try {
+                initializer();
+            } catch (error) {
+                console.error('No se pudo inicializar un modulo administrativo:', error);
+            }
+        });
     }
+    window.initAdminHeavyFeatures = initAdminHeavyFeatures;
     const settingsSidebarBtn = document.querySelector('.sidebar-btn[onclick*="settings"]');
     if (settingsSidebarBtn) {
         settingsSidebarBtn.innerHTML = '<span style="font-size:18px; width:24px;">&#9881;</span> Ajustes y Banner';
@@ -3197,9 +3435,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (renderError) {
                     console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
                 }
+                const savedQrTicket = getProductFormQrTicketData(finalData);
                 const savedVariantsCount = savedProducts.length - 1;
                 showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} actualizacion(es) de variante guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
                 resetProductForm();
+                showProductQrTicket(savedQrTicket);
                 btn.disabled = false;
                 btn.textContent = 'Guardar producto y variantes';
                 const editModal = document.getElementById('edit-product-modal');
@@ -5814,6 +6054,65 @@ function getInventoryQrTicketData(product) {
     };
 }
 
+function getProductFormQrTicketData(source = null) {
+    const data = source || {};
+    const variationId = String(data['ID Variacion'] || data['ID Variación'] || data.idVariacion || getInputValue('prod-id') || '').trim();
+    const motherId = String(data['ID Producto'] || data.idProducto || getInputValue('prod-id-producto') || '').trim();
+    const sku = String(data.SKU || getInputValue('prod-sku') || '').trim();
+    const reference = normalizeBarcodeValue(
+        getProductBarcode(data) ||
+        data['Codigo Barras'] ||
+        getInputValue('prod-barcode') ||
+        makeProductBarcode(motherId, variationId) ||
+        sku
+    );
+    const wholesalePrice = parseAdminInvoiceMoney(data['Precio Mayor'] || data['Precio Mayorista'] || getInputValue('prod-precio-mayorista') || 0);
+    return {
+        reference,
+        name: data.Nombre || data['Nombre del Producto'] || getInputValue('prod-nombre') || 'Producto BLYXU',
+        sku,
+        variationId,
+        motherId,
+        category: data.Categoria || data['Categoría'] || getInputValue('prod-categoria') || '-',
+        stock: Number(data.Stock || data.Cantidad || data['Stock Inicial'] || getInputValue('prod-stock-inicial') || 0) || 0,
+        price: parseAdminInvoiceMoney(data.Precio || getInputValue('prod-precio') || 0),
+        wholesalePrice,
+        wholesaleCode: encodeInventoryWholesalePrice(wholesalePrice),
+        imageUrl: getInventoryQrImageUrl(reference)
+    };
+}
+
+function showProductQrTicket(ticket) {
+    const modal = document.getElementById('inventory-qr-modal');
+    if (!modal || !ticket?.reference) {
+        showToast('Primero genera o escanea una referencia para el producto', 'warning');
+        return;
+    }
+
+    modal.dataset.productKey = '';
+    modal.dataset.reference = ticket.reference;
+    modal.dataset.ticketJson = JSON.stringify(ticket);
+    const qrImg = document.getElementById('inventory-qr-image');
+    if (qrImg) {
+        qrImg.src = getInventoryQrImageUrl(ticket.reference);
+        qrImg.alt = `QR ${ticket.reference}`;
+    }
+    setInventoryQrText('inventory-qr-ref', ticket.reference);
+    setInventoryQrText('inventory-qr-name', ticket.name);
+    setInventoryQrText('inventory-qr-category', ticket.category || '-');
+    setInventoryQrText('inventory-qr-sku', ticket.sku || ticket.variationId || '-');
+    setInventoryQrText('inventory-qr-stock', `${ticket.stock} und.`);
+    setInventoryQrText('inventory-qr-price', formatAdminMoney(ticket.price));
+    setInventoryQrText('inventory-qr-pm', ticket.wholesaleCode ? `PM: ${ticket.wholesaleCode}` : 'PM: -');
+    modal.classList.add('open');
+    updateInventoryQrPreviewOptions();
+}
+
+window.openProductFormQrPreview = function() {
+    ensureProductHierarchyIds();
+    showProductQrTicket(getProductFormQrTicketData());
+};
+
 function setInventoryQrText(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
@@ -5864,6 +6163,7 @@ window.openInventoryQrTicket = function(key) {
 
     modal.dataset.productKey = key;
     modal.dataset.reference = ticket.reference;
+    modal.dataset.ticketJson = JSON.stringify(ticket);
     const qrImg = document.getElementById('inventory-qr-image');
     if (qrImg) {
         qrImg.src = ticket.imageUrl;
@@ -5907,12 +6207,18 @@ window.copyInventoryQrReference = function() {
 window.printInventoryQrTicket = function() {
     const modal = document.getElementById('inventory-qr-modal');
     const product = getInventoryProductByKey(modal?.dataset.productKey || '');
-    if (!product) {
+    let ticket = product ? getInventoryQrTicketData(product) : null;
+    if (!ticket && modal?.dataset.ticketJson) {
+        try {
+            ticket = JSON.parse(modal.dataset.ticketJson);
+        } catch (error) {
+            ticket = null;
+        }
+    }
+    if (!ticket?.reference) {
         showToast('No se encontro el producto para imprimir', 'error');
         return;
     }
-
-    const ticket = getInventoryQrTicketData(product);
     const options = getInventoryQrTicketOptions();
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -8163,6 +8469,10 @@ function drawDashboardDonutChart(canvasId, legendId, entries, total) {
 
 
 function switchDashboardView(viewId, title) {
+    if (viewId === 'quick-sale') {
+        openQuickSaleInOrders();
+        return;
+    }
     document.querySelectorAll('.dashboard-section').forEach(function (el) { el.classList.remove('active'); });
     document.querySelectorAll('.sidebar-btn').forEach(function (el) { el.classList.remove('active'); });
     var target = document.getElementById('view-' + viewId);
@@ -8179,7 +8489,10 @@ function switchDashboardView(viewId, title) {
         document.getElementById('admin-section-toggle')?.setAttribute('aria-expanded', 'false');
     }
     var area = document.querySelector('.dashboard-content-area');
-    if (area) area.scrollTop = 0;
+    if (area) {
+        area.scrollTop = 0;
+        area.scrollLeft = 0;
+    }
 
     if (viewId === 'orders') {
         cargarPedidos();
@@ -8193,6 +8506,23 @@ function switchDashboardView(viewId, title) {
     if (viewId === 'settings' && typeof window.activateSettingsTab === 'function') {
         window.activateSettingsTab('storefront');
     }
+}
+
+window.switchDashboardView = switchDashboardView;
+
+function openQuickSaleInOrders() {
+    switchDashboardView('orders', 'Ventas y Facturación');
+    if (typeof window.switchOrdersAdminTab === 'function') {
+        window.switchOrdersAdminTab('quick-sale');
+    } else {
+        window.activeOrdersAdminTab = 'quick-sale';
+    }
+    if (!Array.isArray(inventario) || !inventario.length) {
+        cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
+    } else {
+        renderQuickSaleResults();
+    }
+    setTimeout(() => document.getElementById('quick-sale-search')?.focus(), 80);
 }
 
 // === LÃ“GICA DE PEDIDOS Y FACTURACIÃ“N DIGITAL ===
@@ -10284,7 +10614,7 @@ async function initChinaOrdersBuilder() {
 
 window.pedidosList = [];
 window.facturasList = [];
-window.activeOrdersAdminTab = 'orders-mayor';
+window.activeOrdersAdminTab = 'quick-sale';
 const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
 const ADMIN_ORDERS_CACHE_TTL = 45 * 1000;
 let adminOrdersLoadPromise = null;
@@ -10836,6 +11166,20 @@ function initOrdersAdminTabs() {
             panel.classList.toggle('active', active);
             panel.hidden = !active;
         });
+        const ordersShell = container.querySelector('.orders-admin-shell');
+        if (ordersShell) ordersShell.scrollLeft = 0;
+        container.scrollLeft = 0;
+        if (searchInput) {
+            searchInput.style.display = tabId === 'quick-sale' ? 'none' : '';
+        }
+        if (tabId === 'quick-sale') {
+            if (!Array.isArray(inventario) || !inventario.length) {
+                cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
+            } else {
+                renderQuickSaleResults();
+            }
+            setTimeout(() => document.getElementById('quick-sale-search')?.focus(), 60);
+        }
     }
 
     window.switchOrdersAdminTab = activate;
@@ -10847,7 +11191,7 @@ function initOrdersAdminTabs() {
         });
     }
 
-    activate(window.activeOrdersAdminTab || 'orders-mayor');
+    activate(window.activeOrdersAdminTab || 'quick-sale');
 }
 
 // === CREADOR Y EDITOR DE FACTURAS ===
@@ -10860,6 +11204,9 @@ window.invoiceSearchResults = [];
 window.invoiceInventoryLoadingPromise = null;
 window.invoiceInventoryLoadTried = false;
 window.invoicePreviousPayment = 0;
+window.quickSaleCart = [];
+window.quickSaleResults = [];
+window.quickSaleSelectedKey = '';
 
 function readInvoiceField(source, fields, fallback = '') {
     return getProductField(source || {}, fields, fallback);
@@ -10908,6 +11255,528 @@ async function ensureInvoiceInventoryLoaded() {
     });
     return window.invoiceInventoryLoadingPromise;
 }
+
+function getQuickSaleStock(product) {
+    return Number(getProductField(product || {}, ['Cantidad', 'Stock', 'Stock Inicial'], 0)) || 0;
+}
+
+function getQuickSalePrice(product, customerType) {
+    const type = normalizeAdminCustomerType(customerType || document.getElementById('quick-sale-customer-type')?.value || 'Detal');
+    const retail = parseAdminInvoiceMoney(getProductField(product || {}, ['Precio'], 0));
+    const wholesale = parseAdminInvoiceMoney(getProductField(product || {}, ['Precio Mayor', 'Precio Mayorista', 'Precio_Mayorista'], 0));
+    return type === 'mayor' && wholesale > 0 ? wholesale : retail;
+}
+
+function getQuickSaleProductMeta(product) {
+    const key = getInventoryProductKey(product);
+    const name = getInvoiceProductName(product);
+    const sku = getInvoiceProductSku(product) || getInvoiceProductId(product);
+    const image = getInventoryProductImage(product, 'inventory') || normalizeImageUrl(product?.Imagen || product?.['Imagen Principal'] || '', 'inventory') || 'Logo2.png';
+    const category = getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, '');
+    const color = getProductField(product, ['Color', 'color'], '');
+    const size = getProductField(product, ['Tamano', 'Tamaño', 'Talla', 'Talla Textil'], '');
+    const style = cleanProductStyleValue(getProductField(product, ['Estilo', 'estilo'], ''));
+    const description = getProductField(product, ['Caracteristicas del producto', 'Características del producto', 'Descripcion', 'Descripción'], '');
+    return { key, name, sku, image, category, color, size, style, description, stock: getQuickSaleStock(product) };
+}
+
+function getQuickSaleSearchText(product) {
+    return normalizeSearchText([
+        getInvoiceProductName(product),
+        getInvoiceProductSku(product),
+        getInvoiceProductId(product),
+        getProductBarcode(product),
+        getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, ''),
+        product?.Color,
+        product?.Estilo,
+        product?.Tamano,
+        product?.Descripcion
+    ].join(' '));
+}
+
+function findQuickSaleProductByReference(rawCode) {
+    const code = normalizeBarcodeValue(rawCode);
+    if (!code || !Array.isArray(inventario)) return null;
+    return inventario.find(product => {
+        if (isBannerInventoryProduct(product)) return false;
+        const references = [
+            getProductBarcode(product),
+            getInvoiceProductSku(product),
+            getInvoiceProductId(product),
+            getInventoryVariationId(product),
+            getInventoryMotherId(product)
+        ].map(normalizeBarcodeValue).filter(Boolean);
+        return references.includes(code);
+    }) || null;
+}
+
+async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
+    const code = normalizeBarcodeValue(rawCode);
+    const input = document.getElementById('quick-sale-search');
+    if (!code || !input) return false;
+
+    input.value = code;
+    if (!Array.isArray(inventario) || !inventario.length) {
+        await cargarInventario({ silent: true });
+    }
+    renderQuickSaleResults();
+
+    const product = findQuickSaleProductByReference(code);
+    if (!product) {
+        showToast('No se encontro un producto con esa referencia', 'warning');
+        input.focus();
+        input.select();
+        return false;
+    }
+
+    const key = getInventoryProductKey(product);
+    selectQuickSaleProduct(key);
+    if (addToSale && getQuickSaleStock(product) > 0) {
+        addQuickSaleProduct(key, 1);
+        showToast('Producto escaneado y agregado a la venta', 'success');
+    } else if (getQuickSaleStock(product) <= 0) {
+        showToast('Producto encontrado, pero esta agotado', 'warning');
+    } else {
+        showToast('Producto encontrado por referencia', 'success');
+    }
+    return true;
+}
+
+window.handleQuickSaleScannedCode = handleQuickSaleScannedCode;
+
+function openQuickSaleScanner() {
+    openBarcodeScanner({
+        targetInputId: 'quick-sale-search',
+        onDetected: code => {
+            handleQuickSaleScannedCode(code, true).catch(error => {
+                console.error('No se pudo procesar el codigo escaneado:', error);
+                showToast('No se pudo procesar el codigo escaneado', 'error');
+            });
+        }
+    });
+}
+
+window.openQuickSaleScanner = openQuickSaleScanner;
+
+function renderQuickSaleResults() {
+    const container = document.getElementById('quick-sale-results');
+    const input = document.getElementById('quick-sale-search');
+    if (!container || !input) return;
+
+    const q = normalizeSearchText(input.value || '');
+    if (q.length < 2) {
+        container.innerHTML = '<div class="quick-sale-empty">Escribe al menos 2 letras para buscar en inventario.</div>';
+        window.quickSaleResults = [];
+        return;
+    }
+
+    if (!Array.isArray(inventario) || !inventario.length) {
+        container.innerHTML = '<div class="quick-sale-empty">Cargando inventario...</div>';
+        cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
+        return;
+    }
+
+    const terms = q.split(/\s+/).filter(Boolean);
+    const results = inventario
+        .filter(product => !isBannerInventoryProduct(product))
+        .map(product => {
+            const text = getQuickSaleSearchText(product);
+            const matches = terms.every(term => text.includes(term));
+            if (!matches) return null;
+            let score = 0;
+            terms.forEach(term => {
+                if (normalizeSearchText(getInvoiceProductName(product)).startsWith(term)) score += 50;
+                if (normalizeSearchText(getInvoiceProductSku(product)).includes(term)) score += 30;
+                if (normalizeSearchText(getProductBarcode(product)).includes(term)) score += 35;
+            });
+            return { product, score };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 18)
+        .map(entry => entry.product);
+
+    window.quickSaleResults = results;
+
+    if (!results.length) {
+        container.innerHTML = `<div class="quick-sale-empty">Sin resultados para "${escapeHtml(input.value)}".</div>`;
+        return;
+    }
+
+    container.innerHTML = results.map(product => {
+        const meta = getQuickSaleProductMeta(product);
+        const price = getQuickSalePrice(product);
+        const stockClass = meta.stock <= 0 ? 'out' : (meta.stock <= 3 ? 'low' : '');
+        const active = meta.key === window.quickSaleSelectedKey ? ' active' : '';
+        return `
+            <article class="quick-sale-product-tile${active}" data-quick-sale-key="${escapeHtml(meta.key)}" tabindex="0">
+                <div class="quick-sale-tile-image">
+                    <img src="${escapeHtml(meta.image)}" alt="${escapeHtml(meta.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.src='Logo2.png'">
+                    <span class="quick-sale-stock-pill ${stockClass}">${meta.stock > 0 ? meta.stock + ' und.' : 'Agotado'}</span>
+                </div>
+                <div class="quick-sale-tile-copy">
+                    <strong>${escapeHtml(meta.name)}</strong>
+                    <span>${escapeHtml(meta.category || 'Sin categoria')} · ${escapeHtml(meta.sku || 'S/N')}</span>
+                    <small>${escapeHtml([meta.color, meta.size, meta.style].filter(Boolean).join(' / ') || 'Sin características extra')}</small>
+                </div>
+                <div class="quick-sale-tile-bottom">
+                    <b>${formatAdminInvoiceMoney(price)}</b>
+                    <button class="quick-sale-add-card" type="button" data-quick-sale-add="${escapeHtml(meta.key)}" ${meta.stock <= 0 ? 'disabled' : ''} aria-label="Añadir ${escapeHtml(meta.name)}">+</button>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function renderQuickSaleDetail(product) {
+    const detail = document.getElementById('quick-sale-product-detail');
+    if (!detail) return;
+
+    if (!product) {
+        detail.innerHTML = '<div class="quick-sale-empty">Selecciona un producto para ver imagen, stock y características.</div>';
+        return;
+    }
+
+    const meta = getQuickSaleProductMeta(product);
+    const price = getQuickSalePrice(product);
+    const stockClass = meta.stock <= 0 ? 'out' : (meta.stock <= 3 ? 'low' : '');
+    detail.innerHTML = `
+        <div class="quick-sale-product-card">
+            <div class="quick-sale-detail-top">
+                <div class="quick-sale-detail-image"><img src="${escapeHtml(meta.image)}" alt="${escapeHtml(meta.name)}" decoding="async" referrerpolicy="no-referrer" onerror="this.src='Logo2.png'"></div>
+                <div>
+                <span class="quick-sale-stock-pill ${stockClass}">${meta.stock > 0 ? meta.stock + ' unidades disponibles' : 'Agotado'}</span>
+                <h3 class="quick-sale-detail-title">${escapeHtml(meta.name)}</h3>
+                <div class="quick-sale-detail-price">${formatAdminInvoiceMoney(price)}</div>
+                </div>
+            </div>
+            <div class="quick-sale-detail-specs">
+                <div><span>SKU / ID</span><strong>${escapeHtml(meta.sku || 'S/N')}</strong></div>
+                <div><span>Categoria</span><strong>${escapeHtml(meta.category || '-')}</strong></div>
+                <div><span>Color</span><strong>${escapeHtml(meta.color || '-')}</strong></div>
+                <div><span>Talla / medida</span><strong>${escapeHtml(meta.size || '-')}</strong></div>
+                <div><span>Estilo</span><strong>${escapeHtml(meta.style || '-')}</strong></div>
+            </div>
+            ${meta.description ? `<div class="quick-sale-empty" style="text-align:left;">${escapeHtml(meta.description)}</div>` : ''}
+            <div class="quick-sale-add-row">
+                <input class="form-control" id="quick-sale-add-qty" type="number" min="1" max="${Math.max(1, meta.stock)}" value="1" ${meta.stock <= 0 ? 'disabled' : ''}>
+                <input class="form-control" id="quick-sale-add-price" type="number" min="0" value="${price}" ${meta.stock <= 0 ? 'disabled' : ''}>
+                <button class="admin-btn" type="button" onclick="addQuickSaleProduct('${escapeHtml(meta.key)}')" ${meta.stock <= 0 ? 'disabled' : ''}>Añadir a caja</button>
+                <button class="admin-btn secondary" type="button" onclick="openQuickSaleInvoicePreview()">Pasar al editor</button>
+            </div>
+        </div>
+    `;
+}
+
+window.selectQuickSaleProduct = function(key) {
+    window.quickSaleSelectedKey = String(key || '');
+    const product = getInventoryProductByKey(window.quickSaleSelectedKey);
+    renderQuickSaleResults();
+    renderQuickSaleDetail(product);
+};
+
+window.addQuickSaleProduct = function(key, qtyOverride = null, priceOverride = null) {
+    const product = getInventoryProductByKey(key);
+    if (!product) return showToast('No se encontro el producto seleccionado', 'error');
+
+    const meta = getQuickSaleProductMeta(product);
+    const qtyInput = document.getElementById('quick-sale-add-qty');
+    const priceInput = document.getElementById('quick-sale-add-price');
+    const detailMatches = window.quickSaleSelectedKey === String(key || '');
+    const qtySource = qtyOverride !== null ? qtyOverride : (detailMatches ? qtyInput?.value : 1);
+    const priceSource = priceOverride !== null ? priceOverride : (detailMatches ? priceInput?.value : getQuickSalePrice(product));
+    const qty = Math.max(1, parseInt(qtySource || 1, 10));
+    const price = Math.max(0, parseAdminInvoiceMoney(priceSource || getQuickSalePrice(product)));
+
+    if (meta.stock <= 0) return showToast('Este producto esta agotado', 'warning');
+    const existing = window.quickSaleCart.find(item => item.key === meta.key);
+    const currentQty = existing ? Number(existing.cantidad || 0) : 0;
+    if (currentQty + qty > meta.stock) {
+        return showToast(`Stock insuficiente. Disponible: ${meta.stock}`, 'warning');
+    }
+
+    if (existing) {
+        existing.cantidad += qty;
+        existing.precio = price;
+    } else {
+        window.quickSaleCart.push({
+            key: meta.key,
+            idVariacion: getInvoiceProductId(product),
+            nombre: meta.name,
+            sku: meta.sku,
+            cantidad: qty,
+            precio: price,
+            stock: meta.stock,
+            image: meta.image
+        });
+    }
+
+    renderQuickSaleCart();
+    showToast('Producto añadido a caja', 'success');
+};
+
+window.updateQuickSaleQty = function(key, value) {
+    const item = window.quickSaleCart.find(row => row.key === key);
+    if (!item) return;
+    const requested = Math.max(1, parseInt(value || 1, 10));
+    item.cantidad = Math.min(requested, Math.max(1, Number(item.stock || requested)));
+    renderQuickSaleCart();
+};
+
+window.removeQuickSaleItem = function(key) {
+    window.quickSaleCart = window.quickSaleCart.filter(item => item.key !== key);
+    renderQuickSaleCart();
+};
+
+window.clearQuickSaleCart = function() {
+    window.quickSaleCart = [];
+    renderQuickSaleCart();
+};
+
+function getQuickSaleTotals() {
+    return (window.quickSaleCart || []).reduce((acc, item) => {
+        const qty = Number(item.cantidad) || 1;
+        const price = Number(item.precio) || 0;
+        acc.count += qty;
+        acc.total += qty * price;
+        return acc;
+    }, { count: 0, total: 0 });
+}
+
+function renderQuickSaleCart() {
+    const cartEl = document.getElementById('quick-sale-cart');
+    const totals = getQuickSaleTotals();
+
+    ['quick-sale-count', 'quick-sale-summary-count'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(totals.count);
+    });
+    ['quick-sale-total', 'quick-sale-summary-total'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = formatAdminInvoiceMoney(totals.total);
+    });
+
+    if (!cartEl) return;
+    if (!window.quickSaleCart.length) {
+        cartEl.innerHTML = '<div class="quick-sale-empty">Agrega productos desde la búsqueda.</div>';
+        return;
+    }
+
+    cartEl.innerHTML = window.quickSaleCart.map(item => {
+        const subtotal = (Number(item.precio) || 0) * (Number(item.cantidad) || 1);
+        return `
+            <div class="quick-sale-cart-item">
+                <div class="quick-sale-cart-copy">
+                    <strong>${escapeHtml(item.nombre)}</strong>
+                    <span>${escapeHtml(item.sku || item.idVariacion || 'S/N')} · ${formatAdminInvoiceMoney(item.precio)} · Subtotal ${formatAdminInvoiceMoney(subtotal)}</span>
+                </div>
+                <input type="number" min="1" max="${Math.max(1, Number(item.stock || 1))}" value="${Number(item.cantidad) || 1}" onchange="updateQuickSaleQty('${escapeHtml(item.key)}', this.value)" aria-label="Cantidad de ${escapeHtml(item.nombre)}">
+                <button class="quick-sale-cart-remove" type="button" onclick="removeQuickSaleItem('${escapeHtml(item.key)}')" title="Quitar">x</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function applyQuickSaleLocalStockDiscount() {
+    (window.quickSaleCart || []).forEach(item => {
+        const product = getInventoryProductByKey(item.key);
+        if (!product) return;
+        const current = getQuickSaleStock(product);
+        const next = Math.max(0, current - (Number(item.cantidad) || 1));
+        product.Cantidad = next;
+        product.Stock = next;
+    });
+    writeInventoryCache(inventario);
+    clearPublicProductsCache();
+}
+
+function hydrateInvoiceEditorFromQuickSale(invoiceIdOverride = '') {
+    const totals = getQuickSaleTotals();
+    window.invoiceItems = (window.quickSaleCart || []).map(item => ({
+        idVariacion: item.idVariacion,
+        nombre: item.nombre,
+        sku: item.sku || item.idVariacion,
+        cantidad: Number(item.cantidad) || 1,
+        precio: Number(item.precio) || 0
+    }));
+    window.invoiceEditIndex = null;
+    window.invoiceEditSource = 'manual';
+    window.invoiceOriginalInvoiceId = '';
+    window.invoiceCustomerType = document.getElementById('quick-sale-customer-type')?.value || 'Detal';
+    window.invoicePreviousPayment = 0;
+
+    document.getElementById('inv-original-id').value = 'VENTA-CAJA';
+    document.getElementById('inv-edit-id').value = invoiceIdOverride || `CAJA-${Date.now()}`;
+    document.getElementById('inv-edit-nombre').value = document.getElementById('quick-sale-customer')?.value.trim() || 'Cliente mostrador';
+    document.getElementById('inv-edit-tel').value = document.getElementById('quick-sale-phone')?.value.trim() || '';
+    document.getElementById('inv-edit-dir').value = 'Venta por caja';
+    document.getElementById('inv-edit-ciudad').value = 'Mostrador';
+    document.getElementById('inv-edit-fecha').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('inv-edit-estado').value = 'Pago';
+    document.getElementById('inv-edit-metodo').value = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
+    document.getElementById('inv-edit-nota').value = document.getElementById('quick-sale-note')?.value.trim() || 'Venta realizada por caja / mostrador.';
+    document.getElementById('inv-edit-abono').value = String(totals.total);
+    setInvoiceCustomerTypeControl(window.invoiceCustomerType, 'Detal');
+    renderItemsFactura();
+}
+
+window.openQuickSaleInvoicePreview = function() {
+    if (!window.quickSaleCart.length) {
+        showToast('Agrega al menos un producto a la caja', 'warning');
+        return;
+    }
+    if (typeof window.abrirEditorFactura === 'function') {
+        window.abrirEditorFactura(null);
+    }
+    hydrateInvoiceEditorFromQuickSale();
+    document.getElementById('inv-editor-title').textContent = 'Factura de venta por caja';
+    document.getElementById('invoice-editor-modal').classList.add('open');
+};
+
+window.saveQuickSaleInvoice = async function() {
+    if (!window.quickSaleCart.length) {
+        showToast('Agrega al menos un producto a la caja', 'warning');
+        return;
+    }
+
+    const totals = getQuickSaleTotals();
+    const idFactura = `CAJA-${Date.now()}`;
+    const customer = document.getElementById('quick-sale-customer')?.value.trim() || 'Cliente mostrador';
+    const phone = document.getElementById('quick-sale-phone')?.value.trim() || '';
+    const method = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
+    const tipoCliente = getInvoiceCustomerTypeLabel(document.getElementById('quick-sale-customer-type')?.value, 'Detal');
+    const note = document.getElementById('quick-sale-note')?.value.trim();
+    const items = window.quickSaleCart.map(item => ({
+        idVariacion: item.idVariacion,
+        id: item.idVariacion,
+        nombre: item.nombre,
+        sku: item.sku || item.idVariacion,
+        cantidad: Number(item.cantidad) || 1,
+        precio: Number(item.precio) || 0,
+        canal: 'Caja'
+    }));
+
+    const payload = {
+        resource: 'facturas',
+        action: 'crear',
+        'ID Factura': idFactura,
+        'ID Pedido': 'VENTA-CAJA',
+        'ID Cliente': phone,
+        'Tipo Cliente': tipoCliente,
+        Fecha: new Date().toISOString().slice(0, 10),
+        Nombre: customer,
+        'Productos JSON': JSON.stringify(items),
+        'Cantidad Total': totals.count,
+        Subtotal: totals.total,
+        'Valor Abonado': totals.total,
+        'Saldo Pendiente': 0,
+        'Ultimo Abono': totals.total,
+        'Estado Factura': 'Pago',
+        pago: method,
+        entrega: 'Venta por caja / mostrador',
+        'Canal Venta': 'Caja',
+        Observaciones: note || 'Venta realizada por caja / mostrador.'
+    };
+
+    const btn = document.getElementById('quick-sale-save-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Registrando...';
+    }
+
+    try {
+        const res = await fetch(GOOGLE_SHEET_API, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (!result || result.status !== 'success') {
+            throw new Error(result?.error || result?.message || 'No se pudo registrar la venta');
+        }
+
+        window.facturasList = [payload, ...(window.facturasList || [])];
+        applyQuickSaleLocalStockDiscount();
+        renderFacturas();
+        renderQuickSaleResults();
+        renderQuickSaleDetail(getInventoryProductByKey(window.quickSaleSelectedKey));
+        renderAdminDashboard();
+        hydrateInvoiceEditorFromQuickSale(idFactura);
+        document.getElementById('inv-editor-title').textContent = 'Factura de venta por caja';
+        if (typeof window.imprimirFacturaEditor === 'function') {
+            window.imprimirFacturaEditor();
+        }
+        if (typeof window.switchOrdersAdminTab === 'function') {
+            window.switchOrdersAdminTab('invoices-mayor');
+        }
+        clearQuickSaleCart();
+        document.getElementById('quick-sale-customer').value = '';
+        document.getElementById('quick-sale-phone').value = '';
+        document.getElementById('quick-sale-note').value = '';
+        showToast('Venta por caja registrada como factura', 'success');
+    } catch (error) {
+        console.error(error);
+        showToast('Error registrando venta: ' + error.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Registrar venta y PDF';
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const quickSearch = document.getElementById('quick-sale-search');
+    const quickResults = document.getElementById('quick-sale-results');
+    const quickScanButton = document.getElementById('btn-scan-quick-sale');
+    const customerType = document.getElementById('quick-sale-customer-type');
+    const mobileViewSelect = document.getElementById('admin-mobile-view-select');
+
+    quickSearch?.addEventListener('input', renderQuickSaleResults);
+    quickSearch?.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        handleQuickSaleScannedCode(quickSearch.value, true).catch(error => {
+            console.error('No se pudo buscar la referencia ingresada:', error);
+        });
+    });
+    quickSearch?.addEventListener('focus', () => {
+        if (!Array.isArray(inventario) || !inventario.length) cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
+    });
+    quickScanButton?.addEventListener('click', openQuickSaleScanner);
+    quickResults?.addEventListener('click', event => {
+        const addBtn = event.target.closest('[data-quick-sale-add]');
+        if (addBtn) {
+            event.stopPropagation();
+            const key = addBtn.dataset.quickSaleAdd;
+            selectQuickSaleProduct(key);
+            addQuickSaleProduct(key, 1);
+            return;
+        }
+        const item = event.target.closest('[data-quick-sale-key]');
+        if (!item) return;
+        selectQuickSaleProduct(item.dataset.quickSaleKey);
+    });
+    quickResults?.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        const item = event.target.closest('[data-quick-sale-key]');
+        if (!item) return;
+        selectQuickSaleProduct(item.dataset.quickSaleKey);
+    });
+    customerType?.addEventListener('change', () => {
+        renderQuickSaleResults();
+        renderQuickSaleDetail(getInventoryProductByKey(window.quickSaleSelectedKey));
+    });
+    mobileViewSelect?.addEventListener('change', event => {
+        const value = event.target.value;
+        if (value === 'logout') {
+            window.location.href = 'index.html';
+            return;
+        }
+        const label = event.target.options[event.target.selectedIndex]?.textContent || 'Panel';
+        switchDashboardView(value, label);
+    });
+    renderQuickSaleCart();
+});
 
 window.abrirEditorFactura = function(idx = null, source = 'pedido') {
     window.invoiceItems = [];

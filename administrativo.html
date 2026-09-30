@@ -830,6 +830,156 @@
             align-items:center;
         }
         .product-barcode-compact.is-visible { display:grid; }
+        .product-qr-generator {
+            grid-column:1/-1;
+            display:grid;
+            grid-template-columns:92px minmax(0,1fr) auto;
+            gap:14px;
+            align-items:center;
+            margin-top:4px;
+            padding:14px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:14px;
+            background:rgba(255,255,255,.025);
+        }
+
+        .barcode-scanner-card {
+            width:min(520px, calc(100vw - 28px));
+            max-width:520px;
+            padding:22px;
+            border-radius:14px;
+            overflow:hidden;
+        }
+        .barcode-scanner-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:14px;
+            margin-bottom:14px;
+        }
+        .barcode-scanner-head h2 {
+            margin:4px 0 0;
+            font-size:24px;
+            line-height:1.08;
+        }
+        .barcode-scanner-status {
+            min-height:42px;
+            display:flex;
+            align-items:center;
+            margin-bottom:10px;
+            padding:10px 12px;
+            border:1px solid rgba(216,209,194,.18);
+            border-radius:8px;
+            background:rgba(216,209,194,.06);
+            color:rgba(244,242,238,.78);
+            font-size:12px;
+            line-height:1.4;
+        }
+        .barcode-scanner-stage {
+            position:relative;
+            width:100%;
+            min-height:300px;
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.12);
+            border-radius:12px;
+            background:#050507;
+        }
+        .barcode-scanner-stage video,
+        #barcode-scanner-reader {
+            width:100%!important;
+            min-height:300px;
+            border:0!important;
+            object-fit:cover;
+        }
+        #barcode-scanner-reader { display:none; }
+        #barcode-scanner-reader video { min-height:300px; object-fit:cover; }
+        #barcode-scanner-reader img { max-width:100%; }
+        .barcode-scanner-guide {
+            position:absolute;
+            inset:50% auto auto 50%;
+            width:min(78%, 330px);
+            aspect-ratio:1.65;
+            pointer-events:none;
+            transform:translate(-50%,-50%);
+            border:2px solid rgba(255,255,255,.9);
+            border-radius:10px;
+            box-shadow:0 0 0 999px rgba(0,0,0,.25);
+            z-index:3;
+        }
+        .barcode-scanner-guide span {
+            position:absolute;
+            left:8%;
+            right:8%;
+            top:50%;
+            height:2px;
+            background:#d8d1c2;
+            box-shadow:0 0 12px rgba(216,209,194,.8);
+            animation:barcode-scan-line 1.7s ease-in-out infinite alternate;
+        }
+        @keyframes barcode-scan-line {
+            from { transform:translateY(-52px); }
+            to { transform:translateY(52px); }
+        }
+        .barcode-scanner-file-row {
+            display:grid;
+            grid-template-columns:auto 1fr;
+            align-items:center;
+            gap:10px;
+            margin-top:12px;
+        }
+        .barcode-scanner-file-row small {
+            color:rgba(244,242,238,.48);
+            font-size:11px;
+            line-height:1.3;
+        }
+        .barcode-scanner-manual-row {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) auto;
+            gap:8px;
+            margin-top:12px;
+        }
+        @media(max-width:560px) {
+            .barcode-scanner-card { padding:16px; }
+            .barcode-scanner-head h2 { font-size:21px; }
+            .barcode-scanner-stage,
+            .barcode-scanner-stage video,
+            #barcode-scanner-reader,
+            #barcode-scanner-reader video { min-height:260px; }
+            .barcode-scanner-file-row,
+            .barcode-scanner-manual-row { grid-template-columns:1fr; }
+            .barcode-scanner-file-row .admin-btn,
+            .barcode-scanner-manual-row .admin-btn { width:100%; }
+        }
+        .product-qr-generator img {
+            width:92px;
+            height:92px;
+            padding:5px;
+            border-radius:10px;
+            background:#fff;
+            object-fit:contain;
+        }
+        .product-qr-generator-copy span,
+        .product-qr-generator-copy strong,
+        .product-qr-generator-copy small { display:block; }
+        .product-qr-generator-copy span {
+            color:var(--muted);
+            font-size:10px;
+            font-weight:700;
+            text-transform:uppercase;
+        }
+        .product-qr-generator-copy strong {
+            margin-top:5px;
+            color:#fff;
+            font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+            font-size:13px;
+            overflow-wrap:anywhere;
+        }
+        .product-qr-generator-copy small {
+            margin-top:6px;
+            color:var(--soft);
+            font-size:11px;
+            line-height:1.4;
+        }
         .highlight-select { color:#ffe48a; font-weight:950; border-color:rgba(244,196,65,.28); }
         .color-picker {
             display:flex;
@@ -5352,6 +5502,450 @@
             100% { transform:translate3d(-1%,4%,0) scale(1.02); filter:hue-rotate(-8deg); }
         }
 
+        /* Caja rapida de ventas */
+        .quick-sale-shell { display:grid; gap:16px; }
+        .quick-sale-hero,
+        .quick-sale-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+        .quick-sale-hero {
+            padding:20px 22px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:18px;
+            background:linear-gradient(135deg,rgba(244,196,65,.08),rgba(34,211,238,.035));
+        }
+        .quick-sale-hero h2,
+        .quick-sale-panel-head h3 { margin:4px 0 0; }
+        .quick-sale-hero p { margin:6px 0 0; color:var(--muted); }
+        .quick-sale-metrics,
+        .quick-sale-summary { display:flex; gap:10px; flex-wrap:wrap; }
+        .quick-sale-metrics div,
+        .quick-sale-summary div {
+            min-width:128px;
+            padding:11px 13px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.035);
+        }
+        .quick-sale-metrics span,
+        .quick-sale-summary span {
+            display:block;
+            color:var(--soft);
+            font-size:9px;
+            font-weight:950;
+            letter-spacing:.9px;
+            text-transform:uppercase;
+        }
+        .quick-sale-metrics strong,
+        .quick-sale-summary strong {
+            display:block;
+            margin-top:4px;
+            color:#fff;
+            font-size:19px;
+            font-weight:950;
+            font-variant-numeric:tabular-nums;
+        }
+        .quick-sale-grid {
+            display:grid;
+            grid-template-columns:minmax(320px,.9fr) minmax(280px,.75fr) minmax(360px,1fr);
+            gap:16px;
+            align-items:start;
+        }
+        .quick-sale-search-panel,
+        .quick-sale-detail-panel,
+        .quick-sale-cart-panel { display:grid; gap:14px; }
+        .quick-sale-search-box .form-control { min-height:48px; font-size:15px; font-weight:800; }
+        .quick-sale-results,
+        .quick-sale-cart-list {
+            display:grid;
+            gap:9px;
+            max-height:58vh;
+            overflow:auto;
+            padding-right:4px;
+        }
+        .quick-sale-result-item,
+        .quick-sale-cart-item {
+            width:100%;
+            display:grid;
+            grid-template-columns:58px minmax(0,1fr) auto;
+            gap:10px;
+            align-items:center;
+            padding:10px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:rgba(255,255,255,.028);
+            color:#fff;
+            text-align:left;
+        }
+        .quick-sale-result-item:hover,
+        .quick-sale-result-item.active { border-color:rgba(244,196,65,.32); background:rgba(244,196,65,.08); }
+        .quick-sale-result-item[disabled] { opacity:.48; cursor:not-allowed; }
+        .quick-sale-thumb,
+        .quick-sale-detail-image {
+            overflow:hidden;
+            border:1px solid rgba(255,255,255,.08);
+            background:#0b0712;
+        }
+        .quick-sale-thumb { width:58px; height:58px; border-radius:10px; }
+        .quick-sale-thumb img,
+        .quick-sale-detail-image img { width:100%; height:100%; object-fit:cover; display:block; }
+        .quick-sale-result-copy strong,
+        .quick-sale-cart-copy strong {
+            display:block;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+            font-size:13px;
+            font-weight:950;
+        }
+        .quick-sale-result-copy span,
+        .quick-sale-cart-copy span {
+            display:block;
+            margin-top:4px;
+            color:rgba(255,255,255,.58);
+            font-size:11px;
+            line-height:1.35;
+        }
+        .quick-sale-stock-pill {
+            padding:5px 8px;
+            border-radius:999px;
+            color:#86efac;
+            background:rgba(16,185,129,.11);
+            border:1px solid rgba(16,185,129,.22);
+            font-size:10px;
+            font-weight:950;
+            white-space:nowrap;
+        }
+        .quick-sale-stock-pill.low { color:#fde68a; background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.24); }
+        .quick-sale-stock-pill.out { color:#fecaca; background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.24); }
+        .quick-sale-product-card { display:grid; gap:14px; }
+        .quick-sale-detail-image { width:100%; aspect-ratio:1/1; border-radius:14px; }
+        .quick-sale-detail-title { margin:0; font-size:20px; line-height:1.14; color:#fff; }
+        .quick-sale-detail-price {
+            color:var(--gold);
+            font-size:24px;
+            font-weight:950;
+            font-variant-numeric:tabular-nums;
+        }
+        .quick-sale-detail-specs { display:grid; gap:8px; }
+        .quick-sale-detail-specs div {
+            display:flex;
+            justify-content:space-between;
+            gap:12px;
+            padding:10px 11px;
+            border:1px solid rgba(255,255,255,.075);
+            border-radius:10px;
+            background:rgba(255,255,255,.028);
+        }
+        .quick-sale-detail-specs span {
+            color:var(--soft);
+            font-size:10px;
+            font-weight:950;
+            text-transform:uppercase;
+        }
+        .quick-sale-detail-specs strong { text-align:right; color:#fff; font-size:12px; }
+        .quick-sale-add-row,
+        .quick-sale-customer-grid,
+        .quick-sale-actions {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:10px;
+        }
+        .quick-sale-add-row .admin-btn,
+        .quick-sale-actions .admin-btn { min-height:44px; }
+        .quick-sale-cart-item { grid-template-columns:minmax(0,1fr) 86px 34px; }
+        .quick-sale-cart-item input {
+            width:100%;
+            min-height:38px;
+            border:1px solid rgba(255,255,255,.1);
+            border-radius:9px;
+            background:rgba(255,255,255,.055);
+            color:#fff;
+            text-align:center;
+            font-weight:900;
+        }
+        .quick-sale-cart-remove {
+            width:34px;
+            height:34px;
+            border:1px solid rgba(239,68,68,.22);
+            border-radius:9px;
+            background:rgba(239,68,68,.08);
+            color:#fecaca;
+            font-weight:950;
+        }
+        .quick-sale-empty {
+            padding:22px;
+            border:1px dashed rgba(255,255,255,.12);
+            border-radius:14px;
+            color:var(--soft);
+            text-align:center;
+            line-height:1.45;
+        }
+        .quick-sale-pos-layout {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) minmax(360px,420px);
+            gap:16px;
+            align-items:start;
+        }
+        .quick-sale-catalog-panel,
+        .quick-sale-checkout-panel {
+            display:grid;
+            gap:14px;
+            padding:16px;
+            border:1px solid rgba(255,255,255,.075);
+            border-radius:16px;
+            background:rgba(255,255,255,.025);
+        }
+        .quick-sale-checkout-panel {
+            position:sticky;
+            top:18px;
+        }
+        .quick-sale-toolbar,
+        .quick-sale-checkout-head {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:14px;
+        }
+        .quick-sale-toolbar h3,
+        .quick-sale-checkout-head h3 {
+            margin:4px 0 0;
+            font-size:18px;
+        }
+        .quick-sale-pos-search {
+            position:relative;
+        }
+        .quick-sale-pos-search .form-control {
+            min-height:58px;
+            padding-left:48px;
+            padding-right:62px;
+            border-radius:14px;
+            font-size:16px;
+            background:rgba(255,255,255,.055);
+        }
+        .quick-sale-scan-btn {
+            position:absolute;
+            top:7px;
+            right:7px;
+            z-index:2;
+            width:44px;
+            height:44px;
+            min-height:44px !important;
+            display:grid;
+            place-items:center;
+            padding:0 !important;
+            border:1px solid rgba(198,170,255,.28);
+            border-radius:11px;
+            background:rgba(168,85,247,.12);
+            color:#e9ddff;
+        }
+        .quick-sale-scan-btn:hover {
+            background:rgba(168,85,247,.2);
+            border-color:rgba(198,170,255,.5);
+        }
+        .quick-sale-scan-btn svg { width:20px; height:20px; }
+        .quick-sale-search-icon {
+            position:absolute;
+            left:17px;
+            top:50%;
+            z-index:1;
+            transform:translateY(-50%);
+            color:rgba(244,196,65,.78);
+            font-size:22px;
+            font-weight:950;
+            pointer-events:none;
+        }
+        .quick-sale-product-grid {
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+            gap:12px;
+            max-height:calc(100vh - 330px);
+            min-height:320px;
+            overflow:auto;
+            padding:2px 4px 2px 0;
+        }
+        .quick-sale-product-grid .quick-sale-empty {
+            grid-column:1/-1;
+            min-height:220px;
+            display:grid;
+            place-items:center;
+        }
+        .quick-sale-product-tile {
+            display:grid;
+            grid-template-rows:auto minmax(86px,1fr) auto;
+            gap:10px;
+            min-height:274px;
+            padding:10px;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:14px;
+            background:rgba(255,255,255,.028);
+            color:#fff;
+            outline:none;
+            cursor:pointer;
+            transition:border-color .18s ease, background .18s ease, transform .18s ease;
+        }
+        .quick-sale-product-tile:hover,
+        .quick-sale-product-tile:focus-visible,
+        .quick-sale-product-tile.active {
+            border-color:rgba(244,196,65,.36);
+            background:rgba(244,196,65,.07);
+            transform:translateY(-1px);
+        }
+        .quick-sale-tile-image {
+            position:relative;
+            overflow:hidden;
+            aspect-ratio:1/1;
+            border:1px solid rgba(255,255,255,.08);
+            border-radius:12px;
+            background:#0b0712;
+        }
+        .quick-sale-tile-image img {
+            width:100%;
+            height:100%;
+            object-fit:cover;
+            display:block;
+        }
+        .quick-sale-tile-image .quick-sale-stock-pill {
+            position:absolute;
+            left:8px;
+            top:8px;
+            box-shadow:0 8px 18px rgba(0,0,0,.28);
+            backdrop-filter:blur(8px);
+        }
+        .quick-sale-tile-copy {
+            min-width:0;
+        }
+        .quick-sale-tile-copy strong {
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
+            min-height:36px;
+            color:#fff;
+            font-size:13px;
+            font-weight:950;
+            line-height:1.25;
+        }
+        .quick-sale-tile-copy span,
+        .quick-sale-tile-copy small {
+            display:block;
+            margin-top:5px;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+            color:rgba(255,255,255,.56);
+            font-size:10.5px;
+            line-height:1.2;
+        }
+        .quick-sale-tile-copy small {
+            color:rgba(255,255,255,.42);
+        }
+        .quick-sale-tile-bottom {
+            display:grid;
+            grid-template-columns:minmax(0,1fr) 42px;
+            gap:9px;
+            align-items:center;
+        }
+        .quick-sale-tile-bottom b {
+            color:var(--gold);
+            font-size:15px;
+            font-weight:950;
+            font-variant-numeric:tabular-nums;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .quick-sale-add-card {
+            width:42px;
+            height:42px;
+            border:1px solid rgba(244,196,65,.38);
+            border-radius:12px;
+            background:#f4c441;
+            color:#09030f;
+            font-size:24px;
+            font-weight:950;
+            line-height:1;
+            box-shadow:0 12px 24px rgba(0,0,0,.24);
+        }
+        .quick-sale-add-card:disabled {
+            border-color:rgba(255,255,255,.1);
+            background:rgba(255,255,255,.08);
+            color:rgba(255,255,255,.32);
+            box-shadow:none;
+            cursor:not-allowed;
+        }
+        .quick-sale-compact-detail {
+            padding:12px;
+            border:1px solid rgba(255,255,255,.07);
+            border-radius:14px;
+            background:rgba(255,255,255,.022);
+        }
+        .quick-sale-compact-detail .quick-sale-empty {
+            padding:14px;
+        }
+        .quick-sale-detail-top {
+            display:grid;
+            grid-template-columns:86px minmax(0,1fr);
+            gap:12px;
+            align-items:center;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-image {
+            width:86px;
+            aspect-ratio:1/1;
+            border-radius:12px;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-title {
+            margin-top:8px;
+            font-size:15px;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-price {
+            margin-top:5px;
+            font-size:18px;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-specs {
+            grid-template-columns:1fr 1fr;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-specs div {
+            display:grid;
+            gap:4px;
+            min-height:52px;
+        }
+        .quick-sale-compact-detail .quick-sale-detail-specs strong {
+            text-align:left;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .quick-sale-compact-detail .quick-sale-add-row {
+            grid-template-columns:82px minmax(0,1fr);
+        }
+        .quick-sale-compact-detail .quick-sale-add-row .admin-btn {
+            grid-column:auto;
+        }
+        @media(max-width:1240px) {
+            .quick-sale-grid { grid-template-columns:1fr 1fr; }
+            .quick-sale-cart-panel { grid-column:1/-1; }
+            .quick-sale-pos-layout { grid-template-columns:1fr; }
+            .quick-sale-checkout-panel { position:relative; top:auto; }
+        }
+        @media(max-width:760px) {
+            .quick-sale-hero,
+            .quick-sale-panel-head,
+            .quick-sale-grid,
+            .quick-sale-pos-layout,
+            .quick-sale-toolbar,
+            .quick-sale-checkout-head,
+            .quick-sale-add-row,
+            .quick-sale-customer-grid,
+            .quick-sale-actions {
+                display:grid!important;
+                grid-template-columns:1fr!important;
+            }
+            .quick-sale-results,
+            .quick-sale-cart-list { max-height:none; }
+            .quick-sale-product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); min-height:0; max-height:none; }
+            .quick-sale-product-tile { min-height:242px; }
+            .quick-sale-compact-detail .quick-sale-detail-specs { grid-template-columns:1fr; }
+        }
+
         /* Capa final mobile admin: selector compacto y secciones adaptables */
         @media (max-width: 760px) {
             html,
@@ -5730,6 +6324,143 @@
             opacity: 0; transition: opacity .2s;
         }
         .admin-otp-error.visible { opacity: 1; }
+
+        /* Apariencia compartida con el acceso Mayorista. */
+        #admin-login-screen {
+            padding: 20px !important;
+            background: #101014 !important;
+            background-image: none !important;
+            font-family: 'Outfit', 'Avenir Next', 'Century Gothic', sans-serif !important;
+        }
+        #admin-login-box {
+            width: min(360px, 100%) !important;
+            padding: 42px 28px 30px !important;
+            border: 1px solid rgba(255,255,255,.07) !important;
+            border-radius: 24px !important;
+            background: #18181c !important;
+            box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 40px 100px rgba(0,0,0,.7), 0 8px 32px rgba(0,0,0,.4) !important;
+            overflow: hidden !important;
+        }
+        #admin-login-box::before {
+            content: '' !important;
+            position: absolute !important;
+            top: 14px !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            width: 36px !important;
+            height: 4px !important;
+            border-radius: 99px !important;
+            background: rgba(255,255,255,.12) !important;
+            transform: translateX(-50%) !important;
+            animation: none !important;
+            z-index: 3 !important;
+        }
+        #admin-login-box::after {
+            content: none !important;
+            display: none !important;
+        }
+        #admin-login-box > * {
+            position: relative;
+            z-index: 2;
+        }
+        .admin-otp-logo {
+            width: 52px !important;
+            margin: 0 auto 18px !important;
+            opacity: .72 !important;
+        }
+        .admin-otp-kicker {
+            margin: 0 0 10px !important;
+            color: rgba(255,255,255,.38) !important;
+            font-size: 10px !important;
+            font-weight: 500 !important;
+            letter-spacing: 0 !important;
+        }
+        .admin-otp-title {
+            margin: 0 0 6px !important;
+            background: none !important;
+            color: #fff !important;
+            -webkit-text-fill-color: currentColor !important;
+            font-size: 22px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0 !important;
+            line-height: 1.15 !important;
+        }
+        .admin-otp-sub {
+            margin: 0 0 28px !important;
+            color: rgba(255,255,255,.38) !important;
+            font-size: 13px !important;
+            font-weight: 400 !important;
+            line-height: 1.5 !important;
+        }
+        .admin-otp-row {
+            display: grid !important;
+            grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+            gap: 7px !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+        .admin-otp-digit {
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 50px !important;
+            border: 1px solid rgba(255,255,255,.08) !important;
+            border-radius: 12px !important;
+            background: #1e1e24 !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,255,255,.04) !important;
+            font-family: inherit !important;
+            font-size: 19px !important;
+            font-weight: 600 !important;
+        }
+        .admin-otp-digit:focus {
+            border-color: rgba(198,170,255,.55) !important;
+            box-shadow: 0 0 0 3px rgba(168,85,247,.1), inset 0 2px 4px rgba(0,0,0,.35) !important;
+            transform: none !important;
+        }
+        .admin-otp-digit.filled {
+            border-color: rgba(198,170,255,.28) !important;
+        }
+        .admin-otp-error {
+            margin: 12px 0 0 !important;
+            color: #fda4af !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+        }
+        @media (max-width: 420px) {
+            #admin-login-screen { padding: 14px !important; }
+            #admin-login-box { padding: 40px 22px 26px !important; }
+            .admin-otp-row { gap: 5px !important; }
+            .admin-otp-digit { height: 48px !important; font-size: 17px !important; }
+            .product-qr-generator {
+                grid-template-columns:72px minmax(0,1fr) !important;
+            }
+            .product-qr-generator img { width:72px; height:72px; }
+            .product-qr-generator .admin-btn { grid-column:1/-1; }
+        }
+
+        /* Evita que las tablas ensanchen y desplacen todo el modulo de ventas. */
+        #view-orders > .orders-admin-shell {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow: hidden !important;
+        }
+        #view-orders .orders-admin-header,
+        #view-orders .orders-search-row,
+        #view-orders .orders-admin-body,
+        #view-orders .orders-tab-panel {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+        }
+        #view-orders .table-wrapper {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            overflow-x: auto !important;
+        }
     </style>
 </head>
 <body>
@@ -5739,9 +6470,9 @@
     <div id="admin-login-screen">
         <div id="admin-login-box">
             <img src="Logo2.png" alt="BLYXU" class="admin-otp-logo" onerror="this.style.display='none'">
-            <span class="admin-otp-kicker">Panel Seguro</span>
-            <h1 class="admin-otp-title">Administrador</h1>
-            <p class="admin-otp-sub">Ingresa tu clave de acceso</p>
+            <span class="admin-otp-kicker">BLYXU &middot; Panel Privado</span>
+            <h1 class="admin-otp-title">Ingresa tu clave</h1>
+            <p class="admin-otp-sub">Acceso administrativo &mdash; solo para personal autorizado.</p>
             <div class="admin-otp-row" id="admin-otp-row">
                 <input class="admin-otp-digit" id="adm-d0" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
                 <input class="admin-otp-digit" id="adm-d1" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
@@ -5911,7 +6642,8 @@
                         <div class="admin-dashboard-hero">
                             <div><span class="admin-kicker">Resumen general</span><h2>Panel de control BLYXU</h2><p>Vista rápida de ventas, pedidos, inventario y actividad reciente.</p></div>
                             <div class="admin-dashboard-actions">
-                                <button class="admin-btn" type="button" onclick="switchDashboardView('products','Gestión de Productos')">Nuevo producto</button>
+                                <button class="admin-btn" type="button" onclick="openQuickSaleInOrders()">Venta rápida</button>
+                                <button class="admin-btn secondary" type="button" onclick="switchDashboardView('products','Gestión de Productos')">Nuevo producto</button>
                                 <button class="admin-btn secondary" type="button" onclick="cargarPedidos({force:true}); cargarInventario({silent:true});">Sincronizar</button>
                             </div>
                         </div>
@@ -5932,7 +6664,7 @@
                         </div>
                         <div class="dashboard-bottom-grid">
                             <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Inventario</span><h3>Stock bajo</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-stock-count">0</span><button class="dashboard-toggle-btn" data-target="dash-low-stock-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-low-stock-wrap"><div><div class="dashboard-activity-list" id="dash-low-stock"><div class="dashboard-empty">Sin inventario cargado</div></div></div></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Accesos</span><h3>Gestion rapida</h3></div></div><div class="dashboard-shortcuts"><button onclick="switchDashboardView('products','Gestion de Productos')">Productos</button><button onclick="switchDashboardView('orders','Pedidos y Facturacion')">Facturas</button><button onclick="switchDashboardView('settings','Ajustes y Banner')">Banner</button><button onclick="switchDashboardView('china-orders','Pedidos a China')">China</button></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Accesos</span><h3>Gestion rapida</h3></div></div><div class="dashboard-shortcuts"><button onclick="openQuickSaleInOrders()">Caja</button><button onclick="switchDashboardView('products','Gestion de Productos')">Productos</button><button onclick="switchDashboardView('orders','Ventas y Facturacion')">Facturas</button><button onclick="switchDashboardView('china-orders','Pedidos a China')">China</button></div></section>
                         </div>
 
                     </div>
@@ -5958,7 +6690,7 @@
                                 <div class="product-config-card identity-card">
                                     <div class="config-card-heading"><span class="config-card-index">01</span><div><h3>Producto y venta</h3><p>Un solo bloque para identificar el producto, poner precio y definir donde se publica.</p></div></div>
                                     <div class="admin-form-grid">
-                                        <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> Escanear</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automático" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Escanear</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small></div>
+                                        <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> Escanear</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automático" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Escanear</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small><div class="product-qr-generator" id="prod-qr-generator"><img id="prod-generated-qr" alt="QR automatico del producto"><div class="product-qr-generator-copy"><span>QR autom&aacute;tico</span><strong id="prod-generated-qr-code">Generando referencia...</strong><small>Este mismo c&oacute;digo identifica el producto en inventario y Caja r&aacute;pida.</small></div><button type="button" class="admin-btn secondary" id="btn-preview-product-qr">Ver QR</button></div></div>
                                         <div class="form-group"><label>Nombre del producto</label><input type="text" class="form-control" id="prod-nombre" name="Nombre" placeholder="Ej: Collar luna dorado" required><small class="field-hint">Es el nombre visible para el cliente.</small></div>
                                         <div class="form-group"><label>Categoria</label><input type="text" class="form-control" id="prod-categoria" name="Categoria" list="admin-category-options" placeholder="Escribe o elige una categoria" required><datalist id="admin-category-options"><option value="Collares"></option><option value="Pulseras"></option><option value="Aretes"></option><option value="Anillos"></option><option value="Sets"></option><option value="Dijes"></option><option value="BANNER"></option></datalist><small class="field-hint">Ayuda a ordenar tienda e inventario.</small></div>
                                         <div class="form-group"><label>Catálogo</label><select class="form-control" id="prod-catalogo" name="Catálogo"><option value="Ambos">Minorista y Mayorista</option><option value="Minorista">Solo Minorista</option><option value="Mayorista">Solo Mayorista</option></select><small class="field-hint">Define en que catalogo se publica.</small></div>
@@ -6069,9 +6801,98 @@
 
                 <div id="view-orders" class="dashboard-section">
                     <div class="admin-panel orders-admin-shell">
-                        <div class="orders-admin-header"><div><span class="admin-kicker">Ventas</span><h2>Pedidos y facturas</h2></div><button class="admin-btn" type="button" onclick="openManualInvoiceEditor()">Nueva factura</button></div>
-                        <div class="orders-search-row"><input class="form-control" id="admin-orders-search" placeholder="Buscar cliente, pedido o factura..."><div class="orders-tabs"><button class="orders-tab-btn active" data-orders-tab-target="orders-mayor">Pedidos <span id="orders-count-badge">0</span></button><button class="orders-tab-btn" data-orders-tab-target="invoices-mayor">Facturas <span id="invoices-count-badge">0</span></button></div></div>
-                        <div class="orders-admin-body"><div class="orders-tab-panel active" data-orders-tab="orders-mayor" id="orders-tab-orders"><div class="table-wrapper"><table><thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Accion</th></tr></thead><tbody id="orders-tbody"></tbody></table></div></div><div class="orders-tab-panel" data-orders-tab="invoices-mayor" id="orders-tab-invoices"><div class="table-wrapper"><table><thead><tr><th>Factura</th><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Accion</th></tr></thead><tbody id="invoices-tbody"></tbody></table></div></div></div>
+                        <div class="orders-admin-header">
+                            <div><span class="admin-kicker">Ventas</span><h2>Ventas y facturación</h2><p style="margin:6px 0 0;color:var(--muted);">Caja de mostrador, pedidos web y facturas en un solo flujo.</p></div>
+                            <button class="admin-btn" type="button" onclick="openManualInvoiceEditor()">Nueva factura manual</button>
+                        </div>
+                        <div class="orders-search-row">
+                            <input class="form-control" id="admin-orders-search" placeholder="Buscar cliente, pedido o factura...">
+                            <div class="orders-tabs">
+                                <button class="orders-tab-btn active" data-orders-tab-target="quick-sale">Caja rápida</button>
+                                <button class="orders-tab-btn" data-orders-tab-target="orders-mayor">Pedidos <span id="orders-count-badge">0</span></button>
+                                <button class="orders-tab-btn" data-orders-tab-target="invoices-mayor">Facturas <span id="invoices-count-badge">0</span></button>
+                            </div>
+                        </div>
+                        <div class="orders-admin-body">
+                            <div class="orders-tab-panel active" data-orders-tab="quick-sale" id="orders-tab-quick-sale">
+                                <div class="quick-sale-shell">
+                                    <div class="quick-sale-hero">
+                                        <div>
+                                            <span class="admin-kicker">Mostrador</span>
+                                            <h2>Caja rápida de ventas</h2>
+                                            <p>Busca o escanea, toca + para agregar y genera la factura PDF con el mismo formato del sistema.</p>
+                                        </div>
+                                        <div class="quick-sale-metrics">
+                                            <div><span>Artículos</span><strong id="quick-sale-count">0</strong></div>
+                                            <div><span>Total</span><strong id="quick-sale-total">$0</strong></div>
+                                        </div>
+                                    </div>
+                                    <div class="quick-sale-pos-layout">
+                                        <section class="quick-sale-catalog-panel">
+                                            <div class="quick-sale-toolbar">
+                                                <div>
+                                                    <span class="admin-kicker">Catálogo de caja</span>
+                                                    <h3>Buscar y agregar</h3>
+                                                </div>
+                                                <button class="admin-btn secondary" type="button" onclick="cargarInventario({silent:true}).then(renderQuickSaleResults)">Actualizar stock</button>
+                                            </div>
+                                            <div class="quick-sale-search-box quick-sale-pos-search">
+                                                <span class="quick-sale-search-icon">⌕</span>
+                                                <input class="form-control" id="quick-sale-search" placeholder="Escanea o busca por nombre, SKU, color, categoría o código..." autocomplete="off">
+                                                <button class="quick-sale-scan-btn" id="btn-scan-quick-sale" type="button" aria-label="Escanear QR o codigo del producto" title="Escanear QR o codigo">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M7 8h10v8H7z"></path></svg>
+                                                </button>
+                                            </div>
+                                            <div class="quick-sale-results quick-sale-product-grid" id="quick-sale-results">
+                                                <div class="quick-sale-empty">Escribe al menos 2 letras para buscar en inventario.</div>
+                                            </div>
+                                        </section>
+
+                                        <aside class="quick-sale-checkout-panel">
+                                            <div class="quick-sale-checkout-head">
+                                                <div>
+                                                    <span class="admin-kicker">Ticket actual</span>
+                                                    <h3>Cobro de caja</h3>
+                                                </div>
+                                                <button class="admin-btn secondary" type="button" onclick="clearQuickSaleCart()">Limpiar</button>
+                                            </div>
+                                            <div id="quick-sale-product-detail" class="quick-sale-product-detail quick-sale-compact-detail">
+                                                <div class="quick-sale-empty">Toca un producto para ver sus características.</div>
+                                            </div>
+                                            <div class="quick-sale-customer-grid">
+                                                <input class="form-control" id="quick-sale-customer" placeholder="Cliente mostrador">
+                                                <input class="form-control" id="quick-sale-phone" placeholder="Teléfono opcional">
+                                                <select class="form-control" id="quick-sale-method">
+                                                    <option value="Efectivo / Caja">Efectivo / Caja</option>
+                                                    <option value="Nequi / Caja">Nequi / Caja</option>
+                                                    <option value="Transferencia / Caja">Transferencia / Caja</option>
+                                                    <option value="Tarjeta / Caja">Tarjeta / Caja</option>
+                                                    <option value="Mixto / Caja">Mixto / Caja</option>
+                                                </select>
+                                                <select class="form-control" id="quick-sale-customer-type">
+                                                    <option value="Detal">Detal</option>
+                                                    <option value="Mayorista">Mayorista</option>
+                                                </select>
+                                            </div>
+                                            <div id="quick-sale-cart" class="quick-sale-cart-list">
+                                                <div class="quick-sale-empty">Agrega productos desde la búsqueda.</div>
+                                            </div>
+                                            <textarea class="form-control" id="quick-sale-note" rows="2" placeholder="Nota opcional para la factura"></textarea>
+                                            <div class="quick-sale-summary">
+                                                <div><span>Cantidad</span><strong id="quick-sale-summary-count">0</strong></div>
+                                                <div><span>Total venta</span><strong id="quick-sale-summary-total">$0</strong></div>
+                                            </div>
+                                            <div class="quick-sale-actions">
+                                                <button class="admin-btn secondary" type="button" onclick="openQuickSaleInvoicePreview()">Ver en editor</button>
+                                                <button class="admin-btn" type="button" id="quick-sale-save-btn" onclick="saveQuickSaleInvoice()">Registrar venta y PDF</button>
+                                            </div>
+                                        </aside>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="orders-tab-panel" data-orders-tab="orders-mayor" id="orders-tab-orders"><div class="table-wrapper"><table><thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Accion</th></tr></thead><tbody id="orders-tbody"></tbody></table></div></div>
+                            <div class="orders-tab-panel" data-orders-tab="invoices-mayor" id="orders-tab-invoices"><div class="table-wrapper"><table><thead><tr><th>Factura</th><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Accion</th></tr></thead><tbody id="invoices-tbody"></tbody></table></div></div>
+                        </div>
                     </div>
                 </div>
 
@@ -6102,7 +6923,7 @@
                     <h2>Codigo QR del producto</h2>
                     <p>El QR codifica la referencia para escanearla en inventario.</p>
                 </div>
-                <button type="button" class="quick-payment-close" onclick="closeInventoryQrTicket()" aria-label="Cerrar">
+                <button type="button" class="quick-payment-close" data-inventory-qr-action="close" aria-label="Cerrar">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
@@ -6122,21 +6943,21 @@
                         <div data-qr-element="pm"><span>PM</span><strong id="inventory-qr-pm">PM: -</strong></div>
                     </div>
                     <div class="inventory-qr-options" aria-label="Elementos del ticket QR">
-                        <label><input type="checkbox" data-qr-option="name" checked onchange="updateInventoryQrPreviewOptions()"> Nombre</label>
-                        <label><input type="checkbox" data-qr-option="reference" checked onchange="updateInventoryQrPreviewOptions()"> Referencia</label>
-                        <label><input type="checkbox" data-qr-option="sku" checked onchange="updateInventoryQrPreviewOptions()"> SKU / ID</label>
-                        <label><input type="checkbox" data-qr-option="category" checked onchange="updateInventoryQrPreviewOptions()"> Categoria</label>
-                        <label><input type="checkbox" data-qr-option="stock" checked onchange="updateInventoryQrPreviewOptions()"> Stock</label>
-                        <label><input type="checkbox" data-qr-option="price" checked onchange="updateInventoryQrPreviewOptions()"> Precio</label>
-                        <label><input type="checkbox" data-qr-option="pm" checked onchange="updateInventoryQrPreviewOptions()"> PM cifrado</label>
+                        <label><input type="checkbox" data-qr-option="name" checked> Nombre</label>
+                        <label><input type="checkbox" data-qr-option="reference" checked> Referencia</label>
+                        <label><input type="checkbox" data-qr-option="sku" checked> SKU / ID</label>
+                        <label><input type="checkbox" data-qr-option="category" checked> Categoria</label>
+                        <label><input type="checkbox" data-qr-option="stock" checked> Stock</label>
+                        <label><input type="checkbox" data-qr-option="price" checked> Precio</label>
+                        <label><input type="checkbox" data-qr-option="pm" checked> PM cifrado</label>
                     </div>
                     <div class="inventory-qr-note">Puedes abrir la imagen del QR o imprimir un ticket de 58 mm para marquillas y referencias.</div>
                 </div>
             </div>
             <div class="inventory-qr-actions">
-                <button type="button" class="admin-btn secondary" onclick="copyInventoryQrReference()">Copiar referencia</button>
-                <button type="button" class="admin-btn secondary" onclick="openInventoryQrImage()">Ver imagen QR</button>
-                <button type="button" class="admin-btn" onclick="printInventoryQrTicket()">Imprimir ticket</button>
+                <button type="button" class="admin-btn secondary" data-inventory-qr-action="copy">Copiar referencia</button>
+                <button type="button" class="admin-btn secondary" data-inventory-qr-action="image">Ver imagen QR</button>
+                <button type="button" class="admin-btn" data-inventory-qr-action="print">Imprimir ticket</button>
             </div>
         </div>
     </div>
@@ -6596,7 +7417,7 @@
         });
     })();
     </script>
-    <script src="admin-app.js?v=admin-contact-hours-20260928" defer></script>
+    <script src="admin-app.js?v=admin-product-qr-mobile-20260929-7" defer></script>
 </body>
 </html>
 

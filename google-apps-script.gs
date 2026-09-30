@@ -128,6 +128,8 @@ const SHEETS = {
       'Estado Factura',
       'Método Pago',
       'Método Entrega',
+      'Canal Venta',
+      'Stock Descontado',
       'Observaciones',
       'Fecha Actualización'
     ]
@@ -1245,6 +1247,29 @@ function shouldDiscountStockForOrder_(pedido) {
   return method.indexOf('consulta') < 0 && status.indexOf('consulta') < 0;
 }
 
+function inferInvoiceSalesChannel_(factura) {
+  const explicit = normalizeKey_(factura['Canal Venta'] || factura.canal || factura.Canal || '');
+  if (explicit) return explicit.indexOf('caja') >= 0 ? 'Caja' : String(factura['Canal Venta'] || factura.canal || factura.Canal || '').trim();
+
+  const orderId = normalizeKey_(factura['ID Pedido'] || factura.Pedido || '');
+  const method = normalizeKey_(factura['MÃ©todo Pago'] || factura['Metodo Pago'] || factura.pago || '');
+  const delivery = normalizeKey_(factura['MÃ©todo Entrega'] || factura['Metodo Entrega'] || factura.entrega || '');
+  const note = normalizeKey_(factura.Observaciones || factura.observaciones || '');
+
+  return [orderId, method, delivery, note].some(value => value.indexOf('caja') >= 0 || value.indexOf('mostrador') >= 0)
+    ? 'Caja'
+    : 'Web';
+}
+
+function shouldDiscountStockForInvoice_(factura) {
+  const stockFlag = normalizeKey_(factura['Stock Descontado'] || factura.stockDescontado || '');
+  if (['si', 'sÃ­', 'true', '1', 'descontado'].indexOf(stockFlag) >= 0) return false;
+
+  const channel = normalizeKey_(factura['Canal Venta'] || inferInvoiceSalesChannel_(factura));
+  const status = normalizeKey_(factura['Estado Factura'] || factura.Estado || '');
+  return channel.indexOf('caja') >= 0 && ['pago', 'pagada', 'finalizada'].some(value => status.indexOf(value) >= 0);
+}
+
 function createOrder_(data) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -1362,6 +1387,7 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Pedido'] = rowObject['Estado Pedido'] || 'Nuevo';
     rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
+    rowObject['Canal Venta'] = rowObject['Canal Venta'] || inferInvoiceSalesChannel_(rowObject);
 
     if (!rowObject['ID Cliente'] && rowObject['Teléfono']) {
       rowObject['ID Cliente'] = cleanPhone_(rowObject['Teléfono']);
@@ -1390,6 +1416,7 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
     rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
+    rowObject['Canal Venta'] = rowObject['Canal Venta'] || inferInvoiceSalesChannel_(rowObject);
     const subtotal = toNumber_(rowObject['Subtotal']);
     const abonado = Math.max(0, toNumber_(rowObject['Valor Abonado']));
     rowObject['Valor Abonado'] = abonado;
@@ -1397,6 +1424,10 @@ function appendRow_(sheetName, inputData) {
       ? Math.max(0, subtotal - abonado)
       : Math.max(0, toNumber_(rowObject['Saldo Pendiente']));
     rowObject['Ultimo Abono'] = Math.max(0, toNumber_(rowObject['Ultimo Abono']));
+    if (shouldDiscountStockForInvoice_(rowObject)) {
+      updateStockFromOrder_(rowObject['Productos JSON']);
+      rowObject['Stock Descontado'] = 'SI';
+    }
   }
 
   if (sheetName === 'PedidosChina') {

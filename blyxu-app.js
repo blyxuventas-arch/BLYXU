@@ -50,6 +50,7 @@ const CATALOG_LOAD_MORE_ROWS = 3;
 const IMAGE_WIDTHS = {
     default: 640,
     card: 360,
+    catalogPreview: 180,
     banner: 760,
     spotlight: 520,
     detail: 900,
@@ -57,6 +58,7 @@ const IMAGE_WIDTHS = {
     cart: 140,
     search: 96
 };
+const CATALOG_IMAGE_PRELOAD_LIMIT = 12;
 
 function getCatalogGridColumnCount(grid) {
     if (!grid || typeof window === 'undefined') return CATALOG_BATCH_SIZE;
@@ -105,6 +107,7 @@ let inventorySpotlightRendered = false;
 let googleIdentityLoadPromise = null;
 let homeRenderToken = 0;
 let catalogLazyImageObserver = null;
+const catalogImagePreloadCache = new Set();
 const catalogShuffleSeed = Math.floor(Math.random() * 1000000000);
 let pendingWholesaleEntryCelebration = false;
 
@@ -427,6 +430,102 @@ function runWhenIdle(callback, timeout = 1400) {
         return requestIdleCallback(callback, { timeout });
     }
     return setTimeout(callback, Math.min(timeout, 700));
+}
+
+function getCatalogProductImageSource(product) {
+    if (!product) return '';
+    return product.Imagen || product.imagen || product.Foto || (product.Galeria && product.Galeria[0]) || '';
+}
+
+function getCatalogPreviewImageUrl(source) {
+    return normalizeImageUrl(source, IS_MOBILE_VIEWPORT ? 'thumb' : 'catalogPreview');
+}
+
+function preloadCatalogImageUrl(src, priority = 'auto') {
+    if (!src || catalogImagePreloadCache.has(src)) return;
+    catalogImagePreloadCache.add(src);
+    const img = new Image();
+    img.decoding = 'async';
+    img.referrerPolicy = 'no-referrer';
+    try {
+        img.fetchPriority = priority;
+    } catch (_) {}
+    img.src = src;
+}
+
+function primeCatalogImages(products, grid) {
+    if (!Array.isArray(products) || !products.length || typeof Image === 'undefined') return;
+    const columns = getCatalogGridColumnCount(grid);
+    const highPriorityCount = Math.max(CATALOG_BATCH_SIZE, columns * 2);
+    products.slice(0, CATALOG_IMAGE_PRELOAD_LIMIT).forEach((product, index) => {
+        const source = getCatalogProductImageSource(product);
+        const preview = getCatalogPreviewImageUrl(source);
+        if (preview) preloadCatalogImageUrl(preview, index < highPriorityCount ? 'high' : 'auto');
+    });
+}
+
+function promoteCatalogImage(img) {
+    if (!img || !img.isConnected) return;
+    const fullSrc = img.dataset.fullSrc;
+    if (!fullSrc || img.dataset.fullLoaded === 'true') return;
+    if (img.src === fullSrc || img.currentSrc === fullSrc) {
+        img.dataset.fullLoaded = 'true';
+        img.classList.remove('is-previewing');
+        img.removeAttribute('data-full-src');
+        return;
+    }
+
+    const fullImage = new Image();
+    fullImage.decoding = 'async';
+    fullImage.referrerPolicy = 'no-referrer';
+    try {
+        fullImage.fetchPriority = img.dataset.catalogPriority === 'high' ? 'high' : 'low';
+    } catch (_) {}
+
+    fullImage.onload = () => {
+        const applyFullImage = () => {
+            if (!img.isConnected) return;
+            img.dataset.fullLoaded = 'true';
+            img.classList.remove('is-previewing');
+            img.classList.add('is-loaded');
+            img.removeAttribute('data-full-src');
+            img.src = fullSrc;
+        };
+
+        if (typeof fullImage.decode === 'function') {
+            fullImage.decode().then(applyFullImage).catch(applyFullImage);
+        } else {
+            applyFullImage();
+        }
+    };
+
+    fullImage.onerror = () => {
+        img.dataset.fullLoaded = 'error';
+        img.classList.remove('is-previewing');
+    };
+
+    fullImage.src = fullSrc;
+}
+
+function handleCatalogImageLoad(img) {
+    if (!img) return;
+    img.classList.add('is-loaded');
+    const fullSrc = img.dataset.fullSrc;
+    if (!fullSrc || img.dataset.fullLoaded === 'true' || img.dataset.fullLoaded === 'error') {
+        img.classList.remove('is-previewing');
+        return;
+    }
+
+    img.classList.add('is-previewing');
+    if (img.dataset.upgradeQueued === 'true') return;
+    img.dataset.upgradeQueued = 'true';
+
+    const startUpgrade = () => promoteCatalogImage(img);
+    if (img.dataset.catalogPriority === 'high') {
+        setTimeout(startUpgrade, 80);
+    } else {
+        runWhenIdle(startUpgrade, 1800);
+    }
 }
 
 function loadDeferredCatalogImage(img) {
@@ -2749,16 +2848,20 @@ function renderProducts(products, options = {}) {
     grid.innerHTML = '';
     let rendered = 0;
     const immediateImageCount = initialBatchSize;
+    const highPriorityImageCount = Math.min(initialBatchSize, Math.max(CATALOG_BATCH_SIZE, getCatalogGridColumnCount(grid) * 2));
     const shouldPrioritizeCatalogImages = mode === 'wholesale'
         || gridId === 'wholesale-products-grid'
         || (typeof window !== 'undefined' && window.location.hash === '#coleccion');
+    primeCatalogImages(filtered, grid);
 
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
         const priceInfo = getProductCardPriceInfo(p, mode);
         const price = priceInfo.price;
         const oldPrice = priceInfo.oldPrice;
-        const img = normalizeImageUrl(p.Imagen || p.imagen || p.Foto || (p.Galeria && p.Galeria[0]) || '', 'card');
+        const rawImg = getCatalogProductImageSource(p);
+        const img = normalizeImageUrl(rawImg, 'card');
+        const previewImg = getCatalogPreviewImageUrl(rawImg) || img;
         const cat = p.Categoria || p.categoria || '';
         const stock = getProductStock(p);
         const colors = (p.Color || p.color || '').split(',').map(c => c.trim()).filter(Boolean);
@@ -2772,16 +2875,18 @@ function renderProducts(products, options = {}) {
             ? ''
             : ` onpointerenter="prepareProductDetailPreview(${productIndex}, '${mode}')" ontouchstart="prepareProductDetailPreview(${productIndex}, '${mode}')"`;
         const shouldLoadImageNow = i < immediateImageCount;
-        const imagePriority = shouldLoadImageNow && shouldPrioritizeCatalogImages ? 'high' : shouldLoadImageNow ? 'auto' : 'low';
-        const imageLoading = shouldLoadImageNow && shouldPrioritizeCatalogImages ? 'eager' : 'lazy';
+        const isHighPriorityImage = i < highPriorityImageCount && shouldPrioritizeCatalogImages;
+        const imagePriority = isHighPriorityImage ? 'high' : shouldLoadImageNow ? 'auto' : 'low';
+        const imageLoading = i < highPriorityImageCount ? 'eager' : 'lazy';
         const imageSourceAttrs = shouldLoadImageNow
-            ? `src="${escapeHtml(img)}"`
-            : `data-src="${escapeHtml(img)}" data-catalog-lazy="true"`;
+            ? `src="${escapeHtml(previewImg)}"`
+            : `data-src="${escapeHtml(previewImg)}" data-catalog-lazy="true"`;
+        const fullImageAttr = img && previewImg && img !== previewImg ? ` data-full-src="${escapeHtml(img)}"` : '';
 
         return `
         <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}"${detailPrepAttrs} tabindex="0">
             <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
-                ${img ? `<img ${imageSourceAttrs} alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onerror="handleCatalogImageError(this)">` :
+                ${img ? `<img ${imageSourceAttrs}${fullImageAttr} data-catalog-priority="${imagePriority}" alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onload="handleCatalogImageLoad(this)" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}

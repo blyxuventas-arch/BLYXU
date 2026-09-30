@@ -2353,7 +2353,14 @@ a,
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform .6s ease;
+    opacity: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+    transition: opacity .18s ease, transform .6s ease;
+}
+
+.product-card-img img.is-loaded,
+.product-card-img img.is-previewing {
+    opacity: 1;
 }
 
 .product-card-img img[data-catalog-lazy] {
