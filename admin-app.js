@@ -1569,6 +1569,9 @@ function getBarcodeCameraErrorMessage(error) {
         return 'La camara esta autorizada, pero el navegador la bloquea porque esta pagina no usa HTTPS. Abre BLYXU desde su direccion segura.';
     }
     if (/NotAllowed|Permission|denied/i.test(`${name} ${message}`)) {
+        if (isIosBarcodeDevice()) {
+            return 'Safari no entrego acceso a la camara. Revisa Ajustes > Safari > Camara y pulsa Reintentar camara.';
+        }
         return 'El navegador no entrego acceso a la camara. Revisa el permiso de este sitio y pulsa Reintentar camara.';
     }
     if (/NotReadable|TrackStart|Could not start|Abort/i.test(`${name} ${message}`)) {
@@ -1579,6 +1582,9 @@ function getBarcodeCameraErrorMessage(error) {
     }
     if (/Overconstrained|ConstraintNotSatisfied/i.test(`${name} ${message}`)) {
         return 'La camara no acepta el modo solicitado. Pulsa Reintentar para abrirla en modo compatible.';
+    }
+    if (isIosBarcodeDevice()) {
+        return 'El iPhone no entrego imagen. Abre BLYXU directamente en Safari, cierra otras apps con camara y pulsa Reintentar.';
     }
     return 'No se pudo iniciar el video de la camara. Pulsa Reintentar camara o usa la referencia manual.';
 }
@@ -1620,6 +1626,16 @@ function getBarcodeScanBox(width, height) {
         width: Math.floor(Math.min(520, availableWidth, Math.max(260, width * 0.94))),
         height: Math.floor(Math.min(360, availableHeight, Math.max(190, height * 0.78)))
     };
+}
+
+function isIosBarcodeDevice() {
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function pickRearBarcodeCamera(cameras = []) {
+    const rearPattern = /back|rear|environment|trasera|posterior|arriere|ruck/i;
+    return cameras.find(camera => rearPattern.test(String(camera?.label || ''))) || cameras[cameras.length - 1] || cameras[0] || null;
 }
 
 async function optimizeBarcodeCameraStream(stream) {
@@ -1713,24 +1729,55 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     if (video) video.style.display = 'none';
     if (reader) reader.style.display = 'block';
     const formatsToSupport = getHtml5BarcodeFormats();
-    const scanner = new window.Html5Qrcode('barcode-scanner-reader', {
-        formatsToSupport,
-        useBarCodeDetectorIfSupported: true
-    });
-    activeHtml5BarcodeScanner = scanner;
     const scannerConfig = {
-        fps: 15,
+        fps: isIosBarcodeDevice() ? 10 : 15,
         qrbox: getBarcodeScanBox,
-        disableFlip: true
+        disableFlip: false
     };
     const onScanSuccess = (decodedText, decodedResult) => {
         const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
         handleDetectedCode(decodedText, detectedFormat);
     };
+
+    const createScanner = () => {
+        const instance = new window.Html5Qrcode('barcode-scanner-reader', {
+            formatsToSupport,
+            useBarCodeDetectorIfSupported: true
+        });
+        activeHtml5BarcodeScanner = instance;
+        return instance;
+    };
+    const resetFailedScanner = scanner => {
+        try { scanner.clear?.(); } catch (error) {}
+        if (activeHtml5BarcodeScanner === scanner) activeHtml5BarcodeScanner = null;
+        if (reader) reader.innerHTML = '';
+    };
+
+    let scanner = createScanner();
+    let startError = null;
+    const preferredConfig = isIosBarcodeDevice()
+        ? { facingMode: 'environment' }
+        : getBarcodeVideoConstraints();
     try {
-        await scanner.start(getBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+        await scanner.start(preferredConfig, scannerConfig, onScanSuccess, () => {});
     } catch (error) {
-        await scanner.start(getBasicBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+        startError = error;
+        resetFailedScanner(scanner);
+        const cameras = typeof window.Html5Qrcode.getCameras === 'function'
+            ? await window.Html5Qrcode.getCameras().catch(() => [])
+            : [];
+        const rearCamera = pickRearBarcodeCamera(cameras);
+        scanner = createScanner();
+        try {
+            await scanner.start(rearCamera?.id || getBasicBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+            startError = null;
+        } catch (fallbackError) {
+            startError = fallbackError;
+        }
+    }
+    if (startError) {
+        resetFailedScanner(scanner);
+        throw startError;
     }
     if (!reader?.isConnected) {
         try { await scanner.stop(); } catch (error) {}
@@ -1738,7 +1785,21 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
         if (activeHtml5BarcodeScanner === scanner) activeHtml5BarcodeScanner = null;
         return true;
     }
-    if (status) status.textContent = 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
+
+    const scannerVideo = reader.querySelector('video');
+    if (scannerVideo) {
+        scannerVideo.muted = true;
+        scannerVideo.autoplay = true;
+        scannerVideo.playsInline = true;
+        scannerVideo.setAttribute('playsinline', '');
+        scannerVideo.setAttribute('webkit-playsinline', '');
+        try { Promise.resolve(scannerVideo.play()).catch(() => {}); } catch (error) {}
+    }
+    if (status) {
+        status.textContent = isIosBarcodeDevice()
+            ? 'Camara trasera activa en iPhone. Manten el codigo centrado y con buena luz.'
+            : 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
+    }
     return true;
 }
 
