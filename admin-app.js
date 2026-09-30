@@ -1587,6 +1587,51 @@ function getBarcodeFormatLabel(format) {
     return labels[normalized] || String(format || 'Codigo').toUpperCase();
 }
 
+function getBarcodeVideoConstraints() {
+    return {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30, max: 30 },
+        focusMode: { ideal: 'continuous' }
+    };
+}
+
+function getBasicBarcodeVideoConstraints() {
+    return {
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+    };
+}
+
+function getBarcodeScanBox(width, height) {
+    const availableWidth = Math.max(180, width - 20);
+    const availableHeight = Math.max(170, height - 20);
+    return {
+        width: Math.floor(Math.min(520, availableWidth, Math.max(260, width * 0.94))),
+        height: Math.floor(Math.min(360, availableHeight, Math.max(190, height * 0.78)))
+    };
+}
+
+async function optimizeBarcodeCameraStream(stream) {
+    const [track] = stream?.getVideoTracks?.() || [];
+    if (!track || typeof track.getCapabilities !== 'function' || typeof track.applyConstraints !== 'function') return;
+    const capabilities = track.getCapabilities();
+    const advanced = [];
+    if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.includes('continuous')) {
+        advanced.push({ focusMode: 'continuous' });
+    }
+    if (typeof capabilities.zoom?.min === 'number' && typeof capabilities.zoom?.max === 'number') {
+        const comfortableZoom = Math.min(capabilities.zoom.max, Math.max(capabilities.zoom.min, 1));
+        advanced.push({ zoom: comfortableZoom });
+    }
+    if (!advanced.length) return;
+    try {
+        await track.applyConstraints({ advanced });
+    } catch (error) {}
+}
+
 function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed }) {
     let candidate = '';
     let candidateHits = 0;
@@ -1638,29 +1683,27 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
         useBarCodeDetectorIfSupported: true
     });
     activeHtml5BarcodeScanner = scanner;
-    await scanner.start(
-        { facingMode: 'environment' },
-        {
-            fps: 10,
-            qrbox: (width, height) => ({
-                width: Math.max(220, Math.min(320, Math.floor(width * 0.82))),
-                height: Math.max(150, Math.min(240, Math.floor(height * 0.58)))
-            }),
-            aspectRatio: 1.333334
-        },
-        (decodedText, decodedResult) => {
-            const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
-            handleDetectedCode(decodedText, detectedFormat);
-        },
-        () => {}
-    );
+    const scannerConfig = {
+        fps: 15,
+        qrbox: getBarcodeScanBox,
+        disableFlip: true
+    };
+    const onScanSuccess = (decodedText, decodedResult) => {
+        const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
+        handleDetectedCode(decodedText, detectedFormat);
+    };
+    try {
+        await scanner.start(getBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+    } catch (error) {
+        await scanner.start(getBasicBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+    }
     if (!reader?.isConnected) {
         try { await scanner.stop(); } catch (error) {}
         try { scanner.clear(); } catch (error) {}
         if (activeHtml5BarcodeScanner === scanner) activeHtml5BarcodeScanner = null;
         return true;
     }
-    if (status) status.textContent = 'Camara activa. La lectura es automatica: manten el codigo dentro del marco.';
+    if (status) status.textContent = 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
     return true;
 }
 
@@ -1718,11 +1761,7 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
                 ? new BarcodeDetector({ formats: detectorFormats })
                 : new BarcodeDetector();
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { ideal: 'environment' },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
+                video: getBarcodeVideoConstraints(),
                 audio: false
             });
             if (scannerSession !== barcodeScannerSession || !modal.isConnected) {
@@ -1730,9 +1769,10 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
                 return;
             }
             activeBarcodeScannerStream = stream;
+            await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
             video.srcObject = activeBarcodeScannerStream;
             clearTimeout(permissionHintTimer);
-            if (status) status.textContent = 'Camara activa. La lectura es automatica: manten el codigo dentro del marco.';
+            if (status) status.textContent = 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
 
             let lastDetectionAt = 0;
             const scan = async () => {

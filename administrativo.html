@@ -844,8 +844,11 @@
         }
 
         .barcode-scanner-card {
-            width:min(520px, calc(100vw - 28px));
-            max-width:520px;
+            width:min(640px, calc(100vw - 24px));
+            max-width:640px;
+            max-height:calc(100dvh - 24px);
+            display:grid;
+            grid-template-rows:auto auto minmax(0, auto) auto auto;
             padding:22px;
             border-radius:14px;
             overflow:hidden;
@@ -878,7 +881,8 @@
         .barcode-scanner-stage {
             position:relative;
             width:100%;
-            min-height:300px;
+            min-height:340px;
+            height:min(58vh, 470px);
             overflow:hidden;
             border:1px solid rgba(255,255,255,.12);
             border-radius:12px;
@@ -887,23 +891,25 @@
         .barcode-scanner-stage video,
         #barcode-scanner-reader {
             width:100%!important;
-            min-height:300px;
+            height:100%!important;
+            min-height:340px;
             border:0!important;
             object-fit:cover;
+            object-position:center;
         }
         #barcode-scanner-reader { display:none; }
-        #barcode-scanner-reader video { min-height:300px; object-fit:cover; }
+        #barcode-scanner-reader video { width:100%!important; height:100%!important; min-height:340px; object-fit:cover; }
         #barcode-scanner-reader img { max-width:100%; }
         .barcode-scanner-guide {
             position:absolute;
             inset:50% auto auto 50%;
-            width:min(78%, 330px);
-            aspect-ratio:1.65;
+            width:min(92%, 520px);
+            height:min(72%, 330px);
             pointer-events:none;
             transform:translate(-50%,-50%);
             border:2px solid rgba(255,255,255,.9);
             border-radius:10px;
-            box-shadow:0 0 0 999px rgba(0,0,0,.25);
+            box-shadow:0 0 0 999px rgba(0,0,0,.16);
             z-index:3;
         }
         .barcode-scanner-guide span {
@@ -967,12 +973,68 @@
             margin-top:12px;
         }
         @media(max-width:560px) {
-            .barcode-scanner-card { padding:16px; }
+            #barcode-scanner-modal {
+                align-items:stretch!important;
+                padding:calc(8px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom))!important;
+            }
+            .barcode-scanner-card {
+                width:100%;
+                max-width:none;
+                max-height:none;
+                height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                grid-template-rows:auto auto minmax(220px, 1fr) auto auto;
+                padding:12px;
+                border-radius:16px;
+                overflow:hidden;
+            }
+            .barcode-scanner-head {
+                align-items:center;
+                gap:10px;
+                margin-bottom:10px;
+            }
             .barcode-scanner-head h2 { font-size:21px; }
+            .barcode-scanner-head .admin-kicker { font-size:9px; }
+            .barcode-scanner-head .admin-btn {
+                width:auto!important;
+                min-height:38px;
+                padding:8px 12px;
+                flex:0 0 auto;
+            }
+            .barcode-scanner-status {
+                min-height:0;
+                margin-bottom:8px;
+                padding:9px 10px;
+                font-size:11px;
+            }
             .barcode-scanner-stage,
             .barcode-scanner-stage video,
             #barcode-scanner-reader,
-            #barcode-scanner-reader video { min-height:260px; }
+            #barcode-scanner-reader video {
+                min-height:220px;
+                height:100%!important;
+            }
+            .barcode-scanner-stage {
+                height:100%;
+            }
+            .barcode-scanner-guide {
+                width:calc(100% - 22px);
+                height:min(74%, 370px);
+                border-radius:12px;
+            }
+            .barcode-scanner-guide span {
+                left:6%;
+                right:6%;
+            }
+            .barcode-live-readout {
+                margin-top:8px;
+                padding:10px 12px;
+            }
+            .barcode-live-readout strong {
+                font-size:13px;
+            }
+            .barcode-live-readout small {
+                font-size:10px;
+            }
             .barcode-scanner-manual-row { grid-template-columns:1fr; }
             .barcode-scanner-manual-row .admin-btn { width:100%; }
         }
