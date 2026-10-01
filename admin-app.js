@@ -53,6 +53,7 @@ let adminInventoryCategoryFilter = 'todos';
 let adminInventoryPdfSelectedCategoryKeys = null;
 let isEditingProduct = false;
 let inventoryFetchToken = 0;
+let inventoryLoadingPromise = null;
 const PRODUCT_CATEGORY_FIELD_KEYS = ['Categor\u00eda', 'Categoria', 'Categor\u00c3\u00ada', 'Categor\u00c3\u0192\u00c2\u00ada', 'categoria'];
 const PRODUCT_PROMOTION_FIELD_KEYS = ['Promocion', 'Promoci\u00f3n', 'Promoci\u00c3\u00b3n', 'Promoci\u00c3\u0192\u00c2\u00b3n', 'promo', 'Promo'];
 const PRODUCT_BARCODE_FIELD_KEYS = ['Codigo Barras', 'Codigo de Barras', 'C\u00f3digo de Barras', 'Codigo_Barras', 'codigoBarras', 'barcode', 'Barcode'];
@@ -1396,6 +1397,32 @@ function setProductBarcodeScanMode(enabled) {
     updateProductQrPreview();
 }
 
+function syncScannedCodeToChildReference(code, sourceInput = null) {
+    const cleanCode = normalizeBarcodeValue(code);
+    if (!cleanCode) return '';
+
+    let childInput = null;
+    if (!sourceInput || sourceInput.id === 'prod-barcode') {
+        childInput = document.getElementById('prod-id');
+    } else {
+        const scope = sourceInput.closest('.admin-panel, .variant-edit-card, .var-edit-expanded');
+        childInput = scope?.querySelector('.var-id, .ve-id') || null;
+    }
+
+    if (childInput) {
+        childInput.value = cleanCode;
+        childInput.dataset.scannedReference = '1';
+        childInput.dispatchEvent(new Event('input', { bubbles: true }));
+        childInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const hint = sourceInput?.id === 'prod-barcode'
+        ? document.getElementById('prod-barcode-hint')
+        : sourceInput?.closest('.admin-panel')?.querySelector('.var-barcode-hint');
+    if (hint) hint.textContent = 'Codigo detectado: la referencia hija se sincronizo automaticamente.';
+    return cleanCode;
+}
+
 function initProductBarcodeField() {
     let barcodeInput = document.getElementById('prod-barcode');
     if (!barcodeInput) {
@@ -1441,6 +1468,7 @@ function initProductBarcodeField() {
                     input.value = normalizeBarcodeValue(code);
                     input.dataset.autoBarcode = '0';
                     setProductBarcodeScanMode(true);
+                    syncScannedCodeToChildReference(code, input);
                     updateProductQrPreview();
                 }
             }
@@ -1524,6 +1552,10 @@ function buildBarcodeScannerModal() {
                 <div id="barcode-scanner-status" class="barcode-scanner-status" aria-live="polite">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
                 <button type="button" class="admin-btn secondary barcode-camera-retry" id="barcode-camera-retry" hidden>Reintentar camara</button>
             </div>
+            <div class="barcode-camera-picker" id="barcode-camera-picker" hidden>
+                <label for="barcode-camera-select">Cámara en uso</label>
+                <select id="barcode-camera-select" class="form-control" aria-label="Seleccionar cámara"></select>
+            </div>
             <div class="barcode-scanner-stage">
                 <video id="barcode-scanner-video" playsinline muted autoplay></video>
                 <div id="barcode-scanner-reader"></div>
@@ -1572,6 +1604,9 @@ function getBarcodeCameraErrorMessage(error) {
         if (isIosBarcodeDevice()) {
             return 'Safari no entrego acceso a la camara. Revisa Ajustes > Safari > Camara y pulsa Reintentar camara.';
         }
+        if (!isMobileBarcodeDevice()) {
+            return 'El navegador no entrego acceso a la webcam. Permite la cámara para este sitio y revisa en Windows: Configuración > Privacidad > Cámara.';
+        }
         return 'El navegador no entrego acceso a la camara. Revisa el permiso de este sitio y pulsa Reintentar camara.';
     }
     if (/NotReadable|TrackStart|Could not start|Abort/i.test(`${name} ${message}`)) {
@@ -1605,18 +1640,26 @@ function getBarcodeFormatLabel(format) {
     return labels[normalized] || String(format || 'Codigo').toUpperCase();
 }
 
-function getBarcodeVideoConstraints() {
-    return {
-        facingMode: { ideal: 'environment' },
+function isMobileBarcodeDevice() {
+    return isIosBarcodeDevice() || /Android|Mobile|IEMobile|Opera Mini/i.test(navigator.userAgent || '');
+}
+
+function getBarcodeVideoConstraints(deviceId = '') {
+    const constraints = {
         width: { ideal: 1280 },
         height: { ideal: 720 }
     };
+    if (deviceId) {
+        constraints.deviceId = { exact: deviceId };
+    } else if (isMobileBarcodeDevice()) {
+        constraints.facingMode = { ideal: 'environment' };
+    }
+    return constraints;
 }
 
-function getBasicBarcodeVideoConstraints() {
-    return {
-        facingMode: { ideal: 'environment' }
-    };
+function getBasicBarcodeVideoConstraints(deviceId = '') {
+    if (deviceId) return { deviceId: { exact: deviceId } };
+    return isMobileBarcodeDevice() ? { facingMode: { ideal: 'environment' } } : true;
 }
 
 function getBarcodeScanBox(width, height) {
@@ -1636,6 +1679,25 @@ function isIosBarcodeDevice() {
 function pickRearBarcodeCamera(cameras = []) {
     const rearPattern = /back|rear|environment|trasera|posterior|arriere|ruck/i;
     return cameras.find(camera => rearPattern.test(String(camera?.label || ''))) || cameras[cameras.length - 1] || cameras[0] || null;
+}
+
+async function populateBarcodeCameraPicker(modal, selectedDeviceId = '') {
+    const picker = modal?.querySelector('#barcode-camera-picker');
+    const select = modal?.querySelector('#barcode-camera-select');
+    if (!picker || !select || !navigator.mediaDevices?.enumerateDevices) return;
+    const cameras = (await navigator.mediaDevices.enumerateDevices().catch(() => []))
+        .filter(device => device.kind === 'videoinput');
+    if (cameras.length < 2) return;
+
+    select.innerHTML = cameras.map((camera, index) => {
+        const name = camera.label || `Cámara ${index + 1}`;
+        return `<option value="${escapeHtml(camera.deviceId)}">${escapeHtml(name)}</option>`;
+    }).join('');
+    const current = cameras.some(camera => camera.deviceId === selectedDeviceId)
+        ? selectedDeviceId
+        : cameras[0].deviceId;
+    select.value = current;
+    picker.hidden = false;
 }
 
 async function optimizeBarcodeCameraStream(stream) {
@@ -1723,7 +1785,7 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
     };
 }
 
-async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode) {
+async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady } = {}) {
     await loadHtml5QrcodeLibrary();
     if (typeof window.Html5Qrcode !== 'function') return false;
     if (video) video.style.display = 'none';
@@ -1755,9 +1817,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
 
     let scanner = createScanner();
     let startError = null;
-    const preferredConfig = isIosBarcodeDevice()
-        ? { facingMode: 'environment' }
-        : getBarcodeVideoConstraints();
+    const preferredConfig = preferredDeviceId || getBarcodeVideoConstraints();
     try {
         await scanner.start(preferredConfig, scannerConfig, onScanSuccess, () => {});
     } catch (error) {
@@ -1766,10 +1826,12 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
         const cameras = typeof window.Html5Qrcode.getCameras === 'function'
             ? await window.Html5Qrcode.getCameras().catch(() => [])
             : [];
-        const rearCamera = pickRearBarcodeCamera(cameras);
+        const fallbackCamera = preferredDeviceId
+            ? cameras.find(camera => camera.id === preferredDeviceId)
+            : (isMobileBarcodeDevice() ? pickRearBarcodeCamera(cameras) : cameras[0]);
         scanner = createScanner();
         try {
-            await scanner.start(rearCamera?.id || getBasicBarcodeVideoConstraints(), scannerConfig, onScanSuccess, () => {});
+            await scanner.start(fallbackCamera?.id || getBasicBarcodeVideoConstraints(preferredDeviceId), scannerConfig, onScanSuccess, () => {});
             startError = null;
         } catch (fallbackError) {
             startError = fallbackError;
@@ -1798,12 +1860,15 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     if (status) {
         status.textContent = isIosBarcodeDevice()
             ? 'Camara trasera activa en iPhone. Manten el codigo centrado y con buena luz.'
-            : 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
+            : (!isMobileBarcodeDevice()
+                ? 'Webcam activa. La lectura es automatica: ubica el codigo centrado y con buena luz.'
+                : 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.');
     }
+    await onCameraReady?.();
     return true;
 }
 
-async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
+async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '' } = {}) {
     const modal = buildBarcodeScannerModal();
     const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
@@ -1811,6 +1876,7 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
     const manualInput = modal.querySelector('#barcode-scanner-manual');
     const reader = modal.querySelector('#barcode-scanner-reader');
     const retryButton = modal.querySelector('#barcode-camera-retry');
+    const cameraSelect = modal.querySelector('#barcode-camera-select');
     const readout = modal.querySelector('#barcode-live-readout');
     const valueLabel = modal.querySelector('#barcode-live-value');
     const formatLabel = modal.querySelector('#barcode-live-format');
@@ -1841,9 +1907,13 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             useCode(manualInput.value);
         }
     });
+    const reopenWithCamera = deviceId => {
+        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '' });
+    };
     retryButton?.addEventListener('click', () => {
-        openBarcodeScanner({ targetInputId, onDetected });
+        reopenWithCamera(preferredDeviceId);
     });
+    cameraSelect?.addEventListener('change', () => reopenWithCamera(cameraSelect.value));
     const permissionHintTimer = setTimeout(() => {
         if (scannerSession === barcodeScannerSession && modal.isConnected && status) {
             status.textContent = 'La camara esta tardando en iniciar. Revisa el permiso del sitio o pulsa Reintentar camara.';
@@ -1864,13 +1934,13 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: getBarcodeVideoConstraints(),
+                    video: getBarcodeVideoConstraints(preferredDeviceId),
                     audio: false
                 });
             } catch (error) {
                 if (!/Overconstrained|ConstraintNotSatisfied/i.test(String(error?.name || error || ''))) throw error;
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: getBasicBarcodeVideoConstraints(),
+                    video: getBasicBarcodeVideoConstraints(preferredDeviceId),
                     audio: false
                 });
             }
@@ -1881,8 +1951,11 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             activeBarcodeScannerStream = stream;
             await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
             attachBarcodeCameraStream(video, activeBarcodeScannerStream, { status, retryButton, scannerSession });
+            await populateBarcodeCameraPicker(modal, preferredDeviceId);
             clearTimeout(permissionHintTimer);
-            if (status) status.textContent = 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.';
+            if (status) status.textContent = isMobileBarcodeDevice()
+                ? 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.'
+                : 'Webcam activa. La lectura es automatica: ubica el codigo centrado y con buena luz.';
 
             let lastDetectionAt = 0;
             const scan = async () => {
@@ -1906,7 +1979,10 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
             return;
         }
 
-        if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode)) {
+        if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
+            preferredDeviceId,
+            onCameraReady: () => populateBarcodeCameraPicker(modal, preferredDeviceId)
+        })) {
             clearTimeout(permissionHintTimer);
             return;
         }
@@ -1927,7 +2003,10 @@ async function openBarcodeScanner({ targetInputId, onDetected } = {}) {
                 video.style.display = 'none';
             }
             try {
-                if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode)) {
+                if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
+                    preferredDeviceId,
+                    onCameraReady: () => populateBarcodeCameraPicker(modal, preferredDeviceId)
+                })) {
                     clearTimeout(permissionHintTimer);
                     return;
                 }
@@ -1953,6 +2032,7 @@ window.scanBarcodeToElement = function (elementId) {
             if (input) {
                 input.value = normalizeBarcodeValue(code);
                 input.dataset.autoBarcode = '0';
+                syncScannedCodeToChildReference(code, input);
             }
         }
     });
@@ -2877,6 +2957,8 @@ function resetProductForm() {
     
     setMotherProductId(generateMotherProductId());
     const currentMotherId = getInputValue('prod-id-producto');
+    const childIdInput = document.getElementById('prod-id');
+    if (childIdInput) delete childIdInput.dataset.scannedReference;
     setInputValue('prod-id', `${currentMotherId}-V01`);
     setProductBarcodeScanMode(false);
     updateProductBarcodeField();
@@ -3484,8 +3566,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prod-id-producto')?.addEventListener('change', () => {
         const motherId = getInputValue('prod-id-producto');
         setMotherProductId(motherId);
+        const childIdInput = document.getElementById('prod-id');
         const currentChildId = getInputValue('prod-id');
-        if (motherId && (!currentChildId || /^VAR-/i.test(currentChildId) || /-V01$/i.test(currentChildId))) {
+        const hasScannedReference = childIdInput?.dataset.scannedReference === '1';
+        if (!hasScannedReference && motherId && (!currentChildId || /^VAR-/i.test(currentChildId) || /-V01$/i.test(currentChildId))) {
             setInputValue('prod-id', `${motherId}-V01`);
         }
         updateLivePreview();
@@ -3966,7 +4050,10 @@ document.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = '';
         const motherId = ensureProductHierarchyIds().idProducto;
         const firstCombo = combinations[0];
-        setInputValue('prod-id', `${motherId}-V01`);
+        const mainChildIdInput = document.getElementById('prod-id');
+        if (mainChildIdInput?.dataset.scannedReference !== '1') {
+            setInputValue('prod-id', `${motherId}-V01`);
+        }
         setInputValue('prod-estilo', firstCombo.styleValue || '');
         setInputValue('prod-tamano', firstCombo.sizeValue || '');
         setInputValue('prod-color', firstCombo.colorValue || '');
@@ -6038,15 +6125,19 @@ function paintInventory(list) {
 
 async function cargarInventario(options) {
     options = options || {};
+    if (inventoryLoadingPromise && !options.force) return inventoryLoadingPromise;
+
+    const loadInventory = async () => {
     const tbody = document.getElementById('inventory-tbody');
     const currentToken = ++inventoryFetchToken;
-    const canKeepCurrentRows = inventario.length > 0 || options.silent === true;
+    const canKeepCurrentRows = inventario.length > 0;
 
     try {
         if (!canKeepCurrentRows) {
             var cachedList = readInventoryCache();
             if (cachedList.length) {
                 paintInventory(cachedList);
+                if (typeof renderQuickSaleResults === 'function') renderQuickSaleResults();
             }
         }
 
@@ -6054,9 +6145,17 @@ async function cargarInventario(options) {
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;"><div style="display:flex;align-items:center;justify-content:center;gap:12px;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div><span style="font-size:13px;color:rgba(255,255,255,0.4);">Cargando inventario...</span></div></td></tr>';
         }
 
-        const res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), {
-            cache: 'no-store'
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        let res;
+        try {
+            res = await fetch(GOOGLE_SHEET_PRODUCTS_URL + '&_=' + Date.now(), {
+                cache: 'no-store',
+                signal: controller.signal
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
         const data = await res.json();
         if (currentToken !== inventoryFetchToken) return;
 
@@ -6079,7 +6178,24 @@ async function cargarInventario(options) {
         } else {
             showToast('No se pudo actualizar inventario: ' + err.message, 'error');
         }
+
+        const quickSaleResults = document.getElementById('quick-sale-results');
+        if (quickSaleResults && inventario.length === 0) {
+            quickSaleResults.innerHTML = `
+                <div class="quick-sale-empty">
+                    <strong>No se pudo cargar el catálogo.</strong><br>
+                    Revisa la conexión y vuelve a intentarlo.<br><br>
+                    <button class="admin-btn secondary" type="button" onclick="cargarInventario({ force: true }).then(renderQuickSaleResults)">Reintentar catálogo</button>
+                </div>
+            `;
+        }
     }
+    };
+
+    inventoryLoadingPromise = loadInventory().finally(() => {
+        inventoryLoadingPromise = null;
+    });
+    return inventoryLoadingPromise;
 }
 
 function renderInventoryInBatches() {
@@ -7785,9 +7901,13 @@ function editarProducto(index) {
     const resolvedBarcode = getProductBarcode(p);
     setInputValue('prod-barcode', resolvedBarcode);
     const barcodeInput = document.getElementById('prod-barcode');
+    const childIdInput = document.getElementById('prod-id');
     if (barcodeInput) {
         const generatedBarcode = makeProductBarcode(getInputValue('prod-id-producto'), getInputValue('prod-id'));
         const hasRealBarcode = Boolean(storedBarcode) && normalizeBarcodeValue(storedBarcode) !== normalizeBarcodeValue(generatedBarcode);
+        if (childIdInput) {
+            childIdInput.dataset.scannedReference = hasRealBarcode && normalizeBarcodeValue(idVar) === normalizeBarcodeValue(resolvedBarcode) ? '1' : '0';
+        }
         barcodeInput.dataset.generatedBarcode = generatedBarcode;
         barcodeInput.dataset.autoBarcode = hasRealBarcode ? '0' : '1';
         setProductBarcodeScanMode(hasRealBarcode);
@@ -11413,7 +11533,11 @@ window.invoiceInventoryLoadTried = false;
 window.invoicePreviousPayment = 0;
 window.quickSaleCart = [];
 window.quickSaleResults = [];
+window.quickSaleGroups = new Map();
 window.quickSaleSelectedKey = '';
+window.quickSaleCategory = 'all';
+window.quickSaleMobilePane = 'catalog';
+window.quickSaleHeldTicket = null;
 
 function readInvoiceField(source, fields, fallback = '') {
     return getProductField(source || {}, fields, fallback);
@@ -11501,6 +11625,40 @@ function getQuickSaleSearchText(product) {
     ].join(' '));
 }
 
+function getQuickSaleGroupKey(product) {
+    const motherId = getInventoryMotherId(product);
+    const variationId = getInventoryVariationId(product);
+    if (motherId && normalizeSearchText(motherId) !== normalizeSearchText(variationId)) {
+        return `mother:${motherId}`;
+    }
+    return `item:${getInventoryProductKey(product)}`;
+}
+
+function getQuickSaleVariantLabel(product) {
+    const meta = getQuickSaleProductMeta(product);
+    const attributes = [meta.color, meta.size, meta.style].filter(Boolean).join(' / ');
+    return String(attributes || meta.sku || getInvoiceProductId(product) || 'Variante');
+}
+
+function groupQuickSaleProducts(products) {
+    const groups = new Map();
+    products.forEach(product => {
+        const groupKey = getQuickSaleGroupKey(product);
+        if (!groups.has(groupKey)) groups.set(groupKey, { key: groupKey, variants: [] });
+        groups.get(groupKey).variants.push(product);
+    });
+
+    return Array.from(groups.values()).map(group => {
+        group.variants.sort((a, b) => {
+            const stockOrder = Number(getQuickSaleStock(b) > 0) - Number(getQuickSaleStock(a) > 0);
+            return stockOrder || getQuickSaleVariantLabel(a).localeCompare(getQuickSaleVariantLabel(b), 'es');
+        });
+        group.product = group.variants.find(product => getInventoryProductKey(product) === window.quickSaleSelectedKey)
+            || group.variants[0];
+        return group;
+    });
+}
+
 function findQuickSaleProductByReference(rawCode) {
     const code = normalizeBarcodeValue(rawCode);
     if (!code || !Array.isArray(inventario)) return null;
@@ -11565,17 +11723,55 @@ function openQuickSaleScanner() {
 
 window.openQuickSaleScanner = openQuickSaleScanner;
 
+function syncQuickSaleMobilePane(pane = window.quickSaleMobilePane) {
+    const catalog = document.querySelector('.quick-sale-catalog-panel');
+    const checkout = document.querySelector('.quick-sale-checkout-panel');
+    const buttons = document.querySelectorAll('[data-quick-sale-pane]');
+    if (!catalog || !checkout) return;
+
+    window.quickSaleMobilePane = pane === 'checkout' ? 'checkout' : 'catalog';
+    const compact = window.matchMedia('(max-width: 1024px)').matches;
+    catalog.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'catalog');
+    checkout.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'checkout');
+    buttons.forEach(button => {
+        const active = button.dataset.quickSalePane === window.quickSaleMobilePane;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+}
+
+window.setQuickSaleMobilePane = function(pane) {
+    syncQuickSaleMobilePane(pane);
+    document.querySelector('.quick-sale-mobile-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+function renderQuickSaleCategories() {
+    const container = document.getElementById('quick-sale-categories');
+    if (!container) return;
+    const categories = Array.from(new Set((inventario || [])
+        .filter(product => !isBannerInventoryProduct(product))
+        .map(product => String(getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, '') || '').trim())
+        .filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'es'));
+    const activeCategory = window.quickSaleCategory || 'all';
+    const buttons = [{ value: 'all', label: 'Todos' }, ...categories.map(category => ({ value: category, label: category }))];
+    container.innerHTML = buttons.map(item => `
+        <button class="quick-sale-category-btn${item.value === activeCategory ? ' active' : ''}" type="button" data-quick-sale-category="${escapeHtml(item.value)}">
+            ${escapeHtml(item.label)}
+        </button>
+    `).join('');
+}
+
+window.setQuickSaleCategory = function(category) {
+    window.quickSaleCategory = String(category || 'all');
+    renderQuickSaleCategories();
+    renderQuickSaleResults();
+};
+
 function renderQuickSaleResults() {
     const container = document.getElementById('quick-sale-results');
     const input = document.getElementById('quick-sale-search');
     if (!container || !input) return;
-
-    const q = normalizeSearchText(input.value || '');
-    if (q.length < 2) {
-        container.innerHTML = '<div class="quick-sale-empty">Escribe al menos 2 letras para buscar en inventario.</div>';
-        window.quickSaleResults = [];
-        return;
-    }
 
     if (!Array.isArray(inventario) || !inventario.length) {
         container.innerHTML = '<div class="quick-sale-empty">Cargando inventario...</div>';
@@ -11583,9 +11779,13 @@ function renderQuickSaleResults() {
         return;
     }
 
+    renderQuickSaleCategories();
+    const q = normalizeSearchText(input.value || '');
     const terms = q.split(/\s+/).filter(Boolean);
-    const results = inventario
+    const activeCategory = window.quickSaleCategory === 'all' ? '' : normalizeSearchText(window.quickSaleCategory);
+    const matchingProducts = inventario
         .filter(product => !isBannerInventoryProduct(product))
+        .filter(product => !activeCategory || normalizeSearchText(getProductField(product, PRODUCT_CATEGORY_FIELD_KEYS, '')) === activeCategory)
         .map(product => {
             const text = getQuickSaleSearchText(product);
             const matches = terms.every(term => text.includes(term));
@@ -11596,44 +11796,124 @@ function renderQuickSaleResults() {
                 if (normalizeSearchText(getInvoiceProductSku(product)).includes(term)) score += 30;
                 if (normalizeSearchText(getProductBarcode(product)).includes(term)) score += 35;
             });
+            if (getQuickSaleStock(product) > 0) score += 5;
             return { product, score };
         })
         .filter(Boolean)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 18)
+        .sort((a, b) => b.score - a.score || getInvoiceProductName(a.product).localeCompare(getInvoiceProductName(b.product), 'es'))
         .map(entry => entry.product);
+    const groups = groupQuickSaleProducts(matchingProducts).slice(0, 24);
+    const results = groups.map(group => group.product);
 
     window.quickSaleResults = results;
+    window.quickSaleGroups = new Map(groups.map(group => [group.key, group]));
 
     if (!results.length) {
-        container.innerHTML = `<div class="quick-sale-empty">Sin resultados para "${escapeHtml(input.value)}".</div>`;
+        const detail = q ? ` para "${escapeHtml(input.value)}"` : ' en esta categoria';
+        container.innerHTML = `<div class="quick-sale-empty">Sin productos${detail}.</div>`;
         return;
     }
 
-    container.innerHTML = results.map(product => {
+    container.innerHTML = groups.map(group => {
+        const product = group.product;
         const meta = getQuickSaleProductMeta(product);
         const price = getQuickSalePrice(product);
         const stockClass = meta.stock <= 0 ? 'out' : (meta.stock <= 3 ? 'low' : '');
         const active = meta.key === window.quickSaleSelectedKey ? ' active' : '';
+        const hasVariants = group.variants.length > 1;
+        const variantControl = hasVariants ? `
+            <label class="quick-sale-variant-field">
+                <span>Elegir variante · ${group.variants.length} opciones</span>
+                <select class="quick-sale-variant-select" data-quick-sale-group="${escapeHtml(group.key)}" aria-label="Elegir color o variante de ${escapeHtml(meta.name)}">
+                    ${group.variants.map(variant => {
+                        const variantMeta = getQuickSaleProductMeta(variant);
+                        const variantPrice = getQuickSalePrice(variant);
+                        const selected = variantMeta.key === meta.key ? ' selected' : '';
+                        const availability = variantMeta.stock > 0 ? `${variantMeta.stock} und.` : 'Agotado';
+                        return `<option value="${escapeHtml(variantMeta.key)}"${selected}>${escapeHtml(getQuickSaleVariantLabel(variant))} · ${availability} · ${formatAdminInvoiceMoney(variantPrice)}</option>`;
+                    }).join('')}
+                </select>
+            </label>
+        ` : `<small class="quick-sale-variant-current">${escapeHtml(getQuickSaleVariantLabel(product))}</small>`;
         return `
-            <article class="quick-sale-product-tile${active}" data-quick-sale-key="${escapeHtml(meta.key)}" tabindex="0">
+            <article class="quick-sale-product-tile${hasVariants ? ' has-variants' : ''}${active}" data-quick-sale-group="${escapeHtml(group.key)}" data-quick-sale-key="${escapeHtml(meta.key)}" tabindex="0">
                 <div class="quick-sale-tile-image">
                     <img src="${escapeHtml(meta.image)}" alt="${escapeHtml(meta.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.src='Logo2.png'">
                     <span class="quick-sale-stock-pill ${stockClass}">${meta.stock > 0 ? meta.stock + ' und.' : 'Agotado'}</span>
                 </div>
                 <div class="quick-sale-tile-copy">
                     <strong>${escapeHtml(meta.name)}</strong>
-                    <span>${escapeHtml(meta.category || 'Sin categoria')} · ${escapeHtml(meta.sku || 'S/N')}</span>
-                    <small>${escapeHtml([meta.color, meta.size, meta.style].filter(Boolean).join(' / ') || 'Sin características extra')}</small>
+                    <span class="quick-sale-tile-meta">${escapeHtml(meta.category || 'Sin categoria')} · ${escapeHtml(meta.sku || 'S/N')}</span>
+                    ${variantControl}
                 </div>
                 <div class="quick-sale-tile-bottom">
-                    <b>${formatAdminInvoiceMoney(price)}</b>
-                    <button class="quick-sale-add-card" type="button" data-quick-sale-add="${escapeHtml(meta.key)}" ${meta.stock <= 0 ? 'disabled' : ''} aria-label="Añadir ${escapeHtml(meta.name)}">+</button>
+                    <b class="quick-sale-tile-price">${formatAdminInvoiceMoney(price)}</b>
+                    <button class="quick-sale-add-card" type="button" data-quick-sale-add-group="${escapeHtml(group.key)}" ${meta.stock <= 0 ? 'disabled' : ''} aria-label="Añadir ${escapeHtml(meta.name)}">+</button>
                 </div>
             </article>
         `;
     }).join('');
 }
+
+function refreshQuickSaleTileForVariant(tile, product) {
+    if (!tile || !product) return;
+    const meta = getQuickSaleProductMeta(product);
+    const image = tile.querySelector('.quick-sale-tile-image img');
+    const stock = tile.querySelector('.quick-sale-stock-pill');
+    const metaLine = tile.querySelector('.quick-sale-tile-meta');
+    const variantLine = tile.querySelector('.quick-sale-variant-current');
+    const price = tile.querySelector('.quick-sale-tile-price');
+    const addButton = tile.querySelector('[data-quick-sale-add-group]');
+
+    tile.dataset.quickSaleKey = meta.key;
+    if (image) {
+        image.src = meta.image;
+        image.alt = meta.name;
+    }
+    if (stock) {
+        stock.classList.remove('out', 'low');
+        if (meta.stock <= 0) stock.classList.add('out');
+        else if (meta.stock <= 3) stock.classList.add('low');
+        stock.textContent = meta.stock > 0 ? `${meta.stock} und.` : 'Agotado';
+    }
+    if (metaLine) metaLine.textContent = `${meta.category || 'Sin categoria'} · ${meta.sku || 'S/N'}`;
+    if (variantLine) variantLine.textContent = getQuickSaleVariantLabel(product);
+    if (price) price.textContent = formatAdminInvoiceMoney(getQuickSalePrice(product));
+    if (addButton) addButton.disabled = meta.stock <= 0;
+}
+
+function getQuickSaleGroupVariant(groupKey) {
+    const group = window.quickSaleGroups.get(String(groupKey || ''));
+    if (!group) return null;
+    const tile = Array.from(document.querySelectorAll('.quick-sale-product-tile'))
+        .find(item => item.dataset.quickSaleGroup === String(groupKey || ''));
+    const selectedKey = tile?.querySelector('.quick-sale-variant-select')?.value
+        || tile?.dataset.quickSaleKey
+        || getInventoryProductKey(group.product);
+    return getInventoryProductByKey(selectedKey) || group.product;
+}
+
+window.previewQuickSaleGroupVariant = function(groupKey, variantKey = '') {
+    const tile = Array.from(document.querySelectorAll('.quick-sale-product-tile'))
+        .find(item => item.dataset.quickSaleGroup === String(groupKey || ''));
+    const group = window.quickSaleGroups.get(String(groupKey || ''));
+    if (!tile || !group) return;
+
+    const select = tile.querySelector('.quick-sale-variant-select');
+    const key = String(variantKey || select?.value || tile.dataset.quickSaleKey || '');
+    const product = group.variants.find(variant => getInventoryProductKey(variant) === key) || group.product;
+    if (select) select.value = getInventoryProductKey(product);
+    refreshQuickSaleTileForVariant(tile, product);
+    selectQuickSaleProduct(getInventoryProductKey(product));
+};
+
+window.addQuickSaleGroupVariant = function(groupKey) {
+    const product = getQuickSaleGroupVariant(groupKey);
+    if (!product) return showToast('No se encontro la variante seleccionada', 'error');
+    const key = getInventoryProductKey(product);
+    selectQuickSaleProduct(key);
+    addQuickSaleProduct(key, 1);
+};
 
 function renderQuickSaleDetail(product) {
     const detail = document.getElementById('quick-sale-product-detail');
@@ -11669,7 +11949,6 @@ function renderQuickSaleDetail(product) {
                 <input class="form-control" id="quick-sale-add-qty" type="number" min="1" max="${Math.max(1, meta.stock)}" value="1" ${meta.stock <= 0 ? 'disabled' : ''}>
                 <input class="form-control" id="quick-sale-add-price" type="number" min="0" value="${price}" ${meta.stock <= 0 ? 'disabled' : ''}>
                 <button class="admin-btn" type="button" onclick="addQuickSaleProduct('${escapeHtml(meta.key)}')" ${meta.stock <= 0 ? 'disabled' : ''}>Añadir a caja</button>
-                <button class="admin-btn secondary" type="button" onclick="openQuickSaleInvoicePreview()">Pasar al editor</button>
             </div>
         </div>
     `;
@@ -11678,7 +11957,17 @@ function renderQuickSaleDetail(product) {
 window.selectQuickSaleProduct = function(key) {
     window.quickSaleSelectedKey = String(key || '');
     const product = getInventoryProductByKey(window.quickSaleSelectedKey);
-    renderQuickSaleResults();
+    document.querySelectorAll('.quick-sale-product-tile').forEach(tile => {
+        const select = tile.querySelector('.quick-sale-variant-select');
+        const containsKey = select
+            ? Array.from(select.options).some(option => option.value === window.quickSaleSelectedKey)
+            : tile.dataset.quickSaleKey === window.quickSaleSelectedKey;
+        if (containsKey && product) {
+            if (select) select.value = window.quickSaleSelectedKey;
+            refreshQuickSaleTileForVariant(tile, product);
+        }
+        tile.classList.toggle('active', containsKey);
+    });
     renderQuickSaleDetail(product);
 };
 
@@ -11730,6 +12019,17 @@ window.updateQuickSaleQty = function(key, value) {
     renderQuickSaleCart();
 };
 
+window.changeQuickSaleQty = function(key, change) {
+    const item = window.quickSaleCart.find(row => row.key === key);
+    if (!item) return;
+    const next = (Number(item.cantidad) || 1) + Number(change || 0);
+    if (next <= 0) {
+        removeQuickSaleItem(key);
+        return;
+    }
+    updateQuickSaleQty(key, next);
+};
+
 window.removeQuickSaleItem = function(key) {
     window.quickSaleCart = window.quickSaleCart.filter(item => item.key !== key);
     renderQuickSaleCart();
@@ -11738,6 +12038,43 @@ window.removeQuickSaleItem = function(key) {
 window.clearQuickSaleCart = function() {
     window.quickSaleCart = [];
     renderQuickSaleCart();
+};
+
+window.holdQuickSaleTicket = function() {
+    const button = document.getElementById('quick-sale-hold-btn');
+    if (window.quickSaleHeldTicket) {
+        const held = window.quickSaleHeldTicket;
+        window.quickSaleCart = held.items || [];
+        ['quick-sale-customer', 'quick-sale-phone', 'quick-sale-address', 'quick-sale-advisor', 'quick-sale-note', 'quick-sale-cash-received'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = held.fields?.[id] || '';
+        });
+        const method = document.getElementById('quick-sale-method');
+        if (method && held.fields?.method) method.value = held.fields.method;
+        window.quickSaleHeldTicket = null;
+        try { localStorage.removeItem('blyxu_quick_sale_held_ticket'); } catch (error) { console.warn(error); }
+        if (button) button.textContent = 'Pausar';
+        renderQuickSaleCart();
+        showToast('Ticket reanudado', 'success');
+        return;
+    }
+
+    if (!window.quickSaleCart.length) {
+        showToast('Agrega productos antes de pausar el ticket', 'warning');
+        return;
+    }
+
+    const fields = {};
+    ['quick-sale-customer', 'quick-sale-phone', 'quick-sale-address', 'quick-sale-advisor', 'quick-sale-note', 'quick-sale-cash-received'].forEach(id => {
+        fields[id] = document.getElementById(id)?.value || '';
+    });
+    fields.method = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
+    window.quickSaleHeldTicket = { items: window.quickSaleCart, fields };
+    try { localStorage.setItem('blyxu_quick_sale_held_ticket', JSON.stringify(window.quickSaleHeldTicket)); } catch (error) { console.warn(error); }
+    window.quickSaleCart = [];
+    if (button) button.textContent = 'Reanudar';
+    renderQuickSaleCart();
+    showToast('Ticket pausado para continuar después', 'success');
 };
 
 function getQuickSaleTotals() {
@@ -11750,6 +12087,36 @@ function getQuickSaleTotals() {
     }, { count: 0, total: 0 });
 }
 
+function updateQuickSaleCashChange() {
+    const method = document.getElementById('quick-sale-method')?.value || '';
+    const cashRow = document.getElementById('quick-sale-cash-row');
+    const cashInput = document.getElementById('quick-sale-cash-received');
+    const changeEl = document.getElementById('quick-sale-change');
+    const usesCash = /Efectivo|Mixto/i.test(method);
+    cashRow?.classList.toggle('is-hidden', !usesCash);
+    if (!usesCash && cashInput) cashInput.value = '';
+    const received = Number(cashInput?.value || 0);
+    const change = Math.max(0, received - getQuickSaleTotals().total);
+    if (changeEl) changeEl.textContent = formatAdminInvoiceMoney(change);
+}
+
+window.updateQuickSaleCashChange = updateQuickSaleCashChange;
+
+function syncQuickSalePaymentMethods() {
+    const method = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
+    document.querySelectorAll('[data-quick-sale-method]').forEach(button => {
+        button.classList.toggle('active', button.dataset.quickSaleMethod === method);
+    });
+}
+
+window.selectQuickSalePaymentMethod = function(method) {
+    const select = document.getElementById('quick-sale-method');
+    if (!select || !method) return;
+    select.value = method;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    syncQuickSalePaymentMethods();
+};
+
 function renderQuickSaleCart() {
     const cartEl = document.getElementById('quick-sale-cart');
     const totals = getQuickSaleTotals();
@@ -11758,14 +12125,27 @@ function renderQuickSaleCart() {
         const el = document.getElementById(id);
         if (el) el.textContent = String(totals.count);
     });
-    ['quick-sale-total', 'quick-sale-summary-total'].forEach(id => {
+    const ticketCount = document.getElementById('quick-sale-ticket-count');
+    if (ticketCount) ticketCount.textContent = `${totals.count} ${totals.count === 1 ? 'ítem' : 'ítems'}`;
+    const mobileCount = document.getElementById('quick-sale-mobile-count');
+    if (mobileCount) mobileCount.textContent = String(totals.count);
+    ['quick-sale-total', 'quick-sale-summary-total', 'quick-sale-subtotal'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = formatAdminInvoiceMoney(totals.total);
     });
+    const discount = document.getElementById('quick-sale-discount');
+    const tax = document.getElementById('quick-sale-tax');
+    if (discount) discount.textContent = '-$0';
+    if (tax) tax.textContent = '$0';
+
+    const saveButton = document.getElementById('quick-sale-save-btn');
+    if (saveButton) saveButton.disabled = !window.quickSaleCart.length;
+    updateQuickSaleCashChange();
+    syncQuickSalePaymentMethods();
 
     if (!cartEl) return;
     if (!window.quickSaleCart.length) {
-        cartEl.innerHTML = '<div class="quick-sale-empty">Agrega productos desde la búsqueda.</div>';
+        cartEl.innerHTML = '<div class="quick-sale-empty">Escanea un producto o toca + para iniciar la venta.</div>';
         return;
     }
 
@@ -11773,11 +12153,16 @@ function renderQuickSaleCart() {
         const subtotal = (Number(item.precio) || 0) * (Number(item.cantidad) || 1);
         return `
             <div class="quick-sale-cart-item">
+                <div class="quick-sale-cart-thumb"><img src="${escapeHtml(item.image || 'Logo2.png')}" alt="" onerror="this.src='Logo2.png'"></div>
                 <div class="quick-sale-cart-copy">
                     <strong>${escapeHtml(item.nombre)}</strong>
                     <span>${escapeHtml(item.sku || item.idVariacion || 'S/N')} · ${formatAdminInvoiceMoney(item.precio)} · Subtotal ${formatAdminInvoiceMoney(subtotal)}</span>
                 </div>
-                <input type="number" min="1" max="${Math.max(1, Number(item.stock || 1))}" value="${Number(item.cantidad) || 1}" onchange="updateQuickSaleQty('${escapeHtml(item.key)}', this.value)" aria-label="Cantidad de ${escapeHtml(item.nombre)}">
+                <div class="quick-sale-qty-control">
+                    <button type="button" onclick="changeQuickSaleQty('${escapeHtml(item.key)}', -1)" aria-label="Restar una unidad">−</button>
+                    <input type="number" min="1" max="${Math.max(1, Number(item.stock || 1))}" value="${Number(item.cantidad) || 1}" onchange="updateQuickSaleQty('${escapeHtml(item.key)}', this.value)" aria-label="Cantidad de ${escapeHtml(item.nombre)}">
+                    <button type="button" onclick="changeQuickSaleQty('${escapeHtml(item.key)}', 1)" aria-label="Sumar una unidad">+</button>
+                </div>
                 <button class="quick-sale-cart-remove" type="button" onclick="removeQuickSaleItem('${escapeHtml(item.key)}')" title="Quitar">x</button>
             </div>
         `;
@@ -11816,12 +12201,14 @@ function hydrateInvoiceEditorFromQuickSale(invoiceIdOverride = '') {
     document.getElementById('inv-edit-id').value = invoiceIdOverride || `CAJA-${Date.now()}`;
     document.getElementById('inv-edit-nombre').value = document.getElementById('quick-sale-customer')?.value.trim() || 'Cliente mostrador';
     document.getElementById('inv-edit-tel').value = document.getElementById('quick-sale-phone')?.value.trim() || '';
-    document.getElementById('inv-edit-dir').value = 'Venta por caja';
+    document.getElementById('inv-edit-dir').value = document.getElementById('quick-sale-address')?.value.trim() || 'Venta por caja';
     document.getElementById('inv-edit-ciudad').value = 'Mostrador';
     document.getElementById('inv-edit-fecha').value = new Date().toISOString().slice(0, 10);
     document.getElementById('inv-edit-estado').value = 'Pago';
     document.getElementById('inv-edit-metodo').value = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
-    document.getElementById('inv-edit-nota').value = document.getElementById('quick-sale-note')?.value.trim() || 'Venta realizada por caja / mostrador.';
+    const advisor = document.getElementById('quick-sale-advisor')?.value.trim();
+    const note = document.getElementById('quick-sale-note')?.value.trim();
+    document.getElementById('inv-edit-nota').value = [advisor ? `Asesor: ${advisor}` : '', note || 'Venta realizada por caja / mostrador.'].filter(Boolean).join(' · ');
     document.getElementById('inv-edit-abono').value = String(totals.total);
     setInvoiceCustomerTypeControl(window.invoiceCustomerType, 'Detal');
     renderItemsFactura();
@@ -11850,9 +12237,18 @@ window.saveQuickSaleInvoice = async function() {
     const idFactura = `CAJA-${Date.now()}`;
     const customer = document.getElementById('quick-sale-customer')?.value.trim() || 'Cliente mostrador';
     const phone = document.getElementById('quick-sale-phone')?.value.trim() || '';
+    const address = document.getElementById('quick-sale-address')?.value.trim() || '';
+    const advisor = document.getElementById('quick-sale-advisor')?.value.trim() || '';
     const method = document.getElementById('quick-sale-method')?.value || 'Efectivo / Caja';
     const tipoCliente = getInvoiceCustomerTypeLabel(document.getElementById('quick-sale-customer-type')?.value, 'Detal');
     const note = document.getElementById('quick-sale-note')?.value.trim();
+    const cashReceived = Number(document.getElementById('quick-sale-cash-received')?.value || 0);
+    const change = Math.max(0, cashReceived - totals.total);
+    if (/^Efectivo/i.test(method) && cashReceived < totals.total) {
+        showToast('El efectivo recibido es menor al total de la venta', 'warning');
+        document.getElementById('quick-sale-cash-received')?.focus();
+        return;
+    }
     const items = window.quickSaleCart.map(item => ({
         idVariacion: item.idVariacion,
         id: item.idVariacion,
@@ -11880,8 +12276,11 @@ window.saveQuickSaleInvoice = async function() {
         'Ultimo Abono': totals.total,
         'Estado Factura': 'Pago',
         pago: method,
-        entrega: 'Venta por caja / mostrador',
+        entrega: address || 'Venta por caja / mostrador',
         'Canal Venta': 'Caja',
+        Asesor: advisor,
+        'Efectivo Recibido': cashReceived,
+        Cambio: change,
         Observaciones: note || 'Venta realizada por caja / mostrador.'
     };
 
@@ -11918,15 +12317,18 @@ window.saveQuickSaleInvoice = async function() {
         clearQuickSaleCart();
         document.getElementById('quick-sale-customer').value = '';
         document.getElementById('quick-sale-phone').value = '';
+        document.getElementById('quick-sale-address').value = '';
         document.getElementById('quick-sale-note').value = '';
+        document.getElementById('quick-sale-cash-received').value = '';
+        updateQuickSaleCashChange();
         showToast('Venta por caja registrada como factura', 'success');
     } catch (error) {
         console.error(error);
         showToast('Error registrando venta: ' + error.message, 'error');
     } finally {
         if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Registrar venta y PDF';
+            btn.disabled = !window.quickSaleCart.length;
+            btn.textContent = 'Cobrar y generar PDF';
         }
     }
 };
@@ -11936,6 +12338,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const quickResults = document.getElementById('quick-sale-results');
     const quickScanButton = document.getElementById('btn-scan-quick-sale');
     const customerType = document.getElementById('quick-sale-customer-type');
+    const categoryStrip = document.getElementById('quick-sale-categories');
+    const clearClientButton = document.getElementById('quick-sale-clear-client');
+    const paymentMethod = document.getElementById('quick-sale-method');
+    const cashReceived = document.getElementById('quick-sale-cash-received');
+    const mobilePaneTabs = document.querySelector('.quick-sale-mobile-tabs');
     const mobileViewSelect = document.getElementById('admin-mobile-view-select');
 
     quickSearch?.addEventListener('input', renderQuickSaleResults);
@@ -11950,21 +12357,46 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Array.isArray(inventario) || !inventario.length) cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
     });
     quickScanButton?.addEventListener('click', openQuickSaleScanner);
+    categoryStrip?.addEventListener('click', event => {
+        const button = event.target.closest('[data-quick-sale-category]');
+        if (button) setQuickSaleCategory(button.dataset.quickSaleCategory);
+    });
+    clearClientButton?.addEventListener('click', () => {
+        ['quick-sale-customer', 'quick-sale-phone', 'quick-sale-address', 'quick-sale-advisor'].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = '';
+        });
+    });
+    paymentMethod?.addEventListener('change', updateQuickSaleCashChange);
+    document.querySelectorAll('[data-quick-sale-method]').forEach(button => {
+        button.addEventListener('click', () => selectQuickSalePaymentMethod(button.dataset.quickSaleMethod));
+    });
+    cashReceived?.addEventListener('input', updateQuickSaleCashChange);
+    mobilePaneTabs?.addEventListener('click', event => {
+        const button = event.target.closest('[data-quick-sale-pane]');
+        if (button) setQuickSaleMobilePane(button.dataset.quickSalePane);
+    });
+    window.addEventListener('resize', () => syncQuickSaleMobilePane());
     quickResults?.addEventListener('click', event => {
-        const addBtn = event.target.closest('[data-quick-sale-add]');
+        const addBtn = event.target.closest('[data-quick-sale-add-group]');
         if (addBtn) {
             event.stopPropagation();
-            const key = addBtn.dataset.quickSaleAdd;
-            selectQuickSaleProduct(key);
-            addQuickSaleProduct(key, 1);
+            addQuickSaleGroupVariant(addBtn.dataset.quickSaleAddGroup);
             return;
         }
+        if (event.target.closest('select, option, button, input')) return;
         const item = event.target.closest('[data-quick-sale-key]');
         if (!item) return;
         selectQuickSaleProduct(item.dataset.quickSaleKey);
     });
+    quickResults?.addEventListener('change', event => {
+        const select = event.target.closest('.quick-sale-variant-select');
+        if (!select) return;
+        previewQuickSaleGroupVariant(select.dataset.quickSaleGroup, select.value);
+    });
     quickResults?.addEventListener('keydown', event => {
         if (event.key !== 'Enter') return;
+        if (event.target.closest('select, button, input')) return;
         const item = event.target.closest('[data-quick-sale-key]');
         if (!item) return;
         selectQuickSaleProduct(item.dataset.quickSaleKey);
@@ -11982,7 +12414,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = event.target.options[event.target.selectedIndex]?.textContent || 'Panel';
         switchDashboardView(value, label);
     });
+    const updateQuickSaleClock = () => {
+        const clock = document.getElementById('quick-sale-clock');
+        if (clock) clock.textContent = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+    };
+    updateQuickSaleClock();
+    setInterval(updateQuickSaleClock, 30000);
+    syncQuickSaleMobilePane();
     renderQuickSaleCart();
+    syncQuickSalePaymentMethods();
+    try {
+        const held = JSON.parse(localStorage.getItem('blyxu_quick_sale_held_ticket') || 'null');
+        if (held?.items?.length) {
+            window.quickSaleHeldTicket = held;
+            const holdButton = document.getElementById('quick-sale-hold-btn');
+            if (holdButton) holdButton.textContent = 'Reanudar';
+        }
+    } catch (error) {
+        console.warn('No se pudo recuperar el ticket pausado:', error);
+    }
 });
 
 window.abrirEditorFactura = function(idx = null, source = 'pedido') {

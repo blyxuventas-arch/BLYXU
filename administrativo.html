@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -890,6 +890,10 @@
             padding:9px 12px;
         }
         .barcode-camera-retry[hidden] { display:none!important; }
+        .barcode-camera-picker { margin-bottom:10px; }
+        .barcode-camera-picker[hidden] { display:none!important; }
+        .barcode-camera-picker label { display:grid; gap:5px; color:rgba(244,242,238,.62); font-size:10px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; }
+        .barcode-camera-picker select { width:100%; min-height:38px; border:1px solid rgba(216,209,194,.18); border-radius:8px; background:#111116; color:#f4f2ee; padding:0 10px; }
         .barcode-scanner-stage {
             position:relative;
             width:100%;
@@ -5606,197 +5610,252 @@
             100% { transform:translate3d(-1%,4%,0) scale(1.02); filter:hue-rotate(-8deg); }
         }
 
-        /* Caja rapida de ventas */
-        .quick-sale-shell { display:grid; gap:16px; }
+        /* ═══ CAJA RÁPIDA — Diseño limpio y minimalista ═══ */
+
+        /* Tokens locales */
+        .quick-sale-shell {
+            --qs-bg-base:  #0d0d10;
+            --qs-bg-1:     #111114;
+            --qs-bg-2:     #17171c;
+            --qs-bg-3:     #1c1c22;
+            --qs-border:   rgba(255,255,255,.07);
+            --qs-border-md:rgba(255,255,255,.11);
+            --qs-gold:     #f4c441;
+            --qs-gold-dim: rgba(244,196,65,.65);
+            --qs-muted:    rgba(255,255,255,.38);
+            --qs-soft:     rgba(255,255,255,.22);
+            --qs-green:    #10b981;
+            --qs-radius:   10px;
+            --qs-radius-sm:7px;
+            display: grid;
+            gap: 14px;
+        }
+        /* Header (hero) */
         .quick-sale-hero,
-        .quick-sale-panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+        .quick-sale-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
         .quick-sale-hero {
-            padding:20px 22px;
-            border:1px solid rgba(255,255,255,.08);
-            border-radius:18px;
-            background:linear-gradient(135deg,rgba(244,196,65,.08),rgba(34,211,238,.035));
+            display: grid;
+            grid-template-columns: minmax(200px,1fr) auto auto;
+            align-items: center;
+            gap: 16px;
+            padding: 13px 16px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius);
+            background: var(--qs-bg-1);
         }
         .quick-sale-hero h2,
-        .quick-sale-panel-head h3 { margin:4px 0 0; }
-        .quick-sale-hero p { margin:6px 0 0; color:var(--muted); }
+        .quick-sale-panel-head h3 { margin: 2px 0 0; }
+        .quick-sale-hero p { margin: 4px 0 0; color: var(--qs-muted); }
+
+        /* Métricas / resumen */
         .quick-sale-metrics,
-        .quick-sale-summary { display:flex; gap:10px; flex-wrap:wrap; }
+        .quick-sale-summary {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
         .quick-sale-metrics div,
         .quick-sale-summary div {
-            min-width:128px;
-            padding:11px 13px;
-            border:1px solid rgba(255,255,255,.08);
-            border-radius:12px;
-            background:rgba(255,255,255,.035);
+            min-width: 100px;
+            padding: 9px 12px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
         }
         .quick-sale-metrics span,
         .quick-sale-summary span {
-            display:block;
-            color:var(--soft);
-            font-size:9px;
-            font-weight:950;
-            letter-spacing:.9px;
-            text-transform:uppercase;
+            display: block;
+            color: var(--qs-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .7px;
+            text-transform: uppercase;
         }
         .quick-sale-metrics strong,
         .quick-sale-summary strong {
-            display:block;
-            margin-top:4px;
-            color:#fff;
-            font-size:19px;
-            font-weight:950;
-            font-variant-numeric:tabular-nums;
+            display: block;
+            margin-top: 3px;
+            color: #fff;
+            font-size: 17px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
         }
         .quick-sale-grid {
-            display:grid;
-            grid-template-columns:minmax(320px,.9fr) minmax(280px,.75fr) minmax(360px,1fr);
-            gap:16px;
-            align-items:start;
+            display: grid;
+            grid-template-columns: minmax(320px,.9fr) minmax(280px,.75fr) minmax(360px,1fr);
+            gap: 14px;
+            align-items: start;
         }
+        /* Paneles */
         .quick-sale-search-panel,
         .quick-sale-detail-panel,
-        .quick-sale-cart-panel { display:grid; gap:14px; }
-        .quick-sale-search-box .form-control { min-height:48px; font-size:15px; font-weight:800; }
+        .quick-sale-cart-panel { display: grid; gap: 12px; }
+        .quick-sale-search-box .form-control { min-height: 48px; font-size: 14px; font-weight: 700; }
+
+        /* Listas */
         .quick-sale-results,
         .quick-sale-cart-list {
-            display:grid;
-            gap:9px;
-            max-height:58vh;
-            overflow:auto;
-            padding-right:4px;
+            display: grid;
+            gap: 7px;
+            max-height: 58vh;
+            overflow: auto;
+            padding-right: 3px;
         }
+
+        /* Items de resultado / carrito */
         .quick-sale-result-item,
         .quick-sale-cart-item {
-            width:100%;
-            display:grid;
-            grid-template-columns:58px minmax(0,1fr) auto;
-            gap:10px;
-            align-items:center;
-            padding:10px;
-            border:1px solid rgba(255,255,255,.08);
-            border-radius:12px;
-            background:rgba(255,255,255,.028);
-            color:#fff;
-            text-align:left;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 52px minmax(0,1fr) auto;
+            gap: 10px;
+            align-items: center;
+            padding: 9px 10px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
+            color: #fff;
+            text-align: left;
+            transition: border-color .15s ease, background .15s ease;
         }
         .quick-sale-result-item:hover,
-        .quick-sale-result-item.active { border-color:rgba(244,196,65,.32); background:rgba(244,196,65,.08); }
-        .quick-sale-result-item[disabled] { opacity:.48; cursor:not-allowed; }
+        .quick-sale-result-item.active {
+            border-color: rgba(244,196,65,.28);
+            background: rgba(244,196,65,.055);
+        }
+        .quick-sale-result-item[disabled] { opacity: .42; cursor: not-allowed; }
+
+        /* Thumbnails */
         .quick-sale-thumb,
         .quick-sale-detail-image {
-            overflow:hidden;
-            border:1px solid rgba(255,255,255,.08);
-            background:#0b0712;
+            overflow: hidden;
+            border: 1px solid var(--qs-border);
+            background: var(--qs-bg-base);
         }
-        .quick-sale-thumb { width:58px; height:58px; border-radius:10px; }
+        .quick-sale-thumb { width: 52px; height: 52px; border-radius: 8px; }
         .quick-sale-thumb img,
-        .quick-sale-detail-image img { width:100%; height:100%; object-fit:cover; display:block; }
+        .quick-sale-detail-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        /* Texto en items */
         .quick-sale-result-copy strong,
         .quick-sale-cart-copy strong {
-            display:block;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-            font-size:13px;
-            font-weight:950;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12.5px;
+            font-weight: 700;
         }
         .quick-sale-result-copy span,
         .quick-sale-cart-copy span {
-            display:block;
-            margin-top:4px;
-            color:rgba(255,255,255,.58);
-            font-size:11px;
-            line-height:1.35;
+            display: block;
+            margin-top: 3px;
+            color: var(--qs-muted);
+            font-size: 11px;
+            line-height: 1.3;
         }
+
+        /* Pill de stock */
         .quick-sale-stock-pill {
-            padding:5px 8px;
-            border-radius:999px;
-            color:#86efac;
-            background:rgba(16,185,129,.11);
-            border:1px solid rgba(16,185,129,.22);
-            font-size:10px;
-            font-weight:950;
-            white-space:nowrap;
+            padding: 4px 8px;
+            border-radius: 999px;
+            color: #86efac;
+            background: rgba(16,185,129,.09);
+            border: 1px solid rgba(16,185,129,.18);
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            white-space: nowrap;
         }
-        .quick-sale-stock-pill.low { color:#fde68a; background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.24); }
-        .quick-sale-stock-pill.out { color:#fecaca; background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.24); }
-        .quick-sale-product-card { display:grid; gap:14px; }
-        .quick-sale-detail-image { width:100%; aspect-ratio:1/1; border-radius:14px; }
-        .quick-sale-detail-title { margin:0; font-size:20px; line-height:1.14; color:#fff; }
+        .quick-sale-stock-pill.low { color: #fde68a; background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.2); }
+        .quick-sale-stock-pill.out { color: #fca5a5; background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.2); }
+
+        /* Detalle de producto */
+        .quick-sale-product-card { display: grid; gap: 12px; }
+        .quick-sale-detail-image { width: 100%; aspect-ratio: 1/1; border-radius: 10px; }
+        .quick-sale-detail-title { margin: 0; font-size: 17px; line-height: 1.2; color: #fff; font-weight: 700; }
         .quick-sale-detail-price {
-            color:var(--gold);
-            font-size:24px;
-            font-weight:950;
-            font-variant-numeric:tabular-nums;
+            color: var(--qs-gold);
+            font-size: 21px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
         }
-        .quick-sale-detail-specs { display:grid; gap:8px; }
+        .quick-sale-detail-specs { display: grid; gap: 6px; }
         .quick-sale-detail-specs div {
-            display:flex;
-            justify-content:space-between;
-            gap:12px;
-            padding:10px 11px;
-            border:1px solid rgba(255,255,255,.075);
-            border-radius:10px;
-            background:rgba(255,255,255,.028);
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
         }
-        .quick-sale-detail-specs span {
-            color:var(--soft);
-            font-size:10px;
-            font-weight:950;
-            text-transform:uppercase;
-        }
-        .quick-sale-detail-specs strong { text-align:right; color:#fff; font-size:12px; }
+        .quick-sale-detail-specs span { color: var(--qs-muted); font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+        .quick-sale-detail-specs strong { text-align: right; color: #fff; font-size: 12px; font-weight: 700; }
+
+        /* Filas de acción */
         .quick-sale-add-row,
         .quick-sale-customer-grid,
         .quick-sale-actions {
-            display:grid;
-            grid-template-columns:repeat(2,minmax(0,1fr));
-            gap:10px;
+            display: grid;
+            grid-template-columns: repeat(2,minmax(0,1fr));
+            gap: 8px;
         }
         .quick-sale-add-row .admin-btn,
-        .quick-sale-actions .admin-btn { min-height:44px; }
-        .quick-sale-cart-item { grid-template-columns:minmax(0,1fr) 86px 34px; }
+        .quick-sale-actions .admin-btn { min-height: 42px; }
+        .quick-sale-cart-item { grid-template-columns: minmax(0,1fr) 82px 32px; }
         .quick-sale-cart-item input {
-            width:100%;
-            min-height:38px;
-            border:1px solid rgba(255,255,255,.1);
-            border-radius:9px;
-            background:rgba(255,255,255,.055);
-            color:#fff;
-            text-align:center;
-            font-weight:900;
+            width: 100%;
+            min-height: 36px;
+            border: 1px solid var(--qs-border-md);
+            border-radius: 7px;
+            background: var(--qs-bg-3);
+            color: #fff;
+            text-align: center;
+            font-weight: 700;
         }
         .quick-sale-cart-remove {
-            width:34px;
-            height:34px;
-            border:1px solid rgba(239,68,68,.22);
-            border-radius:9px;
-            background:rgba(239,68,68,.08);
-            color:#fecaca;
-            font-weight:950;
+            width: 32px;
+            height: 32px;
+            border: 1px solid rgba(239,68,68,.18);
+            border-radius: 7px;
+            background: rgba(239,68,68,.06);
+            color: #fca5a5;
+            font-weight: 700;
         }
+
+        /* Estado vacío */
         .quick-sale-empty {
-            padding:22px;
-            border:1px dashed rgba(255,255,255,.12);
-            border-radius:14px;
-            color:var(--soft);
-            text-align:center;
-            line-height:1.45;
+            padding: 20px 16px;
+            border: 1px dashed var(--qs-soft);
+            border-radius: var(--qs-radius);
+            color: var(--qs-muted);
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.5;
         }
+
+        /* Layout POS */
         .quick-sale-pos-layout {
-            display:grid;
-            grid-template-columns:minmax(0,1fr) minmax(360px,420px);
-            gap:16px;
-            align-items:start;
+            display: grid;
+            grid-template-columns: minmax(0,1fr) minmax(340px,400px);
+            gap: 14px;
+            align-items: start;
         }
+        .quick-sale-mobile-tabs { display: none; }
         .quick-sale-catalog-panel,
         .quick-sale-checkout-panel {
-            display:grid;
-            gap:14px;
-            padding:16px;
-            border:1px solid rgba(255,255,255,.075);
-            border-radius:16px;
-            background:rgba(255,255,255,.025);
+            display: grid;
+            gap: 13px;
+            padding: 14px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius);
+            background: var(--qs-bg-1);
         }
         .quick-sale-checkout-panel {
             position:sticky;
@@ -5804,233 +5863,476 @@
         }
         .quick-sale-toolbar,
         .quick-sale-checkout-head {
-            display:flex;
-            align-items:center;
-            justify-content:space-between;
-            gap:14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         .quick-sale-toolbar h3,
         .quick-sale-checkout-head h3 {
-            margin:4px 0 0;
-            font-size:18px;
+            margin: 3px 0 0;
+            font-size: 16px;
+            font-weight: 700;
         }
-        .quick-sale-pos-search {
-            position:relative;
-        }
+        .quick-sale-pos-search { position: relative; }
         .quick-sale-pos-search .form-control {
-            min-height:58px;
-            padding-left:48px;
-            padding-right:62px;
-            border-radius:14px;
-            font-size:16px;
-            background:rgba(255,255,255,.055);
+            min-height: 52px;
+            padding-left: 44px;
+            padding-right: 58px;
+            border-radius: var(--qs-radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            background: var(--qs-bg-2);
         }
         .quick-sale-scan-btn {
-            position:absolute;
-            top:7px;
-            right:7px;
-            z-index:2;
-            width:44px;
-            height:44px;
-            min-height:44px !important;
-            display:grid;
-            place-items:center;
-            padding:0 !important;
-            border:1px solid rgba(198,170,255,.28);
-            border-radius:11px;
-            background:rgba(168,85,247,.12);
-            color:#e9ddff;
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            z-index: 2;
+            width: 40px;
+            height: 40px;
+            min-height: 40px !important;
+            display: grid;
+            place-items: center;
+            padding: 0 !important;
+            border: 1px solid rgba(168,85,247,.22);
+            border-radius: 7px;
+            background: rgba(168,85,247,.08);
+            color: #d8c4ff;
+            transition: background .15s ease, border-color .15s ease;
         }
         .quick-sale-scan-btn:hover {
-            background:rgba(168,85,247,.2);
-            border-color:rgba(198,170,255,.5);
+            background: rgba(168,85,247,.16);
+            border-color: rgba(168,85,247,.4);
         }
-        .quick-sale-scan-btn svg { width:20px; height:20px; }
+        .quick-sale-scan-btn svg { width: 18px; height: 18px; }
         .quick-sale-search-icon {
-            position:absolute;
-            left:17px;
-            top:50%;
-            z-index:1;
-            transform:translateY(-50%);
-            color:rgba(244,196,65,.78);
-            font-size:22px;
-            font-weight:950;
-            pointer-events:none;
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            z-index: 1;
+            transform: translateY(-50%);
+            color: var(--qs-gold-dim);
+            font-size: 20px;
+            font-weight: 700;
+            pointer-events: none;
         }
+        /* Grid de productos */
         .quick-sale-product-grid {
-            display:grid;
-            grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
-            gap:12px;
-            max-height:calc(100vh - 330px);
-            min-height:320px;
-            overflow:auto;
-            padding:2px 4px 2px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(170px,1fr));
+            gap: 10px;
+            max-height: calc(100vh - 330px);
+            min-height: 300px;
+            overflow: auto;
+            padding: 2px 3px 2px 0;
         }
         .quick-sale-product-grid .quick-sale-empty {
-            grid-column:1/-1;
-            min-height:220px;
-            display:grid;
-            place-items:center;
+            grid-column: 1 / -1;
+            min-height: 200px;
+            display: grid;
+            place-items: center;
         }
+
+        /* Tiles de producto */
         .quick-sale-product-tile {
-            display:grid;
-            grid-template-rows:auto minmax(86px,1fr) auto;
-            gap:10px;
-            min-height:274px;
-            padding:10px;
-            border:1px solid rgba(255,255,255,.08);
-            border-radius:14px;
-            background:rgba(255,255,255,.028);
-            color:#fff;
-            outline:none;
-            cursor:pointer;
-            transition:border-color .18s ease, background .18s ease, transform .18s ease;
+            display: grid;
+            grid-template-rows: auto minmax(80px,1fr) auto;
+            gap: 9px;
+            min-height: 260px;
+            padding: 9px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius);
+            background: var(--qs-bg-2);
+            color: #fff;
+            outline: none;
+            cursor: pointer;
+            transition: border-color .15s ease, background .15s ease;
         }
         .quick-sale-product-tile:hover,
         .quick-sale-product-tile:focus-visible,
         .quick-sale-product-tile.active {
-            border-color:rgba(244,196,65,.36);
-            background:rgba(244,196,65,.07);
-            transform:translateY(-1px);
+            border-color: rgba(244,196,65,.28);
+            background: rgba(244,196,65,.05);
         }
         .quick-sale-tile-image {
-            position:relative;
-            overflow:hidden;
-            aspect-ratio:1/1;
-            border:1px solid rgba(255,255,255,.08);
-            border-radius:12px;
-            background:#0b0712;
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1/1;
+            border: 1px solid var(--qs-border);
+            border-radius: 8px;
+            background: var(--qs-bg-base);
         }
-        .quick-sale-tile-image img {
-            width:100%;
-            height:100%;
-            object-fit:cover;
-            display:block;
-        }
+        .quick-sale-tile-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .quick-sale-tile-image .quick-sale-stock-pill {
-            position:absolute;
-            left:8px;
-            top:8px;
-            box-shadow:0 8px 18px rgba(0,0,0,.28);
-            backdrop-filter:blur(8px);
+            position: absolute;
+            left: 7px;
+            top: 7px;
+            backdrop-filter: blur(6px);
         }
-        .quick-sale-tile-copy {
-            min-width:0;
-        }
+        .quick-sale-tile-copy { min-width: 0; }
         .quick-sale-tile-copy strong {
-            display:-webkit-box;
-            -webkit-line-clamp:2;
-            -webkit-box-orient:vertical;
-            overflow:hidden;
-            min-height:36px;
-            color:#fff;
-            font-size:13px;
-            font-weight:950;
-            line-height:1.25;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 34px;
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 700;
+            line-height: 1.25;
         }
         .quick-sale-tile-copy span,
         .quick-sale-tile-copy small {
-            display:block;
-            margin-top:5px;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
-            color:rgba(255,255,255,.56);
-            font-size:10.5px;
-            line-height:1.2;
+            display: block;
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--qs-muted);
+            font-size: 10px;
+            line-height: 1.2;
         }
-        .quick-sale-tile-copy small {
-            color:rgba(255,255,255,.42);
+        .quick-sale-tile-copy small { color: var(--qs-soft); }
+        .quick-sale-variant-field {
+            display: grid;
+            gap: 5px;
+            margin-top: 8px;
+            cursor: default;
         }
+        .quick-sale-variant-field > span {
+            margin: 0;
+            color: var(--qs-gold-dim);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+        }
+        .quick-sale-variant-select {
+            width: 100%;
+            min-width: 0;
+            min-height: 34px;
+            padding: 6px 24px 6px 8px;
+            border: 1px solid rgba(244,196,65,.22);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-3);
+            color: #fff;
+            font: inherit;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1.2;
+            cursor: pointer;
+            outline: none;
+        }
+        .quick-sale-variant-select:focus-visible {
+            border-color: var(--qs-gold);
+            box-shadow: 0 0 0 2px rgba(244,196,65,.1);
+        }
+        .quick-sale-product-tile.has-variants { min-height: 290px; }
         .quick-sale-tile-bottom {
-            display:grid;
-            grid-template-columns:minmax(0,1fr) 42px;
-            gap:9px;
-            align-items:center;
+            display: grid;
+            grid-template-columns: minmax(0,1fr) 38px;
+            gap: 8px;
+            align-items: center;
         }
         .quick-sale-tile-bottom b {
-            color:var(--gold);
-            font-size:15px;
-            font-weight:950;
-            font-variant-numeric:tabular-nums;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
+            color: var(--qs-gold);
+            font-size: 14px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .quick-sale-add-card {
-            width:42px;
-            height:42px;
-            border:1px solid rgba(244,196,65,.38);
-            border-radius:12px;
-            background:#f4c441;
-            color:#09030f;
-            font-size:24px;
-            font-weight:950;
-            line-height:1;
-            box-shadow:0 12px 24px rgba(0,0,0,.24);
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(244,196,65,.3);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-gold);
+            color: #09030f;
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1;
         }
         .quick-sale-add-card:disabled {
-            border-color:rgba(255,255,255,.1);
-            background:rgba(255,255,255,.08);
-            color:rgba(255,255,255,.32);
-            box-shadow:none;
-            cursor:not-allowed;
+            border-color: var(--qs-border);
+            background: var(--qs-bg-3);
+            color: var(--qs-muted);
+            cursor: not-allowed;
         }
+
+        /* Detalle compacto */
         .quick-sale-compact-detail {
-            padding:12px;
-            border:1px solid rgba(255,255,255,.07);
-            border-radius:14px;
-            background:rgba(255,255,255,.022);
+            padding: 10px;
+            border: 1px solid var(--qs-border);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
         }
-        .quick-sale-compact-detail .quick-sale-empty {
-            padding:14px;
-        }
+        .quick-sale-compact-detail .quick-sale-empty { padding: 12px; }
         .quick-sale-detail-top {
-            display:grid;
-            grid-template-columns:86px minmax(0,1fr);
-            gap:12px;
-            align-items:center;
+            display: grid;
+            grid-template-columns: 80px minmax(0,1fr);
+            gap: 10px;
+            align-items: center;
         }
-        .quick-sale-compact-detail .quick-sale-detail-image {
-            width:86px;
-            aspect-ratio:1/1;
-            border-radius:12px;
+        .quick-sale-compact-detail .quick-sale-detail-image { width: 80px; aspect-ratio: 1/1; border-radius: 9px; }
+        .quick-sale-compact-detail .quick-sale-detail-title { margin-top: 6px; font-size: 14px; }
+        .quick-sale-compact-detail .quick-sale-detail-price { margin-top: 4px; font-size: 16px; }
+        .quick-sale-compact-detail .quick-sale-detail-specs { grid-template-columns: 1fr 1fr; }
+        .quick-sale-compact-detail .quick-sale-detail-specs div { display: grid; gap: 3px; min-height: 48px; }
+        .quick-sale-compact-detail .quick-sale-detail-specs strong { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .quick-sale-compact-detail .quick-sale-add-row { grid-template-columns: 76px minmax(100px,1fr) minmax(140px,1fr); }
+        .quick-sale-compact-detail .quick-sale-add-row .admin-btn { grid-column: auto; }
+        /* Refinamientos del hero POS */
+        .quick-sale-brand,
+        .quick-sale-session,
+        .quick-sale-client-head,
+        .quick-sale-reader-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .quick-sale-compact-detail .quick-sale-detail-title {
-            margin-top:8px;
-            font-size:15px;
+        .quick-sale-brand img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            padding: 5px;
+            border: 1px solid rgba(244,196,65,.16);
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-base);
         }
-        .quick-sale-compact-detail .quick-sale-detail-price {
-            margin-top:5px;
-            font-size:18px;
+        .quick-sale-brand h2 { margin: 2px 0 0; font-size: 18px; font-weight: 700; }
+        .quick-sale-session {
+            gap: 10px;
+            padding: 0 16px;
+            border-left: 1px solid var(--qs-border);
+            border-right: 1px solid var(--qs-border);
         }
-        .quick-sale-compact-detail .quick-sale-detail-specs {
-            grid-template-columns:1fr 1fr;
+        .quick-sale-session strong {
+            min-width: 50px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
-        .quick-sale-compact-detail .quick-sale-detail-specs div {
-            display:grid;
-            gap:4px;
-            min-height:52px;
+        .quick-sale-online {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #a7f3d0;
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            text-transform: uppercase;
         }
-        .quick-sale-compact-detail .quick-sale-detail-specs strong {
-            text-align:left;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            white-space:nowrap;
+        .quick-sale-online i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--qs-green);
+            box-shadow: 0 0 0 3px rgba(16,185,129,.12);
         }
-        .quick-sale-compact-detail .quick-sale-add-row {
-            grid-template-columns:82px minmax(0,1fr);
+        .quick-sale-metrics { flex-wrap: nowrap; }
+        .quick-sale-metrics div {
+            min-width: 96px;
+            padding: 7px 10px;
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
         }
-        .quick-sale-compact-detail .quick-sale-add-row .admin-btn {
-            grid-column:auto;
+        .quick-sale-metrics strong { font-size: 15px; }
+        .quick-sale-catalog-panel,
+        .quick-sale-checkout-panel {
+            border-radius: var(--qs-radius);
+            background: var(--qs-bg-1);
         }
-        @media(max-width:1240px) {
-            .quick-sale-grid { grid-template-columns:1fr 1fr; }
-            .quick-sale-cart-panel { grid-column:1/-1; }
-            .quick-sale-pos-layout { grid-template-columns:1fr; }
-            .quick-sale-checkout-panel { position:relative; top:auto; }
+        .quick-sale-client-head,
+        .quick-sale-reader-head { justify-content: space-between; }
+        .quick-sale-client-head h3,
+        .quick-sale-reader-head h3 { margin: 2px 0 0; font-size: 15px; font-weight: 700; }
+        .quick-sale-text-btn {
+            border: 0;
+            padding: 5px 0;
+            background: transparent;
+            color: rgba(203,181,138,.8);
+            font-size: 9.5px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+            transition: color .15s ease;
         }
-        @media(max-width:760px) {
+        .quick-sale-text-btn:hover { color: #fff; }
+        .quick-sale-text-btn.danger { color: rgba(252,165,165,.8); }
+        .quick-sale-client-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr 1.25fr 1fr .7fr;
+            gap: 9px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--qs-border);
+        }
+        .quick-sale-client-grid label,
+        .quick-sale-payment-panel label,
+        .quick-sale-cash-row label {
+            display: grid;
+            gap: 5px;
+            min-width: 0;
+        }
+        .quick-sale-client-grid label > span,
+        .quick-sale-payment-panel label > span,
+        .quick-sale-cash-row label > span,
+        .quick-sale-cash-row > div > span {
+            color: var(--qs-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+        }
+        .quick-sale-client-grid .form-control,
+        .quick-sale-payment-panel .form-control {
+            min-width: 0;
+            min-height: 40px;
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
+        }
+        .quick-sale-reader-head { margin-top: 1px; }
+        .quick-sale-pos-search .form-control {
+            min-height: 52px;
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
+        }
+        .quick-sale-reader-note {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--qs-muted);
+            font-size: 9px;
+            letter-spacing: .2px;
+        }
+        .quick-sale-reader-note span:last-child { color: rgba(203,181,138,.7); }
+        /* Filtros de categoría */
+        .quick-sale-category-strip {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 1px 0 4px;
+            scrollbar-width: none;
+        }
+        .quick-sale-category-strip::-webkit-scrollbar { display: none; }
+        .quick-sale-category-btn {
+            flex: 0 0 auto;
+            min-height: 30px;
+            padding: 5px 11px;
+            border: 1px solid var(--qs-border);
+            border-radius: 999px;
+            background: var(--qs-bg-2);
+            color: var(--qs-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+            transition: border-color .15s ease, background .15s ease, color .15s ease;
+        }
+        .quick-sale-category-btn:hover,
+        .quick-sale-category-btn.active {
+            border-color: rgba(244,196,65,.35);
+            background: rgba(244,196,65,.08);
+            color: #ffe8a3;
+        }
+
+        /* Ajustes de layout POS */
+        .quick-sale-product-grid { max-height: calc(100vh - 430px); }
+        .quick-sale-product-tile { border-radius: var(--qs-radius-sm); background: var(--qs-bg-2); }
+        .quick-sale-tile-image,
+        .quick-sale-add-card { border-radius: var(--qs-radius-sm); }
+        .quick-sale-compact-detail {
+            padding: 10px;
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
+        }
+        .quick-sale-checkout-panel {
+            min-height: calc(100vh - 238px);
+            grid-template-rows: auto minmax(160px,1fr) auto auto auto;
+        }
+        .quick-sale-cart-list {
+            max-height: none;
+            min-height: 160px;
+            align-content: start;
+        }
+        .quick-sale-cart-item {
+            grid-template-columns: 40px minmax(0,1fr) auto 30px;
+            padding: 7px 8px;
+            border-radius: var(--qs-radius-sm);
+            background: var(--qs-bg-2);
+        }
+        .quick-sale-cart-thumb {
+            width: 40px;
+            height: 40px;
+            overflow: hidden;
+            border-radius: 6px;
+            background: var(--qs-bg-base);
+        }
+        .quick-sale-cart-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .quick-sale-qty-control {
+            display: grid;
+            grid-template-columns: 26px 38px 26px;
+            align-items: center;
+        }
+        .quick-sale-qty-control button,
+        .quick-sale-qty-control input {
+            width: 26px;
+            height: 30px;
+            min-height: 30px;
+            border: 1px solid var(--qs-border-md);
+            border-radius: 0;
+            background: var(--qs-bg-3);
+            color: #fff;
+            text-align: center;
+            font-weight: 700;
+        }
+        .quick-sale-qty-control input { width: 38px; border-left: 0; border-right: 0; }
+
+        /* Panel de pago (checkout) */
+        .quick-sale-payment-panel {
+            display: grid;
+            gap: 9px;
+            padding-top: 13px;
+            border-top: 1px solid var(--qs-border);
+        }
+        .quick-sale-cash-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .quick-sale-cash-row > div {
+            display: grid;
+            align-content: center;
+            gap: 4px;
+            min-height: 58px;
+            padding: 8px 10px;
+            border: 1px solid rgba(16,185,129,.14);
+            border-radius: var(--qs-radius-sm);
+            background: rgba(16,185,129,.045);
+        }
+        .quick-sale-cash-row strong { color: #86efac; font-size: 17px; font-weight: 800; }
+        .quick-sale-cash-row.is-hidden { display: none; }
+        .quick-sale-summary { display: grid; grid-template-columns: .7fr 1.3fr; }
+        .quick-sale-summary div { border-radius: var(--qs-radius-sm); background: var(--qs-bg-2); }
+        .quick-sale-summary div:last-child strong { color: var(--qs-gold); font-size: 21px; }
+        #quick-sale-save-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* Breakpoints */
+        @media (max-width: 1500px) {
+            .quick-sale-client-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+        }
+        @media (max-width: 1240px) {
+            .quick-sale-grid { grid-template-columns: 1fr 1fr; }
+            .quick-sale-cart-panel { grid-column: 1 / -1; }
+            .quick-sale-pos-layout { grid-template-columns: 1fr; }
+            .quick-sale-checkout-panel { position: relative; top: auto; min-height: 0; }
+            .quick-sale-client-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            .quick-sale-product-grid { max-height: 600px; }
+        }
+        @media (max-width: 760px) {
             .quick-sale-hero,
             .quick-sale-panel-head,
             .quick-sale-grid,
@@ -6040,18 +6342,31 @@
             .quick-sale-add-row,
             .quick-sale-customer-grid,
             .quick-sale-actions {
-                display:grid!important;
-                grid-template-columns:1fr!important;
+                display: grid !important;
+                grid-template-columns: 1fr !important;
             }
             .quick-sale-results,
-            .quick-sale-cart-list { max-height:none; }
-            .quick-sale-product-grid { grid-template-columns:repeat(2,minmax(0,1fr)); min-height:0; max-height:none; }
-            .quick-sale-product-tile { min-height:242px; }
-            .quick-sale-compact-detail .quick-sale-detail-specs { grid-template-columns:1fr; }
+            .quick-sale-cart-list { max-height: none; }
+            .quick-sale-product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); min-height: 0; max-height: none; }
+            .quick-sale-product-tile { min-height: 230px; }
+            .quick-sale-compact-detail .quick-sale-detail-specs { grid-template-columns: 1fr; }
+            .quick-sale-hero { grid-template-columns: 1fr auto !important; padding: 10px; }
+            .quick-sale-brand { grid-column: 1 / -1; }
+            .quick-sale-session { padding: 0; border: 0; }
+            .quick-sale-metrics { justify-content: flex-end; }
+            .quick-sale-metrics div { min-width: 76px; }
+            .quick-sale-client-grid { grid-template-columns: 1fr !important; }
+            .quick-sale-reader-head { align-items: start; }
+            .quick-sale-reader-note { display: grid; }
+            .quick-sale-checkout-panel { grid-template-rows: auto; }
+            .quick-sale-cart-item { grid-template-columns: 38px minmax(0,1fr) 30px; }
+            .quick-sale-cart-thumb { width: 38px; height: 38px; }
+            .quick-sale-qty-control { grid-column: 2/3; }
+            .quick-sale-cart-remove { grid-column: 3; grid-row: 1; }
         }
 
-        /* Capa final mobile admin: selector compacto y secciones adaptables */
-        @media (max-width: 760px) {
+        /* Capa final mobile/tablet admin: selector compacto y secciones adaptables */
+        @media (max-width: 1024px) {
             html,
             body {
                 overflow-x: hidden !important;
@@ -6335,6 +6650,149 @@
                 width: 100% !important;
                 min-width: 0 !important;
             }
+            .quick-sale-mobile-tabs {
+                position: sticky;
+                top: 58px;
+                z-index: 62;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px;
+                padding: 4px;
+                border: 1px solid rgba(255,255,255,.1);
+                border-radius: 8px;
+                background: rgba(14,14,17,.96);
+                box-shadow: 0 12px 28px rgba(0,0,0,.28);
+                backdrop-filter: blur(14px);
+            }
+            .quick-sale-mobile-tabs button {
+                min-height: 46px;
+                border: 0;
+                border-radius: 6px;
+                background: transparent;
+                color: rgba(255,255,255,.58);
+                font-size: 11px;
+                font-weight: 900;
+                text-transform: uppercase;
+            }
+            .quick-sale-mobile-tabs button.active {
+                background: #f4c441;
+                color: #0b0810;
+            }
+            .quick-sale-mobile-tabs span {
+                display: inline-grid;
+                min-width: 22px;
+                height: 22px;
+                place-items: center;
+                margin-left: 6px;
+                border-radius: 999px;
+                background: rgba(0,0,0,.18);
+                font-size: 10px;
+            }
+            .quick-sale-pos-layout { grid-template-columns: 1fr !important; }
+            .quick-sale-pos-layout > .pos-mobile-hidden { display: none !important; }
+            .quick-sale-catalog-panel,
+            .quick-sale-checkout-panel { padding: 14px; }
+            .quick-sale-checkout-panel {
+                position: relative;
+                top: auto;
+                min-height: calc(100vh - 190px);
+            }
+            .quick-sale-client-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+            .quick-sale-product-grid {
+                grid-template-columns: repeat(auto-fill,minmax(160px,1fr));
+                max-height: none;
+            }
+            .quick-sale-product-tile { min-height: 232px; }
+            .quick-sale-compact-detail .quick-sale-detail-specs,
+            .quick-sale-compact-detail > .quick-sale-product-card > .quick-sale-empty { display: none; }
+            .quick-sale-compact-detail .quick-sale-add-row {
+                grid-template-columns: 74px minmax(110px,1fr) minmax(150px,1fr);
+            }
+            #admin-main-content:has(#view-orders.active) .cost-calculator-tab { display: none !important; }
+            .admin-section-tab {
+                right: -52px !important;
+                width: 44px !important;
+                padding: 0 !important;
+                gap: 0 !important;
+                font-size: 0 !important;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .orders-admin-shell { padding: 10px !important; }
+            .orders-admin-header h2 { font-size: 23px !important; }
+            .orders-tab-btn { min-height: 44px; }
+            .quick-sale-hero {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px;
+            }
+            .quick-sale-brand { grid-column: 1/-1; }
+            .quick-sale-session {
+                min-width: 0;
+                padding: 0;
+                border: 0;
+            }
+            .quick-sale-metrics {
+                grid-column: 1/-1;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                width: 100%;
+            }
+            .quick-sale-metrics div { min-width: 0; }
+            .quick-sale-client-head,
+            .quick-sale-reader-head {
+                display: grid;
+                grid-template-columns: minmax(0,1fr) auto;
+                align-items: start;
+            }
+            .quick-sale-client-head .quick-sale-text-btn { white-space: nowrap; }
+            .quick-sale-client-grid { grid-template-columns: 1fr !important; }
+            .quick-sale-reader-head .admin-btn {
+                width: auto !important;
+                min-height: 40px;
+                padding: 8px 10px;
+            }
+            .quick-sale-pos-search .form-control {
+                min-height: 54px;
+                padding-left: 42px;
+                padding-right: 58px;
+                font-size: 13px;
+            }
+            .quick-sale-scan-btn {
+                width: 44px !important;
+                min-height: 44px !important;
+            }
+            .quick-sale-reader-note span:last-child { display: none; }
+            .quick-sale-product-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+            .quick-sale-product-tile { min-height: 218px; padding: 8px; }
+            .quick-sale-product-tile.has-variants {
+                grid-column: 1/-1;
+                grid-template-columns: 112px minmax(0,1fr);
+                grid-template-rows: minmax(0,1fr) auto;
+                min-height: 168px;
+            }
+            .quick-sale-product-tile.has-variants .quick-sale-tile-image {
+                grid-column: 1;
+                grid-row: 1/3;
+                height: 100%;
+                min-height: 150px;
+                aspect-ratio: auto;
+            }
+            .quick-sale-product-tile.has-variants .quick-sale-tile-copy,
+            .quick-sale-product-tile.has-variants .quick-sale-tile-bottom {
+                grid-column: 2;
+            }
+            .quick-sale-tile-copy strong { min-height: 32px; font-size: 12px; }
+            .quick-sale-tile-copy span,
+            .quick-sale-tile-copy small { font-size: 9px; }
+            .quick-sale-tile-bottom { grid-template-columns: minmax(0,1fr) 38px; gap: 6px; }
+            .quick-sale-add-card { width: 38px; height: 38px; }
+            .quick-sale-compact-detail .quick-sale-detail-specs { display: none; }
+            .quick-sale-compact-detail .quick-sale-add-row { grid-template-columns: 1fr !important; }
+            .quick-sale-cart-item { grid-template-columns: 40px minmax(0,1fr) 32px; }
+            .quick-sale-cash-row { grid-template-columns: 1fr 1fr; }
+            .quick-sale-actions { grid-template-columns: 1fr !important; }
+            .quick-sale-actions .admin-btn { min-height: 48px; }
         }
 
     </style>
@@ -6587,6 +7045,154 @@
             overflow-x: auto !important;
         }
     </style>
+    <style>
+        /* Caja rápida: composición POS empresarial basada en la referencia aprobada. */
+        .enterprise-pos-shell {
+            --ep-bg: #080808;
+            --ep-panel: #121212;
+            --ep-control: #181818;
+            --ep-line: #292929;
+            --ep-soft: #969696;
+            --ep-gold: #c9a76a;
+            --ep-cream: #f3e9dc;
+            background: var(--ep-bg) !important;
+            border: 1px solid #1e1e1e !important;
+            border-radius: 10px !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .28) !important;
+            color: var(--ep-cream);
+            overflow: hidden;
+        }
+        .enterprise-pos-bar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) auto auto;
+            align-items: center;
+            gap: 18px;
+            min-height: 72px;
+            padding: 13px 18px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+        .enterprise-pos-brand, .enterprise-pos-status, .enterprise-pos-metrics { display: flex; align-items: center; }
+        .enterprise-pos-brand { gap: 11px; min-width: 0; }
+        .enterprise-pos-brand img { width: 38px; height: 38px; object-fit: contain; border: 1px solid #3e3526; border-radius: 8px; padding: 5px; background: #17130d; }
+        .enterprise-pos-brand span, .enterprise-section-head span, .enterprise-ticket-head span, .enterprise-payment-panel > span, .enterprise-note > span { display: block; color: var(--ep-gold); font-size: 9px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+        .enterprise-pos-brand h2 { margin: 2px 0 0; color: var(--ep-cream); font-size: 17px; font-weight: 900; letter-spacing: 0; }
+        .enterprise-pos-status { gap: 8px; padding: 9px 12px; border: 1px solid #2a2a2a; border-radius: 7px; background: #181818; color: #aaa; font-size: 11px; white-space: nowrap; }
+        .enterprise-pos-status i { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 12px rgba(34,197,94,.7); }
+        .enterprise-pos-status strong { margin-left: 8px; color: var(--ep-cream); font-variant-numeric: tabular-nums; }
+        .enterprise-pos-metrics { gap: 8px; }
+        .enterprise-pos-metrics div { display: grid; gap: 3px; min-width: 88px; padding: 8px 10px; border: 1px solid #2a2a2a; border-radius: 7px; background: #181818; }
+        .enterprise-pos-metrics span, .enterprise-financials span, .quick-sale-cash-row span { color: #888; font-size: 9px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+        .enterprise-pos-metrics strong { color: var(--ep-cream); font-size: 15px; font-variant-numeric: tabular-nums; }
+        .enterprise-pos-layout { grid-template-columns: minmax(0, 8fr) minmax(320px, 4fr) !important; gap: 16px !important; padding: 16px; background: #0b0b0b; }
+        .enterprise-catalog-panel, .enterprise-checkout-panel { min-width: 0; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+        .enterprise-catalog-panel { display: grid; align-content: start; gap: 13px; }
+        .enterprise-client-card, .enterprise-scanner-card, .enterprise-checkout-panel { border: 1px solid var(--ep-line); border-radius: 10px; background: var(--ep-panel); box-shadow: 0 12px 24px rgba(0,0,0,.18); }
+        .enterprise-client-card, .enterprise-scanner-card { padding: 14px; }
+        .enterprise-section-head, .enterprise-ticket-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 11px; margin-bottom: 11px; border-bottom: 1px solid #222; }
+        .enterprise-section-head h3, .enterprise-ticket-head h3 { margin: 3px 0 0; color: var(--ep-cream); font-size: 15px; font-weight: 900; }
+        .enterprise-client-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 10px !important; }
+        .enterprise-client-grid label:last-child { grid-column: span 1; }
+        .enterprise-client-grid label span, .enterprise-payment-panel label span { color: #999 !important; font-size: 9px !important; font-weight: 800 !important; letter-spacing: .65px; text-transform: uppercase; }
+        .enterprise-pos-shell .form-control { min-height: 40px; border-color: #2d2d2d; border-radius: 7px; background: var(--ep-control); color: var(--ep-cream); box-shadow: none; }
+        .enterprise-pos-shell .form-control:focus { border-color: var(--ep-gold); box-shadow: 0 0 0 3px rgba(201,167,106,.11); }
+        .quick-sale-refresh-btn { min-height: 33px; border: 1px solid #3c3322; border-radius: 7px; background: #1b1813; color: var(--ep-gold); font-size: 10px; font-weight: 800; padding: 7px 10px; }
+        .enterprise-search-box { margin: 0 !important; }
+        .enterprise-search-box .form-control { min-height: 48px !important; padding-left: 45px !important; padding-right: 58px !important; font-size: 13px; }
+        .enterprise-search-box .quick-sale-search-icon { color: #777; font-size: 20px; }
+        .enterprise-search-box .quick-sale-scan-btn { width: 42px !important; min-height: 38px !important; border-radius: 6px; border-color: #5e4c2c; background: #221c12; color: var(--ep-gold); }
+        .enterprise-reader-note { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: #787878; font-size: 10px; }
+        .enterprise-camera-cta { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: 11px; border: 1px solid #70572e; border-radius: 7px; background: #211b10; color: var(--ep-cream); font-size: 11px; font-weight: 900; letter-spacing: .15px; }
+        .enterprise-camera-cta:hover, .enterprise-camera-cta:focus-visible { border-color: var(--ep-gold); background: #2a2112; color: #fff4d9; }
+        .enterprise-camera-cta svg { width: 17px; height: 17px; color: var(--ep-gold); }
+        .enterprise-category-strip { margin: 0 !important; padding: 1px 1px 5px !important; }
+        .enterprise-category-strip .quick-sale-category-btn { min-height: 34px; border-color: #292929; border-radius: 7px; background: #121212; color: #aaa; font-size: 10px; font-weight: 800; }
+        .enterprise-category-strip .quick-sale-category-btn.active { border-color: #70572e; background: #211b10; color: var(--ep-cream); }
+        .enterprise-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; max-height: calc(100vh - 440px) !important; min-height: 300px !important; gap: 11px !important; padding: 2px !important; }
+        .enterprise-product-grid .quick-sale-product-tile { min-height: 276px; gap: 8px; padding: 9px; border-color: #292929; border-radius: 9px; background: var(--ep-panel); }
+        .enterprise-product-grid .quick-sale-product-tile:hover, .enterprise-product-grid .quick-sale-product-tile.active { border-color: #806536; background: #17140f; transform: none; }
+        .enterprise-product-grid .quick-sale-tile-image { border-color: #292929; border-radius: 7px; background: #0d0d0d; }
+        .enterprise-product-grid .quick-sale-stock-pill { border-radius: 5px; background: rgba(16, 78, 49, .94); color: #9bf0be; font-size: 9px; }
+        .enterprise-product-grid .quick-sale-stock-pill.low { background: rgba(112, 79, 22, .96); color: #f3d58b; }
+        .enterprise-product-grid .quick-sale-stock-pill.out { background: rgba(105, 33, 33, .96); color: #ffb2b2; }
+        .enterprise-product-grid .quick-sale-tile-copy strong { color: var(--ep-cream); font-size: 12px; }
+        .enterprise-product-grid .quick-sale-tile-copy span { color: #8d8d8d; }
+        .enterprise-product-grid .quick-sale-variant-field { margin-top: 6px; gap: 4px; }
+        .enterprise-product-grid .quick-sale-variant-field > span { color: var(--ep-gold); font-size: 8px; }
+        .enterprise-product-grid .quick-sale-variant-select { min-height: 31px; border-color: #3c3322; border-radius: 6px; background: #1a1a1a; color: var(--ep-cream); font-size: 9px; }
+        .enterprise-product-grid .quick-sale-tile-bottom b { color: var(--ep-cream); font-size: 14px; }
+        .enterprise-product-grid .quick-sale-add-card { border-color: #b49455; border-radius: 7px; background: linear-gradient(135deg, #c9a76a, #e0c486); color: #15110a; box-shadow: none; }
+        .enterprise-checkout-panel { display: grid !important; grid-template-rows: auto minmax(150px, 1fr) auto auto auto; align-self: stretch; min-height: 620px; padding: 14px !important; position: sticky !important; top: 12px !important; }
+        .enterprise-ticket-head { margin: 0; }
+        .enterprise-ticket-head > span { border: 1px solid #493b25; border-radius: 999px; background: #1b1710; color: var(--ep-gold); padding: 5px 8px; font-size: 9px; }
+        .enterprise-cart-list { max-height: none !important; min-height: 0; margin: 0; padding: 12px 2px; }
+        .enterprise-cart-list .quick-sale-empty { min-height: 140px; border: 1px dashed #333; border-radius: 8px; color: #858585; }
+        .enterprise-cart-list .quick-sale-cart-item { grid-template-columns: 42px minmax(0, 1fr) 78px 26px; gap: 8px; padding: 8px 0; border-bottom: 1px solid #222; border-radius: 0; background: transparent; }
+        .enterprise-cart-list .quick-sale-cart-thumb { width: 42px; height: 42px; border-radius: 6px; }
+        .enterprise-cart-list .quick-sale-cart-copy strong { color: var(--ep-cream); font-size: 11px; }
+        .enterprise-cart-list .quick-sale-cart-copy span { color: #898989; font-size: 9px; }
+        .enterprise-cart-list .quick-sale-qty-control { grid-template-columns: 21px 32px 21px; gap: 2px; }
+        .enterprise-cart-list .quick-sale-qty-control button, .enterprise-cart-list .quick-sale-qty-control input { min-height: 27px; border-radius: 5px; font-size: 11px; }
+        .enterprise-cart-list .quick-sale-cart-remove { width: 26px; height: 26px; border-radius: 5px; background: #241616; color: #f09a9a; }
+        .enterprise-financials { display: grid; gap: 7px; padding: 12px 0; border-top: 1px solid #292929; }
+        .enterprise-financials > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #9b9b9b; font-size: 11px; }
+        .enterprise-financials strong { color: var(--ep-cream); font-size: 12px; font-variant-numeric: tabular-nums; }
+        .enterprise-financials #quick-sale-discount { color: #67d69a; }
+        .enterprise-net-total { margin-top: 3px; padding-top: 10px; border-top: 1px solid #292929; }
+        .enterprise-net-total span { color: var(--ep-cream); font-size: 13px; font-weight: 900; }
+        .enterprise-net-total strong { color: var(--ep-gold); font-size: 21px; }
+        .enterprise-payment-panel { display: grid; gap: 9px; padding-top: 11px; border-top: 1px solid #292929; }
+        .enterprise-payment-select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        .enterprise-payment-methods { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+        .enterprise-payment-methods button { min-height: 35px; border: 1px solid #303030; border-radius: 6px; background: #181818; color: #999; font-size: 9px; font-weight: 800; padding: 4px; }
+        .enterprise-payment-methods button.active { border-color: #92743f; background: #211c13; color: var(--ep-cream); }
+        .enterprise-payment-panel .quick-sale-cash-row { grid-template-columns: minmax(0, 1fr) 108px; }
+        .enterprise-payment-panel .quick-sale-cash-row > div { border-color: #303030; border-radius: 7px; background: #181818; }
+        .enterprise-payment-panel .quick-sale-cash-row strong { color: #7ee7a9; }
+        .enterprise-note textarea { min-height: 54px; resize: vertical; }
+        .enterprise-ticket-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding-top: 12px; }
+        .enterprise-ticket-action, .enterprise-charge-btn { min-height: 43px; border-radius: 7px; font-size: 9px; font-weight: 900; letter-spacing: .3px; text-transform: uppercase; }
+        .enterprise-ticket-action { border: 1px solid #303030; background: #181818; color: #c1c1c1; }
+        .enterprise-ticket-action.danger { color: #dd9090; }
+        .enterprise-charge-btn { border: 1px solid #b18d4e; background: linear-gradient(135deg, #c9a76a, #e0c486); color: #161109; }
+        .enterprise-charge-btn:disabled { opacity: .35; cursor: not-allowed; }
+        .enterprise-mobile-tabs { display: none; }
+        @media (max-width: 1180px) {
+            .enterprise-pos-layout { grid-template-columns: minmax(0, 1fr) 340px !important; }
+            .enterprise-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            .enterprise-client-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        }
+        @media (max-width: 850px) {
+            .enterprise-pos-bar { grid-template-columns: 1fr auto; }
+            .enterprise-pos-status { display: none; }
+            .enterprise-pos-layout { grid-template-columns: 1fr !important; padding: 11px; }
+            .enterprise-mobile-tabs { display: grid !important; grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 7px; padding: 0; border: 0; background: transparent; }
+            .enterprise-mobile-tabs button { min-height: 41px; border: 1px solid #303030; border-radius: 7px; background: #161616; color: #aaa; font-size: 11px; font-weight: 800; }
+            .enterprise-mobile-tabs button.active { border-color: #92743f; background: #211c13; color: var(--ep-cream); }
+            .enterprise-checkout-panel { position: relative !important; top: auto !important; min-height: 540px; }
+            .enterprise-pos-layout > .pos-mobile-hidden { display: none !important; }
+        }
+        @media (max-width: 560px) {
+            .enterprise-pos-bar { grid-template-columns: 1fr auto; gap: 9px; min-height: 60px; padding: 10px; }
+            .enterprise-pos-brand img { width: 32px; height: 32px; }
+            .enterprise-pos-brand h2 { font-size: 14px; }
+            .enterprise-pos-brand span { font-size: 8px; }
+            .enterprise-pos-metrics div { min-width: 61px; padding: 6px 7px; }
+            .enterprise-pos-metrics span { font-size: 8px; }
+            .enterprise-pos-metrics strong { font-size: 12px; }
+            .enterprise-client-card, .enterprise-scanner-card, .enterprise-checkout-panel { border-radius: 8px; padding: 11px !important; }
+            .enterprise-client-grid { grid-template-columns: 1fr !important; }
+            .enterprise-client-grid label:last-child { grid-column: auto; }
+            .enterprise-reader-note { display: block; line-height: 1.55; }
+            .enterprise-reader-note span:last-child { display: none; }
+            .enterprise-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; max-height: none !important; min-height: 260px !important; }
+            .enterprise-product-grid .quick-sale-product-tile.has-variants { grid-column: 1 / -1; grid-template-columns: 105px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; min-height: 158px; }
+            .enterprise-product-grid .quick-sale-product-tile.has-variants .quick-sale-tile-image { grid-column: 1; grid-row: 1 / 3; min-height: 140px; height: 100%; aspect-ratio: auto; }
+            .enterprise-product-grid .quick-sale-product-tile.has-variants .quick-sale-tile-copy, .enterprise-product-grid .quick-sale-product-tile.has-variants .quick-sale-tile-bottom { grid-column: 2; }
+            .enterprise-ticket-actions { grid-template-columns: 1fr 1fr; }
+            .enterprise-charge-btn { grid-column: span 2; }
+        }
+    </style>
 </head>
 <body>
     <div class="bg-animation"></div>
@@ -6709,7 +7315,7 @@
             </div>
         </aside>
         <aside class="admin-section-drawer" id="admin-section-drawer" aria-label="Secciones del panel">
-            <button class="admin-section-tab" type="button" id="admin-section-toggle" aria-expanded="false">Secciones</button>
+            <button class="admin-section-tab" type="button" id="admin-section-toggle" aria-expanded="false" title="Secciones">Secciones</button>
             <div class="admin-section-panel">
                 <div class="admin-section-head">
                     <span class="admin-kicker">Panel</span>
@@ -6940,76 +7546,73 @@
                         </div>
                         <div class="orders-admin-body">
                             <div class="orders-tab-panel active" data-orders-tab="quick-sale" id="orders-tab-quick-sale">
-                                <div class="quick-sale-shell">
-                                    <div class="quick-sale-hero">
-                                        <div>
-                                            <span class="admin-kicker">Mostrador</span>
-                                            <h2>Caja rápida de ventas</h2>
-                                            <p>Busca o escanea, toca + para agregar y genera la factura PDF con el mismo formato del sistema.</p>
+                                <div class="quick-sale-shell enterprise-pos-shell">
+                                    <header class="enterprise-pos-bar">
+                                        <div class="enterprise-pos-brand">
+                                            <img src="Logo2-nav.png" alt="BLYXU">
+                                            <div><span>Terminal POS</span><h2>BLYXU Caja Comercial</h2></div>
                                         </div>
-                                        <div class="quick-sale-metrics">
-                                            <div><span>Artículos</span><strong id="quick-sale-count">0</strong></div>
-                                            <div><span>Total</span><strong id="quick-sale-total">$0</strong></div>
-                                        </div>
-                                    </div>
-                                    <div class="quick-sale-pos-layout">
-                                        <section class="quick-sale-catalog-panel">
-                                            <div class="quick-sale-toolbar">
-                                                <div>
-                                                    <span class="admin-kicker">Catálogo de caja</span>
-                                                    <h3>Buscar y agregar</h3>
+                                        <div class="enterprise-pos-status"><i></i><span>Caja activa</span><strong id="quick-sale-clock">--:--</strong></div>
+                                        <div class="enterprise-pos-metrics"><div><span>Artículos</span><strong id="quick-sale-count">0</strong></div><div><span>Total</span><strong id="quick-sale-total">$0</strong></div></div>
+                                    </header>
+                                    <div class="quick-sale-pos-layout enterprise-pos-layout">
+                                        <nav class="quick-sale-mobile-tabs enterprise-mobile-tabs" aria-label="Vista de caja">
+                                            <button class="active" type="button" data-quick-sale-pane="catalog">Catálogo</button>
+                                            <button type="button" data-quick-sale-pane="checkout">Ticket <span id="quick-sale-mobile-count">0</span></button>
+                                        </nav>
+                                        <section class="quick-sale-catalog-panel enterprise-catalog-panel">
+                                            <section class="enterprise-client-card">
+                                                <div class="enterprise-section-head"><div><span>Cliente corporativo</span><h3>Registro de comprador</h3></div><button class="quick-sale-text-btn" id="quick-sale-clear-client" type="button">Limpiar</button></div>
+                                                <div class="quick-sale-client-grid enterprise-client-grid">
+                                                    <label><span>Nombre / identificación</span><input class="form-control" id="quick-sale-customer" placeholder="Cliente mostrador"></label>
+                                                    <label><span>WhatsApp / contacto</span><input class="form-control" id="quick-sale-phone" inputmode="tel" placeholder="Opcional"></label>
+                                                    <label><span>Dirección de entrega</span><input class="form-control" id="quick-sale-address" placeholder="Entrega o mostrador"></label>
+                                                    <label><span>Asesor responsable</span><input class="form-control" id="quick-sale-advisor" placeholder="Nombre del vendedor"></label>
+                                                    <label><span>Lista de precios</span><select class="form-control" id="quick-sale-customer-type"><option value="Detal">Detal</option><option value="Mayorista">Mayorista</option></select></label>
                                                 </div>
-                                                <button class="admin-btn secondary" type="button" onclick="cargarInventario({silent:true}).then(renderQuickSaleResults)">Actualizar stock</button>
-                                            </div>
-                                            <div class="quick-sale-search-box quick-sale-pos-search">
-                                                <span class="quick-sale-search-icon">⌕</span>
-                                                <input class="form-control" id="quick-sale-search" placeholder="Escanea o busca por nombre, SKU, color, categoría o código..." autocomplete="off">
-                                                <button class="quick-sale-scan-btn" id="btn-scan-quick-sale" type="button" aria-label="Escanear QR o codigo del producto" title="Escanear QR o codigo">
+                                            </section>
+                                            <section class="enterprise-scanner-card">
+                                                <div class="enterprise-section-head"><div><span>Lectura óptica</span><h3>SKU, código de barras o QR</h3></div><button class="quick-sale-refresh-btn" type="button" onclick="cargarInventario({ force: true }).then(renderQuickSaleResults)">Actualizar stock</button></div>
+                                                <div class="quick-sale-search-box enterprise-search-box">
+                                                    <span class="quick-sale-search-icon" aria-hidden="true">⌕</span>
+                                                    <input class="form-control" id="quick-sale-search" placeholder="Escanea un código o busca producto..." autocomplete="off">
+                                                    <button class="quick-sale-scan-btn" id="btn-scan-quick-sale" type="button" aria-label="Escanear QR o codigo del producto" title="Escanear QR o codigo">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M7 8h10v8H7z"></path></svg>
+                                                    </button>
+                                                </div>
+                                                <div class="enterprise-reader-note"><span>Enter procesa una referencia exacta y la añade al ticket.</span><span>QR · EAN · UPC · CODE 128</span></div>
+                                                <button class="enterprise-camera-cta" type="button" onclick="openQuickSaleScanner()" aria-label="Abrir escáner inteligente con la cámara">
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M7 8h10v8H7z"></path></svg>
+                                                    Abrir escáner inteligente
                                                 </button>
-                                            </div>
-                                            <div class="quick-sale-results quick-sale-product-grid" id="quick-sale-results">
-                                                <div class="quick-sale-empty">Escribe al menos 2 letras para buscar en inventario.</div>
-                                            </div>
+                                            </section>
+                                            <div class="quick-sale-category-strip enterprise-category-strip" id="quick-sale-categories" aria-label="Filtrar productos por categoria"></div>
+                                            <div class="quick-sale-results quick-sale-product-grid enterprise-product-grid" id="quick-sale-results"><div class="quick-sale-empty">Cargando catálogo de caja...</div></div>
                                         </section>
 
-                                        <aside class="quick-sale-checkout-panel">
-                                            <div class="quick-sale-checkout-head">
-                                                <div>
-                                                    <span class="admin-kicker">Ticket actual</span>
-                                                    <h3>Cobro de caja</h3>
+                                        <aside class="quick-sale-checkout-panel enterprise-checkout-panel">
+                                            <div class="enterprise-ticket-head"><div><span>Transacción activa</span><h3>Ticket de venta</h3></div><span id="quick-sale-ticket-count">0 ítems</span></div>
+                                            <div id="quick-sale-cart" class="quick-sale-cart-list enterprise-cart-list"><div class="quick-sale-empty">Escanea un producto o usa + para iniciar el ticket.</div></div>
+                                            <div class="enterprise-financials">
+                                                <div><span>Subtotal</span><strong id="quick-sale-subtotal">$0</strong></div>
+                                                <div><span>Descuento de ticket</span><strong id="quick-sale-discount">-$0</strong></div>
+                                                <div><span>Impuestos incluidos</span><strong id="quick-sale-tax">$0</strong></div>
+                                                <div class="enterprise-net-total"><span>Total a cobrar</span><strong id="quick-sale-summary-total">$0</strong></div>
+                                            </div>
+                                            <div class="enterprise-payment-panel">
+                                                <span>Método de pago</span>
+                                                <select class="form-control enterprise-payment-select" id="quick-sale-method"><option value="Efectivo / Caja">Efectivo</option><option value="Nequi / Caja">Nequi</option><option value="Transferencia / Caja">Transferencia</option><option value="Tarjeta / Caja">Tarjeta</option><option value="Mixto / Caja">Mixto</option></select>
+                                                <div class="enterprise-payment-methods" aria-label="Métodos de pago">
+                                                    <button class="active" type="button" data-quick-sale-method="Efectivo / Caja">Efectivo</button><button type="button" data-quick-sale-method="Nequi / Caja">Nequi</button><button type="button" data-quick-sale-method="Transferencia / Caja">Transferencia</button><button type="button" data-quick-sale-method="Tarjeta / Caja">Tarjeta</button>
                                                 </div>
-                                                <button class="admin-btn secondary" type="button" onclick="clearQuickSaleCart()">Limpiar</button>
+                                                <div class="quick-sale-cash-row" id="quick-sale-cash-row"><label><span>Efectivo recibido</span><input class="form-control" id="quick-sale-cash-received" type="number" min="0" inputmode="numeric" placeholder="$0"></label><div><span>Cambio</span><strong id="quick-sale-change">$0</strong></div></div>
+                                                <label class="enterprise-note"><span>Nota de factura</span><textarea class="form-control" id="quick-sale-note" rows="2" placeholder="Opcional"></textarea></label>
                                             </div>
-                                            <div id="quick-sale-product-detail" class="quick-sale-product-detail quick-sale-compact-detail">
-                                                <div class="quick-sale-empty">Toca un producto para ver sus características.</div>
-                                            </div>
-                                            <div class="quick-sale-customer-grid">
-                                                <input class="form-control" id="quick-sale-customer" placeholder="Cliente mostrador">
-                                                <input class="form-control" id="quick-sale-phone" placeholder="Teléfono opcional">
-                                                <select class="form-control" id="quick-sale-method">
-                                                    <option value="Efectivo / Caja">Efectivo / Caja</option>
-                                                    <option value="Nequi / Caja">Nequi / Caja</option>
-                                                    <option value="Transferencia / Caja">Transferencia / Caja</option>
-                                                    <option value="Tarjeta / Caja">Tarjeta / Caja</option>
-                                                    <option value="Mixto / Caja">Mixto / Caja</option>
-                                                </select>
-                                                <select class="form-control" id="quick-sale-customer-type">
-                                                    <option value="Detal">Detal</option>
-                                                    <option value="Mayorista">Mayorista</option>
-                                                </select>
-                                            </div>
-                                            <div id="quick-sale-cart" class="quick-sale-cart-list">
-                                                <div class="quick-sale-empty">Agrega productos desde la búsqueda.</div>
-                                            </div>
-                                            <textarea class="form-control" id="quick-sale-note" rows="2" placeholder="Nota opcional para la factura"></textarea>
-                                            <div class="quick-sale-summary">
-                                                <div><span>Cantidad</span><strong id="quick-sale-summary-count">0</strong></div>
-                                                <div><span>Total venta</span><strong id="quick-sale-summary-total">$0</strong></div>
-                                            </div>
-                                            <div class="quick-sale-actions">
-                                                <button class="admin-btn secondary" type="button" onclick="openQuickSaleInvoicePreview()">Ver en editor</button>
-                                                <button class="admin-btn" type="button" id="quick-sale-save-btn" onclick="saveQuickSaleInvoice()">Registrar venta y PDF</button>
+                                            <div class="enterprise-ticket-actions">
+                                                <button class="enterprise-ticket-action danger" type="button" onclick="clearQuickSaleCart()">Cancelar</button>
+                                                <button class="enterprise-ticket-action" id="quick-sale-hold-btn" type="button" onclick="holdQuickSaleTicket()">Pausar</button>
+                                                <button class="enterprise-ticket-action" type="button" onclick="openQuickSaleInvoicePreview()">Revisar</button>
+                                                <button class="enterprise-charge-btn" type="button" id="quick-sale-save-btn" onclick="saveQuickSaleInvoice()" disabled>Cobrar</button>
                                             </div>
                                         </aside>
                                     </div>
@@ -7543,7 +8146,7 @@
     })();
     </script>
     <script src="html5-qrcode.min.js?v=2.3.8" defer></script>
-    <script src="admin-app.js?v=admin-iphone-camera-fix-20260930-15" defer></script>
+<script src="admin-app.js?v=admin-enterprise-pos-20261001-27" defer></script>
 </body>
 </html>
 
