@@ -1275,6 +1275,17 @@ function createOrder_(data) {
   lock.waitLock(30000);
 
   try {
+    // Un reintento con el mismo ID devuelve el registro existente.
+    const id = String(data['ID Pedido'] || '').trim();
+    if (id) {
+      const sheet = getSheet_('Pedidos');
+      const existingRow = findRowIndex_(sheet, 'ID Pedido', id);
+      if (existingRow) {
+        const headers = getHeaders_(sheet);
+        const values = sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0];
+        return headers.reduce(function(row, header, index) { row[header] = values[index]; return row; }, {});
+      }
+    }
     const pedido = appendRow_('Pedidos', data);
 
     upsertClientFromOrder_(pedido);

@@ -1710,7 +1710,7 @@
                 renderRecommendations(productId, product);
 
                 cartBtn.disabled = stock <= 0;
-                cartBtn.textContent = stock > 0 ? (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general') : 'Agotado por ahora';
+                cartBtn.textContent = stock > 0 ? (detailCatalogMode === 'wholesale' ? 'Añadir al pedido' : (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general')) : 'Agotado por ahora';
                 cartBtn.onclick = () => {
                     if (stock <= 0) return;
                     addToCart(productId, null, detailCatalogMode);

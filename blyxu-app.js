@@ -5656,6 +5656,8 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
     });
 }
 
+let orderCheckoutInProgress = false;
+
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
@@ -5680,7 +5682,11 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         modo: item.mode || activeCatalogMode
     }));
 
-    const orderId = `${normalizedType === 'Mayor' ? 'MAY' : 'DET'}-${Date.now()}`;
+    const fingerprint = JSON.stringify({ cliente, productos, normalizedType });
+    let pendingOrder = null;
+    try { pendingOrder = JSON.parse(localStorage.getItem('blyxu-pending-order') || 'null'); } catch (_) {}
+    const orderId = pendingOrder?.fingerprint === fingerprint ? pendingOrder.id : `${normalizedType === 'Mayor' ? 'MAY' : 'DET'}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem('blyxu-pending-order', JSON.stringify({ id: orderId, fingerprint }));
     const payload = {
         resource: 'pedidos',
         action: 'crear',
@@ -5704,26 +5710,18 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         ].filter(Boolean).join(' | ')
     };
 
-    try {
-        const response = await fetch(GOOGLE_SHEET_API, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        if (result && result.status === 'success') {
-            return { ...payload, 'ID Pedido': result.id || orderId };
-        }
+    const response = await fetch(GOOGLE_SHEET_API, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error('No se pudo confirmar el registro. Reintenta con el mismo pedido.');
+    const result = await response.json();
+    if (!result || result.status !== 'success' || result.ok === false) {
         throw new Error(result?.message || result?.error || 'No se pudo guardar el pedido');
-    } catch (error) {
-        const formData = new FormData();
-        Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
-        await fetch(GOOGLE_SHEET_API, {
-            method: 'POST',
-            body: formData,
-            mode: 'no-cors'
-        });
-        return payload;
     }
+    const savedId = result.data?.['ID Pedido'] || result.id || result.idPedido;
+    if (!savedId) throw new Error('El servidor no confirmó el ID del pedido. Reintenta para verificarlo.');
+    return { ...payload, ...result.data, 'ID Pedido': savedId };
 }
 
 function askCustomerInfo() {
@@ -5737,6 +5735,10 @@ function askRetailQuestion() {
 }
 
 function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', cliente = null, savedOrder = null, total = 0, note = '' }) {
+    if (isRegisteredOrder && savedOrder?.['ID Pedido']) {
+        return `Pedido registrado con éxito\nID del pedido: ${savedOrder['ID Pedido']}\nCliente: ${cliente?.nombre || savedOrder['Nombre Cliente'] || ''}`;
+    }
+
     const hasHiddenPrices = cart.some(item => !cartItemShowsPrice(item));
     const orderLabel = hasHiddenPrices ? 'Consulta General' : (customerType === 'Mayor' ? 'Mayorista' : 'Detal');
     let msg = hasHiddenPrices
@@ -5745,6 +5747,7 @@ function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', c
 
     if (savedOrder && savedOrder['ID Pedido']) {
         msg += `*ID Pedido:* ${savedOrder['ID Pedido']}\n`;
+        msg += '*Registro:* Completado\n*Estado del pedido:* Pendiente de confirmación\n';
     }
 
     if (cliente) {
@@ -5775,6 +5778,13 @@ function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', c
 }
 
 async function checkout(skipPrompt = false) {
+    if (orderCheckoutInProgress) return;
+    orderCheckoutInProgress = true;
+    try { return await performOrderCheckout(skipPrompt); }
+    finally { orderCheckoutInProgress = false; }
+}
+
+async function performOrderCheckout(skipPrompt = false) {
     if (!cart.length) return;
     await syncRetailPriceVisibility();
     const total = getCartPricingSummary(cart).total;
@@ -5808,16 +5818,11 @@ async function checkout(skipPrompt = false) {
             savedOrder = await saveOrderToGoogleSheets(cliente, total, customerType);
         } catch (error) {
             console.error('Error guardando pedido:', error);
-            const formContainer = document.getElementById('cart-wholesale-form');
-            if (formContainer) {
-                formContainer.innerHTML = `
-                    <div style="text-align:center; padding:24px; background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px;">
-                        <h4 style="margin:0 0 8px; color:#ef4444; font-size:15px;">Error al registrar</h4>
-                        <p style="margin:0 0 16px; color:rgba(255,255,255,0.6); font-size:12px;">${error.message}</p>
-                        <button class="btn-checkout" onclick="closeCart()" style="background:transparent; border:1px solid rgba(255,255,255,0.2);">Cerrar</button>
-                    </div>
-                `;
-            }
+            const errorBox = document.getElementById('cart-section-form-error');
+            if (errorBox) {
+                errorBox.textContent = error.message;
+                errorBox.style.display = 'block';
+            } else { alert(error.message); }
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = originalText;
@@ -5835,6 +5840,10 @@ async function checkout(skipPrompt = false) {
         note: retailNote
     });
 
+    if (savedOrder) {
+        localStorage.setItem('blyxu-last-order', JSON.stringify(savedOrder));
+        localStorage.removeItem('blyxu-pending-order');
+    }
     cart = [];
     saveCart();
     updateCartUI();
@@ -5842,21 +5851,8 @@ async function checkout(skipPrompt = false) {
     if (noteEl) noteEl.value = '';
 
     if (isRegisteredOrder) {
-        // Mostrar mensaje de éxito en lugar de cerrar el carrito y hacer alert
-        const formContainer = document.getElementById('cart-wholesale-form');
+        const formContainer = document.getElementById('cart-section-payment-form') || document.getElementById('cart-wholesale-form');
         if (formContainer) {
-            const idText = savedOrder?.['ID Pedido'] ? `<div style="display:inline-block; margin-top:12px; padding:4px 12px; background:rgba(16,185,129,0.1); border-radius:99px; font-weight:800; color:#10B981; font-size:11px; letter-spacing:1px;">ID: ${savedOrder['ID Pedido']}</div>` : '';
-            formContainer.innerHTML = `
-                <div style="text-align:center; padding:32px 16px;">
-                    <div style="width:64px; height:64px; background:linear-gradient(135deg, #10B981, #059669); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; box-shadow:0 12px 24px rgba(16,185,129,0.3);">
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    </div>
-                    <h4 style="margin:0 0 8px; font-size:18px; font-weight:800; color:#fff;">¡Registro Exitoso!</h4>
-                    <p style="margin:0; font-size:13px; color:rgba(255,255,255,0.5); line-height:1.5;">Tu pedido mayorista ha sido guardado correctamente en el sistema.</p>
-                    ${idText}
-                    <button class="btn-checkout" onclick="closeCart()" style="margin-top:24px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar Panel</button>
-                </div>
-            `;
             const orderId = savedOrder?.['ID Pedido'] || 'Pedido registrado';
             const whatsappHref = `https://wa.me/${getCommerceWhatsAppPhone()}?text=${encodeURIComponent(msg)}`;
             formContainer.style.display = 'block';
@@ -5866,7 +5862,7 @@ async function checkout(skipPrompt = false) {
                     <div class="cart-success-icon">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <h4>${isConsultation ? 'Consulta registrada' : 'Gracias por tu pedido'}</h4>
+                    <h4>${isConsultation ? 'Consulta registrada' : 'Registro del pedido completado'}</h4>
                     <p>${isConsultation ? 'Tu consulta quedo registrada correctamente. Te llevamos a WhatsApp para terminar con un asesor.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.`}</p>
                     <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
                     <div class="cart-success-actions">
@@ -5875,7 +5871,7 @@ async function checkout(skipPrompt = false) {
                         </button>
                         <a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5Z"></path><path d="M9.2 8.8c.2 2.8 2.3 5 5.1 5.5"></path></svg>
-                            ${isConsultation ? 'Continuar en WhatsApp' : 'Dudas por WhatsApp'}
+                            Enviar pedido por WhatsApp
                         </a>
                         <button class="btn-checkout" onclick="dismissWholesaleOrderNotice()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar</button>
                     </div>
@@ -5883,7 +5879,7 @@ async function checkout(skipPrompt = false) {
             `;
             if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
-        if (isConsultation) openWhatsAppMessage(msg);
+        openWhatsAppMessage(msg);
     } else {
         closeCart();
         openWhatsAppMessage(msg);

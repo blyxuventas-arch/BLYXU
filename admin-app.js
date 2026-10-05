@@ -8420,24 +8420,29 @@ function ensureDashboardEnhancements() {
 
     const statGrid = shell.querySelector('.dashboard-stat-grid');
     statGrid?.insertAdjacentHTML('afterend', `
-        <div class="dashboard-mini-grid">
+        <details class="dashboard-extra-metrics"><summary>Ver métricas adicionales</summary><div class="dashboard-mini-grid">
             <article class="dashboard-stat-card"><span>Conversion</span><strong id="dash-conversion-rate">0%</strong><small>Facturas / pedidos filtrados</small></article>
             <article class="dashboard-stat-card"><span>Ticket promedio</span><strong id="dash-average-ticket">$0</strong><small>Promedio facturado</small></article>
             <article class="dashboard-stat-card"><span>Consultas</span><strong id="dash-consult-orders">0</strong><small>Pedidos por WhatsApp</small></article>
             <article class="dashboard-stat-card"><span>Valor inventario</span><strong id="dash-inventory-value">$0</strong><small>Stock x precio detal</small></article>
-        </div>
+        </div></details>
     `);
 
     // Collapsible toggle buttons
     shell.querySelectorAll('.dashboard-toggle-btn').forEach(btn => {
         if (btn.dataset.bound) return;
         btn.dataset.bound = '1';
+        const initialTarget = document.getElementById(btn.dataset.target);
+        btn.setAttribute('aria-controls', btn.dataset.target);
+        btn.setAttribute('aria-expanded', String(!initialTarget?.classList.contains('collapsed')));
+        btn.querySelector('span').textContent = initialTarget?.classList.contains('collapsed') ? 'Mostrar' : 'Ocultar';
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.target;
             const target = document.getElementById(targetId);
             if (!target) return;
             const isCollapsed = target.classList.toggle('collapsed');
             btn.classList.toggle('collapsed', isCollapsed);
+            btn.setAttribute('aria-expanded', String(!isCollapsed));
             btn.querySelector('span').textContent = isCollapsed ? 'Mostrar' : 'Ocultar';
         });
     });
@@ -11536,7 +11541,7 @@ window.quickSaleResults = [];
 window.quickSaleGroups = new Map();
 window.quickSaleSelectedKey = '';
 window.quickSaleCategory = 'all';
-window.quickSaleMobilePane = 'catalog';
+window.quickSaleMobilePane = 'client';
 window.quickSaleHeldTicket = null;
 
 function readInvoiceField(source, fields, fallback = '') {
@@ -11729,8 +11734,10 @@ function syncQuickSaleMobilePane(pane = window.quickSaleMobilePane) {
     const buttons = document.querySelectorAll('[data-quick-sale-pane]');
     if (!catalog || !checkout) return;
 
-    window.quickSaleMobilePane = pane === 'checkout' ? 'checkout' : 'catalog';
+    window.quickSaleMobilePane = ['client', 'catalog', 'checkout'].includes(pane) ? pane : 'client';
+    const client = document.querySelector('.quick-sale-client-panel');
     const compact = window.matchMedia('(max-width: 1024px)').matches;
+    client?.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'client');
     catalog.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'catalog');
     checkout.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'checkout');
     buttons.forEach(button => {
@@ -11803,6 +11810,8 @@ function renderQuickSaleResults() {
         .sort((a, b) => b.score - a.score || getInvoiceProductName(a.product).localeCompare(getInvoiceProductName(b.product), 'es'))
         .map(entry => entry.product);
     const groups = groupQuickSaleProducts(matchingProducts).slice(0, 24);
+    const toggle = document.getElementById('quick-sale-catalog-toggle');
+    if (toggle) toggle.hidden = groups.length <= 2;
     const results = groups.map(group => group.product);
 
     window.quickSaleResults = results;
@@ -11848,6 +11857,7 @@ function renderQuickSaleResults() {
                 </div>
                 <div class="quick-sale-tile-bottom">
                     <b class="quick-sale-tile-price">${formatAdminInvoiceMoney(price)}</b>
+                    <button class="quick-sale-info-card" type="button" data-quick-sale-info-group="${escapeHtml(group.key)}" aria-label="Información de ${escapeHtml(meta.name)}" title="Información del producto">ⓘ</button>
                     <button class="quick-sale-add-card" type="button" data-quick-sale-add-group="${escapeHtml(group.key)}" ${meta.stock <= 0 ? 'disabled' : ''} aria-label="Añadir ${escapeHtml(meta.name)}">+</button>
                 </div>
             </article>
@@ -12008,7 +12018,26 @@ window.addQuickSaleProduct = function(key, qtyOverride = null, priceOverride = n
     }
 
     renderQuickSaleCart();
-    showToast('Producto añadido a caja', 'success');
+    document.querySelectorAll('.quick-sale-product-tile').forEach(tile => {
+        if (tile.dataset.quickSaleKey !== meta.key) return;
+        const button = tile.querySelector('.quick-sale-add-card');
+        if (!button) return;
+        clearTimeout(button.quickSaleFeedbackTimer);
+        button.classList.add('is-added');
+        button.textContent = '✓';
+        button.setAttribute('aria-label', 'Producto añadido');
+        button.quickSaleFeedbackTimer = setTimeout(() => {
+            button.classList.remove('is-added');
+            button.textContent = '+';
+            button.setAttribute('aria-label', 'Añadir ' + meta.name);
+        }, 850);
+    });
+    const status = document.getElementById('quick-sale-add-status');
+    if (status) {
+        clearTimeout(status.quickSaleFeedbackTimer);
+        status.textContent = 'Producto añadido';
+        status.quickSaleFeedbackTimer = setTimeout(() => { status.textContent = ''; }, 1100);
+    }
 };
 
 window.updateQuickSaleQty = function(key, value) {
@@ -12153,7 +12182,7 @@ function renderQuickSaleCart() {
         const subtotal = (Number(item.precio) || 0) * (Number(item.cantidad) || 1);
         return `
             <div class="quick-sale-cart-item">
-                <div class="quick-sale-cart-thumb"><img src="${escapeHtml(item.image || 'Logo2.png')}" alt="" onerror="this.src='Logo2.png'"></div>
+                <button type="button" class="quick-sale-cart-thumb" onclick="openQuickSaleImage(this)" aria-label="Ampliar imagen de ${escapeHtml(item.nombre)}"><img src="${escapeHtml(item.image || 'Logo2.png')}" alt="${escapeHtml(item.nombre)}" onerror="this.src='Logo2.png'"></button>
                 <div class="quick-sale-cart-copy">
                     <strong>${escapeHtml(item.nombre)}</strong>
                     <span>${escapeHtml(item.sku || item.idVariacion || 'S/N')} · ${formatAdminInvoiceMoney(item.precio)} · Subtotal ${formatAdminInvoiceMoney(subtotal)}</span>
@@ -12378,6 +12407,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     window.addEventListener('resize', () => syncQuickSaleMobilePane());
     quickResults?.addEventListener('click', event => {
+        const infoBtn = event.target.closest('[data-quick-sale-info-group]');
+        if (infoBtn) {
+            event.stopPropagation();
+            openQuickSaleProductInfo(infoBtn.dataset.quickSaleInfoGroup);
+            return;
+        }
         const addBtn = event.target.closest('[data-quick-sale-add-group]');
         if (addBtn) {
             event.stopPropagation();
@@ -13241,6 +13276,12 @@ window.imprimirFacturaEditor = function() {
 
     // Rellenar campos en plantilla de impresión
     document.getElementById('inv-id').textContent = pId;
+    const consultUrl = new URL('facturas-pedidos.html', window.location.href);
+    consultUrl.searchParams.set('buscar', pId);
+    const qrImage = document.getElementById('inv-consult-qr-image');
+    const qrLink = document.getElementById('inv-consult-qr-link');
+    if (qrImage) qrImage.src = getInventoryQrImageUrl(consultUrl.href, 240);
+    if (qrLink) { qrLink.href = consultUrl.href; qrLink.textContent = 'Factura ' + pId; }
     
     try {
         const dateObj = new Date(fecha.includes('T') ? fecha : fecha + 'T00:00:00');
@@ -13741,3 +13782,80 @@ window.toggleVariants = function (motherIdClass, btnEl) {
 };
 
 
+
+function toggleQuickSaleCatalog() {
+    const grid = document.getElementById('quick-sale-results');
+    const button = document.getElementById('quick-sale-catalog-toggle');
+    if (!grid || !button) return;
+    const expanded = grid.classList.toggle('is-expanded');
+    button.setAttribute('aria-expanded', String(expanded));
+    button.textContent = expanded ? 'Ver menos productos' : 'Ver más productos';
+}
+
+function openQuickSaleImage(button) {
+    const source = button.querySelector('img');
+    if (!source) return;
+    let dialog = document.getElementById('quick-sale-image-dialog');
+    if (!dialog) {
+        dialog = document.createElement('dialog');
+        dialog.id = 'quick-sale-image-dialog';
+        dialog.className = 'quick-sale-image-dialog';
+        dialog.innerHTML = '<header><strong></strong><button type="button" class="quick-sale-refresh-btn" data-zoom>Ampliar</button><button type="button" class="quick-sale-refresh-btn" data-close aria-label="Cerrar imagen">Cerrar</button></header><div class="quick-sale-image-viewport"><img alt=""></div>';
+        document.body.appendChild(dialog);
+        dialog.querySelector('[data-close]').onclick = () => dialog.close();
+        dialog.querySelector('[data-zoom]').onclick = () => {
+            const zoomed = dialog.querySelector('.quick-sale-image-viewport').classList.toggle('is-zoomed');
+            dialog.querySelector('[data-zoom]').textContent = zoomed ? 'Reducir' : 'Ampliar';
+        };
+        dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    }
+    dialog.querySelector('strong').textContent = source.alt;
+    dialog.querySelector('img').src = source.currentSrc || source.src;
+    dialog.querySelector('img').alt = source.alt;
+    dialog.querySelector('.quick-sale-image-viewport').classList.remove('is-zoomed');
+    dialog.querySelector('[data-zoom]').textContent = 'Ampliar';
+    dialog.showModal();
+}
+
+function toggleDesktopSidebar() {
+    const layout = document.getElementById('admin-main-content');
+    if (!layout) return;
+    const compact = layout.classList.toggle('sidebar-compact');
+    syncDesktopSidebarToggle(compact);
+    try { localStorage.setItem('blyxu-admin-sidebar-compact', String(compact)); } catch (_) {}
+}
+function syncDesktopSidebarToggle(compact) {
+    const button = document.getElementById('desktop-sidebar-toggle');
+    if (!button) return;
+    button.setAttribute('aria-expanded', String(!compact));
+    button.setAttribute('aria-label', compact ? 'Desplegar menú de secciones' : 'Plegar menú de secciones');
+    button.title = compact ? 'Desplegar menú' : 'Plegar menú';
+    button.textContent = compact ? '☰' : '‹';
+}
+function initDesktopSidebar() {
+    let compact = true;
+    try { compact = localStorage.getItem('blyxu-admin-sidebar-compact') !== 'false'; } catch (_) {}
+    document.getElementById('admin-main-content')?.classList.toggle('sidebar-compact', compact);
+    syncDesktopSidebarToggle(compact);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDesktopSidebar);
+else initDesktopSidebar();
+
+function openQuickSaleProductInfo(groupKey) {
+    const product = getQuickSaleGroupVariant(groupKey);
+    if (!product) return;
+    const meta = getQuickSaleProductMeta(product);
+    let dialog = document.getElementById('quick-sale-info-dialog');
+    if (!dialog) {
+        dialog = document.createElement('dialog');
+        dialog.id = 'quick-sale-info-dialog';
+        dialog.className = 'quick-sale-info-dialog';
+        dialog.setAttribute('aria-labelledby', 'quick-sale-info-title');
+        document.body.appendChild(dialog);
+        dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    }
+    const fields = [['Referencia', meta.sku], ['Categoría', meta.category], ['Color', meta.color], ['Tamaño / talla', meta.size], ['Estilo', meta.style], ['Disponibilidad', meta.stock + ' unidades'], ['Precio', formatAdminInvoiceMoney(getQuickSalePrice(product))]];
+    dialog.innerHTML = '<header><h3 id="quick-sale-info-title">' + escapeHtml(meta.name) + '</h3><button type="button" class="quick-sale-refresh-btn" aria-label="Cerrar información">Cerrar</button></header><p>' + escapeHtml(meta.description || 'Sin descripción disponible.') + '</p><dl>' + fields.map(([label, value]) => '<div><dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(String(value || 'No especificado')) + '</dd></div>').join('') + '</dl>';
+    dialog.querySelector('button').onclick = () => dialog.close();
+    dialog.showModal();
+}

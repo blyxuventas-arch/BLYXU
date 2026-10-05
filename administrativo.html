@@ -7205,7 +7205,129 @@
             .enterprise-charge-btn { grid-column: span 2; }
         }
     </style>
-</head>
+<style>
+.enterprise-pos-layout > .quick-sale-client-panel { grid-column: 1 / -1; }
+.quick-sale-add-card.is-added { background: #15803d !important; color: #fff !important; }
+.quick-sale-add-status { display: block; min-height: 20px; color: #4ade80; font-size: 12px; }
+.quick-sale-cart-thumb { cursor: zoom-in; padding: 0; border: 0; }
+.quick-sale-image-dialog { width: min(94vw, 850px); max-height: 92dvh; padding: 16px; border: 1px solid #645080; border-radius: 16px; background: #15121c; color: #fff; }
+.quick-sale-image-dialog::backdrop { background: rgba(0,0,0,.85); }
+.quick-sale-image-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.quick-sale-image-viewport { overflow: auto; max-height: 72dvh; text-align: center; }
+.quick-sale-image-viewport img { display: block; width: 100%; height: auto; margin: auto; }
+.quick-sale-image-viewport.is-zoomed img { width: 200%; max-width: none; }
+@media (max-width: 1024px) {
+.enterprise-pos-layout { grid-template-columns: 1fr !important; }
+.enterprise-mobile-tabs { display: grid !important; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0,1fr)) !important; gap: 6px; }
+.enterprise-mobile-tabs button { min-height: 44px; font-size: 11px; padding: 7px 4px; }
+.enterprise-pos-layout > .pos-mobile-hidden { display: none !important; }
+.enterprise-product-grid:not(.is-expanded) > .quick-sale-product-tile:nth-child(n+3) { display: none !important; }
+.enterprise-product-grid .quick-sale-product-tile { padding: 9px !important; gap: 8px !important; }
+.enterprise-product-grid .quick-sale-product-tile.has-variants { grid-column: auto !important; display: flex; flex-direction: column; }
+.enterprise-product-grid .quick-sale-tile-copy strong { font-size: 12px; }
+.enterprise-product-grid .quick-sale-tile-meta { font-size: 10px; }
+.enterprise-product-grid .quick-sale-tile-image { width: 100%; }
+.enterprise-product-grid .quick-sale-tile-image img { aspect-ratio: 1; object-fit: cover; }
+.enterprise-product-grid .quick-sale-tile-bottom { margin-top: auto; }
+.quick-sale-client-panel { margin: 0 !important; }
+.enterprise-checkout-panel { min-height: 0 !important; }
+.enterprise-cart-list > .quick-sale-empty { min-height: 100px !important; padding: 20px 12px !important; }
+}
+@media (min-width: 1025px) { #quick-sale-catalog-toggle { display: none; } }
+</style><style>
+        @media (max-width: 640px) {
+            #view-products .product-preview-panel { display: none !important; }
+        }
+    </style>
+<style>
+.desktop-sidebar-toggle { display: none; }
+@media (min-width: 1025px) {
+    #admin-main-content.dashboard-layout { grid-template-columns: 260px minmax(0,1fr); }
+    #admin-main-content .sub-sidebar { width: 260px; z-index: 80; overflow: visible; }
+    #admin-main-content .desktop-sidebar-toggle { display: flex; align-items: center; justify-content: center; min-height: 40px; width: 40px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 10px; background: #181818; color: #fff; cursor: pointer; align-self: flex-end; }
+    #admin-main-content .sidebar-btn .sidebar-label { width: auto; min-width: 0; font-size: 14px; }
+    #admin-main-content.sidebar-compact { grid-template-columns: 76px minmax(0,1fr); }
+    #admin-main-content.sidebar-compact .sub-sidebar { width: 76px; padding: 16px 10px; gap: 14px; }
+    #admin-main-content.sidebar-compact .desktop-sidebar-toggle { align-self: center; }
+    #admin-main-content.sidebar-compact .sidebar-logo { padding: 0 0 14px; }
+    #admin-main-content.sidebar-compact .sidebar-logo img { max-width: 48px !important; }
+    #admin-main-content.sidebar-compact .sidebar-section h4,
+    #admin-main-content.sidebar-compact .sidebar-label { display: none; }
+    #admin-main-content.sidebar-compact .sidebar-btn { position: relative; justify-content: center; padding: 12px 0; gap: 0; min-height: 46px; }
+    #admin-main-content.sidebar-compact .sidebar-btn > span:first-child { width: auto; min-width: 0; font-size: 13px; }
+    #admin-main-content.sidebar-compact .sidebar-btn::after { content: attr(data-section-label); position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%); padding: 10px 14px; border: 1px solid #444; border-radius: 9px; background: #202020; color: #fff; font-size: 13px; white-space: nowrap; box-shadow: 0 4px 16px #0008; opacity: 0; visibility: hidden; pointer-events: none; }
+    #admin-main-content.sidebar-compact .sidebar-btn:hover::after,
+    #admin-main-content.sidebar-compact .sidebar-btn:focus-visible::after { opacity: 1; visibility: visible; }
+}
+</style><style>
+#view-dashboard .admin-dashboard-shell { display: flex; flex-direction: column; gap: 18px; }
+#view-dashboard .admin-dashboard-hero { padding: 22px; min-height: auto; margin: 0; }
+#view-dashboard .admin-dashboard-hero h2 { font-size: clamp(22px, 2vw, 30px); }
+#view-dashboard .dashboard-quick-actions { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+#view-dashboard .dashboard-quick-actions button { display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left; border: 1px solid var(--line); border-radius: 12px; background: #17171a; color: #fff; cursor: pointer; }
+#view-dashboard .dashboard-quick-actions button:hover { background: #26212f; border-color: #9b7bc5; }
+#view-dashboard .dashboard-quick-actions b { display: grid; place-items: center; flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; background: #30253f; color: #d8b4fe; font-size: 12px; }
+#view-dashboard .dashboard-quick-actions span { font-size: 13px; font-weight: 800; }
+#view-dashboard .dashboard-quick-actions small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 500; }
+#view-dashboard .dashboard-stat-grid, #view-dashboard .dashboard-mini-grid { grid-template-columns: repeat(4,minmax(0,1fr)) !important; gap: 12px; margin: 0; }
+#view-dashboard .dashboard-stat-card { padding: 18px; min-width: 0; }
+#view-dashboard .dashboard-stat-grid .dashboard-stat-card strong { font-size: clamp(22px,2.1vw,32px); overflow-wrap: anywhere; }
+#view-dashboard .dashboard-mini-grid .dashboard-stat-card { padding: 12px 16px; background: transparent; }
+#view-dashboard .dashboard-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 8px; }
+#view-dashboard .dashboard-section-heading h3 { margin: 0; font-size: 17px; }
+#view-dashboard .dashboard-section-heading > span { color: var(--muted); font-size: 12px; }
+#view-dashboard .dashboard-main-grid, #view-dashboard .dashboard-bottom-grid, #view-dashboard .dashboard-charts-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)) !important; gap: 16px; align-items: start; margin: 0; }
+#view-dashboard .dashboard-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 14px; }
+#view-dashboard .dashboard-card-head h3 { font-size: 16px; }
+#view-dashboard .dashboard-activity-list { max-height: 320px; overflow-y: auto; overscroll-behavior: contain; }
+#view-dashboard .dashboard-filter-bar { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+#view-dashboard .dashboard-filter-bar label:nth-of-type(5) { grid-column: span 3; }
+#view-dashboard .dashboard-filter-bar .form-control { min-width: 0; width: 100%; }
+#view-dashboard .dashboard-extra-metrics { border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+#view-dashboard .dashboard-extra-metrics summary { cursor: pointer; font-size: 13px; font-weight: 800; color: var(--soft); }
+#view-dashboard .dashboard-extra-metrics[open] summary { margin-bottom: 12px; }
+@media (max-width: 1100px) {
+    #view-dashboard .dashboard-quick-actions { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 640px) {
+    #view-dashboard .admin-dashboard-shell { gap: 12px; }
+    #view-dashboard .admin-dashboard-hero { padding: 16px; }
+    #view-dashboard .dashboard-stat-grid, #view-dashboard .dashboard-mini-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+    #view-dashboard .dashboard-main-grid, #view-dashboard .dashboard-bottom-grid, #view-dashboard .dashboard-charts-grid { grid-template-columns: 1fr !important; }
+    #view-dashboard .dashboard-quick-actions button { padding: 10px; gap: 8px; }
+    #view-dashboard .dashboard-quick-actions small { display: none; }
+    #view-dashboard .dashboard-section-heading { flex-direction: column; gap: 4px; }
+    #view-dashboard .dashboard-filter-bar { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+    #view-dashboard .dashboard-filter-bar label:nth-of-type(5) { grid-column: 1 / -1; }
+    #view-dashboard .dashboard-filter-bar > button { grid-column: 1 / -1; }
+    #view-dashboard .dashboard-order-card { gap: 8px; }
+    #view-dashboard .dashboard-order-info { min-width: 0; overflow-wrap: anywhere; }
+}
+</style><style>.admin-fold > summary { cursor:pointer; padding:14px 18px; color:var(--soft); font-size:13px; font-weight:800; }.admin-fold { border-bottom:1px solid var(--line); }.orders-navigation-fold .orders-search-row { padding-top:8px; }.inventory-pdf-category-panel.admin-fold { padding:0; }.inventory-pdf-category-panel.admin-fold > div { padding:0 18px 16px; }</style><style>
+.admin-pin-wrap { position:relative; display:block; flex:1; min-width:0; border-radius:15px; isolation:isolate; }
+#admin-login-box .admin-otp-digit { width:100% !important; position:relative; z-index:1; }
+.admin-pin-wrap::before { content:''; position:absolute; inset:-2px; border-radius:17px; background:conic-gradient(from 0deg, transparent, #a78bfa, transparent 45%, #7c3aed, transparent); opacity:0; }
+.admin-pin-wrap:focus-within::before { opacity:1; animation:adminPinGlow 1.8s ease-in-out infinite; }
+.admin-pin-wrap:has(.filled)::before { opacity:.65; }
+.admin-pin-wrap.is-success::before { opacity:1; animation:none; background:#34d399; }
+.admin-pin-wrap.is-success::after { content:'✓'; position:absolute; inset:0; display:grid; place-items:center; z-index:3; color:#34d399; font-size:26px; font-weight:900; pointer-events:none; animation:adminPinCheck .35s ease-out both; }
+#admin-login-box .admin-pin-wrap.is-success .admin-otp-digit { color:transparent !important; opacity:1 !important; -webkit-text-fill-color:transparent; background:#10251e !important; border-color:#34d399 !important; box-shadow:0 0 18px #10b98140 !important; }
+.admin-login-status { min-height:20px; margin:16px 0 0; font-size:13px; color:#34d399; }
+#admin-login-box.access-confirmed { border-color:#34d399 !important; box-shadow:0 0 32px #10b98120,0 30px 70px #0007 !important; }
+@keyframes adminPinGlow { 0%,100% { opacity:.5; filter:drop-shadow(0 0 2px #a78bfa); } 50% { opacity:1; filter:drop-shadow(0 0 7px #a78bfa); } }
+@keyframes adminPinCheck { from { opacity:0; transform:scale(.5); } to { opacity:1; transform:scale(1); } }
+.quick-sale-info-card { width:34px; height:34px; flex-shrink:0; border:1px solid #6f578b; border-radius:50%; background:#292033; color:#e9d5ff; cursor:pointer; font-size:17px; font-weight:800; }
+.quick-sale-info-dialog { width:min(92vw,460px); max-height:88dvh; overflow:auto; border:1px solid #645080; border-radius:16px; padding:20px; background:#17131e; color:#fff; }
+.quick-sale-info-dialog::backdrop { background:#0009; }
+.quick-sale-info-dialog header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.quick-sale-info-dialog h3 { margin:0; font-size:18px; }
+.quick-sale-info-dialog p { color:#c7c1ce; font-size:14px; line-height:1.6; white-space:pre-wrap; }
+.quick-sale-info-dialog dl { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.quick-sale-info-dialog dl > div { padding:10px; background:#ffffff06; border-radius:9px; min-width:0; }
+.quick-sale-info-dialog dt { color:#aaa0b5; font-size:11px; margin-bottom:5px; }
+.quick-sale-info-dialog dd { margin:0; font-size:13px; overflow-wrap:anywhere; }
+@media(prefers-reduced-motion:reduce) { .admin-pin-wrap::before,.admin-pin-wrap::after { animation:none !important; } }
+</style></head>
 <body>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
@@ -7217,19 +7339,19 @@
             <h1 class="admin-otp-title">Ingresa tu clave</h1>
             <p class="admin-otp-sub">Acceso administrativo &mdash; solo para personal autorizado.</p>
             <div class="admin-otp-row" id="admin-otp-row">
-                <input class="admin-otp-digit" id="adm-d0" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d1" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d2" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d3" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d4" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d5" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="admin-otp-digit" id="adm-d6" type="text" inputmode="numeric" maxlength="1" autocomplete="off">
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d0" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d1" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d2" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d3" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d4" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d5" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
+                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d6" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
             </div>
-            <div class="admin-otp-error" id="admin-otp-error">Clave incorrecta, inténtalo de nuevo</div>
+            <p id="admin-login-status" class="admin-login-status" role="status" aria-live="polite"></p><div class="admin-otp-error" id="admin-otp-error">Clave incorrecta, inténtalo de nuevo</div>
         </div>
     </div>
 
-    <div id="admin-main-content" style="display:none;" class="dashboard-layout">
+    <div id="admin-main-content" style="display:none;" class="dashboard-layout sidebar-compact">
         <aside class="cost-calculator-drawer" id="admin-cost-calculator" aria-label="Calculadora de costos">
             <button class="cost-calculator-tab" type="button" id="cost-calculator-toggle" aria-expanded="false">Costos</button>
             <div class="cost-calculator-panel">
@@ -7346,22 +7468,23 @@
             </div>
         </aside>
         <aside class="sub-sidebar">
+            <button id="desktop-sidebar-toggle" class="desktop-sidebar-toggle" type="button" onclick="toggleDesktopSidebar()" aria-label="Desplegar menú de secciones" aria-expanded="false" title="Desplegar menú">☰</button>
             <div class="sidebar-logo"><img src="Logo2.png" alt="BLYXU" style="width:100%;max-width:120px;display:block;margin:0 auto;"></div>
             <div class="sidebar-menu-wrapper" style="flex:1;">
                 <div class="sidebar-section">
                     <h4>Operaciones</h4>
-                    <button class="sidebar-btn active" data-view="dashboard" onclick="switchDashboardView('dashboard','Dashboard')"><span>DB</span> Dashboard</button>
-                    <button class="sidebar-btn" data-view="products" onclick="switchDashboardView('products','Gestión de Productos')"><span>PR</span> Añadir Producto</button>
-                    <button class="sidebar-btn" data-view="inventory" onclick="switchDashboardView('inventory','Inventario Actual')"><span>IN</span> Ver Inventario</button>
-                    <button class="sidebar-btn" data-view="china-orders" onclick="switchDashboardView('china-orders','Pedidos a China')"><span>CN</span> Pedidos China</button>
-                    <button class="sidebar-btn" data-view="orders" onclick="switchDashboardView('orders','Pedidos y Facturación')"><span>PF</span> Pedidos y Fact.</button>
+                    <button class="sidebar-btn active" data-view="dashboard" onclick="switchDashboardView('dashboard','Dashboard')" aria-label="Dashboard" data-section-label="Dashboard"><span>DB</span><span class="sidebar-label">Dashboard</span></button>
+                    <button class="sidebar-btn" data-view="products" onclick="switchDashboardView('products','Gestión de Productos')" aria-label="Añadir Producto" data-section-label="Añadir Producto"><span>PR</span><span class="sidebar-label">Añadir Producto</span></button>
+                    <button class="sidebar-btn" data-view="inventory" onclick="switchDashboardView('inventory','Inventario Actual')" aria-label="Ver Inventario" data-section-label="Ver Inventario"><span>IN</span><span class="sidebar-label">Ver Inventario</span></button>
+                    <button class="sidebar-btn" data-view="china-orders" onclick="switchDashboardView('china-orders','Pedidos a China')" aria-label="Pedidos China" data-section-label="Pedidos China"><span>CN</span><span class="sidebar-label">Pedidos China</span></button>
+                    <button class="sidebar-btn" data-view="orders" onclick="switchDashboardView('orders','Pedidos y Facturación')" aria-label="Pedidos y Fact." data-section-label="Pedidos y Fact."><span>PF</span><span class="sidebar-label">Pedidos y Fact.</span></button>
                 </div>
                 <div class="sidebar-section">
                     <h4>Sistema</h4>
-                    <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuración del Sitio')"><span>AJ</span> Ajustes y Banner</button>
+                    <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuración del Sitio')" aria-label="Ajustes y Banner" data-section-label="Ajustes y Banner"><span>AJ</span><span class="sidebar-label">Ajustes y Banner</span></button>
                 </div>
             </div>
-            <div class="sidebar-section"><button class="sidebar-btn logout" onclick="window.location.href='index.html'"><span>SA</span> Cerrar Sesión</button></div>
+            <div class="sidebar-section"><button class="sidebar-btn logout" onclick="window.location.href='index.html'" aria-label="Cerrar Sesión" data-section-label="Cerrar Sesión"><span>SA</span><span class="sidebar-label">Cerrar Sesión</span></button></div>
         </aside>
 
         <main class="dashboard-main">
@@ -7385,30 +7508,39 @@
                         <div class="admin-dashboard-hero">
                             <div><span class="admin-kicker">Resumen general</span><h2>Panel de control BLYXU</h2><p>Vista rápida de ventas, pedidos, inventario y actividad reciente.</p></div>
                             <div class="admin-dashboard-actions">
-                                <button class="admin-btn" type="button" onclick="openQuickSaleInOrders()">Venta rápida</button>
-                                <button class="admin-btn secondary" type="button" onclick="switchDashboardView('products','Gestión de Productos')">Nuevo producto</button>
+                                
+                                
                                 <button class="admin-btn secondary" type="button" onclick="cargarPedidos({force:true}); cargarInventario({silent:true});">Sincronizar</button>
                             </div>
                         </div>
+                        <nav class="dashboard-quick-actions" aria-label="Accesos rápidos del dashboard">
+                            <button type="button" onclick="openQuickSaleInOrders()"><b>+</b><span>Caja rápida<small>Registrar una venta</small></span></button>
+                            <button type="button" onclick="switchDashboardView('products','Gestión de Productos')"><b>PR</b><span>Nuevo producto<small>Añadir al catálogo</small></span></button>
+                            <button type="button" onclick="switchDashboardView('orders','Pedidos y Facturación')"><b>PF</b><span>Pedidos y facturas<small>Revisar y gestionar</small></span></button>
+                            <button type="button" onclick="switchDashboardView('inventory','Inventario Actual')"><b>IN</b><span>Inventario<small>Consultar existencias</small></span></button>
+                        </nav>
                         <div class="dashboard-stat-grid">
                             <article class="dashboard-stat-card"><span>Total ventas</span><strong id="dash-total-sales">$0</strong><small>Facturas guardadas</small></article>
                             <article class="dashboard-stat-card"><span>Pedidos pendientes</span><strong id="dash-pending-orders">0</strong><small>Sin facturar</small></article>
                             <article class="dashboard-stat-card"><span>Productos activos</span><strong id="dash-active-products">0</strong><small>Inventario publicado</small></article>
                             <article class="dashboard-stat-card"><span>Stock total</span><strong id="dash-total-stock">0</strong><small>Unidades disponibles</small></article>
                         </div>
+
+                        <div class="dashboard-section-heading"><h3>Actividad e inventario</h3><span>Pedidos recientes y productos por reponer</span></div>
                         <div class="dashboard-main-grid">
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Actividad</span><h3>Resumen operativo</h3></div><button class="dashboard-toggle-btn" data-target="dash-status-bars-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div><div class="dashboard-collapsible" id="dash-status-bars-wrap"><div><div class="dashboard-bars" id="dash-status-bars"><div class="dashboard-empty">Cargando resumen...</div></div></div></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Rendimiento</span><h3>Pedidos cerrados</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-closed-orders-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-closed-legend"></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Reciente</span><h3>Ultimos pedidos</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-orders-count">0</span><button class="dashboard-toggle-btn" data-target="dash-recent-orders-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-recent-orders-wrap"><div><div class="dashboard-activity-list" id="dash-recent-orders"><div class="dashboard-empty">Sin pedidos cargados</div></div></div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Reciente</span><h3>Últimos pedidos</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-orders-count">0</span><button class="dashboard-toggle-btn" data-target="dash-recent-orders-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-recent-orders-wrap"><div><div class="dashboard-activity-list" id="dash-recent-orders"><div class="dashboard-empty">Sin pedidos cargados</div></div></div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Inventario</span><h3>Stock bajo</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-stock-count">0</span><button class="dashboard-toggle-btn" data-target="dash-low-stock-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-low-stock-wrap"><div><div class="dashboard-activity-list" id="dash-low-stock"><div class="dashboard-empty">Sin inventario cargado</div></div></div></div></section>
                         </div>
+                        <div class="dashboard-section-heading"><h3>Ventas y rendimiento</h3><span>Resultados del período seleccionado</span></div>
                         <div class="dashboard-charts-grid">
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Ventas</span><h3>Facturacion por dia</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-sales-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-sales-legend"></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Catálogo</span><h3>Top categorias</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-category-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-category-legend"></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Ventas</span><h3>Facturación por día</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-sales-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-sales-legend"></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Catálogo</span><h3>Categorías principales</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-category-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-category-legend"></div></section>
                         </div>
                         <div class="dashboard-bottom-grid">
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Inventario</span><h3>Stock bajo</h3></div><div style="display:flex;align-items:center;gap:8px"><span class="dashboard-items-count" id="dash-stock-count">0</span><button class="dashboard-toggle-btn" data-target="dash-low-stock-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div></div><div class="dashboard-collapsible" id="dash-low-stock-wrap"><div><div class="dashboard-activity-list" id="dash-low-stock"><div class="dashboard-empty">Sin inventario cargado</div></div></div></div></section>
-                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Accesos</span><h3>Gestion rapida</h3></div></div><div class="dashboard-shortcuts"><button onclick="openQuickSaleInOrders()">Caja</button><button onclick="switchDashboardView('products','Gestion de Productos')">Productos</button><button onclick="switchDashboardView('orders','Ventas y Facturacion')">Facturas</button><button onclick="switchDashboardView('china-orders','Pedidos a China')">China</button></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Actividad</span><h3>Resumen operativo</h3></div><button class="dashboard-toggle-btn" data-target="dash-status-bars-wrap" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg><span>Ver</span></button></div><div class="dashboard-collapsible" id="dash-status-bars-wrap"><div><div class="dashboard-bars" id="dash-status-bars"><div class="dashboard-empty">Cargando resumen...</div></div></div></div></section>
+                            <section class="dashboard-card"><div class="dashboard-card-head"><div><span>Rendimiento</span><h3>Pedidos cerrados</h3></div></div><div class="dashboard-canvas-wrap"><canvas id="dash-closed-orders-canvas"></canvas></div><div class="dashboard-chart-legend" id="dash-closed-legend"></div></section>
                         </div>
+
 
                     </div>
                 </div>
@@ -7529,7 +7661,7 @@
                 <div id="view-inventory" class="dashboard-section">
                     <div class="admin-panel gradient-bg">
                         <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
-                        <div class="inventory-pdf-category-panel" id="inventory-pdf-category-panel"><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div>
+                        <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
                         <div class="table-wrapper" style="padding:20px;"><table class="inventory-tree"><thead><tr><th>Foto</th><th>Producto</th><th>Categoria</th><th>Detal</th><th>Mayorista</th><th>Stock</th><th>Variantes</th><th>Acciones</th></tr></thead><tbody id="inventory-tbody"><tr><td colspan="8">Cargando inventario...</td></tr></tbody></table></div>
                         <div id="inventory-catalog-print-container" class="hidden-print"></div>
                     </div>
@@ -7548,6 +7680,7 @@
                             <div><span class="admin-kicker">Ventas</span><h2>Ventas y facturación</h2><p style="margin:6px 0 0;color:var(--muted);">Caja de mostrador, pedidos web y facturas en un solo flujo.</p></div>
                             <button class="admin-btn" type="button" onclick="openManualInvoiceEditor()">Nueva factura manual</button>
                         </div>
+                        <details class="admin-fold orders-navigation-fold" open><summary>Secciones de ventas · Caja, pedidos y facturas</summary>
                         <div class="orders-search-row">
                             <input class="form-control" id="admin-orders-search" placeholder="Buscar cliente, pedido o factura...">
                             <div class="orders-tabs">
@@ -7556,6 +7689,7 @@
                                 <button class="orders-tab-btn" data-orders-tab-target="invoices-mayor">Facturas <span id="invoices-count-badge">0</span></button>
                             </div>
                         </div>
+                        </details>
                         <div class="orders-admin-body">
                             <div class="orders-tab-panel active" data-orders-tab="quick-sale" id="orders-tab-quick-sale">
                                 <div class="quick-sale-shell enterprise-pos-shell">
@@ -7569,11 +7703,11 @@
                                     </header>
                                     <div class="quick-sale-pos-layout enterprise-pos-layout">
                                         <nav class="quick-sale-mobile-tabs enterprise-mobile-tabs" aria-label="Vista de caja">
-                                            <button class="active" type="button" data-quick-sale-pane="catalog">Catálogo</button>
+                                            <button class="active" type="button" data-quick-sale-pane="client">Datos del cliente</button>
+                                            <button type="button" data-quick-sale-pane="catalog">Catálogo</button>
                                             <button type="button" data-quick-sale-pane="checkout">Ticket <span id="quick-sale-mobile-count">0</span></button>
                                         </nav>
-                                        <section class="quick-sale-catalog-panel enterprise-catalog-panel">
-                                            <section class="enterprise-client-card">
+                                            <section class="enterprise-client-card quick-sale-client-panel">
                                                 <div class="enterprise-section-head"><div><span>Cliente corporativo</span><h3>Registro de comprador</h3></div><button class="quick-sale-text-btn" id="quick-sale-clear-client" type="button">Limpiar</button></div>
                                                 <div class="quick-sale-client-grid enterprise-client-grid">
                                                     <label><span>Nombre / identificación</span><input class="form-control" id="quick-sale-customer" placeholder="Cliente mostrador"></label>
@@ -7583,6 +7717,7 @@
                                                     <label><span>Lista de precios</span><select class="form-control" id="quick-sale-customer-type"><option value="Detal">Detal</option><option value="Mayorista">Mayorista</option></select></label>
                                                 </div>
                                             </section>
+                                        <section class="quick-sale-catalog-panel enterprise-catalog-panel">
                                             <section class="enterprise-scanner-card">
                                                 <div class="enterprise-section-head"><div><span>Lectura óptica</span><h3>SKU, código de barras o QR</h3></div><button class="quick-sale-refresh-btn" type="button" onclick="cargarInventario({ force: true }).then(renderQuickSaleResults)">Actualizar stock</button></div>
                                                 <div class="quick-sale-search-box enterprise-search-box">
@@ -7600,6 +7735,8 @@
                                             </section>
                                             <div class="quick-sale-category-strip enterprise-category-strip" id="quick-sale-categories" aria-label="Filtrar productos por categoria"></div>
                                             <div class="quick-sale-results quick-sale-product-grid enterprise-product-grid" id="quick-sale-results"><div class="quick-sale-empty">Cargando catálogo de caja...</div></div>
+                                            <button id="quick-sale-catalog-toggle" class="quick-sale-refresh-btn" type="button" aria-expanded="false" onclick="toggleQuickSaleCatalog()" hidden>Ver más productos</button>
+                                            <span id="quick-sale-add-status" class="quick-sale-add-status" role="status" aria-live="polite"></span>
                                         </section>
 
                                         <aside class="quick-sale-checkout-panel enterprise-checkout-panel">
@@ -8010,7 +8147,10 @@
             </div>
         </div>
 
-        <div class="invoice-footer-line"></div>
+        <div id="inv-consult-qr" style="display:flex;align-items:center;gap:14px;margin:18px 0;break-inside:avoid;color:#171717;">
+            <img id="inv-consult-qr-image" alt="QR para consultar esta factura" width="112" height="112">
+            <div><strong>Consulta tu factura</strong><p style="margin:5px 0;font-size:12px;">Escanea este QR para ver tu comprobante.</p><a id="inv-consult-qr-link" style="font-size:11px;color:#171717;overflow-wrap:anywhere;"></a></div>
+        </div><div class="invoice-footer-line"></div>
         <div class="invoice-footer">
             <p class="thank-you">Gracias por elegir BLYXU Joyería & Accesorios</p>
             <p class="footer-subtext">Comprobante expedido digitalmente por BLYXU &bull; Tienda Web: www.blyxu.online &bull; Calidad y Autenticidad Certificada</p>
@@ -8086,9 +8226,12 @@
             inputs.forEach(function (inp, i) {
                 setTimeout(function () {
                     inp.classList.add('success');
+                    inp.parentElement.classList.add('is-success');
                 }, i * 80);
             });
-            setTimeout(unlockAdmin, inputs.length * 80 + 600);
+            document.getElementById('admin-login-status').textContent = 'Acceso confirmado';
+            document.getElementById('admin-login-box').classList.add('access-confirmed');
+            setTimeout(unlockAdmin, inputs.length * 80 + 850);
         }
 
         function showError(row, errEl) {

@@ -1518,6 +1518,12 @@
                     <form class="orders-form" id="orders-lookup-form">
                         <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="N&uacute;mero de contacto o referencia" required>
                         <button type="submit" id="orders-submit-btn">Ver mi panel</button>
+                        <button type="button" id="orders-scan-qr-btn">Escanear QR de factura</button>
+                        <dialog id="orders-qr-dialog" aria-labelledby="orders-qr-title" style="width:min(92vw,480px);border:1px solid #555;border-radius:16px;padding:18px;background:#151515;color:#fff;">
+                            <h3 id="orders-qr-title">Escanea el QR de tu factura</h3>
+                            <div id="orders-qr-reader"></div><p id="orders-qr-error" role="status"></p>
+                            <button type="button" id="orders-qr-close">Cerrar cámara</button>
+                        </dialog>
                         <div class="orders-status" id="orders-status" aria-live="polite"></div>
                     </form>
                 </div>
@@ -2195,6 +2201,9 @@
 
             function buildPrintableInvoice(order) {
                 const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'Pedido');
+                const consultationUrl = new URL('facturas-pedidos.html', window.location.href);
+                consultationUrl.searchParams.set('buscar', id);
+                const consultationQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=' + encodeURIComponent(consultationUrl.href);
                 const orderId = getField(order, ['ID Pedido'], id);
                 const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
                 const name = getField(order, ['Nombre', 'Nombre Cliente', 'Cliente'], 'Cliente BLYXU');
@@ -2324,11 +2333,11 @@
 
                         <div class="invoice-store-box">
                             <div style="display:flex; align-items:center; gap:14px;">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=https://www.blyxu.online" alt="QR BLYXU">
+                                <img src="${escapeHtml(consultationQr)}" alt="QR para consultar esta factura">
                                 <div>
-                                    <strong style="font-size:13.5px; color:#000000 !important; display:block; margin-bottom:2px;">Visita nuestra tienda online oficial BLYXU</strong>
+                                    <strong style="font-size:13.5px; color:#000000 !important; display:block; margin-bottom:2px;">Consulta tu factura BLYXU</strong>
                                     <p style="margin:0; font-size:12px; color:#52525b !important;">Escanea este cÃ³digo QR o haz clic en el enlace:</p>
-                                    <a href="https://www.blyxu.online" target="_blank" style="display:inline-block; margin-top:3px; font-size:13px; font-weight:800; color:#000000 !important; text-decoration:underline;">www.blyxu.online</a>
+                                    <a href="${escapeHtml(consultationUrl.href)}" target="_blank" rel="noopener" style="display:inline-block; margin-top:3px; font-size:13px; font-weight:800; color:#000000 !important; text-decoration:underline;">Factura ${escapeHtml(id)}</a>
                                 </div>
                             </div>
                             <div style="text-align:right; font-size:12px; color:#52525b !important;">
@@ -2890,6 +2899,63 @@
                     input.classList.remove('lookup-active');
                     form.closest('.orders-login')?.classList.remove('is-generating');
                 }
+            });
+
+            let invoiceScanner = null;
+            let scannerStarting = false;
+            let scannerHandled = false;
+            const scannerDialog = document.getElementById('orders-qr-dialog');
+            const scannerError = document.getElementById('orders-qr-error');
+            async function stopInvoiceScanner() {
+                if (invoiceScanner?.isScanning) {
+                    try { await invoiceScanner.stop(); } catch (_) {}
+                }
+            }
+            document.getElementById('orders-qr-close').addEventListener('click', () => scannerDialog.close());
+            scannerDialog.addEventListener('close', stopInvoiceScanner);
+            document.getElementById('orders-scan-qr-btn').addEventListener('click', async () => {
+                if (scannerStarting || invoiceScanner?.isScanning) return;
+                scannerStarting = true;
+                scannerHandled = false;
+                scannerError.textContent = '';
+                scannerDialog.showModal();
+                try {
+                    if (!window.Html5Qrcode) {
+                        await new Promise((resolve, reject) => {
+                            const script = document.createElement('script');
+                            script.src = 'html5-qrcode.min.js';
+                            script.onload = resolve;
+                            script.onerror = reject;
+                            document.head.appendChild(script);
+                        });
+                    }
+                    if (!scannerDialog.open) return;
+                    invoiceScanner ||= new Html5Qrcode('orders-qr-reader');
+                    await invoiceScanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, async decoded => {
+                        if (scannerHandled || !scannerDialog.open) return;
+                        let reference = String(decoded || '').trim();
+                        try {
+                            const url = new URL(reference);
+                            if (url.origin !== window.location.origin || !url.pathname.endsWith('/facturas-pedidos.html')) {
+                                scannerError.textContent = 'Este QR no corresponde a una factura BLYXU.';
+                                return;
+                            }
+                            reference = url.searchParams.get('buscar') || '';
+                        } catch (_) {}
+                        if (!reference || reference.length > 200 || /^https?:/i.test(reference)) {
+                            scannerError.textContent = 'No se encontró una referencia válida en el QR.';
+                            return;
+                        }
+                        scannerHandled = true;
+                        await stopInvoiceScanner();
+                        scannerDialog.close();
+                        input.value = reference;
+                        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    }, () => {});
+                    if (!scannerDialog.open) await stopInvoiceScanner();
+                } catch (_) {
+                    scannerError.textContent = 'No se pudo abrir la cámara. Permite el acceso o escribe la referencia de tu factura.';
+                } finally { scannerStarting = false; }
             });
 
             verifyMercadoPagoReturn();
