@@ -10398,8 +10398,10 @@ textarea,
 }
 
 .customer-google-box {
+    /* El método se muestra únicamente cuando hay un cliente OAuth configurado. */
     margin-bottom: 12px !important;
 }
+.customer-google-box[hidden] { display: none !important; }
 
 .customer-auth-divider {
     margin: 10px 0 14px !important;

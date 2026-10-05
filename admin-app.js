@@ -3181,6 +3181,7 @@ function initSettingsTabs() {
             label: 'Promos',
             items: [
                 { title: 'Banner Promocional Flotante', formId: 'promo-config-form' },
+                { title: 'Promoción exclusiva mayorista', formId: 'wholesale-promo-config-form' },
                 { title: 'Promociones para Clientes Registrados', formId: 'customer-promo-form' }
             ]
         },
@@ -3202,7 +3203,9 @@ function initSettingsTabs() {
             id: 'retail',
             label: 'Precios',
             items: [
-                { title: 'Precios Minoristas', source: document.getElementById('toggle-retail-prices')?.closest('div') }
+                { title: 'Precios Minoristas', source: document.getElementById('toggle-retail-prices')?.closest('div') },
+                { title: 'Mercado Pago público', source: document.getElementById('toggle-mercado-pago-public')?.closest('.retail-toggle-card') },
+                { title: 'Catálogo con pedidos por WhatsApp', source: document.getElementById('toggle-catalog-whatsapp')?.closest('.retail-toggle-card') }
             ]
         }
     ];
@@ -3452,14 +3455,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const initializers = [
             initOrdersAdminTabs,
             initSettingsTabs,
+            initSettingsFolds,
             initChinaOrdersBuilder,
             initAdminCostCalculator,
             initRetailPriceToggle,
             initMercadoPagoPublicToggle,
+            initCatalogWhatsAppToggle,
             initContactConfigAdmin,
             initWhatsAppConfigAdmin,
             initInvoiceConfigAdmin,
             initPromoConfigAdmin,
+            initWholesalePromoConfigAdmin,
             initHomeAdConfigAdmin,
             initCustomerPromoAdmin,
             initQRConfigAdmin,
@@ -4083,6 +4089,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function initSettingsFolds() {
+    const root = document.getElementById('view-settings');
+    if (!root) return;
+    const contact = root.querySelector('#settings-tab-contact') || root;
+    if (!document.getElementById('google-login-config-form')) {
+        const form = document.createElement('form');
+        form.id = 'google-login-config-form';
+        form.innerHTML = '<div class="form-group"><label for="google-login-client-id">ID de cliente de Google</label><input class="form-control" id="google-login-client-id" placeholder="...apps.googleusercontent.com"><small class="field-hint">Crea un cliente OAuth de tipo Aplicación web en Google Cloud y autoriza el dominio de la tienda. Deja vacío para ocultar este método.</small></div><button class="admin-btn" type="submit">Guardar acceso con Google</button>';
+        contact.appendChild(form);
+        const field = form.querySelector('input');
+        loadSiteConfigForAdmin().then(config => field.value = config.Google_Client_ID || '');
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const value = field.value.trim();
+            if (value && !/^[\w.-]+\.apps\.googleusercontent\.com$/.test(value)) { showToast('Revisa el ID de cliente de Google', 'error'); return; }
+            const button = form.querySelector('button');
+            button.disabled = true;
+            try { await saveSiteConfig('Google_Client_ID', value, { throwOnError: true }); showToast('Acceso con Google guardado'); }
+            catch (error) { showToast('No se pudo guardar el acceso con Google', 'error'); }
+            finally { button.disabled = false; }
+        });
+    }
+    const titles = {
+        'google-login-config-form': 'Registro e inicio de sesión con Google',
+        'home-ad-config-form': 'Banner de inicio', 'carousel-image-form': 'Carrusel de inicio',
+        'contact-config-form': 'Horario y canales de contacto', 'whatsapp-config-form': 'WhatsApp comercial',
+        'promo-config-form': 'Promoción minorista', 'wholesale-promo-config-form': 'Promoción mayorista',
+        'customer-promo-form': 'Promoción de clientes registrados', 'invoice-config-form': 'Datos de facturación',
+        'qr-config-form': 'Métodos de pago y acceso'
+    };
+    root.querySelectorAll('form, .retail-toggle-card').forEach(source => {
+        if (source.closest('details.settings-fold')) return;
+        const fold = document.createElement('details');
+        fold.className = 'settings-fold';
+        const summary = document.createElement('summary');
+        summary.textContent = titles[source.id] || source.querySelector('strong, h3')?.textContent || 'Configuración';
+        source.before(fold);
+        fold.append(summary, source);
+    });
+    root.addEventListener('invalid', event => {
+        let fold = event.target.closest('details');
+        while (fold) { fold.open = true; fold = fold.parentElement?.closest('details'); }
+    }, true);
+}
+
 function initRetailPriceToggle() {
     const toggle = document.getElementById('toggle-retail-prices');
     if (!toggle) return;
@@ -4120,6 +4171,43 @@ function initRetailPriceToggle() {
             renderState(enabled);
         }
     });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('product-form');
+    form?.addEventListener('invalid', event => {
+        let fold = event.target.closest('details');
+        while (fold) {
+            fold.open = true;
+            fold = fold.parentElement?.closest('details');
+        }
+    }, true);
+});
+
+function initCatalogWhatsAppToggle() {
+    const toggle = document.getElementById('toggle-catalog-whatsapp');
+    if (!toggle) return;
+    const key = 'Catalogo_Solo_WhatsApp';
+    const renderState = enabled => {
+        toggle.checked = enabled;
+        toggle.setAttribute('aria-checked', String(enabled));
+    };
+    toggle.addEventListener('change', async () => {
+        const enabled = toggle.checked;
+        toggle.disabled = true;
+        try {
+            await saveSiteConfig(key, enabled ? '1' : '0', { throwOnError: true });
+            window.storeConfig = { ...(window.storeConfig || {}), [key]: enabled ? '1' : '0' };
+            renderState(enabled);
+            showToast(enabled ? 'Catálogo con pedidos por WhatsApp activo' : 'Modo catálogo por WhatsApp desactivado');
+        } catch (error) {
+            renderState(!enabled);
+            showToast('No se pudo guardar el modo catálogo por WhatsApp', 'error');
+        } finally {
+            toggle.disabled = false;
+        }
+    });
+    loadSiteConfigForAdmin().then(config => renderState(String(config[key] || '0') === '1'));
 }
 
 function initMercadoPagoPublicToggle() {
@@ -4191,7 +4279,7 @@ function updateSiteConfigCacheForAdmin(key, value) {
     }
 }
 
-async function saveSiteConfig(key, value) {
+async function saveSiteConfig(key, value, options = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 9000);
     try {
@@ -4213,6 +4301,7 @@ async function saveSiteConfig(key, value) {
         clearTimeout(timeout);
         console.error('No se pudo guardar configuración:', err);
         showToast('No se pudo guardar configuración en Google Sheets');
+        if (options.throwOnError) throw err;
     }
 }
 
@@ -4464,6 +4553,50 @@ function schedulePromoAdminPreview() {
         renderPromoAdminPreview();
         updateLivePreview();
         promoAdminPreviewFrame = null;
+    });
+}
+
+function initWholesalePromoConfigAdmin() {
+    const form = document.getElementById('wholesale-promo-config-form');
+    if (!form) return;
+    const fields = [['Enabled', 'enabled'], ['Title', 'title'], ['Discount', 'discount'], ['Date', 'date'], ['Message', 'message']];
+    const input = suffix => document.getElementById('wholesale-promo-config-' + suffix);
+    input('discount').required = true;
+    input('date').required = true;
+    const preview = () => {
+        const target = document.getElementById('wholesale-promo-admin-preview');
+        if (target) target.textContent = `${input('title').value || 'Oferta mayorista'} · -${input('discount').value || '0'}% · ${input('message').value} · Hasta ${input('date').value || 'seleccionar fecha final'}`;
+    };
+    form.addEventListener('input', preview);
+    loadSiteConfigForAdmin().then(config => {
+        fields.forEach(([key, suffix]) => {
+            if (suffix === 'enabled') input(suffix).checked = String(config['Wholesale_Promo_' + key]) === 'true';
+            else input(suffix).value = suffix === 'date' ? String(config['Wholesale_Promo_' + key] || '').replace(/-05:00$/, '') : (config['Wholesale_Promo_' + key] || '');
+        });
+        preview();
+    });
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (input('enabled').checked && Date.parse(input('date').value + '-05:00') <= Date.now()) {
+            showToast('Selecciona una fecha final futura para la promoción mayorista', 'error');
+            return;
+        }
+        const button = form.querySelector('button[type="submit"], #btn-save-wholesale-promo-config');
+        if (button) button.disabled = true;
+        try {
+            // Desactivar primero evita publicar una promoción parcialmente guardada.
+            await saveSiteConfig('Wholesale_Promo_Enabled', 'false', { throwOnError: true });
+            for (const [key, suffix] of fields.filter(([key]) => key !== 'Enabled')) {
+                const value = input(suffix).value.trim();
+                await saveSiteConfig('Wholesale_Promo_' + key, suffix === 'date' && value ? value + '-05:00' : value, { throwOnError: true });
+            }
+            await saveSiteConfig('Wholesale_Promo_Enabled', input('enabled').checked ? 'true' : 'false', { throwOnError: true });
+            showToast('Promoción mayorista guardada');
+        } catch (error) {
+            showToast('No se pudo guardar la promoción mayorista', 'error');
+        } finally {
+            if (button) button.disabled = false;
+        }
     });
 }
 
@@ -4723,7 +4856,7 @@ function initCustomerPromoAdmin() {
 }
 
 function createPaymentMethodCard(data = { name: '', type: 'key', value: '', image: '', instructions: '' }, index) {
-    const card = document.createElement('div');
+    const card = document.createElement('details');
     card.className = 'payment-method-card';
     card.style.cssText = 'border: 1px solid rgba(168, 85, 247, 0.25); border-radius: 16px; padding: 20px; background: rgba(255,255,255,0.02); position: relative; display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;';
     card.dataset.index = index;
@@ -4767,6 +4900,19 @@ function createPaymentMethodCard(data = { name: '', type: 'key', value: '', imag
         </div>
     `;
     
+    const methodSummary = document.createElement('summary');
+    const methodName = document.createElement('strong');
+    const updateMethodName = () => {
+        methodName.textContent = `Método #${Number(card.dataset.index) + 1} · ${card.querySelector('.pm-name').value.trim() || 'Nuevo método'}`;
+    };
+    methodSummary.appendChild(methodName);
+    const methodBody = document.createElement('div');
+    methodBody.className = 'payment-method-body';
+    while (card.firstChild) methodBody.appendChild(card.firstChild);
+    card.append(methodSummary, methodBody);
+    card.open = !data.name;
+    updateMethodName();
+    card.querySelector('.pm-name').addEventListener('input', updateMethodName);
     const typeSelect = card.querySelector('.pm-type');
     const valueGroup = card.querySelector('.pm-value-group');
     const imageGroup = card.querySelector('.pm-image-group');
@@ -4861,7 +5007,7 @@ function reindexPaymentMethods() {
     cards.forEach((card, index) => {
         card.dataset.index = index;
         const indexLabel = card.querySelector('strong');
-        if (indexLabel) indexLabel.textContent = `Método #${index + 1}`;
+        if (indexLabel) indexLabel.textContent = `Método #${index + 1} · ${card.querySelector('.pm-name')?.value.trim() || 'Nuevo método'}`;
     });
 }
 
@@ -11735,6 +11881,8 @@ function syncQuickSaleMobilePane(pane = window.quickSaleMobilePane) {
     if (!catalog || !checkout) return;
 
     window.quickSaleMobilePane = ['client', 'catalog', 'checkout'].includes(pane) ? pane : 'client';
+    const layout = document.querySelector('.enterprise-pos-layout');
+    if (layout) layout.dataset.activePane = window.quickSaleMobilePane;
     const client = document.querySelector('.quick-sale-client-panel');
     const compact = window.matchMedia('(max-width: 1024px)').matches;
     client?.classList.toggle('pos-mobile-hidden', compact && window.quickSaleMobilePane !== 'client');

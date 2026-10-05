@@ -934,6 +934,7 @@ function normalizePromotionValue(value) {
 }
 
 function isProductPromotionEnabled(product, mode = activeCatalogMode) {
+    if (mode === 'wholesale') return getPromotionDiscountPercent(mode) > 0;
     const promo = normalizePromotionValue(getProductField(product || {}, PRODUCT_PROMOTION_FIELD_KEYS, false));
     if (promo === 'FALSO') return false;
     if (promo === 'Ambos') return true;
@@ -942,7 +943,13 @@ function isProductPromotionEnabled(product, mode = activeCatalogMode) {
     return false;
 }
 
-function getPromotionDiscountPercent() {
+function getPromotionDiscountPercent(mode = activeCatalogMode) {
+    if (mode === 'wholesale') {
+        const enabled = String(getSiteConfigValue('Wholesale_Promo_Enabled', 'false')) === 'true';
+        const end = Date.parse(getSiteConfigValue('Wholesale_Promo_Date', ''));
+        const percent = Number(getSiteConfigValue('Wholesale_Promo_Discount', '0'));
+        return enabled && Number.isFinite(end) && end > Date.now() && percent > 0 && percent < 100 ? percent : 0;
+    }
     const promoTitle = getSiteConfigValue('Promo_Title', '');
     const match = String(promoTitle || '').match(/(\d+)%/);
     if (match) {
@@ -964,8 +971,10 @@ function getProductDisplayOldPrice(product, mode = activeCatalogMode, currentPri
 }
 
 function getProductCardPriceInfo(product, mode = activeCatalogMode) {
-    const basePrice = getProductPrice(product, mode);
-    const discountPercentage = isProductPromotionEnabled(product, mode) ? getPromotionDiscountPercent() : 0;
+    const basePrice = mode === 'wholesale'
+        ? parseCatalogAmount(product.PrecioMayoristaOriginal || product.Precio_Mayorista_Original || getProductPrice(product, mode))
+        : getProductPrice(product, mode);
+    const discountPercentage = isProductPromotionEnabled(product, mode) ? getPromotionDiscountPercent(mode) : 0;
     const promoPrice = discountPercentage > 0 && basePrice > 0
         ? Math.max(0, Math.round(basePrice * (1 - discountPercentage / 100)))
         : basePrice;
@@ -982,7 +991,7 @@ function getProductCardPriceInfo(product, mode = activeCatalogMode) {
 }
 
 function getProductPromotionBadgeMarkup(product, mode = activeCatalogMode) {
-    const discountPercentage = getPromotionDiscountPercent();
+    const discountPercentage = getPromotionDiscountPercent(mode);
     if (!discountPercentage || !isProductPromotionEnabled(product, mode)) return '';
     return `<div class="product-promo-circle badge-sale" title="-${discountPercentage}% de descuento">
         <span class="promo-circle-num">-${discountPercentage}%</span>
@@ -1156,7 +1165,7 @@ function collapseCatalogProductsToRepresentatives(products, mode = activeCatalog
 }
 
 function applyPromotionsToProducts() {
-    const discountPercentage = getPromotionDiscountPercent();
+    const discountPercentage = getPromotionDiscountPercent('retail');
     if (!discountPercentage) return;
     
     const factor = 1 - (discountPercentage / 100);
@@ -1166,7 +1175,7 @@ function applyPromotionsToProducts() {
         if (promoVal === 'FALSO') return;
 
         const appliesRetail = promoVal === 'Ambos' || promoVal === 'Minorista';
-        const appliesWholesale = promoVal === 'Ambos' || promoVal === 'Mayorista';
+        const appliesWholesale = false;
 
         // 1. Detal
         const rawRetail = parseCatalogAmount(product.PrecioOriginal || product.Precio || product.precio);
@@ -2333,6 +2342,7 @@ function shouldShowProductPrices(mode = activeCatalogMode) {
 }
 
 function isMercadoPagoCheckoutEnabled() {
+    if (String(siteConfig.Catalogo_Solo_WhatsApp || '0') === '1') return false;
     return siteConfig[MERCADO_PAGO_ENABLED_CONFIG_KEY] === undefined
         ? true
         : String(siteConfig[MERCADO_PAGO_ENABLED_CONFIG_KEY]) !== '0';
@@ -4484,7 +4494,9 @@ function renderFloatingWhatsApp() {
 }
 
 function renderPromoWidget() {
-    const isEnabled = String(getSiteConfigValue('Promo_Enabled', 'false')).trim() === 'true';
+    const wholesale = document.body?.dataset.catalogMode === 'wholesale';
+    const prefix = wholesale ? 'Wholesale_Promo_' : 'Promo_';
+    const isEnabled = String(getSiteConfigValue(prefix + 'Enabled', 'false')).trim() === 'true' && (!wholesale || getPromotionDiscountPercent('wholesale') > 0);
     
     // Si estaba habilitado y ahora no, limpiar todo
     if (!isEnabled) {
@@ -4494,10 +4506,10 @@ function renderPromoWidget() {
         return;
     }
 
-    const title = getSiteConfigValue('Promo_Title', 'Oferta BLYXU');
-    const message = getSiteConfigValue('Promo_Message', 'Aprovecha nuestros descuentos especiales.');
-    const promoDate = getSiteConfigValue('Promo_Date', '');
-    const promoDiscount = getSiteConfigValue('Promo_Discount', '');
+    const title = getSiteConfigValue(prefix + 'Title', 'Oferta BLYXU');
+    const message = getSiteConfigValue(prefix + 'Message', 'Aprovecha nuestros descuentos especiales.');
+    const promoDate = getSiteConfigValue(prefix + 'Date', '');
+    const promoDiscount = getSiteConfigValue(prefix + 'Discount', '');
     const numberText = String(promoDiscount || title).replace(/[^\d]/g, '');
     const discountText = numberText ? `-${numberText}%` : 'Promo';
 
@@ -4553,6 +4565,13 @@ function renderPromoWidget() {
             const diff = targetDate - Date.now();
 
             if (diff <= 0) {
+                if (wholesale) {
+                    injectContainers.forEach(container => container.innerHTML = '');
+                    clearInterval(window.blyxuPromoInterval);
+                    updateCartUI();
+                    renderWholesaleCatalogProducts();
+                    return;
+                }
                 injectContainers.forEach((c, idx) => {
                     const el = document.getElementById(`inline-promo-timer-${idx}`);
                     if (el && diff <= 0) {
@@ -4806,6 +4825,14 @@ function getCurrentCustomerPromotion() {
 }
 
 function getCartPricingSummary(items = cart) {
+    items.forEach(item => {
+        if (normalizeCartMode(item.mode || activeCartMode) !== 'wholesale') return;
+        const original = Number(item.originalPrice || item.price || 0);
+        item.originalPrice = original;
+        const percent = getPromotionDiscountPercent('wholesale');
+        item.price = Math.max(0, Math.round(original * (1 - percent / 100)));
+        item.productDiscount = percent;
+    });
     const subtotal = items.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.qty || 1)), 0);
     const hasWholesaleItem = normalizeCartMode(activeCartMode) === 'wholesale' ||
         items.some(item => normalizeCartMode(item.mode || activeCartMode) === 'wholesale');
@@ -5341,6 +5368,47 @@ async function removeCustomerFavorite(idFavorito) {
 window.saveCustomerFavorite = saveCustomerFavorite;
 window.removeCustomerFavorite = removeCustomerFavorite;
 
+async function renderCustomerGoogleSignIn() {
+    const box = document.getElementById('customer-google-box');
+    const target = document.getElementById('customer-google-signin');
+    if (!box || !target) return;
+    if (configLoadPromise) await configLoadPromise.catch(() => {});
+    const clientId = String(getSiteConfigValue('Google_Client_ID', '')).trim();
+    box.hidden = !clientId;
+    if (!clientId) return;
+    try {
+        if (!window.google?.accounts?.id) {
+            if (!googleIdentityLoadPromise) googleIdentityLoadPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('No se pudo cargar Google. Puedes ingresar con tu contraseña.'));
+                document.head.appendChild(script);
+            }).catch(error => { googleIdentityLoadPromise = null; throw error; });
+            await googleIdentityLoadPromise;
+        }
+        window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: async response => {
+                if (!response.credential) return;
+                setCustomerAuthMessage('Validando tu cuenta de Google...');
+                try {
+                    const data = await customerAuthRequest('googlelogincliente', { credential: response.credential });
+                    if (!data.token || !data.cliente) throw new Error('No se pudo confirmar el acceso con Google.');
+                    setCustomerSession(data.token, data.cliente);
+                    setCustomerAuthView('profile');
+                    renderCustomerProfile();
+                    loadCustomerDashboard();
+                    setCustomerAuthMessage('Ya ingresaste con Google. Completa tu teléfono y dirección para tus pedidos.', 'success');
+                } catch (error) { setCustomerAuthMessage(error.message, 'error'); }
+            }
+        });
+        target.innerHTML = '';
+        window.google.accounts.id.renderButton(target, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'pill', locale: 'es', width: Math.min(360, target.parentElement.clientWidth || 280) });
+    } catch (error) { setCustomerAuthMessage(error.message, 'error'); }
+}
+
 function openCustomerAuthModal(view) {
     const modal = ensureCustomerAuthModal();
     const session = getCustomerSession();
@@ -5350,6 +5418,7 @@ function openCustomerAuthModal(view) {
     document.body.classList.add('customer-auth-open');
     setCustomerAuthView(view || (hasSession ? 'profile' : 'login'));
     renderCustomerProfile();
+    if (!hasSession) renderCustomerGoogleSignIn();
     if (hasSession) {
         loadCustomerDashboard();
     }

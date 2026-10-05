@@ -7221,6 +7221,10 @@
 .enterprise-mobile-tabs { display: grid !important; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0,1fr)) !important; gap: 6px; }
 .enterprise-mobile-tabs button { min-height: 44px; font-size: 11px; padding: 7px 4px; }
 .enterprise-pos-layout > .pos-mobile-hidden { display: none !important; }
+.enterprise-pos-layout[data-active-pane="client"] > :is(.quick-sale-catalog-panel, .quick-sale-checkout-panel),
+.enterprise-pos-layout[data-active-pane="catalog"] > :is(.quick-sale-client-panel, .quick-sale-checkout-panel),
+.enterprise-pos-layout[data-active-pane="checkout"] > :is(.quick-sale-client-panel, .quick-sale-catalog-panel) { display: none !important; }
+.enterprise-mobile-tabs { scroll-margin-top: 70px; }
 .enterprise-product-grid:not(.is-expanded) > .quick-sale-product-tile:nth-child(n+3) { display: none !important; }
 .enterprise-product-grid .quick-sale-product-tile { padding: 9px !important; gap: 8px !important; }
 .enterprise-product-grid .quick-sale-product-tile.has-variants { grid-column: auto !important; display: flex; flex-direction: column; }
@@ -7327,6 +7331,67 @@
 .quick-sale-info-dialog dt { color:#aaa0b5; font-size:11px; margin-bottom:5px; }
 .quick-sale-info-dialog dd { margin:0; font-size:13px; overflow-wrap:anywhere; }
 @media(prefers-reduced-motion:reduce) { .admin-pin-wrap::before,.admin-pin-wrap::after { animation:none !important; } }
+</style><style>
+/* Controles de caja en filas independientes, sin superposición. */
+.settings-fold { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; background: #171719; overflow: hidden; }
+.settings-fold > summary, .payment-method-card > summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; padding: 18px 20px; font-size: 14px; font-weight: 700; }
+.settings-fold > summary::-webkit-details-marker, .payment-method-card > summary::-webkit-details-marker { display: none; }
+.settings-fold > summary::after, .payment-method-card > summary::after { content: '+'; margin-left: auto; font-size: 20px; }
+.settings-fold[open] > summary::after, .payment-method-card[open] > summary::after { content: '−'; }
+.settings-fold > form { padding: 18px 20px; border-top: 1px solid var(--line); }
+#view-settings .payment-method-card { display: block !important; padding: 0 !important; }
+.payment-method-body { padding: 0 20px 20px; display: grid; gap: 12px; }
+.settings-fold > .retail-toggle-card { margin: 0; }
+.product-entry-fold > summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 800; }
+.product-entry-fold > summary::-webkit-details-marker { display: none; }
+.product-entry-fold > summary::after { content: '+'; margin-left: auto; font-size: 22px; }
+.product-entry-fold[open] > summary::after { content: '−'; }
+.product-entry-fold > summary small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.4; }
+.product-entry-body { padding-top: 20px; }
+.identity-card.product-entry-fold > .product-entry-body > .config-card-heading { display: none; }
+.main-product-fold .product-config-card { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.main-product-fold .variant-card > .config-card-heading .config-card-index,
+.main-product-fold .media-card > .config-card-heading .config-card-index { display: none; }
+.main-product-fold .media-card { margin-top: 24px; padding-top: 22px; border-top: 1px solid var(--line); }
+#view-add .product-stepper { grid-template-columns: repeat(2, minmax(0,1fr)); }
+#view-orders .orders-navigation-fold .orders-search-row { display: flex !important; flex-wrap: wrap; align-items: center; gap: 12px; }
+#view-orders .orders-navigation-fold .orders-search-row > .form-control { flex: 1 1 240px; width: auto !important; min-width: 0; }
+#view-orders .orders-navigation-fold .orders-tabs { display: flex !important; flex: 1 1 330px; flex-wrap: nowrap !important; align-items: center; justify-content: flex-start !important; gap: 8px; min-width: 0; overflow-x: auto; padding-bottom: 4px; }
+#view-orders .orders-navigation-fold .orders-tab-btn { flex: 0 0 auto; width: auto !important; white-space: nowrap; margin: 0 !important; }
+.enterprise-product-grid { grid-auto-rows: max-content !important; align-content: start !important; }
+.enterprise-product-grid .quick-sale-product-tile { display: flex !important; flex-direction: column !important; height: auto !important; min-height: 330px !important; padding-bottom: 18px !important; grid-template-rows: none !important; }
+.enterprise-product-grid .quick-sale-tile-image { flex-shrink: 0; }
+.enterprise-product-grid .quick-sale-tile-copy { flex: 1 0 auto; min-width: 0; height: auto !important; overflow: visible !important; }
+.enterprise-product-grid .quick-sale-tile-bottom { display: grid !important; grid-template-columns: minmax(0,1fr) 34px 38px !important; gap: 8px !important; width: 100%; min-height: 44px !important; margin-top: 16px !important; align-self: auto !important; align-items: center; flex-shrink: 0; }
+.enterprise-product-grid .quick-sale-tile-bottom > * { position: static !important; margin: 0 !important; }
+.enterprise-product-grid .quick-sale-variant-field { min-width: 0; }
+@media (max-width: 560px) {
+    .enterprise-product-grid .quick-sale-tile-bottom { gap: 5px !important; }
+    #view-orders .orders-navigation-fold .orders-tabs { flex-basis: 100%; }
+}
+/* Acceso administrativo con la misma tarjeta del portal mayorista. */
+#admin-login-box { padding: 42px 28px 30px !important; }
+#admin-login-box .admin-otp-kicker { letter-spacing: .12em !important; text-transform: uppercase; }
+#admin-login-box .admin-otp-title { letter-spacing: -.01em !important; }
+#admin-login-box .admin-otp-sub { margin-bottom: 32px !important; }
+#admin-login-box .admin-otp-row { gap: 7px !important; margin-bottom: 28px !important; }
+#admin-login-box .admin-pin-wrap { padding: 2px; border-radius: 18px; background: rgba(255,255,255,.05); }
+#admin-login-box .admin-otp-digit { height: 64px !important; border: none !important; border-radius: 16px !important; background: #1e1e24 !important; font-weight: 700 !important; caret-color: transparent; }
+#admin-login-box .admin-otp-digit:focus { background: #22222a !important; transform: translateY(-2px) !important; box-shadow: inset 0 2px 4px rgba(0,0,0,.45) !important; }
+#admin-login-box .admin-otp-digit.filled { background: #202028 !important; }
+#admin-login-box .admin-pin-wrap::before { inset: -1px; border-radius: 20px; padding: 2px; background: conic-gradient(from 45deg, rgba(255,255,255,.6), rgba(200,160,255,.4), rgba(255,255,255,.6)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+#admin-login-box .admin-login-status { margin: 0; min-height: 0; }
+#admin-login-box .admin-login-status:not(:empty) { margin-bottom: 16px; min-height: 20px; }
+#admin-login-box .admin-otp-error { min-height: 16px; margin: 0 0 16px !important; }
+.admin-otp-submit { width: 100%; height: 50px; border: 1.5px solid rgba(255,255,255,.10); border-radius: 14px; background: rgba(255,255,255,.06); color: rgba(255,255,255,.8); font-family: inherit; font-size: 13px; font-weight: 600; letter-spacing: .04em; cursor: pointer; transition: background .2s, border-color .2s; }
+.admin-otp-submit:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); color: #fff; }
+.admin-otp-back { display: inline-flex; align-items: center; gap: 5px; margin-top: 20px; color: rgba(255,255,255,.28); font-size: 11.5px; text-decoration: none; }
+.admin-otp-back:hover { color: rgba(255,255,255,.6); }
+@media (max-width: 420px) {
+    #admin-login-box { padding: 42px 20px 30px !important; }
+    #admin-login-box .admin-otp-row { gap: 5px !important; }
+    #admin-login-box .admin-otp-digit { height: 56px !important; font-size: 19px !important; }
+}
 </style></head>
 <body>
     <div class="bg-animation"></div>
@@ -7348,6 +7413,8 @@
                 <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d6" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
             </div>
             <p id="admin-login-status" class="admin-login-status" role="status" aria-live="polite"></p><div class="admin-otp-error" id="admin-otp-error">Clave incorrecta, inténtalo de nuevo</div>
+            <button class="admin-otp-submit" id="admin-otp-submit" type="button">Ingresar al panel</button>
+            <a href="index.html" class="admin-otp-back">← Volver a la tienda pública</a>
         </div>
     </div>
 
@@ -7552,17 +7619,8 @@
                                 <div><span class="admin-kicker">Alta de inventario</span><h2 id="product-form-title">Nuevo Producto</h2></div>
                                 <span class="admin-mode-pill" id="product-form-mode">Creando</span>
                             </div>
-                            <div class="product-form-intro">
-                                <div><span>Flujo simple</span><strong>Llena de arriba hacia abajo: primero datos y venta, luego variante, por ultimo fotos.</strong></div>
-                                <div class="product-flow-cards"><div><b>1</b> Producto y venta</div><div><b>2</b> Variante</div><div><b>3</b> Imagenes</div></div>
-                            </div>
-                            <div class="product-stepper" aria-label="Orden de configuracion del producto">
-                                <span><strong>1</strong><em>Producto y venta</em><small>Datos, catalogo y precios</small></span>
-                                <span><strong>2</strong><em>Variante</em><small>Stock, color y talla</small></span>
-                                <span><strong>3</strong><em>Imagenes</em><small>Principal y galeria</small></span>
-                            </div>
                             <form id="product-form">
-                                <div class="product-config-card identity-card">
+                                <details class="product-config-card identity-card product-entry-fold" open><summary><span class="config-card-index">01</span><span>Información general<small>Nombre, categoría, catálogo, precios y descripción</small></span></summary><div class="product-entry-body">
                                     <div class="config-card-heading"><span class="config-card-index">01</span><div><h3>Producto y venta</h3><p>Un solo bloque para identificar el producto, poner precio y definir donde se publica.</p></div></div>
                                     <div class="admin-form-grid">
                                         <div class="form-group product-id-field"><div class="product-id-label-row"><label>ID Producto Madre</label><label class="barcode-mode-toggle" title="Usar codigo real de la marquilla"><input type="checkbox" id="prod-barcode-scan-mode"> C&oacute;digo f&iacute;sico</label></div><input type="text" class="form-control important-code-field" id="prod-id-producto" name="ID Producto" placeholder="Automático" readonly><input type="hidden" id="prod-id-producto-hidden" name="idProducto"><div class="product-barcode-compact" id="prod-barcode-panel"><input type="text" class="form-control important-code-field" id="prod-barcode" name="Codigo Barras" placeholder="Escanea o escribe el codigo de barras"><button type="button" class="admin-btn secondary" id="btn-scan-product-barcode">Detectar c&oacute;digo</button></div><small class="field-hint" id="prod-barcode-hint">Se genera solo para unir todas las variantes y asigna codigo interno automatico.</small><div class="product-qr-generator" id="prod-qr-generator"><img id="prod-generated-qr" alt="QR automatico del producto"><div class="product-qr-generator-copy"><span>QR autom&aacute;tico</span><strong id="prod-generated-qr-code">Generando referencia...</strong><small>Este mismo c&oacute;digo identifica el producto en inventario y Caja r&aacute;pida.</small></div><button type="button" class="admin-btn secondary" id="btn-preview-product-qr">Ver QR</button></div></div>
@@ -7575,12 +7633,12 @@
                                         <div class="form-group"><label>Promoción / descuento</label><select class="form-control highlight-select" id="prod-promoción" name="Promoción"><option value="FALSO">No aplica promoción</option><option value="Ambos">Aplica a ambos</option><option value="Minorista">Solo minorista</option><option value="Mayorista">Solo mayorista</option></select><small class="field-hint">La vista previa calcula el descuento.</small></div>
                                         <div class="form-group admin-form-wide"><label>Características / descripción</label><textarea class="form-control" id="prod-descripcion" placeholder="Materiales, medidas, cuidados o notas importantes..."></textarea><small class="field-hint">Escribe datos útiles para evitar dudas.</small></div>
                                     </div>
-                                </div>
-
-                                <div class="product-config-card variant-card">
-                                    <div class="config-card-heading"><span class="config-card-index">02</span><div><h3>Variante inicial y stock</h3><p>Configura la primera version del producto: color, talla, stock y estado.</p></div></div>
+                                </div></details>
+<details class="product-config-card product-entry-fold main-product-fold"><summary><span class="config-card-index">02</span><span>Producto principal<small>Referencia, stock, características e imágenes del primer producto</small></span></summary><div class="product-entry-body">
+<div class="product-config-card variant-card">
+                                    <div class="config-card-heading"><span class="config-card-index">02</span><div><h3>Producto principal y stock</h3><p>Configura el producto principal: color, talla, stock y estado.</p></div></div>
                                     <div class="admin-form-grid">
-                                        <div class="form-group"><label>ID Variante / Hijo</label><input type="text" class="form-control important-code-field" id="prod-id" name="id" placeholder="Ej: PROD-001-V01"><small class="field-hint">Referencia especifica de esta variante.</small></div>
+                                        <div class="form-group"><label>Referencia del producto principal</label><input type="text" class="form-control important-code-field" id="prod-id" name="id" placeholder="Ej: PROD-001-V01"><small class="field-hint">Referencia específica del producto principal.</small></div>
                                         <div class="form-group"><label>Stock</label><input type="number" class="form-control" id="prod-stock-inicial" name="Cantidad" min="0" value="12" required><input type="hidden" id="prod-stock" value="12"><small class="field-hint">Si queda en 0 se marca como agotado.</small></div>
                                         <div class="form-group"><label>Color</label><input type="hidden" id="prod-color" name="Color"><div class="color-picker" id="prod-color-picker" data-color-target="#prod-color" data-color-multiple="true" aria-label="Seleccionar color del producto"></div></div>
                                         <div class="form-group"><label>Estilo</label><input type="text" class="form-control" id="prod-estilo" name="Estilo" placeholder="Ej: flor, corazon, minimalista"></div>
@@ -7616,7 +7674,8 @@
                                     </div>
                                 </div>
 
-                                <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
+                                </div></details>
+<input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
                                 <div id="variation-options-panel" class="product-config-card" style="display:none;"><h3>Variantes hijas</h3><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="admin-btn" id="btn-add-manual-variant">Agregar variante manual</button><button type="button" class="admin-btn secondary" id="btn-show-variation-generator">Generar variantes</button></div><div id="variation-generator-fields" style="display:none;"><div class="admin-form-grid"><div class="form-group"><label>Variable principal</label><select class="form-control" id="variation-primary-field"><option value="style">Estilo</option><option value="color">Color</option><option value="size">Tamaño</option><option value="auto">Automático</option></select></div><div class="form-group"><label>Opcion 1: Estilo</label><input type="text" class="form-control" id="variation-styles" placeholder="corazon, estrella, inicial"></div><div class="form-group"><label>Opcion 2: Tamaño</label><input type="text" class="form-control" id="variation-sizes" placeholder="S, M, L o 45 cm, 50 cm"></div><div class="form-group"><label>Opcion 3: Color</label><input type="hidden" id="variation-colors"><div class="color-picker" data-color-target="#variation-colors" data-color-multiple="true" aria-label="Seleccionar colores para variantes"></div></div></div><p id="variation-generator-summary" class="field-hint">Genera tarjetas editables para cada combinacion antes de guardar.</p><button type="button" class="admin-btn" id="btn-generate-variations">Generar variaciones</button></div></div>
                                 <div id="variants-container" class="variants-stack"></div>
                                 <div class="product-form-actions"><div><button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button><button type="button" class="admin-btn" id="btn-add-variant">Añadir variantes</button></div><button type="submit" class="admin-btn" id="btn-save">Guardar producto y variantes</button></div>
@@ -7701,7 +7760,7 @@
                                         <div class="enterprise-pos-status"><i></i><span>Caja activa</span><strong id="quick-sale-clock">--:--</strong></div>
                                         <div class="enterprise-pos-metrics"><div><span>Artículos</span><strong id="quick-sale-count">0</strong></div><div><span>Total</span><strong id="quick-sale-total">$0</strong></div></div>
                                     </header>
-                                    <div class="quick-sale-pos-layout enterprise-pos-layout">
+                                    <div class="quick-sale-pos-layout enterprise-pos-layout" data-active-pane="client">
                                         <nav class="quick-sale-mobile-tabs enterprise-mobile-tabs" aria-label="Vista de caja">
                                             <button class="active" type="button" data-quick-sale-pane="client">Datos del cliente</button>
                                             <button type="button" data-quick-sale-pane="catalog">Catálogo</button>
@@ -7780,7 +7839,7 @@
                         <div class="settings-tab-content">
                             <div class="settings-tab-panel active" data-settings-tab="carousel" id="settings-tab-carousel"><form id="carousel-image-form" class="carousel-admin-form"><div class="carousel-admin-intro"><div><span>Portada</span><strong>Carrusel principal</strong><p>Sube una o varias imágenes para que roten en la portada.</p></div><button type="button" class="admin-btn" id="carousel-pick-files-btn">Elegir imágenes</button></div><input type="file" id="carousel-file" accept="image/*" multiple style="display:none;"><div class="drop-zone" id="carousel-preview"><div class="carousel-empty-preview"><strong>Arrastra imágenes aquí</strong><span id="carousel-selected-note">Sin archivos seleccionados</span></div></div><div class="admin-form-grid"><div class="form-group"><label>Modo del banner</label><select class="form-control" id="carousel-mode"><option value="add">Añadir al carrusel</option><option value="replace">Reemplazar portada principal</option></select><small class="field-hint">Usa reemplazar si quieres cambiar el primer banner activo.</small></div><div class="form-group"><label>URL de imagen</label><input class="form-control" id="carousel-image-url" placeholder="URL opcional si no subes archivo"></div><div class="form-group"><label>Título</label><input class="form-control" id="carousel-title" placeholder="Título del banner"></div><div class="form-group"><label>Descripción</label><textarea class="form-control" id="carousel-description" placeholder="Descripción corta"></textarea></div></div><button class="admin-btn" id="btn-save-carousel" type="submit">Guardar banner</button></form><form id="home-ad-config-form"><h3>Banner promocional del home</h3><div class="admin-form-grid"><div class="form-group"><label>Imagen del banner</label><input type="file" id="home-ad-config-file" accept="image/*"><input class="form-control" id="home-ad-config-image" placeholder="URL de imagen del banner"><div class="home-ad-image-preview" id="home-ad-image-preview"><span>Sin imagen para mostrar</span></div></div><div class="form-group"><label>Título</label><input class="form-control" id="home-ad-config-title" placeholder="Ej: Brilla con tus favoritos"></div><div class="form-group admin-form-wide"><label>Texto</label><textarea class="form-control" id="home-ad-config-text" placeholder="Mensaje corto del banner"></textarea></div></div><button class="admin-btn" id="btn-save-home-ad-config">Guardar banner promocional</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="contact" id="settings-tab-contact"><form id="contact-config-form"><div class="carousel-admin-intro"><div><span>Atenci&oacute;n</span><strong>Horario y canales de contacto</strong><p>Este horario alimenta el reloj y el estado abierto/cerrado de la p&aacute;gina de contacto.</p></div></div><div class="admin-form-grid"><div class="form-group"><label>D&iacute;as de atenci&oacute;n</label><input class="form-control" id="contact-config-days" placeholder="Lunes a S&aacute;bado"></div><div class="form-group"><label>Horario de atenci&oacute;n</label><input class="form-control" id="contact-config-hours" placeholder="10:00 a.m. - 7:00 p.m."></div><div class="form-group"><label>WhatsApp de contacto</label><input class="form-control" id="contact-config-whatsapp" placeholder="573112368622"></div><div class="form-group"><label>Facebook</label><input class="form-control" id="contact-config-facebook" placeholder="blyxu"></div><div class="form-group"><label>TikTok</label><input class="form-control" id="contact-config-tiktok" placeholder="blyxu"></div><div class="form-group"><label>Instagram</label><input class="form-control" id="contact-config-instagram" placeholder="blyxu"></div></div><button class="admin-btn" id="btn-save-contact-config">Guardar contacto</button></form><form id="whatsapp-config-form"><div class="form-group"><label>WhatsApp comercial principal</label><input class="form-control" id="whatsapp-config-commerce" placeholder="573112368622"></div><button class="admin-btn" id="btn-save-whatsapp-config">Guardar WhatsApp</button></form></div>
-                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mercado Pago público</strong><span>Permite mostrar precios de detal pero finalizar únicamente por WhatsApp cuando esta pasarela esté apagada.</span></div><label class="settings-toggle-row" title="Activar o desactivar Mercado Pago en catálogo público"><input type="checkbox" id="toggle-mercado-pago-public" checked> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promoción.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Título de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesión.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Título</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
+                            <div class="settings-tab-panel" data-settings-tab="promo" id="settings-tab-promo"><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mostrar precios minoristas</strong><span>Cuando está activo, los precios de detal se muestran públicamente en el catálogo minorista. Desactívalo para ocultar los precios a visitantes no registrados.</span></div><label class="settings-toggle-row" title="Activar o desactivar precios minoristas"><input type="checkbox" id="toggle-retail-prices" checked> Activo</label></div><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Mercado Pago público</strong><span>Permite mostrar precios de detal pero finalizar únicamente por WhatsApp cuando esta pasarela esté apagada.</span></div><label class="settings-toggle-row" title="Activar o desactivar Mercado Pago en catálogo público"><input type="checkbox" id="toggle-mercado-pago-public" checked> Activo</label></div><div class="retail-toggle-card"><div class="retail-toggle-card-info"><strong>Catálogo con pedidos por WhatsApp</strong><span>Actívalo para registrar pedidos y enviarlos por WhatsApp sin pasarela de pago. Puedes mantener activos los precios minoristas. Al desactivarlo se respeta el interruptor de Mercado Pago público.</span></div><label class="settings-toggle-row" title="Usar catálogo con registro de pedidos y envío por WhatsApp"><input type="checkbox" id="toggle-catalog-whatsapp"> Activo</label></div><form id="promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promo principal del home</h3><p>Activa la franja de oferta con contador y aplica el porcentaje a productos marcados con promoción.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Título de oferta</label><input class="form-control" id="promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="promo-config-date" type="datetime-local"></div></div><div id="promo-admin-preview" class="promo-admin-preview"></div><button class="admin-btn" id="btn-save-promo-config">Guardar promo</button></form><form id="wholesale-promo-config-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Oferta visual</span><h3>Promoción exclusiva mayorista</h3><p>Descuento independiente para todo el catálogo mayorista, con su propio contador. No cambia la promoción minorista.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="wholesale-promo-config-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Título de oferta</label><input class="form-control" id="wholesale-promo-config-title" placeholder="Ej: Flash Sale BLYXU"></div><div class="form-group"><label>Descuento %</label><input class="form-control" id="wholesale-promo-config-discount" type="number" min="1" max="99" placeholder="20"></div><div class="form-group admin-form-wide"><label>Mensaje</label><input class="form-control" id="wholesale-promo-config-message" placeholder="Joyas seleccionadas por tiempo limitado"></div><div class="form-group"><label>Fecha final</label><input class="form-control" id="wholesale-promo-config-date" type="datetime-local"></div></div><div id="wholesale-promo-admin-preview" class="wholesale-promo-admin-preview"></div><button class="admin-btn" id="btn-save-wholesale-promo-config">Guardar promoción mayorista</button></form><form id="customer-promo-form" class="promo-admin-form"><div class="promo-admin-head"><div><span class="admin-kicker">Clientes</span><h3>Promo cliente registrado</h3><p>Descuento exclusivo aplicado en carrito para clientes con sesión.</p></div><label class="settings-toggle-row promo-toggle-row"><input type="checkbox" id="customer-promo-enabled"> Activa</label></div><div class="admin-form-grid promo-admin-grid"><div class="form-group"><label>Descuento %</label><input class="form-control" id="customer-promo-discount" type="number" min="1" max="99" placeholder="10"></div><div class="form-group"><label>Título</label><input class="form-control" id="customer-promo-title" placeholder="Cliente VIP BLYXU"></div><div class="form-group"><label>Vence</label><input class="form-control" id="customer-promo-expire" type="datetime-local"></div></div><button class="admin-btn" id="btn-save-customer-promo">Guardar promo cliente</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="invoice" id="settings-tab-invoice"><form id="invoice-config-form"><div class="admin-form-grid"><input class="form-control" id="inv-config-logo" placeholder="Logo"><input class="form-control" id="inv-config-empresa" placeholder="Empresa"><input class="form-control" id="inv-config-nit" placeholder="NIT"><input class="form-control" id="inv-config-direccion" placeholder="Direccion"><input class="form-control" id="inv-config-telefono" placeholder="Telefono"><input class="form-control" id="inv-config-email" placeholder="Email"></div><button class="admin-btn" id="btn-save-invoice-config">Guardar factura</button></form></div>
                             <div class="settings-tab-panel" data-settings-tab="payments" id="settings-tab-payments"><form id="qr-config-form"><input class="form-control" id="qr-config-password" placeholder="Clave pagos"><div id="payment-methods-container"></div><button type="button" class="admin-btn secondary" id="btn-add-payment-method">Añadir método</button><button class="admin-btn" id="btn-save-qr-config">Guardar pagos</button></form></div>
                         </div>
@@ -8263,6 +8322,12 @@
             if (!row || !errEl) return;
 
             var inputs = Array.from(row.querySelectorAll('.admin-otp-digit'));
+            inputs.forEach(function (inp, idx) { inp.setAttribute('aria-label', 'Dígito ' + (idx + 1) + ' de ' + DIGITS + ' de la clave'); });
+            document.getElementById('admin-otp-submit').addEventListener('click', function () {
+                var empty = inputs.find(function (inp) { return !inp.value; });
+                if (empty) { empty.focus(); return; }
+                checkCode(inputs, row, errEl);
+            });
 
             inputs.forEach(function (inp, idx) {
                 inp.addEventListener('input', function (e) {
