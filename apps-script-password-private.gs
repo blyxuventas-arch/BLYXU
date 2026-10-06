@@ -1,3 +1,595 @@
+/* @noble/hashes 2.0.1
+The MIT License (MIT)
+
+Copyright (c) 2022 Paul Miller (https://paulmillr.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.*/
+var BlyxuCrypto = (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // crypto-entry.js
+  var crypto_entry_exports = {};
+  __export(crypto_entry_exports, {
+    hmac: () => hmac,
+    pbkdf2: () => pbkdf2,
+    sha1: () => sha1,
+    sha256: () => sha256
+  });
+
+  // noble/package/utils.js
+  function isBytes(a) {
+    return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
+  }
+  function anumber(n, title = "") {
+    if (!Number.isSafeInteger(n) || n < 0) {
+      const prefix = title && `"${title}" `;
+      throw new Error(`${prefix}expected integer >= 0, got ${n}`);
+    }
+  }
+  function abytes(value, length, title = "") {
+    const bytes = isBytes(value);
+    const len = value?.length;
+    const needsLen = length !== void 0;
+    if (!bytes || needsLen && len !== length) {
+      const prefix = title && `"${title}" `;
+      const ofLen = needsLen ? ` of length ${length}` : "";
+      const got = bytes ? `length=${len}` : `type=${typeof value}`;
+      throw new Error(prefix + "expected Uint8Array" + ofLen + ", got " + got);
+    }
+    return value;
+  }
+  function ahash(h) {
+    if (typeof h !== "function" || typeof h.create !== "function")
+      throw new Error("Hash must wrapped by utils.createHasher");
+    anumber(h.outputLen);
+    anumber(h.blockLen);
+  }
+  function aexists(instance, checkFinished = true) {
+    if (instance.destroyed)
+      throw new Error("Hash instance has been destroyed");
+    if (checkFinished && instance.finished)
+      throw new Error("Hash#digest() has already been called");
+  }
+  function aoutput(out, instance) {
+    abytes(out, void 0, "digestInto() output");
+    const min = instance.outputLen;
+    if (out.length < min) {
+      throw new Error('"digestInto() output" expected to be of length >=' + min);
+    }
+  }
+  function clean(...arrays) {
+    for (let i = 0; i < arrays.length; i++) {
+      arrays[i].fill(0);
+    }
+  }
+  function createView(arr) {
+    return new DataView(arr.buffer, arr.byteOffset, arr.byteLength);
+  }
+  function rotr(word, shift) {
+    return word << 32 - shift | word >>> shift;
+  }
+  function rotl(word, shift) {
+    return word << shift | word >>> 32 - shift >>> 0;
+  }
+  function utf8ToBytes(str) {
+    if (typeof str !== "string")
+      throw new Error("string expected");
+    return new Uint8Array(new TextEncoder().encode(str));
+  }
+  function kdfInputToBytes(data, errorTitle = "") {
+    if (typeof data === "string")
+      return utf8ToBytes(data);
+    return abytes(data, void 0, errorTitle);
+  }
+  function checkOpts(defaults, opts) {
+    if (opts !== void 0 && {}.toString.call(opts) !== "[object Object]")
+      throw new Error("options must be object or undefined");
+    const merged = Object.assign(defaults, opts);
+    return merged;
+  }
+  function createHasher(hashCons, info = {}) {
+    const hashC = (msg, opts) => hashCons(opts).update(msg).digest();
+    const tmp = hashCons(void 0);
+    hashC.outputLen = tmp.outputLen;
+    hashC.blockLen = tmp.blockLen;
+    hashC.create = (opts) => hashCons(opts);
+    Object.assign(hashC, info);
+    return Object.freeze(hashC);
+  }
+  var oidNist = (suffix) => ({
+    oid: Uint8Array.from([6, 9, 96, 134, 72, 1, 101, 3, 4, 2, suffix])
+  });
+
+  // noble/package/hmac.js
+  var _HMAC = class {
+    constructor(hash, key) {
+      __publicField(this, "oHash");
+      __publicField(this, "iHash");
+      __publicField(this, "blockLen");
+      __publicField(this, "outputLen");
+      __publicField(this, "finished", false);
+      __publicField(this, "destroyed", false);
+      ahash(hash);
+      abytes(key, void 0, "key");
+      this.iHash = hash.create();
+      if (typeof this.iHash.update !== "function")
+        throw new Error("Expected instance of class which extends utils.Hash");
+      this.blockLen = this.iHash.blockLen;
+      this.outputLen = this.iHash.outputLen;
+      const blockLen = this.blockLen;
+      const pad = new Uint8Array(blockLen);
+      pad.set(key.length > blockLen ? hash.create().update(key).digest() : key);
+      for (let i = 0; i < pad.length; i++)
+        pad[i] ^= 54;
+      this.iHash.update(pad);
+      this.oHash = hash.create();
+      for (let i = 0; i < pad.length; i++)
+        pad[i] ^= 54 ^ 92;
+      this.oHash.update(pad);
+      clean(pad);
+    }
+    update(buf) {
+      aexists(this);
+      this.iHash.update(buf);
+      return this;
+    }
+    digestInto(out) {
+      aexists(this);
+      abytes(out, this.outputLen, "output");
+      this.finished = true;
+      this.iHash.digestInto(out);
+      this.oHash.update(out);
+      this.oHash.digestInto(out);
+      this.destroy();
+    }
+    digest() {
+      const out = new Uint8Array(this.oHash.outputLen);
+      this.digestInto(out);
+      return out;
+    }
+    _cloneInto(to) {
+      to || (to = Object.create(Object.getPrototypeOf(this), {}));
+      const { oHash, iHash, finished, destroyed, blockLen, outputLen } = this;
+      to = to;
+      to.finished = finished;
+      to.destroyed = destroyed;
+      to.blockLen = blockLen;
+      to.outputLen = outputLen;
+      to.oHash = oHash._cloneInto(to.oHash);
+      to.iHash = iHash._cloneInto(to.iHash);
+      return to;
+    }
+    clone() {
+      return this._cloneInto();
+    }
+    destroy() {
+      this.destroyed = true;
+      this.oHash.destroy();
+      this.iHash.destroy();
+    }
+  };
+  var hmac = (hash, key, message) => new _HMAC(hash, key).update(message).digest();
+  hmac.create = (hash, key) => new _HMAC(hash, key);
+
+  // noble/package/pbkdf2.js
+  function pbkdf2Init(hash, _password, _salt, _opts) {
+    ahash(hash);
+    const opts = checkOpts({ dkLen: 32, asyncTick: 10 }, _opts);
+    const { c, dkLen, asyncTick } = opts;
+    anumber(c, "c");
+    anumber(dkLen, "dkLen");
+    anumber(asyncTick, "asyncTick");
+    if (c < 1)
+      throw new Error("iterations (c) must be >= 1");
+    const password = kdfInputToBytes(_password, "password");
+    const salt = kdfInputToBytes(_salt, "salt");
+    const DK = new Uint8Array(dkLen);
+    const PRF = hmac.create(hash, password);
+    const PRFSalt = PRF._cloneInto().update(salt);
+    return { c, dkLen, asyncTick, DK, PRF, PRFSalt };
+  }
+  function pbkdf2Output(PRF, PRFSalt, DK, prfW, u) {
+    PRF.destroy();
+    PRFSalt.destroy();
+    if (prfW)
+      prfW.destroy();
+    clean(u);
+    return DK;
+  }
+  function pbkdf2(hash, password, salt, opts) {
+    const { c, dkLen, DK, PRF, PRFSalt } = pbkdf2Init(hash, password, salt, opts);
+    let prfW;
+    const arr = new Uint8Array(4);
+    const view = createView(arr);
+    const u = new Uint8Array(PRF.outputLen);
+    for (let ti = 1, pos = 0; pos < dkLen; ti++, pos += PRF.outputLen) {
+      const Ti = DK.subarray(pos, pos + PRF.outputLen);
+      view.setInt32(0, ti, false);
+      (prfW = PRFSalt._cloneInto(prfW)).update(arr).digestInto(u);
+      Ti.set(u.subarray(0, Ti.length));
+      for (let ui = 1; ui < c; ui++) {
+        PRF._cloneInto(prfW).update(u).digestInto(u);
+        for (let i = 0; i < Ti.length; i++)
+          Ti[i] ^= u[i];
+      }
+    }
+    return pbkdf2Output(PRF, PRFSalt, DK, prfW, u);
+  }
+
+  // noble/package/_md.js
+  function Chi(a, b, c) {
+    return a & b ^ ~a & c;
+  }
+  function Maj(a, b, c) {
+    return a & b ^ a & c ^ b & c;
+  }
+  var HashMD = class {
+    constructor(blockLen, outputLen, padOffset, isLE) {
+      __publicField(this, "blockLen");
+      __publicField(this, "outputLen");
+      __publicField(this, "padOffset");
+      __publicField(this, "isLE");
+      // For partial updates less than block size
+      __publicField(this, "buffer");
+      __publicField(this, "view");
+      __publicField(this, "finished", false);
+      __publicField(this, "length", 0);
+      __publicField(this, "pos", 0);
+      __publicField(this, "destroyed", false);
+      this.blockLen = blockLen;
+      this.outputLen = outputLen;
+      this.padOffset = padOffset;
+      this.isLE = isLE;
+      this.buffer = new Uint8Array(blockLen);
+      this.view = createView(this.buffer);
+    }
+    update(data) {
+      aexists(this);
+      abytes(data);
+      const { view, buffer, blockLen } = this;
+      const len = data.length;
+      for (let pos = 0; pos < len; ) {
+        const take = Math.min(blockLen - this.pos, len - pos);
+        if (take === blockLen) {
+          const dataView = createView(data);
+          for (; blockLen <= len - pos; pos += blockLen)
+            this.process(dataView, pos);
+          continue;
+        }
+        buffer.set(data.subarray(pos, pos + take), this.pos);
+        this.pos += take;
+        pos += take;
+        if (this.pos === blockLen) {
+          this.process(view, 0);
+          this.pos = 0;
+        }
+      }
+      this.length += data.length;
+      this.roundClean();
+      return this;
+    }
+    digestInto(out) {
+      aexists(this);
+      aoutput(out, this);
+      this.finished = true;
+      const { buffer, view, blockLen, isLE } = this;
+      let { pos } = this;
+      buffer[pos++] = 128;
+      clean(this.buffer.subarray(pos));
+      if (this.padOffset > blockLen - pos) {
+        this.process(view, 0);
+        pos = 0;
+      }
+      for (let i = pos; i < blockLen; i++)
+        buffer[i] = 0;
+      view.setBigUint64(blockLen - 8, BigInt(this.length * 8), isLE);
+      this.process(view, 0);
+      const oview = createView(out);
+      const len = this.outputLen;
+      if (len % 4)
+        throw new Error("_sha2: outputLen must be aligned to 32bit");
+      const outLen = len / 4;
+      const state = this.get();
+      if (outLen > state.length)
+        throw new Error("_sha2: outputLen bigger than state");
+      for (let i = 0; i < outLen; i++)
+        oview.setUint32(4 * i, state[i], isLE);
+    }
+    digest() {
+      const { buffer, outputLen } = this;
+      this.digestInto(buffer);
+      const res = buffer.slice(0, outputLen);
+      this.destroy();
+      return res;
+    }
+    _cloneInto(to) {
+      to || (to = new this.constructor());
+      to.set(...this.get());
+      const { blockLen, buffer, length, finished, destroyed, pos } = this;
+      to.destroyed = destroyed;
+      to.finished = finished;
+      to.length = length;
+      to.pos = pos;
+      if (length % blockLen)
+        to.buffer.set(buffer);
+      return to;
+    }
+    clone() {
+      return this._cloneInto();
+    }
+  };
+  var SHA256_IV = /* @__PURE__ */ Uint32Array.from([
+    1779033703,
+    3144134277,
+    1013904242,
+    2773480762,
+    1359893119,
+    2600822924,
+    528734635,
+    1541459225
+  ]);
+
+  // noble/package/sha2.js
+  var SHA256_K = /* @__PURE__ */ Uint32Array.from([
+    1116352408,
+    1899447441,
+    3049323471,
+    3921009573,
+    961987163,
+    1508970993,
+    2453635748,
+    2870763221,
+    3624381080,
+    310598401,
+    607225278,
+    1426881987,
+    1925078388,
+    2162078206,
+    2614888103,
+    3248222580,
+    3835390401,
+    4022224774,
+    264347078,
+    604807628,
+    770255983,
+    1249150122,
+    1555081692,
+    1996064986,
+    2554220882,
+    2821834349,
+    2952996808,
+    3210313671,
+    3336571891,
+    3584528711,
+    113926993,
+    338241895,
+    666307205,
+    773529912,
+    1294757372,
+    1396182291,
+    1695183700,
+    1986661051,
+    2177026350,
+    2456956037,
+    2730485921,
+    2820302411,
+    3259730800,
+    3345764771,
+    3516065817,
+    3600352804,
+    4094571909,
+    275423344,
+    430227734,
+    506948616,
+    659060556,
+    883997877,
+    958139571,
+    1322822218,
+    1537002063,
+    1747873779,
+    1955562222,
+    2024104815,
+    2227730452,
+    2361852424,
+    2428436474,
+    2756734187,
+    3204031479,
+    3329325298
+  ]);
+  var SHA256_W = /* @__PURE__ */ new Uint32Array(64);
+  var SHA2_32B = class extends HashMD {
+    constructor(outputLen) {
+      super(64, outputLen, 8, false);
+    }
+    get() {
+      const { A, B, C, D, E, F, G, H } = this;
+      return [A, B, C, D, E, F, G, H];
+    }
+    // prettier-ignore
+    set(A, B, C, D, E, F, G, H) {
+      this.A = A | 0;
+      this.B = B | 0;
+      this.C = C | 0;
+      this.D = D | 0;
+      this.E = E | 0;
+      this.F = F | 0;
+      this.G = G | 0;
+      this.H = H | 0;
+    }
+    process(view, offset) {
+      for (let i = 0; i < 16; i++, offset += 4)
+        SHA256_W[i] = view.getUint32(offset, false);
+      for (let i = 16; i < 64; i++) {
+        const W15 = SHA256_W[i - 15];
+        const W2 = SHA256_W[i - 2];
+        const s0 = rotr(W15, 7) ^ rotr(W15, 18) ^ W15 >>> 3;
+        const s1 = rotr(W2, 17) ^ rotr(W2, 19) ^ W2 >>> 10;
+        SHA256_W[i] = s1 + SHA256_W[i - 7] + s0 + SHA256_W[i - 16] | 0;
+      }
+      let { A, B, C, D, E, F, G, H } = this;
+      for (let i = 0; i < 64; i++) {
+        const sigma1 = rotr(E, 6) ^ rotr(E, 11) ^ rotr(E, 25);
+        const T1 = H + sigma1 + Chi(E, F, G) + SHA256_K[i] + SHA256_W[i] | 0;
+        const sigma0 = rotr(A, 2) ^ rotr(A, 13) ^ rotr(A, 22);
+        const T2 = sigma0 + Maj(A, B, C) | 0;
+        H = G;
+        G = F;
+        F = E;
+        E = D + T1 | 0;
+        D = C;
+        C = B;
+        B = A;
+        A = T1 + T2 | 0;
+      }
+      A = A + this.A | 0;
+      B = B + this.B | 0;
+      C = C + this.C | 0;
+      D = D + this.D | 0;
+      E = E + this.E | 0;
+      F = F + this.F | 0;
+      G = G + this.G | 0;
+      H = H + this.H | 0;
+      this.set(A, B, C, D, E, F, G, H);
+    }
+    roundClean() {
+      clean(SHA256_W);
+    }
+    destroy() {
+      this.set(0, 0, 0, 0, 0, 0, 0, 0);
+      clean(this.buffer);
+    }
+  };
+  var _SHA256 = class extends SHA2_32B {
+    constructor() {
+      super(32);
+      // We cannot use array here since array allows indexing by variable
+      // which means optimizer/compiler cannot use registers.
+      __publicField(this, "A", SHA256_IV[0] | 0);
+      __publicField(this, "B", SHA256_IV[1] | 0);
+      __publicField(this, "C", SHA256_IV[2] | 0);
+      __publicField(this, "D", SHA256_IV[3] | 0);
+      __publicField(this, "E", SHA256_IV[4] | 0);
+      __publicField(this, "F", SHA256_IV[5] | 0);
+      __publicField(this, "G", SHA256_IV[6] | 0);
+      __publicField(this, "H", SHA256_IV[7] | 0);
+    }
+  };
+  var sha256 = /* @__PURE__ */ createHasher(
+    () => new _SHA256(),
+    /* @__PURE__ */ oidNist(1)
+  );
+
+  // noble/package/legacy.js
+  var SHA1_IV = /* @__PURE__ */ Uint32Array.from([
+    1732584193,
+    4023233417,
+    2562383102,
+    271733878,
+    3285377520
+  ]);
+  var SHA1_W = /* @__PURE__ */ new Uint32Array(80);
+  var _SHA1 = class extends HashMD {
+    constructor() {
+      super(64, 20, 8, false);
+      __publicField(this, "A", SHA1_IV[0] | 0);
+      __publicField(this, "B", SHA1_IV[1] | 0);
+      __publicField(this, "C", SHA1_IV[2] | 0);
+      __publicField(this, "D", SHA1_IV[3] | 0);
+      __publicField(this, "E", SHA1_IV[4] | 0);
+    }
+    get() {
+      const { A, B, C, D, E } = this;
+      return [A, B, C, D, E];
+    }
+    set(A, B, C, D, E) {
+      this.A = A | 0;
+      this.B = B | 0;
+      this.C = C | 0;
+      this.D = D | 0;
+      this.E = E | 0;
+    }
+    process(view, offset) {
+      for (let i = 0; i < 16; i++, offset += 4)
+        SHA1_W[i] = view.getUint32(offset, false);
+      for (let i = 16; i < 80; i++)
+        SHA1_W[i] = rotl(SHA1_W[i - 3] ^ SHA1_W[i - 8] ^ SHA1_W[i - 14] ^ SHA1_W[i - 16], 1);
+      let { A, B, C, D, E } = this;
+      for (let i = 0; i < 80; i++) {
+        let F, K;
+        if (i < 20) {
+          F = Chi(B, C, D);
+          K = 1518500249;
+        } else if (i < 40) {
+          F = B ^ C ^ D;
+          K = 1859775393;
+        } else if (i < 60) {
+          F = Maj(B, C, D);
+          K = 2400959708;
+        } else {
+          F = B ^ C ^ D;
+          K = 3395469782;
+        }
+        const T = rotl(A, 5) + F + E + K + SHA1_W[i] | 0;
+        E = D;
+        D = C;
+        C = rotl(B, 30);
+        B = A;
+        A = T;
+      }
+      A = A + this.A | 0;
+      B = B + this.B | 0;
+      C = C + this.C | 0;
+      D = D + this.D | 0;
+      E = E + this.E | 0;
+      this.set(A, B, C, D, E);
+    }
+    roundClean() {
+      clean(SHA1_W);
+    }
+    destroy() {
+      this.set(0, 0, 0, 0, 0);
+      clean(this.buffer);
+    }
+  };
+  var sha1 = /* @__PURE__ */ createHasher(() => new _SHA1());
+  return __toCommonJS(crypto_entry_exports);
+})();
+/*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+
 /***************
  * CONFIGURACION
  ***************/
@@ -6,7 +598,7 @@ const SPREADSHEET_ID = '';
 // Credenciales Mercado Pago (Checkout Pro - Catálogo Minorista)
 const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-72ab41d6-5fc7-4867-8e02-564ab0ae9f99';
 // Token privado de prueba. No lo subas a repositorios públicos.
-const MERCADO_PAGO_ACCESS_TOKEN = ''; // Credencial retirada: usar propiedades privadas con una nueva credencial.
+const MERCADO_PAGO_ACCESS_TOKEN = ''; // Configurar una credencial nueva en Propiedades del Script.
 const SITE_URL = 'https://blyxu.online';
 
 const SHEETS = {
@@ -128,8 +720,6 @@ const SHEETS = {
       'Estado Factura',
       'Método Pago',
       'Método Entrega',
-      'Canal Venta',
-      'Stock Descontado',
       'Observaciones',
       'Fecha Actualización'
     ]
@@ -187,12 +777,16 @@ function autorizarMercadoPago() {
 
 function handleRequest_(e, method) {
   try {
-    const params = e.parameter || {};
     const body = parseBody_(e);
+    const params = Object.assign({}, e.parameter || {}, body);
 
     const action = normalizeKey_(body.action || params.action || '');
     const resource = body.resource || body.recurso || body.sheet || body.hoja ||
       params.resource || params.recurso || params.sheet || params.hoja;
+
+    const authorization = securityAuthorizeRequest_(body, params, action, resource, method);
+    if (authorization.response) return json_(authorization.response);
+    if (action === 'customerrecords') return securityCustomerRecords_(body,params);
 
     if (action === 'setup') {
       ensureSheets_();
@@ -227,7 +821,7 @@ function handleRequest_(e, method) {
       const rows = listRows_('Configuracion', {});
       const configObj = {};
       rows.forEach(r => { if (r.Clave) configObj[r.Clave] = r.Valor; });
-      return json_({ ok: true, status: 'success', config: configObj });
+      return json_({ ok: true, status: 'success', config: authorization.admin ? configObj : securityPublicConfig_(configObj) });
     }
     
     if (method === 'POST' && action === 'setconfig') {
@@ -282,15 +876,6 @@ function handleRequest_(e, method) {
       action === 'customerprofile'
     ) {
       return handleCustomerProfile_(body, params);
-    }
-
-    if (
-      action === 'customerdashboard' ||
-      action === 'dashboardcliente' ||
-      action === 'clientedashboard' ||
-      action === 'micuenta'
-    ) {
-      return handleCustomerDashboard_(body, params);
     }
 
     if (
@@ -380,19 +965,6 @@ function handleRequest_(e, method) {
       return handleMercadoPagoPaymentUpdate_(body, params);
     }
 
-    // ==========================================
-    // 4) AVEONLINE / INTERRAPIDISIMO - COTIZACION ENVIO
-    // ==========================================
-    if (
-      action === 'cotizarenvio' ||
-      action === 'cotizar_envio' ||
-      action === 'shippingquote' ||
-      action === 'quoteshipping' ||
-      action === 'aveonlinequote'
-    ) {
-      return handleAveonlineShippingQuote_(body);
-    }
-
     const sheetName = sheetFromResource_(resource || action);
 
     if (!sheetName) {
@@ -408,11 +980,11 @@ function handleRequest_(e, method) {
 
       if (id) {
         const row = getById_(sheetName, id);
-        return json_({ ok: true, status: 'success', data: row });
+        return json_({ ok: true, status: 'success', data: sheetName === 'Clientes' ? securityAdminCustomer_(row) : row });
       }
 
       const rows = listRows_(sheetName, params);
-      return json_({ ok: true, status: 'success', data: rows });
+      return json_({ ok: true, status: 'success', data: sheetName === 'Clientes' ? rows.map(securityAdminCustomer_) : rows });
     }
 
     if (method === 'POST') {
@@ -458,6 +1030,20 @@ function handleRequest_(e, method) {
         }
 
         if (sheetName === 'Pedidos') {
+          if (!authorization.admin) {
+            data['ID Pedido'] = makeId_('PED');
+            data['Estado Pedido'] = 'Pendiente'; data['Stock Descontado'] = 'NO';
+            const wholesale = normalizeKey_(data['Tipo Cliente'] || '') === 'mayor';
+            const items = securityCatalogItems_(parseMaybeJson_(data['Productos JSON']),wholesale);
+            const customer = null;
+            const promotion = wholesale ? {percent:0} : getActiveCustomerPromotion_(customer ? customer.data : null);
+            const priced = applyCustomerPromotionToItems_(items,promotion).items;
+            const consultation = toNumber_(data.Subtotal) === 0 && String(getConfigValue_('Mostrar_Precios_Minorista','true')) !== 'true';
+            data['Productos JSON'] = JSON.stringify(priced);
+            data.Subtotal = consultation ? 0 : priced.reduce(function(total,item){return total+item.precio*item.cantidad;},0);
+            data['Cantidad Total'] = priced.reduce(function(total,item){return total+item.cantidad;},0);
+            delete data.adminCredential; delete data['Payment Status'];
+          }
           const pedido = createOrder_(data);
           return json_({ ok: true, status: 'success', data: pedido });
         }
@@ -530,8 +1116,7 @@ function handleRequest_(e, method) {
     return json_({
       ok: false,
       status: 'error',
-      error: error.message,
-      stack: error.stack
+      error: /^(Acceso no autorizado|Inicia sesión|Cuenta sin permiso|Cuenta de Google|Token de Google)/.test(error.message || '') ? error.message : 'No se pudo completar la solicitud de forma segura.'
     });
   }
 }
@@ -541,20 +1126,12 @@ function handleRequest_(e, method) {
  ***************/
 function handleMercadoPagoPreference_(body) {
   ensureSheets_();
-  if (String(getConfigValue_('Mercado_Pago_Publico_Activo', '1')) === '0' || String(getConfigValue_('Catalogo_Solo_WhatsApp', '0')) === '1') {
-    return json_({
-      ok: false,
-      status: 'error',
-      error: 'Mercado Pago esta desactivado desde el panel administrativo.'
-    });
-  }
-
   const token = getMercadoPagoAccessToken_();
   if (!token || token.indexOf('PEGA_AQUÍ') >= 0 || token.trim() === '') {
     return json_({
       ok: false,
       status: 'error',
-      error: 'Mercado Pago no está configurado. Por favor ingresa el Access Token en el Apps Script.'
+      error: 'Los pagos en línea están temporalmente pausados. Puedes registrar tu pedido y consultar por WhatsApp.'
     });
   }
 
@@ -581,7 +1158,7 @@ function handleMercadoPagoPreference_(body) {
   // 2) Parsear datos del cliente y carrito
   const cliente = body.cliente || body.customer || {};
   const rawItems = body.items || body.productos || body.cart || [];
-  const items = Array.isArray(rawItems) ? rawItems : parseMaybeJson_(rawItems);
+  const items = securityCatalogItems_(Array.isArray(rawItems) ? rawItems : parseMaybeJson_(rawItems), false);
 
   if (!items || items.length === 0) {
     return json_({
@@ -608,14 +1185,14 @@ function handleMercadoPagoPreference_(body) {
   const clientCity = String(cliente.ciudad || body.ciudad || body['Ciudad'] || '').trim();
   const clientNote = String(cliente.nota || body.nota || body['Nota Cliente'] || '').trim();
   const sessionToken = String(body.token || body.customerToken || cliente.token || '').trim();
-  const registeredCustomer = sessionToken ? findCustomerBySessionToken_(sessionToken) : null;
+  const registeredCustomer = null;
   const customerPromotion = getActiveCustomerPromotion_(registeredCustomer ? registeredCustomer.data : null);
   const pricedCart = applyCustomerPromotionToItems_(items, customerPromotion);
   const orderItems = pricedCart.items;
 
   // 3) Pre-registrar pedido en la hoja 'Pedidos'
   const now = new Date();
-  const orderId = body['ID Pedido'] || body.idPedido || makeId_('DET');
+  const orderId = makeId_('DET');
 
   const totalQty = orderItems.reduce((sum, item) => sum + toNumber_(item.cantidad || item.qty || item.quantity || 1), 0);
   const calculatedTotal = orderItems.reduce((sum, item) => {
@@ -678,10 +1255,7 @@ function handleMercadoPagoPreference_(body) {
   });
 
   // 5) Payer y URLs de retorno
-  const rawOrigin = String(body.origin || '').trim();
-  const origin = (rawOrigin.indexOf('http') === 0 && !rawOrigin.includes('localhost') && !rawOrigin.includes('127.0.0.1') && !rawOrigin.includes('file:'))
-    ? rawOrigin
-    : SITE_URL;
+  const origin = SITE_URL;
 
   const backUrls = {
     success: origin + '/facturas-pedidos.html?status=approved&id=' + orderId,
@@ -783,7 +1357,11 @@ function handleMercadoPagoPreference_(body) {
 function getMercadoPagoAccessToken_() {
   try {
     const tokenFromProperties = PropertiesService.getScriptProperties().getProperty('MERCADO_PAGO_ACCESS_TOKEN');
-    if (tokenFromProperties) return tokenFromProperties;
+    if (tokenFromProperties) {
+      const fingerprint = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,tokenFromProperties,Utilities.Charset.UTF_8).map(function(b){return ('0'+((b+256)%256).toString(16)).slice(-2);}).join('');
+      if (fingerprint === '5e3b73448921db57bf4801f0ca272ff65666b7434596c67d6a04dd012e0440dc') return '';
+      return tokenFromProperties;
+    }
   } catch (error) {
     Logger.log('No se pudo leer Script Properties: ' + error.message);
   }
@@ -927,209 +1505,6 @@ function applyMercadoPagoPaymentToOrder_(payment) {
   }
 }
 
-/***************
- * AVEONLINE / INTERRAPIDISIMO
- ***************/
-function getPrivateConfig_(key, fallback) {
-  const propValue = PropertiesService.getScriptProperties().getProperty(key);
-  if (propValue !== null && propValue !== undefined && String(propValue).trim() !== '') return propValue;
-
-  try {
-    const sheetValue = getConfigValue_(key, fallback);
-    return sheetValue !== null && sheetValue !== undefined && String(sheetValue).trim() !== '' ? sheetValue : (fallback || '');
-  } catch (error) {
-    return fallback || '';
-  }
-}
-
-function getAveonlineCredentials_() {
-  return {
-    user: getPrivateConfig_('AVEONLINE_USER', getPrivateConfig_('AVEONLINE_USUARIO', '')),
-    password: getPrivateConfig_('AVEONLINE_PASSWORD', getPrivateConfig_('AVEONLINE_CLAVE', '')),
-    origin: getPrivateConfig_('AVEONLINE_ORIGIN_CITY', getPrivateConfig_('AVEONLINE_CIUDAD_ORIGEN', '')),
-    enterpriseId: getPrivateConfig_('AVEONLINE_ENTERPRISE_ID', getPrivateConfig_('AVEONLINE_EMPRESA_ID', '')),
-    operatorId: getPrivateConfig_('AVEONLINE_OPERATOR_ID', getPrivateConfig_('AVEONLINE_OPERADOR_ID', '')),
-    authUrl: getPrivateConfig_('AVEONLINE_AUTH_URL', 'https://app.aveonline.co/api/auth/v3.0/index.php'),
-    quoteUrl: getPrivateConfig_('AVEONLINE_QUOTE_URL', 'https://app.aveonline.co/avestock/api/calcularenvio.php')
-  };
-}
-
-function authenticateAveonline_(credentials) {
-  if (!credentials.user || !credentials.password) {
-    throw new Error('Faltan credenciales AVEONLINE_USER y AVEONLINE_PASSWORD en Propiedades del Script.');
-  }
-
-  const response = UrlFetchApp.fetch(credentials.authUrl, {
-    method: 'post',
-    contentType: 'application/json',
-    muteHttpExceptions: true,
-    payload: JSON.stringify({
-      tipo: 'AuthProduct',
-      user: credentials.user,
-      password: credentials.password,
-      tokenTime: 1
-    })
-  });
-
-  const text = response.getContentText();
-  const data = JSON.parse(text || '{}');
-  const account = data.data || {};
-  const token = account.token || account.tokenBody || data.token || '';
-
-  if (response.getResponseCode() >= 400 || !token) {
-    throw new Error(data.message || data.error || 'No se pudo autenticar con Aveonline.');
-  }
-
-  return {
-    token: token,
-    enterpriseId: credentials.enterpriseId || account.idEnterprise || account.idActive || account.id || '',
-    agentId: account.idAgent || account.idAgentUser || ''
-  };
-}
-
-function normalizeShippingDestination_(body) {
-  return String(
-    body.destino ||
-    body.ciudad ||
-    body.city ||
-    body.clientDestino ||
-    body.destination ||
-    ''
-  ).trim();
-}
-
-function getShippingItems_(body) {
-  const items = Array.isArray(body.items) ? body.items :
-    Array.isArray(body.productos) ? body.productos :
-    Array.isArray(body.products) ? body.products : [];
-
-  if (!items.length) return [{
-    name: 'Pedido BLYXU',
-    qty: 1,
-    price: Math.max(10000, toNumber_(body.valorDeclarado || body.subtotal || body.total || 10000)),
-    weight: toNumber_(body.peso || body.weight || 1)
-  }];
-
-  return items.map(function(item) {
-    return {
-      name: item.name || item.nombre || item.title || 'Producto BLYXU',
-      qty: Math.max(1, toNumber_(item.qty || item.cantidad || item.unidades || 1)),
-      price: Math.max(0, toNumber_(item.price || item.precio || item.valor || item.valorDeclarado || 0)),
-      weight: Math.max(0, toNumber_(item.weight || item.peso || 0))
-    };
-  });
-}
-
-function buildAveonlineQuotePayload_(body, credentials, auth) {
-  const destination = normalizeShippingDestination_(body);
-  if (!destination) throw new Error('Ingresa ciudad de destino para cotizar el envio.');
-  if (!credentials.origin) throw new Error('Falta AVEONLINE_ORIGIN_CITY o AVEONLINE_CIUDAD_ORIGEN en Propiedades del Script.');
-  if (!auth.enterpriseId) throw new Error('No se pudo resolver el ID de empresa de Aveonline.');
-
-  const items = getShippingItems_(body);
-  const units = Math.max(1, toNumber_(body.unidades || body.grandTotalUnit || items.reduce(function(sum, item) {
-    return sum + item.qty;
-  }, 0)));
-  const declared = Math.max(10000, toNumber_(body.valorDeclarado || body.grandTotalDeclarado || items.reduce(function(sum, item) {
-    return sum + (item.price * item.qty);
-  }, 0)));
-  const weight = Math.max(0.5, toNumber_(body.peso || body.grandTotalPeso || items.reduce(function(sum, item) {
-    return sum + ((item.weight || 0.25) * item.qty);
-  }, 0)));
-  const alto = Math.max(1, toNumber_(body.alto || body.idalto || getPrivateConfig_('AVEONLINE_DEFAULT_ALTO', 10)));
-  const ancho = Math.max(1, toNumber_(body.ancho || body.idancho || getPrivateConfig_('AVEONLINE_DEFAULT_ANCHO', 10)));
-  const largo = Math.max(1, toNumber_(body.largo || body.idlargo || getPrivateConfig_('AVEONLINE_DEFAULT_LARGO', 10)));
-  const volume = Math.max(1, toNumber_(body.volumen || body.grandTotalVol || ((alto * ancho * largo) / 2500)));
-
-  return {
-    tipo: 'authave',
-    empresa: Number(auth.enterpriseId),
-    bodegaOrigen: credentials.origin,
-    clientDestino: destination,
-    paymentCliente: Number(body.paymentCliente !== undefined ? body.paymentCliente : 1),
-    grandTotalPeso: weight.toFixed(2),
-    campo: String(body.campo || body.operador || credentials.operatorId || ''),
-    recaudo: toNumber_(body.recaudo || 0),
-    grandTotalDeclarado: declared.toFixed(2),
-    paymentAsumecosto: Number(body.paymentAsumecosto !== undefined ? body.paymentAsumecosto : 1),
-    origenpedidos: Number(body.origenpedidos !== undefined ? body.origenpedidos : 1),
-    grandTotalUnit: units,
-    grandTotalVol: volume,
-    idalto: alto,
-    idancho: ancho,
-    idlargo: largo,
-    plugin: body.plugin || 'aveonline'
-  };
-}
-
-function selectPreferredShippingQuote_(data) {
-  const rawQuotes = data.cotizaciones || data.data || data.result || data.results || [];
-  const quotes = Array.isArray(rawQuotes) ? rawQuotes : [];
-  if (!quotes.length) return null;
-
-  return quotes.find(function(quote) {
-    const name = normalizeKey_(quote.nombreTransportadora || quote.transportadora || quote.operator || quote.nombre || '');
-    return name.indexOf('interrapidisimo') >= 0;
-  }) || quotes[0];
-}
-
-function publicShippingQuote_(quote) {
-  if (!quote) return null;
-  return {
-    transportadora: quote.nombreTransportadora || quote.transportadora || quote.operator || '',
-    codigo: quote.codTransportadora || quote.codigo || quote.campo || '',
-    total: toNumber_(quote.total || quote.valorTotal || quote.fletetotal || quote.valor || 0),
-    valorTransporte: toNumber_(quote.valorTotal || quote.fletetotal || quote.valor || 0),
-    recaudo: toNumber_(quote.valorOtrosRecaudos || quote.costoRecaudo || 0),
-    diasEntrega: quote.diasentrega || quote.diasEntrega || quote.deliveryDays || '',
-    origen: quote.origen || '',
-    destino: quote.destino || ''
-  };
-}
-
-function handleAveonlineShippingQuote_(body) {
-  try {
-    const credentials = getAveonlineCredentials_();
-    const auth = authenticateAveonline_(credentials);
-    const payload = buildAveonlineQuotePayload_(body || {}, credentials, auth);
-    const response = UrlFetchApp.fetch(credentials.quoteUrl, {
-      method: 'post',
-      contentType: 'application/json',
-      muteHttpExceptions: true,
-      headers: {
-        Authorization: auth.token
-      },
-      payload: JSON.stringify(payload)
-    });
-
-    const text = response.getContentText();
-    const data = JSON.parse(text || '{}');
-    const quote = selectPreferredShippingQuote_(data);
-
-    if (response.getResponseCode() >= 400 || !quote) {
-      return json_({
-        ok: false,
-        status: 'error',
-        error: data.message || data.error || 'No se encontraron cotizaciones para ese destino.',
-        rawStatus: response.getResponseCode()
-      });
-    }
-
-    return json_({
-      ok: true,
-      status: 'success',
-      data: publicShippingQuote_(quote),
-      quotes: (data.cotizaciones || data.data || []).map(publicShippingQuote_).filter(Boolean)
-    });
-  } catch (error) {
-    return json_({
-      ok: false,
-      status: 'error',
-      error: error.message || 'No se pudo cotizar el envio.'
-    });
-  }
-}
-
 function validateStockAvailability_(items) {
   const sheet = getSheet_('Productos');
   const headers = getHeaders_(sheet);
@@ -1247,45 +1622,11 @@ function shouldDiscountStockForOrder_(pedido) {
   return method.indexOf('consulta') < 0 && status.indexOf('consulta') < 0;
 }
 
-function inferInvoiceSalesChannel_(factura) {
-  const explicit = normalizeKey_(factura['Canal Venta'] || factura.canal || factura.Canal || '');
-  if (explicit) return explicit.indexOf('caja') >= 0 ? 'Caja' : String(factura['Canal Venta'] || factura.canal || factura.Canal || '').trim();
-
-  const orderId = normalizeKey_(factura['ID Pedido'] || factura.Pedido || '');
-  const method = normalizeKey_(factura['MÃ©todo Pago'] || factura['Metodo Pago'] || factura.pago || '');
-  const delivery = normalizeKey_(factura['MÃ©todo Entrega'] || factura['Metodo Entrega'] || factura.entrega || '');
-  const note = normalizeKey_(factura.Observaciones || factura.observaciones || '');
-
-  return [orderId, method, delivery, note].some(value => value.indexOf('caja') >= 0 || value.indexOf('mostrador') >= 0)
-    ? 'Caja'
-    : 'Web';
-}
-
-function shouldDiscountStockForInvoice_(factura) {
-  const stockFlag = normalizeKey_(factura['Stock Descontado'] || factura.stockDescontado || '');
-  if (['si', 'sÃ­', 'true', '1', 'descontado'].indexOf(stockFlag) >= 0) return false;
-
-  const channel = normalizeKey_(factura['Canal Venta'] || inferInvoiceSalesChannel_(factura));
-  const status = normalizeKey_(factura['Estado Factura'] || factura.Estado || '');
-  return channel.indexOf('caja') >= 0 && ['pago', 'pagada', 'finalizada'].some(value => status.indexOf(value) >= 0);
-}
-
 function createOrder_(data) {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
 
   try {
-    // Un reintento con el mismo ID devuelve el registro existente.
-    const id = String(data['ID Pedido'] || '').trim();
-    if (id) {
-      const sheet = getSheet_('Pedidos');
-      const existingRow = findRowIndex_(sheet, 'ID Pedido', id);
-      if (existingRow) {
-        const headers = getHeaders_(sheet);
-        const values = sheet.getRange(existingRow, 1, 1, headers.length).getValues()[0];
-        return headers.reduce(function(row, header, index) { row[header] = values[index]; return row; }, {});
-      }
-    }
     const pedido = appendRow_('Pedidos', data);
 
     upsertClientFromOrder_(pedido);
@@ -1398,7 +1739,6 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Pedido'] = rowObject['Estado Pedido'] || 'Nuevo';
     rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
-    rowObject['Canal Venta'] = rowObject['Canal Venta'] || inferInvoiceSalesChannel_(rowObject);
 
     if (!rowObject['ID Cliente'] && rowObject['Teléfono']) {
       rowObject['ID Cliente'] = cleanPhone_(rowObject['Teléfono']);
@@ -1427,7 +1767,6 @@ function appendRow_(sheetName, inputData) {
     rowObject['Fecha Actualización'] = now;
     rowObject['Estado Factura'] = rowObject['Estado Factura'] || 'Pendiente';
     rowObject['Tipo Cliente'] = rowObject['Tipo Cliente'] || inferCustomerType_(rowObject);
-    rowObject['Canal Venta'] = rowObject['Canal Venta'] || inferInvoiceSalesChannel_(rowObject);
     const subtotal = toNumber_(rowObject['Subtotal']);
     const abonado = Math.max(0, toNumber_(rowObject['Valor Abonado']));
     rowObject['Valor Abonado'] = abonado;
@@ -1435,10 +1774,6 @@ function appendRow_(sheetName, inputData) {
       ? Math.max(0, subtotal - abonado)
       : Math.max(0, toNumber_(rowObject['Saldo Pendiente']));
     rowObject['Ultimo Abono'] = Math.max(0, toNumber_(rowObject['Ultimo Abono']));
-    if (shouldDiscountStockForInvoice_(rowObject)) {
-      updateStockFromOrder_(rowObject['Productos JSON']);
-      rowObject['Stock Descontado'] = 'SI';
-    }
   }
 
   if (sheetName === 'PedidosChina') {
@@ -1601,8 +1936,8 @@ function handleCustomerRegister_(body) {
     return json_({ ok: false, status: 'error', error: 'Ingresa un correo valido.' });
   }
 
-  if (password.length < 6) {
-    return json_({ ok: false, status: 'error', error: 'La contraseña debe tener minimo 6 caracteres.' });
+  if (password.length < 12 || password.length > 128) {
+    return json_({ ok: false, status: 'error', error: 'Usa una contraseña de 12 a 128 caracteres.' });
   }
 
   const sheet = getSheet_('Clientes');
@@ -1610,6 +1945,7 @@ function handleCustomerRegister_(body) {
   const existingByPhone = findRowIndex_(sheet, 'Teléfono', telefono);
   const existingByEmail = findCustomerRowByEmail_(email);
   const existingRow = existingByPhone || existingByEmail;
+  if (existingRow) return json_({ok:false,status:'error',error:'Esta cuenta ya existe. Inicia sesión para continuar.'});
 
   if (existingByEmail && existingByPhone && existingByEmail !== existingByPhone) {
     return json_({ ok: false, status: 'error', error: 'Ese correo ya esta registrado con otro telefono.' });
@@ -1673,6 +2009,7 @@ function handleCustomerLogin_(body) {
   }
 
   const customer = found.data;
+  if (customer['Google ID']) return json_({ok:false,status:'error',error:'Esta cuenta usa acceso seguro con Google. Selecciona Continuar con Google.'});
   const salt = String(customer['Password Salt'] || '').trim();
   const expectedHash = String(customer['Password Hash'] || '').trim();
   if (!salt || !expectedHash || hashCustomerPassword_(password, salt) !== expectedHash) {
@@ -1799,6 +2136,7 @@ function verifyGoogleIdToken_(credential) {
 }
 
 function handleCustomerProfile_(body, params) {
+  ensureSheets_();
   const token = String((body && body.token) || (params && params.token) || '').trim();
   const found = findCustomerBySessionToken_(token);
   if (!found) {
@@ -1809,23 +2147,6 @@ function handleCustomerProfile_(body, params) {
     ok: true,
     status: 'success',
     cliente: publicCustomer_(found.data)
-  });
-}
-
-function handleCustomerDashboard_(body, params) {
-  const found = getAuthenticatedCustomer_(body, params);
-  if (!found) {
-    return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
-  }
-  const orders = getCustomerOrdersForAccount_(found);
-
-  return json_({
-    ok: true,
-    status: 'success',
-    cliente: publicCustomer_(found.data),
-    orders: orders.slice(0, 60).map(publicCustomerOrder_),
-    invoices: getCustomerInvoicesForAccount_(found, orders).slice(0, 60).map(publicCustomerInvoice_),
-    favorites: getCustomerFavoritesForAccount_(found).map(publicCustomerFavorite_)
   });
 }
 
@@ -1843,6 +2164,7 @@ function handleCustomerLogout_(body, params) {
 }
 
 function handleCustomerOrders_(body, params) {
+  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1856,7 +2178,7 @@ function handleCustomerOrders_(body, params) {
     const phone = cleanPhone_(row['Teléfono'] || row.Telefono || row.telefono);
     const email = normalizeEmail_(row.Email || row.email);
     const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
-    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
+    return securityCustomerOwnsRecord_(found.data,row);
   }).sort((a, b) => new Date(b.Fecha || 0) - new Date(a.Fecha || 0));
 
   return json_({
@@ -1868,6 +2190,7 @@ function handleCustomerOrders_(body, params) {
 }
 
 function handleCustomerInvoices_(body, params) {
+  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1880,7 +2203,7 @@ function handleCustomerInvoices_(body, params) {
     const phone = cleanPhone_(row['TelÃ©fono'] || row.Telefono || row.telefono);
     const email = normalizeEmail_(row.Email || row.email);
     const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
-    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
+    return securityCustomerOwnsRecord_(found.data,row);
   });
   const orderIds = {};
   customerOrders.forEach(function(order) {
@@ -1893,9 +2216,7 @@ function handleCustomerInvoices_(body, params) {
     const invoiceEmail = normalizeEmail_(row.Email || row.email);
     const orderId = String(row['ID Pedido'] || '').trim();
     const safeInvoiceCustomerPhone = invoiceCustomerPhone || cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
-    return (safeCustomerPhone && safeInvoiceCustomerPhone === safeCustomerPhone) ||
-      (customerEmail && invoiceEmail === customerEmail) ||
-      (orderId && orderIds[orderId]);
+    return securityCustomerOwnsRecord_(found.data,row) || (orderId && securityCustomerOwnsRecord_(found.data,getById_('Pedidos',orderId) || {}));
   }).sort(function(a, b) {
     return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
   });
@@ -1909,6 +2230,7 @@ function handleCustomerInvoices_(body, params) {
 }
 
 function handleCustomerFavorites_(body, params) {
+  ensureSheets_();
   const found = getAuthenticatedCustomer_(body, params);
   if (!found) {
     return json_({ ok: false, status: 'error', error: 'Sesion vencida. Inicia sesion nuevamente.' });
@@ -1921,7 +2243,7 @@ function handleCustomerFavorites_(body, params) {
     const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
     const phone = cleanPhone_(row.Telefono || row['Teléfono']);
     const email = normalizeEmail_(row.Email);
-    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
+    return active && securityCustomerOwnsRecord_(found.data,row);
   }).sort((a, b) => new Date(b.Fecha || 0) - new Date(a.Fecha || 0));
 
   return json_({
@@ -2061,106 +2383,6 @@ function handleCustomerPromotionSave_(body) {
   });
 }
 
-function getCustomerOrdersForAccount_(found) {
-  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono']);
-  const customerEmail = normalizeEmail_(found.data.Email);
-  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
-  const rows = listRows_('Pedidos', {});
-  return rows.filter(function(row) {
-    const phone = cleanPhone_(row['TelÃ©fono'] || row.Telefono || row.telefono);
-    const email = normalizeEmail_(row.Email || row.email);
-    const safePhone = phone || cleanPhone_(getCustomerPhoneValue_(row));
-    return (safeCustomerPhone && safePhone === safeCustomerPhone) || (customerEmail && email === customerEmail);
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
-function getCustomerInvoicesForAccount_(found, knownOrders) {
-  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono'] || found.data['TelÃƒÂ©fono']);
-  const customerEmail = normalizeEmail_(found.data.Email);
-  const safeCustomerPhone = customerPhone || cleanPhone_(getCustomerPhoneValue_(found.data));
-  const customerOrders = knownOrders || getCustomerOrdersForAccount_(found);
-  const orderIds = {};
-  customerOrders.forEach(function(order) {
-    const id = String(order['ID Pedido'] || '').trim();
-    if (id) orderIds[id] = true;
-  });
-
-  return listRows_('Facturas', {}).filter(function(row) {
-    const invoiceCustomerPhone = cleanPhone_(row['ID Cliente'] || row.Telefono || row['TelÃ©fono'] || row['TelÃƒÂ©fono'] || row.Celular);
-    const invoiceEmail = normalizeEmail_(row.Email || row.email);
-    const orderId = String(row['ID Pedido'] || '').trim();
-    const safeInvoiceCustomerPhone = invoiceCustomerPhone || cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
-    return (safeCustomerPhone && safeInvoiceCustomerPhone === safeCustomerPhone) ||
-      (customerEmail && invoiceEmail === customerEmail) ||
-      (orderId && orderIds[orderId]);
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
-function getCustomerFavoritesForAccount_(found) {
-  const customerPhone = cleanPhone_(found.data['TelÃ©fono'] || found.data['Telefono']);
-  const customerEmail = normalizeEmail_(found.data.Email);
-  return listRows_('Favoritos', {}).filter(function(row) {
-    const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
-    const phone = cleanPhone_(row.Telefono || row['TelÃ©fono']);
-    const email = normalizeEmail_(row.Email);
-    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
-function getCustomerOrdersForAccount_(found) {
-  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
-  const customerEmail = normalizeEmail_(found.data.Email);
-  const rows = listRows_('Pedidos', {});
-  return rows.filter(function(row) {
-    const phone = cleanPhone_(getCustomerPhoneValue_(row));
-    const email = normalizeEmail_(row.Email || row.email);
-    return (customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail);
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
-function getCustomerInvoicesForAccount_(found, knownOrders) {
-  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
-  const customerEmail = normalizeEmail_(found.data.Email);
-  const customerOrders = knownOrders || getCustomerOrdersForAccount_(found);
-  const orderIds = {};
-  customerOrders.forEach(function(order) {
-    const id = String(order['ID Pedido'] || '').trim();
-    if (id) orderIds[id] = true;
-  });
-
-  return listRows_('Facturas', {}).filter(function(row) {
-    const invoiceCustomerPhone = cleanPhone_(row['ID Cliente'] || getCustomerPhoneValue_(row));
-    const invoiceEmail = normalizeEmail_(row.Email || row.email);
-    const orderId = String(row['ID Pedido'] || '').trim();
-    return (customerPhone && invoiceCustomerPhone === customerPhone) ||
-      (customerEmail && invoiceEmail === customerEmail) ||
-      (orderId && orderIds[orderId]);
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
-function getCustomerFavoritesForAccount_(found) {
-  const customerPhone = cleanPhone_(getCustomerPhoneValue_(found.data));
-  const customerEmail = normalizeEmail_(found.data.Email);
-  return listRows_('Favoritos', {}).filter(function(row) {
-    const active = normalizeKey_(row.Estado || 'Activo') !== 'inactivo';
-    const phone = cleanPhone_(getCustomerPhoneValue_(row));
-    const email = normalizeEmail_(row.Email);
-    return active && ((customerPhone && phone === customerPhone) || (customerEmail && email === customerEmail));
-  }).sort(function(a, b) {
-    return new Date(b.Fecha || 0) - new Date(a.Fecha || 0);
-  });
-}
-
 function getAuthenticatedCustomer_(body, params) {
   const token = String((body && body.token) || (params && params.token) || '').trim();
   return findCustomerBySessionToken_(token);
@@ -2249,66 +2471,9 @@ function publicCustomerFavorite_(favorite) {
   };
 }
 
-function getRowObjectAt_(sheet, headers, rowIndex) {
-  if (!rowIndex || rowIndex < 2) return null;
-  return rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
-}
-
-function findRowByColumnValue_(sheetName, candidateHeaders, targetValue, normalizer) {
-  const sheet = getSheet_(sheetName);
-  const headers = getHeaders_(sheet);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2 || !targetValue) return null;
-
-  for (let h = 0; h < candidateHeaders.length; h++) {
-    const header = findHeader_(headers, candidateHeaders[h], sheetName) || candidateHeaders[h];
-    const colIndex = headers.indexOf(header);
-    if (colIndex < 0) continue;
-
-    const values = sheet.getRange(2, colIndex + 1, lastRow - 1, 1).getValues();
-    for (let i = 0; i < values.length; i++) {
-      const value = normalizer ? normalizer(values[i][0]) : String(values[i][0] || '').trim();
-      if (value === targetValue) {
-        const rowIndex = i + 2;
-        return { rowIndex: rowIndex, data: getRowObjectAt_(sheet, headers, rowIndex) };
-      }
-    }
-  }
-
-  return null;
-}
-
-function scanCustomerByIdentifier_(identifier) {
-  const cleanIdentifier = cleanPhone_(identifier);
-  const email = normalizeEmail_(identifier);
-  const sheet = getSheet_('Clientes');
-  const headers = getHeaders_(sheet);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return null;
-
-  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
-  for (let i = 0; i < values.length; i++) {
-    const data = rowToObject_(headers, values[i]);
-    const phone = cleanPhone_(data['TelÃ©fono'] || data['Telefono']);
-    const customerEmail = normalizeEmail_(data.Email);
-    if ((cleanIdentifier && phone === cleanIdentifier) || (email && customerEmail === email)) {
-      return { rowIndex: i + 2, data: data };
-    }
-  }
-  return null;
-}
-
 function findCustomerByIdentifier_(identifier) {
   const cleanIdentifier = cleanPhone_(identifier);
   const email = normalizeEmail_(identifier);
-  if (email) {
-    const foundByEmail = findRowByColumnValue_('Clientes', ['Email'], email, normalizeEmail_);
-    if (foundByEmail) return foundByEmail;
-  }
-  if (cleanIdentifier) {
-    const foundByPhone = findRowByColumnValue_('Clientes', ['TelÃ©fono', 'Telefono', 'telefono'], cleanIdentifier, cleanPhone_);
-    if (foundByPhone) return foundByPhone;
-  }
   const sheet = getSheet_('Clientes');
   const headers = getHeaders_(sheet);
   const lastRow = sheet.getLastRow();
@@ -2326,52 +2491,13 @@ function findCustomerByIdentifier_(identifier) {
   return null;
 }
 
-function findCustomerByIdentifier_(identifier) {
-  const cleanIdentifier = cleanPhone_(identifier);
-  const email = normalizeEmail_(identifier);
-  if (email) {
-    const foundByEmail = findRowByColumnValue_('Clientes', ['Email'], email, normalizeEmail_);
-    if (foundByEmail) return foundByEmail;
-  }
-  if (cleanIdentifier) {
-    const foundByPhone = findRowByColumnValue_('Clientes', ['telefono', 'Telefono'], cleanIdentifier, cleanPhone_);
-    if (foundByPhone) return foundByPhone;
-  }
-
-  const sheet = getSheet_('Clientes');
-  const headers = getHeaders_(sheet);
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return null;
-
-  const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
-  for (let i = 0; i < values.length; i++) {
-    const data = rowToObject_(headers, values[i]);
-    const phone = cleanPhone_(getCustomerPhoneValue_(data));
-    const customerEmail = normalizeEmail_(data.Email);
-    if ((cleanIdentifier && phone === cleanIdentifier) || (email && customerEmail === email)) {
-      return { rowIndex: i + 2, data: data };
-    }
-  }
-  return null;
-}
-
 function findCustomerRowByEmail_(email) {
   const found = findCustomerByIdentifier_(email);
   return found ? found.rowIndex : null;
 }
 
 function findCustomerBySessionToken_(token, allowExpired) {
-  if (!token) return null;
-  const foundByToken = findRowByColumnValue_('Clientes', ['Session Token'], token, function(value) {
-    return String(value || '').trim();
-  });
-  if (foundByToken) {
-    const fastExpires = new Date(foundByToken.data['Session Expira']);
-    if (!allowExpired && (!foundByToken.data['Session Expira'] || Number.isNaN(fastExpires.getTime()) || fastExpires.getTime() < Date.now())) {
-      return null;
-    }
-    return foundByToken;
-  }
+  if (!token || !String(token).startsWith('BLYXU-S2-')) return null;
   const sheet = getSheet_('Clientes');
   const headers = getHeaders_(sheet);
   const lastRow = sheet.getLastRow();
@@ -2505,7 +2631,7 @@ function makeCustomerSalt_() {
 }
 
 function makeSessionToken_() {
-  return Utilities.getUuid() + '-' + Utilities.getUuid();
+  return 'BLYXU-S2-' + Utilities.getUuid() + '-' + Utilities.getUuid();
 }
 
 function hashCustomerPassword_(password, salt) {
@@ -2551,10 +2677,6 @@ function upsertClientFromOrder_(pedido) {
 
   const current = rowToObject_(headers, sheet.getRange(rowIndex, 1, 1, headers.length).getValues()[0]);
 
-  current['Nombre'] = pedido['Nombre Cliente'] || current['Nombre'];
-  current['Email'] = pedido.Email || pedido.email || current['Email'];
-  current['Dirección'] = pedido['Dirección'] || current['Dirección'];
-  current['Ciudad'] = pedido['Ciudad'] || current['Ciudad'];
   current['Total Pedidos'] = toNumber_(current['Total Pedidos']) + 1;
   current['Total Gastado'] = toNumber_(current['Total Gastado']) + subtotal;
   current['Último Pedido'] = pedido['Fecha'] || now;
@@ -3069,16 +3191,6 @@ function configurarBlyxuSpreadsheet(spreadsheetId) {
   return 'Spreadsheet configurado y hojas verificadas.';
 }
 
-function configurarAveonlineEnvios(usuario, clave, ciudadOrigen, empresaId, operadorId) {
-  const props = PropertiesService.getScriptProperties();
-  if (usuario) props.setProperty('AVEONLINE_USER', String(usuario).trim());
-  if (clave) props.setProperty('AVEONLINE_PASSWORD', String(clave).trim());
-  if (ciudadOrigen) props.setProperty('AVEONLINE_ORIGIN_CITY', String(ciudadOrigen).trim());
-  if (empresaId) props.setProperty('AVEONLINE_ENTERPRISE_ID', String(empresaId).trim());
-  if (operadorId) props.setProperty('AVEONLINE_OPERATOR_ID', String(operadorId).trim());
-  return 'Credenciales de Aveonline guardadas. Prueba con action=cotizarenvio.';
-}
-
 function verificarSistemaClientes() {
   ensureSheets_();
   const sheet = getSheet_('Clientes');
@@ -3122,4 +3234,177 @@ function probarRegistroCliente() {
   });
 
   return response.getContent();
+}
+
+function securityAdminIdentity_(body) {
+  const credential = String(body.adminCredential || '').trim();
+  if (credential.startsWith('BLYXU-A3-')) return authAdminSession_(credential);
+  if (authAdminEnabled_()) return null;
+  if (!credential) return null;
+  const identity = verifyGoogleIdToken_(credential);
+  const allowed = String(PropertiesService.getScriptProperties().getProperty('BLYXU_ADMIN_EMAILS') || 'blyxu.ventas@gmail.com').toLowerCase().split(',').map(function(email) { return email.trim(); }).filter(Boolean);
+  if (allowed.indexOf(String(identity.email || '').toLowerCase()) < 0) throw new Error('Cuenta sin permiso de administrador.');
+  return identity;
+}
+function securityPublicConfig_(config) {
+  const result = {Auth_Admin_Mode: authAdminEnabled_() ? 'password-totp' : 'google-bootstrap'};
+  Object.keys(config || {}).forEach(function(key) {
+    if (/^(Google_Client_ID|Mostrar_Precios_Minorista|Mercado_Pago_Publico_Activo|Catalogo_Solo_WhatsApp|Contacto_[A-Za-z]+|WhatsApp_Comercial|Factura_(Logo|Empresa|NIT|Direccion|Telefono|Email)|Promo_(Enabled|Title|Discount|Message|EndDate|Clientes_(Enabled|Title|Discount|Expire))|Wholesale_Promo_(Enabled|Title|Discount|Message|Date|EndDate)|Banner_[A-Za-z0-9_]+|Home_[A-Za-z0-9_]+|QR_(Title|Subtitle|Image|Methods|Year|Enabled|Payments_JSON))$/.test(key)) result[key] = config[key];
+  });
+  return result;
+}
+function securityAuthorizeRequest_(body, params, action, resource, method) {
+  if (action === 'adminpasswordlogin') return {response:authAdminLogin_(body)};
+  const admin = securityAdminIdentity_(body);
+  if (action === 'adminpasswordbegin') return {response:authAdminBegin_(admin)};
+  if (action === 'adminpasswordfinish') return {response:authAdminFinish_(body,admin)};
+  if (/^(registrarcliente|customerregister|registercustomer|crearcliente|crearcuenta|registrocliente|registrarse|signup|signupcliente|register|registro|createcustomer|newcustomer|logincliente|iniciarsesion|customerlogin|login|signin|entrarcliente|ingresarcliente|googlelogincliente|customergooglelogin|logincongoogle|googlelogin|signinwithgoogle|perfilcliente|customerprofile|pedidoscliente|customerorders|mispedidos|facturascliente|customerinvoices|misfacturas|favoritoscliente|customerfavorites|misfavoritos|guardarfavorito|addfavorite|quitarfavorito|removefavorite|customerrecords)$/.test(action) && !admin) return {response:{ok:false,status:'error',error:'La tienda usa datos de contacto para pedidos. No hay acceso público a cuentas ni documentos.'}};
+  if (action === 'adminsession') {
+    if (!admin) throw new Error('Inicia sesión con una cuenta administradora.');
+    return { response: {ok:true,status:'success',email:admin.email}, admin:admin };
+  }
+  if (admin) return {admin:admin};
+  const publicActions = ['customerrecords','getconfig','registrarcliente','customerregister','registercustomer','crearcliente','crearcuenta','registrocliente','registrarse','signup','signupcliente','register','registro','createcustomer','newcustomer','logincliente','iniciarsesion','customerlogin','login','signin','entrarcliente','ingresarcliente','googlelogincliente','customergooglelogin','logincongoogle','googlelogin','signinwithgoogle','perfilcliente','customerprofile','cerrarsesion','customerlogout','pedidoscliente','customerorders','mispedidos','facturascliente','customerinvoices','misfacturas','favoritoscliente','customerfavorites','misfavoritos','guardarfavorito','addfavorite','quitarfavorito','removefavorite','createpreference','crearpreferencia','mercadopago','mpcheckout','checkoutmercadopago','pagar','mpwebhook','mercadopagowebhook','verifymppayment','verificarpagomp'];
+  if (['logincliente','iniciarsesion','customerlogin','login','signin','entrarcliente','ingresarcliente','registrarcliente','customerregister','registercustomer','crearcliente','crearcuenta','registrocliente','registrarse','signup','signupcliente','register','registro','createcustomer','newcustomer'].indexOf(action) >= 0) securityLimitLogin_(body);
+  if (publicActions.indexOf(action) >= 0 || (!action && isMercadoPagoPaymentNotification_(body,params))) return {admin:null};
+  const sheet = sheetFromResource_(resource || action);
+  const reading = method === 'GET' || ['listar','list','get'].indexOf(action) >= 0;
+  if (sheet === 'Productos' && reading) return {admin:null};
+  if (sheet === 'Pedidos' && method === 'POST' && ['crear','create','agregar',''].indexOf(action) >= 0) return {admin:null};
+  throw new Error('Acceso no autorizado. Inicia sesión con una cuenta administradora.');
+}
+
+function securityCustomerOwnsRecord_(customer, row) {
+  // Un teléfono o correo escrito en un formulario no acredita su propiedad.
+  const verified = String(customer['Google ID'] || '').trim();
+  const email = normalizeEmail_(customer.Email);
+  return !!verified && !!email && email === normalizeEmail_(row.Email || row.email);
+}
+function securityCustomerRecords_(body, params) {
+  const found = getAuthenticatedCustomer_(body,params);
+  if (!found || !found.data['Google ID']) return json_({ok:false,status:'error',error:'Ingresa con Google para verificar tu identidad y consultar tus documentos.'});
+  const orders = listRows_('Pedidos',{}).filter(function(row){return securityCustomerOwnsRecord_(found.data,row);});
+  const ids = {}; orders.forEach(function(row){ids[String(row['ID Pedido'] || '')]=true;});
+  const invoices = listRows_('Facturas',{}).filter(function(row){return securityCustomerOwnsRecord_(found.data,row) || securityCustomerOwnsRecord_(found.data,getById_('Pedidos',String(row['ID Pedido'] || '')) || {});});
+  const resource = sheetFromResource_(body.resource || params.resource);
+  if (resource !== 'Pedidos' && resource !== 'Facturas') return json_({ok:false,status:'error',error:'Consulta no válida.'});
+  return json_({ok:true,status:'success',data:resource==='Pedidos'?orders:invoices});
+}
+
+function securityLimitLogin_(body) {
+  const customer = body.cliente || body.customer || body;
+  const identity = String(customer.usuario || customer.identifier || customer.email || customer.Email || customer.telefono || '').trim().toLowerCase();
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,identity,Utilities.Charset.UTF_8).map(function(b){return ('0'+((b+256)%256).toString(16)).slice(-2);}).join('');
+  const cache = CacheService.getScriptCache(); const key = 'auth-attempts-' + digest;
+  const count = Number(cache.get(key) || 0);
+  if (count >= 15) throw new Error('Inicia sesión más tarde: se alcanzó el límite de intentos.');
+  cache.put(key,String(count+1),600);
+}
+
+function securityCatalogItems_(items, wholesale) {
+  if (!Array.isArray(items) || !items.length || items.length > 100) throw new Error('Carrito no válido.');
+  return items.map(function(item) {
+    const id = String(item.idVariacion || item['ID Variación'] || item['ID Variacion'] || item.id || item.sku || '').trim();
+    const product = getById_('Productos',id);
+    const qty = Number(item.cantidad || item.qty || item.quantity || 1);
+    if (!product || !Number.isInteger(qty) || qty < 1 || qty > 1000) throw new Error('Producto o cantidad no válida.');
+    let price = toNumber_(product[wholesale ? 'Precio Mayor' : 'Precio']);
+    const prefix = wholesale ? 'Wholesale_Promo_' : 'Promo_';
+    const enabled = String(getConfigValue_(prefix+'Enabled','false')) === 'true';
+    const expiry = String(getConfigValue_(prefix+'Date',''));
+    const discount = Math.max(0,Math.min(90,toNumber_(getConfigValue_(prefix+'Discount',0))));
+    const active = enabled && discount > 0 && (!expiry || new Date(expiry).getTime()>Date.now());
+    const tagged = ['si','true','1'].indexOf(normalizeKey_(product.Promocion || ''))>=0;
+    if (active && (wholesale || tagged)) price=Math.round(price*(1-discount/100));
+    return {id:id,idVariacion:id,sku:product.SKU || id,nombre:product['Nombre del Producto'] || product.Nombre || 'Producto',opcion:String(product.Estilo || product.Color || ''),cantidad:qty,precio:Math.max(0,price),imagen:product['Imagen Principal'] || ''};
+  });
+}
+
+function securityAdminCustomer_(customer) {
+  const safe = Object.assign({},customer || {});
+  ['Password Hash','Password Salt','Session Token','Session Expira','Google ID'].forEach(function(key){delete safe[key];});
+  return safe;
+}
+
+// Administrator password + TOTP. This file belongs only in Apps Script.
+function authBytes_(text) {
+  return Uint8Array.from(Utilities.newBlob(String(text)).getBytes().map(function(b){return (b+256)%256;}));
+}
+function authHex_(bytes) {return Array.from(bytes).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');}
+function authDigest_(text) {return authHex_(BlyxuCrypto.sha256(authBytes_(text)));}
+function authEqual_(a,b) {a=String(a);b=String(b);var difference=a.length^b.length;for(var i=0;i<Math.max(a.length,b.length);i++)difference|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);return difference===0;}
+function authPasswordHash_(password,salt) {
+  return authHex_(BlyxuCrypto.pbkdf2(BlyxuCrypto.sha256,authBytes_(password),authBytes_(salt),{c:600000,dkLen:32}));
+}
+function authRandom_() {return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');}
+function authBase32_(bytes) {
+  var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',bits=0,value=0,out='';
+  bytes.forEach(function(b){value=(value<<8)|b;bits+=8;while(bits>=5){out+=alphabet[(value>>>(bits-5))&31];bits-=5;}});
+  if(bits)out+=alphabet[(value<<(5-bits))&31];return out;
+}
+function authBase32Decode_(text) {
+  var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',bits=0,value=0,out=[];
+  String(text).replace(/=+$/,'').split('').forEach(function(c){var n=alphabet.indexOf(c);if(n<0)throw new Error('Acceso no autorizado.');value=(value<<5)|n;bits+=5;if(bits>=8){out.push((value>>>(bits-8))&255);bits-=8;}});return Uint8Array.from(out);
+}
+function authTotp_(secret,step,digits) {
+  var counter=new Uint8Array(8);for(var i=7;i>=0;i--){counter[i]=step%256;step=Math.floor(step/256);}
+  var mac=BlyxuCrypto.hmac(BlyxuCrypto.sha1,authBase32Decode_(secret),counter),offset=mac[mac.length-1]&15;
+  var number=((mac[offset]&127)<<24)|(mac[offset+1]<<16)|(mac[offset+2]<<8)|mac[offset+3];
+  return String(number%Math.pow(10,digits||6)).padStart(digits||6,'0');
+}
+function authValidStep_(secret,code,previous) {
+  if(!/^\d{6}$/.test(String(code)))return -1;
+  var step=Math.floor(Date.now()/30000);for(var delta=-1;delta<=1;delta++){var candidate=step+delta;if(candidate>Number(previous||-1)&&authEqual_(authTotp_(secret,candidate),code))return candidate;}return -1;
+}
+function authAdminConfig_(){return PropertiesService.getScriptProperties();}
+function authAdminEnabled_(){return authAdminConfig_().getProperty('BLYXU_ADMIN_PASSWORD_ENABLED')==='true';}
+function authAdminSession_(token) {
+  if(!/^BLYXU-A3-[a-f0-9]{64}$/.test(String(token||'')))return null;
+  var data=CacheService.getScriptCache().get('admin-session-'+authDigest_(token));
+  if(!data)return null;var session=JSON.parse(data);
+  if(session.expires<Date.now()||session.version!==authAdminConfig_().getProperty('BLYXU_ADMIN_AUTH_VERSION'))return null;
+  return {email:session.email,method:'password-totp'};
+}
+function authAdminLogin_(body) {
+  var props=authAdminConfig_();if(!authAdminEnabled_())return {ok:false,error:'Primero configura el acceso del administrador.'};
+  var lock=LockService.getScriptLock();if(!lock.tryLock(1000))return {ok:false,error:'Intenta de nuevo en unos segundos.'};
+  try {
+    var attempts=JSON.parse(props.getProperty('BLYXU_ADMIN_ATTEMPTS')||'{"count":0,"start":0}');
+    if(Date.now()-attempts.start>900000)attempts={count:0,start:Date.now()};
+    if(attempts.count>=5)return {ok:false,error:'Demasiados intentos. Espera 15 minutos.'};
+    attempts.count++;props.setProperty('BLYXU_ADMIN_ATTEMPTS',JSON.stringify(attempts));
+    var password=String(body.password||''),user=String(body.usuario||'').trim().toLowerCase();
+    if(password.length<12||password.length>128||!authEqual_(user,props.getProperty('BLYXU_ADMIN_USERNAME')))return {ok:false,error:'Datos de acceso incorrectos.'};
+    if(!authEqual_(authPasswordHash_(password,props.getProperty('BLYXU_ADMIN_PASSWORD_SALT')),props.getProperty('BLYXU_ADMIN_PASSWORD_HASH')))return {ok:false,error:'Datos de acceso incorrectos.'};
+    var step=authValidStep_(props.getProperty('BLYXU_ADMIN_TOTP_SECRET'),String(body.codigo||''),props.getProperty('BLYXU_ADMIN_TOTP_LAST_STEP'));
+    if(step<0){
+      var recovery=String(body.codigo||'').trim().toUpperCase(),hashes=JSON.parse(props.getProperty('BLYXU_ADMIN_RECOVERY_HASHES')||'[]'),match=hashes.indexOf(authDigest_(recovery));
+      if(match<0)return {ok:false,error:'Datos de acceso incorrectos.'};hashes.splice(match,1);props.setProperty('BLYXU_ADMIN_RECOVERY_HASHES',JSON.stringify(hashes));
+    } else props.setProperty('BLYXU_ADMIN_TOTP_LAST_STEP',String(step));
+    props.deleteProperty('BLYXU_ADMIN_ATTEMPTS');
+    var token='BLYXU-A3-'+authRandom_(),email=props.getProperty('BLYXU_ADMIN_USERNAME');
+    CacheService.getScriptCache().put('admin-session-'+authDigest_(token),JSON.stringify({email:email,expires:Date.now()+1800000,version:props.getProperty('BLYXU_ADMIN_AUTH_VERSION')}),1800);
+    return {ok:true,status:'success',token:token,email:email};
+  } finally {lock.releaseLock();}
+}
+function authAdminBegin_(admin) {
+  if(authAdminEnabled_()||!admin||admin.method==='password-totp')throw new Error('Acceso no autorizado.');
+  var seed=authBase32_(BlyxuCrypto.sha256(authBytes_(authRandom_())).slice(0,20)),nonce=authRandom_();
+  CacheService.getScriptCache().put('admin-enrollment-'+authDigest_(nonce),JSON.stringify({email:admin.email,secret:seed,expires:Date.now()+600000}),600);
+  return {ok:true,nonce:nonce,uri:'otpauth://totp/'+encodeURIComponent('BLYXU:'+admin.email)+'?secret='+seed+'&issuer=BLYXU&algorithm=SHA1&digits=6&period=30'};
+}
+function authAdminFinish_(body,admin) {
+  if(!admin||admin.method==='password-totp'||authAdminEnabled_())throw new Error('Acceso no autorizado.');
+  var key='admin-enrollment-'+authDigest_(String(body.nonce||'')),cache=CacheService.getScriptCache(),raw=cache.get(key);
+  if(!raw)throw new Error('La configuración venció. Vuelve a comenzar.');var pending=JSON.parse(raw);
+  var password=String(body.password||''),step=authValidStep_(pending.secret,String(body.codigo||''),-1);
+  if(pending.email!==admin.email||pending.expires<Date.now()||password.length<12||password.length>128||step<0)return {ok:false,error:'Comprueba la contraseña y el código de seis dígitos.'};
+  var hash=authPasswordHash_(password,authDigest_(pending.secret+'password-salt'));
+  var lock=LockService.getScriptLock();lock.waitLock(1000);
+  try {
+    if(authAdminEnabled_()||!cache.get(key))throw new Error('Acceso no autorizado.');
+    var recovery=[];for(var i=0;i<8;i++)recovery.push(authRandom_().slice(0,20).toUpperCase());
+    authAdminConfig_().setProperties({BLYXU_ADMIN_USERNAME:admin.email.toLowerCase(),BLYXU_ADMIN_PASSWORD_SALT:authDigest_(pending.secret+'password-salt'),BLYXU_ADMIN_PASSWORD_HASH:hash,BLYXU_ADMIN_TOTP_SECRET:pending.secret,BLYXU_ADMIN_TOTP_LAST_STEP:String(step),BLYXU_ADMIN_AUTH_VERSION:authRandom_(),BLYXU_ADMIN_RECOVERY_HASHES:JSON.stringify(recovery.map(authDigest_)),BLYXU_ADMIN_PASSWORD_ENABLED:'true'});
+    cache.remove(key);return {ok:true,recovery:recovery};
+  } finally {lock.releaseLock();}
 }
