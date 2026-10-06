@@ -1671,8 +1671,8 @@ function isMobileBarcodeDevice() {
 
 function getBarcodeVideoConstraints(deviceId = '') {
     const constraints = {
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
     };
     if (deviceId) {
         constraints.deviceId = { exact: deviceId };
@@ -1818,8 +1818,9 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     const formatsToSupport = getHtml5BarcodeFormats();
     const scannerConfig = {
         fps: isIosBarcodeDevice() ? 10 : 15,
-        qrbox: getBarcodeScanBox,
-        disableFlip: false
+        // Decode the full frame, including smaller or off-center QR codes.
+        disableFlip: false,
+        videoConstraints: getBarcodeVideoConstraints(preferredDeviceId)
     };
     const onScanSuccess = (decodedText, decodedResult) => {
         const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
@@ -1856,7 +1857,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
             : (isMobileBarcodeDevice() ? pickRearBarcodeCamera(cameras) : cameras[0]);
         scanner = createScanner();
         try {
-            await scanner.start(fallbackCamera?.id || getBasicBarcodeVideoConstraints(preferredDeviceId), scannerConfig, onScanSuccess, () => {});
+            await scanner.start(fallbackCamera?.id || getBasicBarcodeVideoConstraints(preferredDeviceId), { ...scannerConfig, videoConstraints: undefined }, onScanSuccess, () => {});
             startError = null;
         } catch (fallbackError) {
             startError = fallbackError;
@@ -1889,6 +1890,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
                 ? 'Webcam activa. La lectura es automatica: ubica el codigo centrado y con buena luz.'
                 : 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.');
     }
+    await window.BlyxuQrCamera?.scanner(scanner, reader);
     await onCameraReady?.();
     return true;
 }
@@ -1975,6 +1977,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             }
             activeBarcodeScannerStream = stream;
             await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
+            await window.BlyxuQrCamera?.stream(activeBarcodeScannerStream, modal.querySelector('.barcode-scanner-status-wrap'));
             attachBarcodeCameraStream(video, activeBarcodeScannerStream, { status, retryButton, scannerSession });
             await populateBarcodeCameraPicker(modal, preferredDeviceId);
             clearTimeout(permissionHintTimer);

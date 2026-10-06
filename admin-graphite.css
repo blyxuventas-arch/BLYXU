@@ -52,3 +52,5 @@ body.admin-graphite .enterprise-charge-btn {background:#eeeef2 !important;color:
 body.admin-graphite :is(.product-preview-name,.enterprise-pos-brand h2) {font-weight:500 !important;font-size:22px !important;}
 @media(max-width:1300px) {body.admin-graphite #view-products .grid-split.product-admin-grid {grid-template-columns:minmax(0,1fr) !important;} body.admin-graphite #view-products .product-preview-panel {position:static !important;}}
 }
+
+@media screen {.qr-camera-controls {padding:12px 0;color:#cccdd5;font-size:13px;line-height:1.5;} .qr-camera-controls p {margin:0 0 10px;} .qr-camera-controls label {display:grid;gap:8px;} .qr-camera-controls input {width:100%;accent-color:#ceced8;}}

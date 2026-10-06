@@ -94,3 +94,56 @@ html body .navbar #nav-links {background:#252529 !important;border-color:#575760
 html body .navbar #nav-links a:is(:hover,.active) {background:#494951 !important;color:#fff !important;box-shadow:none !important;} 
 html body .navbar #nav-links a::before,html body .navbar #nav-links a::after {display:none !important;} 
 @media(max-width:980px) {html body .navbar #nav-links {background:#202023 !important;}}
+
+/* Customer account: the same quiet graphite surfaces as the store. */
+html body #customer-auth-modal {background:rgba(12,12,15,.78) !important;backdrop-filter:blur(8px) !important;}
+html body #customer-auth-modal .customer-auth-dialog {background:#222225 !important;border:1px solid #515159 !important;border-radius:8px !important;box-shadow:0 20px 70px #0005 !important;padding:28px !important;max-width:540px !important;}
+html body #customer-auth-modal :is(h2,h3,strong) {font-weight:500 !important;color:#eeeef2 !important;}
+html body #customer-auth-modal h2 {font-size:26px !important;letter-spacing:-.02em !important;}
+html body #customer-auth-modal :is(p,label,small) {font-size:13px !important;line-height:1.65 !important;color:#c7c7cf !important;font-weight:400 !important;}
+html body #customer-auth-modal .customer-auth-form {gap:18px !important;}
+html body #customer-auth-modal input:not([type=checkbox]) {background:#2d2d32 !important;border:1px solid #65656f !important;border-radius:6px !important;color:#f0f0f4 !important;min-height:46px !important;font-size:14px !important;box-shadow:none !important;}
+html body #customer-auth-modal input:autofill {box-shadow:0 0 0 1000px #2d2d32 inset !important;-webkit-text-fill-color:#f0f0f4 !important;}
+html body #customer-auth-modal input:-webkit-autofill {box-shadow:0 0 0 1000px #2d2d32 inset !important;-webkit-text-fill-color:#f0f0f4 !important;}
+html body #customer-auth-modal button {border-radius:6px !important;box-shadow:none !important;font-size:13px !important;font-weight:500 !important;min-height:44px !important;}
+html body #customer-auth-modal :is(button[type=submit],#customer-logout-btn) {background:#eeeef2 !important;color:#252528 !important;border:1px solid #eeeef2 !important;}
+html body #customer-auth-modal :is(.customer-auth-secondary,.customer-auth-tabs button,[data-password-toggle],.customer-auth-close) {background:#303035 !important;color:#e4e4eb !important;border:1px solid #65656f !important;}
+html body #customer-auth-modal .customer-auth-tabs {background:transparent !important;border:0 !important;gap:10px !important;padding:0 !important;border-radius:0 !important;}
+html body #customer-auth-modal .customer-auth-brand {padding-bottom:18px !important;border-bottom:1px solid #4a4a52 !important;margin-bottom:22px !important;}
+html body #customer-auth-modal :is(.customer-profile-card,.customer-profile-summary,.customer-benefit-card) {background:#29292e !important;border:1px solid #55555e !important;border-radius:6px !important;box-shadow:none !important;}
+html body #customer-auth-modal input[type=checkbox] {accent-color:#a9a9b5;}
+html body #customer-auth-modal :is(input,button):focus-visible {outline:2px solid #d3d3dc !important;outline-offset:3px !important;}
+
+/* Contact: keep the clock and channels, soften their presentation. */
+html body.contact-v2[data-page=contact] {--contact-yellow:#dddde4;--contact-coral:#dddde4;--contact-green:#a4d7b6;--contact-muted:#b6b6c0;--contact-line:#45454d;--contact-surface:#232327;background:#17171a !important;}
+html body.contact-v2[data-page=contact] .contact-page::before {background:#17171a !important;}
+html body.contact-v2[data-page=contact] :is(.contact-kicker,.contact-section-index) {color:#bdbdc7 !important;font-weight:500 !important;}
+html body.contact-v2[data-page=contact] .contact-stage-copy h1 {font-size:clamp(30px,4vw,48px) !important;font-weight:500 !important;letter-spacing:-.03em !important;line-height:1.18 !important;}
+html body.contact-v2[data-page=contact] :is(.contact-stage-copy h1 span,h2,.contact-connect-main h2) {color:#eeeef3 !important;font-weight:500 !important;}
+html body.contact-v2[data-page=contact] h2 {font-size:26px !important;}
+html body.contact-v2[data-page=contact] .contact-stage-copy > p {font-size:15px !important;}
+html body.contact-v2[data-page=contact] :is(.contact-hero-btn,.contact-secondary-btn) {border-radius:6px !important;box-shadow:none !important;font-weight:500 !important;min-height:46px !important;}
+html body.contact-v2[data-page=contact] .contact-hero-btn {background:#eeeef2 !important;border-color:#eeeef2 !important;color:#252528 !important;}
+html body.contact-v2[data-page=contact] .contact-secondary-btn {padding:0 20px !important;background:#2b2b30 !important;border:1px solid #65656f !important;color:#e6e6ed !important;}
+html body.contact-v2[data-page=contact] :is(.contact-hours-timeline,.contact-clock-core) {background:#242428 !important;border-color:#55555f !important;box-shadow:none !important;}
+html body.contact-v2[data-page=contact] :is(.contact-clock-char,.contact-digital-clock) {color:#eeeef2 !important;text-shadow:none !important;font-weight:500 !important;}
+html body.contact-v2[data-page=contact] :is(.contact-day,.contact-social-link) {background:#26262b !important;border:1px solid #50505a !important;border-radius:6px !important;box-shadow:none !important;}
+html body.contact-v2[data-page=contact] :is(.contact-social-icon,.contact-phone-link) {color:#dedee7 !important;border-color:#666670 !important;box-shadow:none !important;}
+html body.contact-v2[data-page=contact] :is(.contact-social-band,.contact-social-links,.contact-connect) {border-color:#45454d !important;}
+html body.contact-v2[data-page=contact] .contact-status-pill {background:#34343b !important;border:1px solid #676772 !important;color:#eeeef3 !important;font-weight:500 !important;}
+html body.contact-v2[data-page=contact] .contact-status-pill.is-open {background:#273b30 !important;color:#c5ecd4 !important;border-color:#63816f !important;}
+.qr-camera-controls {padding:12px 0;color:#cccdd5;font-size:13px;line-height:1.5;}
+html body.contact-v2[data-page=contact] {--cp:#c5c5cf;}
+html body.contact-v2[data-page=contact] :is(.contact-kicker i,.contact-service-note span::before) {background:#aaaab6 !important;box-shadow:none !important;}
+html body.contact-v2[data-page=contact] .contact-hours-timeline::before {background:#242428 !important;border-color:#585862 !important;box-shadow:none !important;}
+html body.contact-v2[data-page=contact] .contact-hours-timeline::after {display:none !important;}
+html body.contact-v2[data-page=contact] .contact-clock-tick:is(.is-active,.is-sweep) {background:#bdbdc8 !important;box-shadow:none !important;animation:none !important;}
+html body.contact-v2[data-page=contact] :is(.contact-clock-separator,#contact-clock-city) {color:#b6b6c2 !important;}
+html body.contact-v2[data-page=contact] .contact-connect-main h2 {background:none !important;-webkit-text-fill-color:#eeeef3 !important;}
+html body.contact-v2[data-page=contact] :is(.contact-action,.contact-social-link):hover {color:#fff !important;background:#33333b !important;border-color:#85858f !important;}
+html body.contact-v2[data-page=contact] .contact-day.is-today {background:#44444e !important;color:#eeeef4 !important;}
+html body.contact-v2[data-page=contact] #contact-page #contact-live-clock {font-weight:500 !important;color:#eeeef3 !important;text-shadow:none !important;}
+.qr-camera-controls p {margin:0 0 10px;}
+.qr-camera-controls label {display:grid;gap:8px;}
+.qr-camera-controls input {width:100%;accent-color:#ceced8;}
+@media(max-width:600px) {html body #customer-auth-modal .customer-auth-dialog {padding:22px 18px !important;width:calc(100% - 24px) !important;} html body #customer-auth-modal h2 {font-size:23px !important;}}
