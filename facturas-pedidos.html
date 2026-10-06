@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=blyxu-catalog-fast-img-20260928" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-catalog-fast-img-20260928"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=blyxu-security-20261005" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-security-20261005"></noscript>
     <style>
         .orders-page {
             position: relative;
@@ -1881,21 +1881,12 @@
             }
 
             async function fetchResourceData(resource) {
-                const getResponse = await fetch(apiUrl + '?resource=' + encodeURIComponent(resource) + '&action=get', { cache: 'no-store' });
-                let data = await readOrdersResponse(getResponse);
-
-                if (!data) {
-                    const postResponse = await fetch(apiUrl, {
-                        method: 'POST',
-                        body: JSON.stringify({ resource, action: 'get' })
-                    });
-                    data = await readOrdersResponse(postResponse);
-                }
-
-                if (!data) {
-                    throw new Error('No se pudo leer la base de datos. Google devolvio una pagina HTML en vez de datos.');
-                }
-
+                let session;
+                try { session = JSON.parse(localStorage.getItem('blyxu_customer_session_v1') || 'null'); } catch (_) {}
+                if (!session?.token) throw new Error('Inicia sesión en Cuenta para consultar tus pedidos y facturas.');
+                const response = await fetch(apiUrl, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'customerrecords',resource,token:session.token}),cache:'no-store'});
+                const data = await readOrdersResponse(response);
+                if (!data || data.ok === false) throw new Error(data?.error || 'No se pudo confirmar tu sesión.');
                 return data;
             }
 

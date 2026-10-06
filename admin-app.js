@@ -1,4 +1,22 @@
 ﻿const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+
+// Las credenciales administrativas se mantienen en memoria y se envían solo al servidor.
+const adminNativeFetch = window.fetch.bind(window);
+let secureAdminCredential = '';
+window.fetch = async function(input, options = {}) {
+    const address = typeof input === 'string' ? input : input?.url;
+    if (!address || address.split('?')[0] !== GOOGLE_SHEET_API || !secureAdminCredential) return adminNativeFetch(input, options);
+    const url = new URL(address);
+    let payload = Object.fromEntries(url.searchParams);
+    if (options.body instanceof FormData || options.body instanceof URLSearchParams) payload = {...payload, ...Object.fromEntries(options.body)};
+    else if (typeof options.body === 'string') payload = {...payload, ...JSON.parse(options.body)};
+    if (!options.method || options.method.toUpperCase() === 'GET') payload.action = payload.action || 'get';
+    payload.adminCredential = secureAdminCredential;
+    const response = await adminNativeFetch(GOOGLE_SHEET_API, {...options, method:'POST',mode:'cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    const result = await response.clone().json();
+    if (result.ok === false || result.status === 'error') throw new Error(result.error || 'No se pudo completar la operación.');
+    return response;
+};
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
 const RETAIL_PRICE_VISIBILITY_KEY = 'blyxu_show_retail_prices';
@@ -3586,14 +3604,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginError = document.getElementById('login-error');
     const loginScreen = document.getElementById('admin-login-screen');
     const mainContent = document.getElementById('admin-main-content');
-    const ADMIN_ACCESS_CODE = '2015690';
+    const ADMIN_ACCESS_CODE_LENGTH = 7;
 
 
     function syncAdminVaultState() {
         const passwordInput = document.getElementById('admin-password');
         const vault = loginScreen?.querySelector('[data-vault]');
         if (!vault || !passwordInput) return;
-        const targetLength = ADMIN_ACCESS_CODE.length;
+        const targetLength = ADMIN_ACCESS_CODE_LENGTH;
         const len = Math.min((passwordInput.value || '').trim().length, targetLength);
         const progress = Math.min(100, Math.round((len / targetLength) * 100));
         vault.style.setProperty('--vault-progress', progress + '%');
@@ -3628,52 +3646,38 @@ document.addEventListener('DOMContentLoaded', () => {
     adminPasswordInputForVault?.addEventListener('input', syncAdminVaultState);
     syncAdminVaultState();
 
+
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const passwordInput = document.getElementById('admin-password');
-            const loginBox = document.getElementById('login-box');
-            const submitButton = loginForm.querySelector('.admin-btn');
-            const pass = (passwordInput.value || '').trim();
-            const resetButton = () => {
-                loginBox?.classList.remove('is-unlocking');
-                if (submitButton) {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Validar';
-                }
-            };
-
-            loginScreen?.classList.remove('vault-success');
-            loginScreen?.querySelector('[data-vault]')?.classList.remove('is-unlocking');
-            loginBox?.classList.add('is-unlocking');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = 'Validando...';
-            }
-
-            if (pass === ADMIN_ACCESS_CODE) {
-                loginError.style.display = 'none';
-                playAdminVaultUnlock(() => {
-                    loginScreen.style.display = 'none';
-                    mainContent.style.display = ''; // Permite que actue el CSS grid (dashboard-layout)
-                    initAdminHeavyFeatures();
-                    renderAdminDashboard();
-                    Promise.allSettled([
-                        cargarInventario(),
-                        cargarPedidos()
-                    ]).then(() => renderAdminDashboard());
-                });
-            } else {
-                loginError.style.display = 'block';
-                markAdminVaultDenied();
-                resetButton();
-                // Shake effect
-                document.getElementById('login-box').style.transform = 'translateX(10px)';
-                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(-10px)', 100);
-                setTimeout(() => document.getElementById('login-box').style.transform = 'translateX(10px)', 200);
-                setTimeout(() => document.getElementById('login-box').style.transform = '', 300);
-            }
-        });
+        loginForm.hidden = true;
+        const googleAccess = document.createElement('div');
+        googleAccess.innerHTML = '<p>Ingresa con tu cuenta de Google autorizada para administrar BLYXU.</p><div id="secure-admin-google-button"></div><p id="secure-admin-message" role="status">Cargando acceso seguro...</p>';
+        loginForm.after(googleAccess);
+        const message = googleAccess.querySelector('#secure-admin-message');
+        (async () => {
+            const response = await adminNativeFetch(GOOGLE_SHEET_API + '?action=get_config',{cache:'no-store'});
+            const data = await response.json();
+            const clientId = String(data.config?.Google_Client_ID || '').trim();
+            if (!clientId) throw new Error('Falta configurar el acceso con Google.');
+            if (!window.google?.accounts?.id) await new Promise((resolve,reject) => {
+                const script = document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=()=>reject(new Error('No se pudo cargar Google.'));document.head.appendChild(script);
+            });
+            window.google.accounts.id.initialize({client_id:clientId,callback:async result=>{
+                message.textContent='Verificando permiso de administrador...';
+                try {
+                    const authResponse=await adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminsession',adminCredential:result.credential})});
+                    const auth=await authResponse.json();
+                    if (!auth.ok) throw new Error(auth.error || 'Cuenta sin permiso de administrador.');
+                    secureAdminCredential=result.credential;
+                    message.textContent='Acceso autorizado';
+                    playAdminVaultUnlock(()=>{
+                        loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
+                        Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
+                    });
+                } catch(error) {secureAdminCredential='';message.textContent=error.message;}
+            }});
+            window.google.accounts.id.renderButton(document.getElementById('secure-admin-google-button'),{type:'standard',theme:'outline',size:'large',text:'continue_with',locale:'es'});
+            message.textContent='Solo las cuentas autorizadas pueden acceder.';
+        })().catch(error=>{message.textContent=error.message;});
     }
     // -------------------
 
@@ -4940,7 +4944,7 @@ function createPaymentMethodCard(data = { name: '', type: 'key', value: '', imag
         previewZone.style.opacity = isUploading ? '0.75' : '1';
     };
     const renderQrPreview = (url, isLocal = false) => {
-        previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;${isLocal ? ' opacity:0.7;' : ''}">`;
+        previewZone.innerHTML = `<img src="${escapeHtml(url)}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;${isLocal ? ' opacity:0.7;' : ''}">`;
     };
     const uploadQrFile = async (file) => {
         if (!file || !file.type.startsWith('image/')) {
@@ -4986,7 +4990,7 @@ function createPaymentMethodCard(data = { name: '', type: 'key', value: '', imag
     urlInput.addEventListener('input', () => {
         const url = urlInput.value.trim();
         if (url) {
-            previewZone.innerHTML = `<img src="${url}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;" onerror="this.parentElement.innerHTML='<span style=\x22font-size:11px;color:#ef4444;\x22>No se pudo cargar la imagen</span>'">`;
+            previewZone.innerHTML = `<img src="${escapeHtml(url)}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;" onerror="this.parentElement.innerHTML='<span style=\x22font-size:11px;color:#ef4444;\x22>No se pudo cargar la imagen</span>'">`;
         } else {
             previewZone.innerHTML = `<span style="font-size:11px; color:rgba(255,255,255,0.2); z-index:1;">Arrastra el QR aquí</span>`;
         }
@@ -5929,7 +5933,7 @@ function initCarouselImageAdmin() {
     imageUrlInput.addEventListener('input', () => {
         const url = imageUrlInput.value.trim();
         if (url) {
-            preview.innerHTML = `<img src="${url}" alt="Preview carrusel" onerror="this.parentElement.innerHTML='<span>No se pudo cargar la URL</span>'">`;
+            preview.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview carrusel" onerror="this.parentElement.innerHTML='<span>No se pudo cargar la URL</span>'">`;
             pendingCarouselFiles = [];
             updateCarouselSelectedNote(1);
         }
@@ -6320,7 +6324,7 @@ async function cargarInventario(options) {
     } catch (err) {
         console.error("Error al cargar datos:", err);
         if (tbody && inventario.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${err.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#ff6b6b;">Error al cargar el inventario: ${escapeHtml(err.message)}</td></tr>`;
         } else {
             showToast('No se pudo actualizar inventario: ' + err.message, 'error');
         }
@@ -11099,7 +11103,7 @@ let adminOrdersLoadPromise = null;
 
 function readAdminOrdersCache() {
     try {
-        const cached = JSON.parse(localStorage.getItem(ADMIN_ORDERS_CACHE_KEY) || 'null');
+        const cached = JSON.parse(sessionStorage.getItem(ADMIN_ORDERS_CACHE_KEY) || 'null');
         return cached && Array.isArray(cached.pedidos) && Array.isArray(cached.facturas) ? cached : null;
     } catch (error) {
         return null;
@@ -11108,7 +11112,7 @@ function readAdminOrdersCache() {
 
 function writeAdminOrdersCache() {
     try {
-        localStorage.setItem(ADMIN_ORDERS_CACHE_KEY, JSON.stringify({
+        sessionStorage.setItem(ADMIN_ORDERS_CACHE_KEY, JSON.stringify({
             savedAt: Date.now(),
             pedidos: window.pedidosList || [],
             facturas: window.facturasList || []
@@ -11177,8 +11181,8 @@ async function cargarPedidos(options = {}) {
     } catch (err) {
         console.error(err);
         if (!cached) {
-            orderBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`; });
-            invoiceBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${err.message}</td></tr>`; });
+            orderBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${escapeHtml(err.message)}</td></tr>`; });
+            invoiceBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${escapeHtml(err.message)}</td></tr>`; });
         }
         showToast(cached ? 'Mostrando pedidos guardados localmente' : 'Error cargando pedidos', cached ? 'warning' : 'error');
     } finally {
@@ -12591,6 +12595,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mobileViewSelect?.addEventListener('change', event => {
         const value = event.target.value;
         if (value === 'logout') {
+            secureAdminCredential = '';
+            sessionStorage.removeItem(ADMIN_ORDERS_CACHE_KEY);
             window.location.href = 'index.html';
             return;
         }

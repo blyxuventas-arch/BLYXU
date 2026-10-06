@@ -5088,7 +5088,7 @@ function renderCustomerProfile() {
     card.innerHTML = `
         <strong>${escapeHtml(customer.nombre || 'Cliente BLYXU')}</strong>
         <span>${escapeHtml(customer.email || '')}</span>
-        <span>${escapeHtml(customer.telefono || '')}</span>
+        ${customer.telefono && !String(customer.telefono).startsWith('GOOGLE-') ? `<span>${escapeHtml(customer.telefono)}</span>` : ''}
         ${customer.direccion || customer.ciudad ? `<small>${escapeHtml([customer.direccion, customer.ciudad].filter(Boolean).join(', '))}</small>` : ''}
         ${promotion.percent > 0 ? `<div class="customer-promo-badge"><b>-${promotion.percent}%</b><span>${escapeHtml(promotion.label)}</span></div>` : ''}
     `;
