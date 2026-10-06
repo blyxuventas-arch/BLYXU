@@ -3,6 +3,13 @@
 // Las credenciales administrativas se mantienen en memoria y se envían solo al servidor.
 const adminNativeFetch = window.fetch.bind(window);
 let secureAdminCredential = '';
+let secureAdminExpiryTimer;
+function revokeAdminSession() {
+    const token=secureAdminCredential;secureAdminCredential='';clearTimeout(secureAdminExpiryTimer);
+    if(token.startsWith('BLYXU-A3-'))adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminlogout',adminCredential:token}),keepalive:true}).catch(()=>{});
+}
+function logoutAdminSecurely(){revokeAdminSession();sessionStorage.removeItem('blyxu_admin_orders_invoices_cache_v2');location.href='index.html';}
+window.logoutAdminSecurely=logoutAdminSecurely;
 window.fetch = async function(input, options = {}) {
     const address = typeof input === 'string' ? input : input?.url;
     if (!address || address.split('?')[0] !== GOOGLE_SHEET_API || !secureAdminCredential) return adminNativeFetch(input, options);
@@ -3649,6 +3656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
         secureAdminCredential=credential;siteConfigPromise=null;
+        clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
         playAdminVaultUnlock(()=>{
             loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
             Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
@@ -11078,7 +11086,7 @@ window.activeOrdersAdminTab = 'quick-sale';
 const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
 try { localStorage.removeItem(ADMIN_ORDERS_CACHE_KEY); } catch (_) {}
 window.addEventListener('pagehide', () => {
-    secureAdminCredential = '';
+    revokeAdminSession();
     sessionStorage.removeItem(ADMIN_ORDERS_CACHE_KEY);
     const screen = document.getElementById('admin-login-screen');
     const main = document.getElementById('admin-main-content');
@@ -12582,7 +12590,7 @@ document.addEventListener('DOMContentLoaded', () => {
     mobileViewSelect?.addEventListener('change', event => {
         const value = event.target.value;
         if (value === 'logout') {
-            secureAdminCredential = '';
+            revokeAdminSession();
             sessionStorage.removeItem(ADMIN_ORDERS_CACHE_KEY);
             window.location.href = 'index.html';
             return;

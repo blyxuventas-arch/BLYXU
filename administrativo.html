@@ -7521,7 +7521,7 @@
                     <button class="sidebar-btn" data-view="china-orders" onclick="switchDashboardView('china-orders','Pedidos a China')"><span>CN</span> Pedidos China</button>
                     <button class="sidebar-btn" data-view="orders" onclick="switchDashboardView('orders','Pedidos y Facturación')"><span>PF</span> Pedidos y Fact.</button>
                     <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuración del Sitio')"><span>AJ</span> Ajustes y Banner</button>
-                    <button class="sidebar-btn logout" onclick="window.location.href='index.html'"><span>SA</span> Cerrar Sesión</button>
+                    <button class="sidebar-btn logout" onclick="logoutAdminSecurely()"><span>SA</span> Cerrar Sesión</button>
                 </div>
             </div>
         </aside>
@@ -7542,7 +7542,7 @@
                     <button class="sidebar-btn" data-view="settings" onclick="switchDashboardView('settings','Configuración del Sitio')" aria-label="Ajustes y Banner" data-section-label="Ajustes y Banner"><span>AJ</span><span class="sidebar-label">Ajustes y Banner</span></button>
                 </div>
             </div>
-            <div class="sidebar-section"><button class="sidebar-btn logout" onclick="window.location.href='index.html'" aria-label="Cerrar Sesión" data-section-label="Cerrar Sesión"><span>SA</span><span class="sidebar-label">Cerrar Sesión</span></button></div>
+            <div class="sidebar-section"><button class="sidebar-btn logout" onclick="logoutAdminSecurely()" aria-label="Cerrar Sesión" data-section-label="Cerrar Sesión"><span>SA</span><span class="sidebar-label">Cerrar Sesión</span></button></div>
         </aside>
 
         <main class="dashboard-main">
@@ -8252,8 +8252,8 @@
     </script>
     
     <script src="html5-qrcode.min.js?v=2.3.8" defer></script>
-<script src="admin-password-access.js?v=blyxu-contact-20261005" defer></script>
-<script src="admin-app.js?v=blyxu-contact-20261005" defer></script>
+<script src="admin-password-access.js?v=blyxu-admin-security-20261005" defer></script>
+<script src="admin-app.js?v=blyxu-admin-security-20261005" defer></script>
 </body>
 </html>
 

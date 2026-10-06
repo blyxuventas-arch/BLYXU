@@ -3254,6 +3254,11 @@ function securityPublicConfig_(config) {
   return result;
 }
 function securityAuthorizeRequest_(body, params, action, resource, method) {
+  if (action === 'adminlogout') {
+    var logoutCredential=String(body.adminCredential||'');
+    if(authAdminSession_(logoutCredential))CacheService.getScriptCache().remove('admin-session-'+authDigest_(logoutCredential));
+    return {response:{ok:true,status:'success'}};
+  }
   if (action === 'adminpasswordlogin') return {response:authAdminLogin_(body)};
   const admin = securityAdminIdentity_(body);
   if (action === 'adminpasswordbegin') return {response:authAdminBegin_(admin)};
