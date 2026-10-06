@@ -3660,6 +3660,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
         secureAdminCredential=credential;siteConfigPromise=null;
+        window.refreshOrderNotifications?.();
         initCustomerAccessNotifications();
         clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
         playAdminVaultUnlock(()=>{

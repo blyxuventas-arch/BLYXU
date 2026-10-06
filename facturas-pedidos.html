@@ -1885,7 +1885,7 @@
 
             async function fetchResourceData(resource) {
                 let session;
-                try { session = JSON.parse(localStorage.getItem('blyxu_customer_session_v1') || 'null'); } catch (_) {}
+                try { session = JSON.parse(sessionStorage.getItem('blyxu_key_session_v1') || localStorage.getItem('blyxu_customer_device_session_v2') || 'null'); } catch (_) {}
                 if (!session?.token) throw new Error('Inicia sesión en Cuenta para consultar tus pedidos y facturas.');
                 const response = await fetch(apiUrl, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'customerrecords',resource,token:session.token}),cache:'no-store'});
                 const data = await readOrdersResponse(response);
@@ -2133,6 +2133,7 @@
                                     ${note ? `<div class="order-metric"><span>Nota</span><strong>${escapeHtml(note)}</strong></div>` : ''}
                                 </div>
                                 <button type="button" class="order-details-toggle" aria-expanded="false">Ver detalle completo</button>
+                                <button type="button" class="orders-action-btn" data-order-id="${escapeHtml(id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Descargar comprobante de pedido</button>
                             </div>
                         </article>
                     `;
@@ -2763,6 +2764,8 @@ document.addEventListener('DOMContentLoaded',function(){
     if(lookup){lookup.replaceChildren();var message=document.createElement('p');message.textContent='Para consultar un pedido o solicitar tu factura, comunícate con BLYXU por WhatsApp. Tus documentos no se muestran mediante un número de celular.';lookup.append(message);}
 });
 <\/script>
+<script src="order-summary.js?v=receipt-private-20261006" defer></script>
+<script src="order-receipt-access.js?v=20261006-1" defer></script>
 </body>
                     </html>`);
                 printWindow.document.close();

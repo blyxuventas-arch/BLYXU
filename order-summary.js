@@ -14,6 +14,8 @@
             date: record?.Fecha || record?.['Fecha Registro'] || record?.summaryCreatedAt || '',
             consultation: /consulta/i.test(record?.['Estado Pedido'] || ''),
             customer: clean(record?.['Nombre Cliente']),
+            contact: [record?.Telefono || record?.['Teléfono'], record?.Email, record?.Direccion || record?.['Dirección'], record?.Ciudad].filter(Boolean).map(clean).join(' · '),
+            note: clean(record?.['Nota Cliente']),
             items: Array.isArray(items) ? items : [],
             total: Number(record?.Subtotal) || 0
         };
@@ -67,7 +69,7 @@
             img.src = src;
         });
     }
-    async function download(summary, button) {
+    async function download(summary, button, authorizeBeforeSave) {
         if (!summary?.items?.length) throw new Error('Añade productos al carrito para generar el resumen.');
         if (button?.disabled) return;
         const original = button?.textContent;
@@ -81,13 +83,19 @@
             };
             let y = 18;
             text('BLYXU', 16, y, 20, 'bold');
-            text('RESUMEN VISUAL · ' + clean(summary.mode), 16, y += 9, 10);
+            text('COMPROBANTE DE PEDIDO · ' + clean(summary.mode), 16, y += 9, 10);
             text(summary.registered ? 'Pedido realizado y registrado' : 'Selección del carrito · Sin registrar', 16, y += 11, 15, 'bold');
             if (summary.registered) text('Referencia: ' + clean(summary.id), 16, y += 7, 10);
             const date = new Date(summary.date || Date.now());
             const dateLabel = Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleString('es-CO', {timeZone:'America/Bogota', dateStyle:'medium', timeStyle:'short'});
             text((summary.registered ? 'Fecha de registro: ' : 'Fecha del resumen: ') + dateLabel + ' (Colombia)', 16, y += 7, 9);
             if (summary.customer) text('Cliente: ' + summary.customer, 16, y += 7, 10);
+            for (const value of [summary.contact, summary.note ? 'Observaciones: '+summary.note : ''].filter(Boolean)) {
+                pdf.setFontSize(9);
+                const lines=pdf.splitTextToSize(clean(value),178);
+                if(y+lines.length*5>245){pdf.addPage();y=20;}
+                pdf.text(lines,16,y+=7);y+=(lines.length-1)*5;
+            }
             text(summary.consultation ? 'Consulta pendiente de respuesta y confirmación.' : 'Pendiente de confirmar disponibilidad, envío y pago.', 16, y += 9, 10);
             y += 10;
             const items = summary.items;
@@ -128,12 +136,14 @@
             text('Productos: ' + items.reduce((sum, item) => sum + Math.max(1, Number(item.cantidad ?? item.qty) || 1), 0), 16, y += 8, 11, 'bold');
             const unpriced = summary.consultation || items.some(item => item.precioEstado === 'Por consultar' || item.priceVisible === false || Number(item.precio ?? item.price) <= 0);
             text(unpriced ? 'Valor pendiente de cotización' : 'Valor de productos: ' + money(summary.total), 16, y += 7, 11, 'bold');
-            text('Este resumen no es una factura ni un comprobante de pago.', 16, y += 10, 9);
+            text('Este documento resume los productos solicitados.', 16, y += 10, 9);
+            text('No constituye una factura de venta ni un comprobante de pago.', 16, y += 6, 9);
             text('El envío y la disponibilidad se confirman con BLYXU por WhatsApp.', 16, y += 6, 9);
             for (let page = 1; page <= pdf.getNumberOfPages(); page++) {
                 pdf.setPage(page); text('BLYXU · ' + page + ' / ' + pdf.getNumberOfPages(), 16, 285, 8, 'normal', 120);
             }
-            pdf.save('BLYXU-' + (clean(summary.id) || 'carrito').replace(/[^a-zA-Z0-9_-]/g, '-') + '.pdf');
+            if(authorizeBeforeSave)await authorizeBeforeSave();
+            pdf.save('BLYXU-Comprobante-' + (clean(summary.id) || 'carrito').replace(/[^a-zA-Z0-9_-]/g, '-') + '.pdf');
             if (missingImages && button) {
                 const status = document.getElementById('cart-summary-pdf-status');
                 if (status) status.textContent = 'PDF descargado. Algunas imágenes no pudieron cargarse; sus códigos y opciones están incluidos.';

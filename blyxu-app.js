@@ -3523,15 +3523,7 @@ function updateCartUI() {
     if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
     if (secCountLabel) secCountLabel.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}`;
     if (secModeBadge) secModeBadge.textContent = getCartModeLabel();
-    const summaryButton = document.getElementById('cart-summary-pdf-btn');
-    if (summaryButton) summaryButton.disabled = cart.length === 0;
-    const previousSummaryButton = document.getElementById('cart-last-summary-pdf-btn');
-    if (previousSummaryButton) {
-        let previousOrder = null;
-        try { previousOrder = JSON.parse(localStorage.getItem('blyxu-last-order') || 'null'); } catch (_) {}
-        previousSummaryButton.hidden = !previousOrder?.['ID Pedido'];
-    }
-
+    localStorage.removeItem('blyxu-last-order');
     // Update Standalone Section Summary Totals
     const formattedSubtotal = hasHiddenPrices ? 'Por consultar' : formatMoney(pricingSummary.subtotal);
     const formattedTotal = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
@@ -5133,6 +5125,7 @@ function renderCustomerOrdersList(orders = []) {
             <article class="customer-order-card">
                 <div>
                     <strong>${escapeHtml(order.id || 'Pedido')}</strong>
+                    <button type="button" data-order-id="${escapeHtml(order.id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Descargar comprobante de pedido</button>
                     <span>${escapeHtml(formatCustomerDate(order.fecha))}</span>
                 </div>
                 ${previews.length ? `<div class="customer-order-products">
@@ -5760,31 +5753,6 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
 
 let orderCheckoutInProgress = false;
 
-window.downloadCartOrderSummary = async function(button, registeredOnly = false) {
-    const status = document.getElementById('cart-summary-pdf-status');
-    if (status) status.textContent = '';
-    try {
-        if (!window.BlyxuOrderSummary) throw new Error('El resumen está cargando. Inténtalo nuevamente.');
-        let summary;
-        if (registeredOnly) {
-            const record = JSON.parse(localStorage.getItem('blyxu-last-order') || 'null');
-            if (!record?.['ID Pedido']) throw new Error('No hay un pedido registrado en este dispositivo.');
-            summary = window.BlyxuOrderSummary.fromRecord(record);
-        } else {
-            const pricing = getCartPricingSummary(cart);
-            summary = {
-                registered: false, mode: normalizeCartMode(activeCartMode) === 'wholesale' ? 'Mayorista' : 'Minorista',
-                date: new Date().toISOString(), consultation: isCartConsultationMode(),
-                items: cart.map(item => ({...item, precio: pricing.promotion?.percent > 0 ? Math.max(0, Math.round(item.price * (1 - pricing.promotion.percent / 100))) : item.price})), total: pricing.total
-            };
-        }
-        await window.BlyxuOrderSummary.download(summary, button);
-    } catch (error) {
-        if (status) status.textContent = error.message || 'No se pudo generar el resumen.';
-        else alert(error.message || 'No se pudo generar el resumen.');
-    }
-};
-
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
@@ -5851,7 +5819,7 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
     }
     const savedId = result.data?.['ID Pedido'] || result.id || result.idPedido;
     if (!savedId) throw new Error('El servidor no confirmó el ID del pedido. Reintenta para verificarlo.');
-    return { ...payload, ...result.data, 'ID Pedido': savedId, summaryCreatedAt: result.data?.Fecha || new Date().toISOString() };
+    return { ...payload, ...result.data, 'ID Pedido': savedId, receipt:result.receipt, summaryCreatedAt: result.data?.Fecha || new Date().toISOString() };
 }
 
 function askCustomerInfo() {
@@ -5971,9 +5939,8 @@ async function performOrderCheckout(skipPrompt = false) {
     });
 
     if (savedOrder) {
-        // Conservar únicamente los datos del resumen; nunca la credencial de sesión.
-        const {token: unusedToken, ...summaryRecord} = savedOrder;
-        localStorage.setItem('blyxu-last-order', JSON.stringify(summaryRecord));
+        window.BlyxuReceiptAccess?.begin(savedOrder.receipt);
+        localStorage.removeItem('blyxu-last-order');
         localStorage.removeItem('blyxu-pending-order');
     }
     cart = [];
@@ -5994,11 +5961,14 @@ async function performOrderCheckout(skipPrompt = false) {
                     <div class="cart-success-icon">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <h4>${isConsultation ? 'Consulta registrada' : 'Registro del pedido completado'}</h4>
+                    <h4>Pedido registrado correctamente</h4>
                     <p>${isConsultation ? 'Tu consulta quedo registrada correctamente. Te llevamos a WhatsApp para terminar con un asesor.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.`}</p>
                     <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
                     <div class="cart-success-actions">
-                        <button class="cart-copy-reference-btn" type="button" onclick="downloadCartOrderSummary(this, true)">Descargar resumen PDF</button>
+                        <div data-temporary-receipt>
+                            <button class="cart-copy-reference-btn" type="button" data-receipt-download onclick="BlyxuReceiptAccess.downloadTemporary(this)">Descargar comprobante de pedido</button>
+                            <p data-receipt-status role="status">Acceso privado disponible durante un máximo de 5 minutos.</p>
+                        </div>
                         <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
                             Copiar referencia
                         </button>
@@ -6010,6 +5980,7 @@ async function performOrderCheckout(skipPrompt = false) {
                     </div>
                 </div>
             `;
+            window.BlyxuReceiptAccess?.refresh();
             if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
         openWhatsAppMessage(msg);
