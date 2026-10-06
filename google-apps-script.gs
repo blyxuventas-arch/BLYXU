@@ -541,7 +541,7 @@ function handleRequest_(e, method) {
  ***************/
 function handleMercadoPagoPreference_(body) {
   ensureSheets_();
-  if (String(getConfigValue_('Mercado_Pago_Publico_Activo', '1')) === '0') {
+  if (String(getConfigValue_('Mercado_Pago_Publico_Activo', '1')) === '0' || String(getConfigValue_('Catalogo_Solo_WhatsApp', '0')) === '1') {
     return json_({
       ok: false,
       status: 'error',
@@ -1717,6 +1717,11 @@ function handleCustomerGoogleLogin_(body) {
   let saved;
 
   if (found) {
+    const linkedGoogleId = String(found.data['Google ID'] || '');
+    const authoritativeEmail = /@gmail\.com$/i.test(email) || Boolean(googleProfile.hd);
+    if ((linkedGoogleId && linkedGoogleId !== googleProfile.sub) || (!linkedGoogleId && !authoritativeEmail)) {
+      return json_({ ok: false, status: 'error', error: 'Ingresa con tu contraseña para acceder a esta cuenta existente.' });
+    }
     const phone = found.data['Teléfono'] || found.data['Telefono'];
     saved = updateRow_('Clientes', phone, {
       'Nombre': googleProfile.name || found.data.Nombre || email,
@@ -1781,9 +1786,13 @@ function verifyGoogleIdToken_(credential) {
   if (payload.email_verified !== true && String(payload.email_verified) !== 'true') {
     throw new Error('Tu correo de Google no esta verificado.');
   }
+  if (!payload.sub || !['accounts.google.com', 'https://accounts.google.com'].includes(String(payload.iss || '')) || Number(payload.exp || 0) <= Date.now() / 1000) {
+    throw new Error('La credencial de Google no es válida o ya venció.');
+  }
 
   return {
     sub: payload.sub || '',
+    hd: payload.hd || '',
     email: payload.email || '',
     name: payload.name || payload.given_name || ''
   };
