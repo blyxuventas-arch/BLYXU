@@ -97,3 +97,33 @@
 .product-detail-page #product-detail #detail-price {font-size:clamp(27px,3vw,38px) !important;}
 .product-detail-page #product-detail .product-favorite-mobile {display:none !important;}
 @media(max-width:900px) {.product-detail-page #product-detail {width:calc(100% - 24px) !important;margin:100px auto 40px !important;}}
+/* Product detail uses the same muted dark palette as the catalogue. */
+.product-detail-page #product-detail {background:#17151c;border-color:#3e3348;}
+.product-detail-page #product-detail .product-gallery {background:#18151d;}
+.product-detail-page #product-detail .product-main-img {background:#141218 !important;}
+.product-detail-page #product-detail .product-info {background:#231d2b !important;color:#eee7f3 !important;border-left-color:#49384f !important;}
+.product-detail-page #product-detail .product-info-name,.product-detail-page #product-detail #detail-price {color:#eee7f3 !important;}
+.product-detail-page #product-detail .product-info-cat,.product-detail-page #product-detail .product-availability-pill {color:#b0a0bf !important;}
+.product-detail-page #product-detail .product-availability-pill strong {color:#a4c5b0 !important;}
+.product-detail-page #product-detail .product-availability-pill.is-out strong {color:#dda6b4 !important;}
+.product-detail-page #product-detail :is(.product-details-block,.product-info-actions,#product-variations,.product-perks) {border-color:#493c52 !important;}
+.product-detail-page #product-detail .detail-block-label {color:#aa98b9 !important;}
+.product-detail-page #product-detail .product-info-desc {color:#c2b6cc !important;}
+.product-detail-page #product-detail .spec-item {border-color:#493c52 !important;}
+.product-detail-page #product-detail .spec-label {color:#ab9ab7 !important;}
+.product-detail-page #product-detail .spec-value {color:#e0d4e9 !important;}
+.product-detail-page #product-detail .detail-variant-chip {border-color:#5b4966 !important;background:transparent !important;color:#cab9d7 !important;}
+.product-detail-page #product-detail .detail-variant-chip.active {background:#3a2c46 !important;border-color:#ad8dc2 !important;color:#eee0f9 !important;}
+.product-detail-page #product-detail .detail-variant-chip :is(span,.detail-variant-label) {color:#d8c7e5 !important;}
+.product-detail-page #product-detail .btn-save-favorite-detail {background:transparent !important;border-color:#796188 !important;color:#d7c1e7 !important;}
+.product-detail-page #product-detail .btn-save-favorite-detail.active {color:#e3b3d3 !important;border-color:#e3b3d3 !important;}
+.product-detail-page #product-detail :is(.btn-buy-now,.btn-pay-now) {background:#d2c0df !important;color:#24172d !important;border-color:#d2c0df !important;font-weight:600;}
+.product-detail-page #product-detail .btn-buy-now:hover:not(:disabled) {background:#e1d3eb !important;}
+.product-detail-page #product-detail .btn-buy-now:disabled {background:#493d53 !important;color:#c2b1cd !important;border-color:#675470 !important;opacity:1;}
+.product-detail-page #product-detail .btn-consult-direct {background:transparent !important;color:#b5ceb9 !important;border-color:#6e8c75 !important;}
+.product-detail-page #product-detail .perk-item,.product-detail-page #product-detail .perk-item svg {color:#af9dbb;}
+.product-detail-page #product-detail .product-card-spec-row :is(span,.product-card-spec-value) {color:#c5b4d1 !important;}
+.product-detail-page #product-detail #detail-old-price {color:#af9dbb !important;}
+.product-detail-page #product-detail .detail-promo-badge {background:#493254 !important;border-color:#796085 !important;color:#e0c7ef !important;}
+.product-detail-page .recommended-section {border-top-color:#3e3348;}
+@media(max-width:900px) {.product-detail-page #product-detail .product-info {border-top-color:#49384f !important;}}
