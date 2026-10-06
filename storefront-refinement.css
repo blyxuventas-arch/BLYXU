@@ -112,6 +112,9 @@ html body #customer-auth-modal .customer-auth-tabs {background:transparent !impo
 html body #customer-auth-modal .customer-auth-brand {padding-bottom:18px !important;border-bottom:1px solid #4a4a52 !important;margin-bottom:22px !important;}
 html body #customer-auth-modal :is(.customer-profile-card,.customer-profile-summary,.customer-benefit-card) {background:#29292e !important;border:1px solid #55555e !important;border-radius:6px !important;box-shadow:none !important;}
 html body #customer-auth-modal input[type=checkbox] {accent-color:#a9a9b5;}
+html body #customer-auth-modal .customer-dashboard-tabs button {background:#303035 !important;border:1px solid #65656f !important;color:#e4e4eb !important;}
+html body #customer-auth-modal .customer-dashboard-tabs button.active {background:#4b4b55 !important;border-color:#b9b9c5 !important;color:#fff !important;}
+html body #customer-auth-modal :is(.customer-dashboard-item,.customer-dashboard-empty,.customer-benefit-card) {background:#28282d !important;border:1px solid #51515b !important;border-radius:6px !important;box-shadow:none !important;}
 html body #customer-auth-modal :is(input,button):focus-visible {outline:2px solid #d3d3dc !important;outline-offset:3px !important;}
 
 /* Contact: keep the clock and channels, soften their presentation. */
