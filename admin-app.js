@@ -3656,6 +3656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
         secureAdminCredential=credential;siteConfigPromise=null;
+        initCustomerAccessNotifications();
         clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
         playAdminVaultUnlock(()=>{
             loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
@@ -4783,7 +4784,7 @@ function initHomeAdConfigAdmin() {
 }
 
 function initCustomerPromoAdmin() {
-    initCustomerPrivateKeys();
+    // Account activation and recovery are managed from the notification bell.
     const form = document.getElementById('customer-promo-form');
     if (!form) return;
 
