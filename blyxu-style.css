@@ -16404,3 +16404,9 @@ html body select {
     display: none !important;
     visibility: hidden !important;
 }
+/* Customer access controls */
+.customer-auth-form .customer-remember { flex-direction:row;align-items:center;font-weight:500;line-height:1.5; }
+.customer-auth-form .customer-remember input { width:20px !important;min-height:20px !important;height:20px;padding:0 !important;flex-shrink:0; }
+.customer-password-checks { margin:0;padding-left:20px;font-size:12px;line-height:1.7; }
+.customer-auth-form [data-password-toggle] { flex-shrink:0;box-shadow:none !important; }
+#customer-auth-modal input { scroll-margin-block:16px; }

@@ -4741,17 +4741,20 @@ function hideMercadoPagoLoading() {
 }
 
 function getCustomerSession() {
-    try {const saved=JSON.parse(sessionStorage.getItem('blyxu_key_session_v1')||'null');return /^BLYXU-P5-[a-f0-9]{64}$/.test(saved?.token||'')?saved:null;}catch(error){return null;}
+    try {const saved=JSON.parse(sessionStorage.getItem('blyxu_key_session_v1')||localStorage.getItem('blyxu_customer_device_session_v2')||'null');return /^BLYXU-P5-[a-f0-9]{64}$/.test(saved?.token||'')&&(!saved.expires||saved.expires>Date.now())?saved:null;}catch(error){return null;}
 }
 
-function setCustomerSession(token, cliente) {
+function setCustomerSession(token, cliente, options = {}) {
     const session = {
         token,
         cliente,
         savedAt: Date.now(),
+        expires: options.expires || getCustomerSession()?.expires || Date.now()+21600000,
         refreshedAt: Date.now()
     };
+    const keep=options.remember ?? Boolean(localStorage.getItem('blyxu_customer_device_session_v2'));
     sessionStorage.setItem('blyxu_key_session_v1', JSON.stringify(session));
+    if(keep)localStorage.setItem('blyxu_customer_device_session_v2',JSON.stringify({token:session.token,expires:session.expires}));else localStorage.removeItem('blyxu_customer_device_session_v2');
     renderCustomerAccountState();
     hydrateCustomerCheckoutFields();
     if (typeof updateCartUI === 'function') updateCartUI();
@@ -4760,6 +4763,7 @@ function setCustomerSession(token, cliente) {
 function clearCustomerSession() {
     window.customerOwnInvoices=[];
     sessionStorage.removeItem('blyxu_key_session_v1');
+    localStorage.removeItem('blyxu_customer_device_session_v2');
     localStorage.removeItem(CUSTOMER_SESSION_KEY);
     renderCustomerAccountState();
     if (typeof updateCartUI === 'function') updateCartUI();
@@ -4990,7 +4994,7 @@ function ensureCustomerAuthModal() {
     document.body.appendChild(modal);
 
     modal.addEventListener('click', event => {
-        if (event.target === modal || event.target.closest('.customer-auth-close')) {
+        if (event.target.closest('.customer-auth-close')) {
             closeCustomerAuthModal();
         }
     });
@@ -5396,26 +5400,30 @@ function openCustomerAuthModal(mode='login') {
     modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('customer-auth-open');
 }
 
+function customerPasswordField(name,label,current){return '<label>'+label+'<span style="display:flex;gap:8px;align-items:center"><input style="min-width:0;flex:1" name="'+name+'" type="password" autocomplete="'+(current?'current-password':'new-password')+'" minlength="12" maxlength="128" required><button type="button" data-password-toggle="'+name+'" aria-label="Mostrar contraseña" aria-pressed="false" style="width:auto;min-width:48px;padding:10px">👁</button></span></label>';}
 function renderCustomerAccessForm(panel,mode){
     if(!['login','register','recover','reset'].includes(mode))mode='login';
     const titles={login:'Mi cuenta',register:'Crear mi cuenta',recover:'Recuperar acceso',reset:'Crear nueva contraseña'};
     const names=`<label>Primer nombre<input name="nombre" autocomplete="given-name" maxlength="50" required></label><label>Primer apellido<input name="apellido" autocomplete="family-name" maxlength="50" required></label>`;
     const phone=`<label>Celular / WhatsApp<input name="telefono" type="tel" autocomplete="tel" maxlength="20" required></label>`;
-    const password=`<label>${mode==='reset'?'Nueva contraseña':'Contraseña'}<input name="password" type="password" autocomplete="${mode==='login'?'current-password':'new-password'}" minlength="12" maxlength="128" required></label>`;
-    const repeat=`<label>Repite la contraseña<input name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><small>Usa al menos 12 caracteres. Guarda tu contraseña en un lugar privado.</small>`;
-    const description={login:'Tus pedidos, facturas, favoritos y beneficios en un solo lugar.',register:'BLYXU verificará tu identidad por WhatsApp y te entregará un enlace de activación. Después entrarás con celular y contraseña.',recover:'Envía tu solicitud. BLYXU verificará tu identidad y te entregará un enlace para crear una contraseña nueva.',reset:'Confirma tu contraseña para activar o recuperar tu cuenta. Este enlace se usa una sola vez y vence en una hora.'};
-    panel.innerHTML=`<h2 id="customer-auth-title">${titles[mode]}</h2><p>${description[mode]}</p><form class="customer-auth-form">${['register','recover'].includes(mode)?names:''}${mode!=='reset'?phone:''}${mode!=='recover'?password:''}${['register','reset'].includes(mode)?repeat:''}<button type="submit">${{login:'Entrar a mi cuenta',register:'Solicitar activación',recover:'Solicitar recuperación',reset:'Guardar contraseña nueva'}[mode]}</button><p role="status" aria-live="polite"></p></form><div class="customer-auth-tabs" style="margin-top:16px"><button type="button" data-access="login">Ingresar</button><button type="button" data-access="register">Registrarme</button></div><button type="button" class="customer-auth-secondary" data-access="recover">Olvidé mi contraseña</button>`;
+    const password=customerPasswordField('password',mode==='reset'?'Nueva contraseña':'Contraseña',mode==='login');
+    const repeat=customerPasswordField('confirm','Repite la contraseña',false)+`<ul class="customer-password-checks" aria-live="polite"><li data-check-length>○ Escribe entre 12 y 128 caracteres.</li><li data-check-match>○ Repite exactamente la misma contraseña.</li></ul><small>Puedes usar una frase larga que recuerdes. Evita tu nombre o celular. No compartas tu contraseña.</small>`;
+    const description={login:'Tus pedidos, facturas, favoritos y beneficios en un solo lugar.',register:'1. Completa tus datos y crea tu contraseña. 2. Comunica a BLYXU el código de registro que aparecerá al enviar. 3. Cuando aprueben tu cuenta, entra con tu celular y contraseña.',recover:'Envía tu solicitud. BLYXU verificará tu identidad y te entregará un enlace para crear una contraseña nueva.',reset:'Confirma tu contraseña para activar o recuperar tu cuenta. Este enlace se usa una sola vez y vence en una hora.'};
+    panel.innerHTML=`<h2 id="customer-auth-title">${titles[mode]}</h2><p>${description[mode]}</p><form class="customer-auth-form">${['register','recover'].includes(mode)?names:''}${mode!=='reset'?phone:''}${mode!=='recover'?password:''}${['register','reset'].includes(mode)?repeat:''}${mode==='login'?'<label class="customer-remember"><input type="checkbox" name="remember" checked> Mantener sesión iniciada en este dispositivo (30 días)</label>':''}<button type="submit">${{login:'Entrar a mi cuenta',register:'Solicitar activación',recover:'Solicitar recuperación',reset:'Guardar contraseña nueva'}[mode]}</button><p role="status" aria-live="polite"></p></form><div class="customer-auth-tabs" style="margin-top:16px"><button type="button" data-access="login">Ingresar</button><button type="button" data-access="register">Registrarme</button></div><button type="button" class="customer-auth-secondary" data-access="recover">Olvidé mi contraseña</button>`;
+    panel.querySelectorAll('[data-password-toggle]').forEach(toggle=>toggle.onclick=()=>{const input=panel.querySelector('[name="'+toggle.dataset.passwordToggle+'"]');const visible=input.type==='password';input.type=visible?'text':'password';toggle.setAttribute('aria-label',visible?'Ocultar contraseña':'Mostrar contraseña');toggle.setAttribute('aria-pressed',String(visible));toggle.textContent=visible?'Ocultar':'👁';});
+    const check=()=>{const fields=panel.querySelector('form').elements;if(!fields.confirm)return;const length=fields.password.value.length>=12&&fields.password.value.length<=128,match=fields.confirm.value.length>0&&fields.confirm.value===fields.password.value;panel.querySelector('[data-check-length]').textContent=(length?'✓':'○')+' Entre 12 y 128 caracteres.';panel.querySelector('[data-check-match]').textContent=(match?'✓':'○')+' Las dos contraseñas coinciden.';fields.confirm.setCustomValidity(fields.confirm.value&&!match?'Las contraseñas no coinciden.':'');};panel.querySelectorAll('input[type=password]').forEach(input=>input.addEventListener('input',check));
     panel.querySelectorAll('[data-access]').forEach(button=>button.onclick=()=>renderCustomerAccessForm(panel,button.dataset.access));
     panel.querySelector('form').onsubmit=async event=>{
-        event.preventDefault();const form=event.currentTarget,button=form.querySelector('button'),status=form.querySelector('[role=status]'),fields=form.elements;
+        event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type=submit]'),status=form.querySelector('[role=status]'),fields=form.elements;
         if(fields.confirm&&fields.password.value!==fields.confirm.value){status.textContent='Las contraseñas no coinciden.';return;}
         button.disabled=true;status.textContent='Procesando…';
         const payload={};for(const name of ['nombre','apellido','telefono','password'])if(fields[name])payload[name]=fields[name].value;
         if(mode==='reset')payload.resetToken=customerResetToken;
+        if(mode==='login')payload.remember=fields.remember.checked;
         try{const data=await customerAuthRequest({login:'calogin',register:'caregister',recover:'carecover',reset:'careset'}[mode],payload);form.reset();
-            if(mode==='login'){setCustomerSession(data.token,data.cliente);setCustomerAuthView('profile');renderCustomerProfile();await loadCustomerDashboard();}
+            if(mode==='login'){setCustomerSession(data.token,data.cliente,{remember:payload.remember,expires:data.expires});setCustomerAuthView('profile');renderCustomerProfile();await loadCustomerDashboard();}
             else{status.textContent=data.message;if(mode==='reset'){customerResetToken='';button.disabled=true;}}
-        }catch(error){status.textContent=error.message;if(fields.password)fields.password.value='';if(fields.confirm)fields.confirm.value='';}
+        }catch(error){status.textContent=error.message;}
         finally{if(mode!=='reset'||customerResetToken)button.disabled=false;}
     };
 }
@@ -5550,7 +5558,7 @@ function initCustomerAuth() {
                         loadCustomerDashboard();
                     }
                 })
-                .catch(() => clearCustomerSession());
+                .catch(error => {if(/venci|revoc|inválid|autoriz|sesión/i.test(error.message))clearCustomerSession();});
         } else if (document.getElementById('customer-auth-modal')?.classList.contains('open')) {
             renderCustomerProfile();
             loadCustomerDashboard();

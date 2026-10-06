@@ -8977,6 +8977,7 @@ function switchDashboardView(viewId, title) {
         area.scrollLeft = 0;
     }
 
+    if (viewId === 'users' && typeof loadCustomerUsers === 'function')loadCustomerUsers();
     if (viewId === 'orders') {
         cargarPedidos();
     }
