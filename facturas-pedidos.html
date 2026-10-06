@@ -9,8 +9,8 @@
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
-    <link rel="preload" href="blyxu-style.css?v=blyxu-security-20261005" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-security-20261005"></noscript>
+    <link rel="preload" href="blyxu-style.css?v=blyxu-security-20261005b" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="blyxu-style.css?v=blyxu-security-20261005b"></noscript>
     <style>
         .orders-page {
             position: relative;
@@ -1463,6 +1463,7 @@
             box-shadow: none !important;
         }
     </style>
+    <script src="qrcode-local.js?v=2.0.4" defer></script>
 </head>
 
 <body data-page="facturas-pedidos">
@@ -2194,7 +2195,9 @@
                 const id = getField(order, ['ID Factura', 'ID Pedido', 'ID', 'id'], 'Pedido');
                 const consultationUrl = new URL('facturas-pedidos.html', window.location.href);
                 consultationUrl.searchParams.set('buscar', id);
-                const consultationQr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=' + encodeURIComponent(consultationUrl.href);
+                const localQr = qrcode(0, 'M');
+                localQr.addData(consultationUrl.href); localQr.make();
+                const consultationQr = localQr.createDataURL(5,20);
                 const orderId = getField(order, ['ID Pedido'], id);
                 const date = getField(order, ['Fecha', 'Fecha Pedido'], '');
                 const name = getField(order, ['Nombre', 'Nombre Cliente', 'Cliente'], 'Cliente BLYXU');

@@ -7392,7 +7392,8 @@
     #admin-login-box .admin-otp-row { gap: 5px !important; }
     #admin-login-box .admin-otp-digit { height: 56px !important; font-size: 19px !important; }
 }
-</style></head>
+</style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
+</head>
 <body>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
@@ -7401,19 +7402,9 @@
         <div id="admin-login-box">
             <img src="Logo2.png" alt="BLYXU" class="admin-otp-logo" onerror="this.style.display='none'">
             <span class="admin-otp-kicker">BLYXU &middot; Panel Privado</span>
-            <h1 class="admin-otp-title">Ingresa tu clave</h1>
+            <h1 class="admin-otp-title">Acceso seguro</h1>
             <p class="admin-otp-sub">Acceso administrativo &mdash; solo para personal autorizado.</p>
-            <div class="admin-otp-row" id="admin-otp-row">
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d0" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d1" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d2" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d3" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d4" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d5" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-                <span class="admin-pin-wrap"><input class="admin-otp-digit" id="adm-d6" type="text" inputmode="numeric" maxlength="1" autocomplete="off"></span>
-            </div>
-            <p id="admin-login-status" class="admin-login-status" role="status" aria-live="polite"></p><div class="admin-otp-error" id="admin-otp-error">Clave incorrecta, inténtalo de nuevo</div>
-            <button class="admin-otp-submit" id="admin-otp-submit" type="button">Ingresar al panel</button>
+            <form id="admin-login-form" style="display:none"><input id="admin-password" type="password" autocomplete="off"></form>
             <a href="index.html" class="admin-otp-back">← Volver a la tienda pública</a>
         </div>
     </div>
@@ -8259,114 +8250,9 @@
             }
         });
     </script>
-    <script>
-    (function () {
-        const ADMIN_CODE = '2015690';
-        const DIGITS = 7;
-
-        function unlockAdmin() {
-            const screen = document.getElementById('admin-login-screen');
-            const main   = document.getElementById('admin-main-content');
-            if (!screen || !main) return;
-            screen.classList.add('hidden');
-            setTimeout(function () {
-                screen.style.display = 'none';
-                main.style.display = '';
-                window.initAdminHeavyFeatures?.();
-                window.renderAdminDashboard?.();
-                Promise.allSettled([
-                    window.cargarInventario?.(),
-                    window.cargarPedidos?.()
-                ]).then(function () { window.renderAdminDashboard?.(); });
-            }, 420);
-        }
-
-        function showSuccess(inputs) {
-            inputs.forEach(function (inp, i) {
-                setTimeout(function () {
-                    inp.classList.add('success');
-                    inp.parentElement.classList.add('is-success');
-                }, i * 80);
-            });
-            document.getElementById('admin-login-status').textContent = 'Acceso confirmado';
-            document.getElementById('admin-login-box').classList.add('access-confirmed');
-            setTimeout(unlockAdmin, inputs.length * 80 + 850);
-        }
-
-        function showError(row, errEl) {
-            row.classList.remove('shake');
-            void row.offsetWidth;
-            row.classList.add('shake');
-            errEl.classList.add('visible');
-            setTimeout(function () { errEl.classList.remove('visible'); }, 2200);
-        }
-
-        function checkCode(inputs, row, errEl) {
-            var code = Array.from(inputs).map(function(i){ return i.value; }).join('');
-            if (code.length < DIGITS) return;
-            if (code === ADMIN_CODE) {
-                inputs.forEach(function(i){ i.disabled = true; });
-                showSuccess(inputs);
-            } else {
-                showError(row, errEl);
-                setTimeout(function () {
-                    inputs.forEach(function(i){ i.value = ''; i.classList.remove('filled','success'); });
-                    inputs[0].focus();
-                }, 500);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            var row    = document.getElementById('admin-otp-row');
-            var errEl  = document.getElementById('admin-otp-error');
-            if (!row || !errEl) return;
-
-            var inputs = Array.from(row.querySelectorAll('.admin-otp-digit'));
-            inputs.forEach(function (inp, idx) { inp.setAttribute('aria-label', 'Dígito ' + (idx + 1) + ' de ' + DIGITS + ' de la clave'); });
-            document.getElementById('admin-otp-submit').addEventListener('click', function () {
-                var empty = inputs.find(function (inp) { return !inp.value; });
-                if (empty) { empty.focus(); return; }
-                checkCode(inputs, row, errEl);
-            });
-
-            inputs.forEach(function (inp, idx) {
-                inp.addEventListener('input', function (e) {
-                    var val = inp.value.replace(/\D/g, '');
-                    inp.value = val ? val[0] : '';
-                    inp.classList.toggle('filled', inp.value !== '');
-                    if (inp.value && idx < DIGITS - 1) inputs[idx + 1].focus();
-                    checkCode(inputs, row, errEl);
-                });
-                inp.addEventListener('keydown', function (e) {
-                    if (e.key === 'Backspace' && !inp.value && idx > 0) {
-                        inputs[idx - 1].value = '';
-                        inputs[idx - 1].classList.remove('filled');
-                        inputs[idx - 1].focus();
-                    }
-                    if (e.key === 'ArrowLeft' && idx > 0) inputs[idx-1].focus();
-                    if (e.key === 'ArrowRight' && idx < DIGITS-1) inputs[idx+1].focus();
-                });
-                inp.addEventListener('paste', function (e) {
-                    e.preventDefault();
-                    var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
-                    text.split('').slice(0, DIGITS - idx).forEach(function (ch, offset) {
-                        var t = inputs[idx + offset];
-                        if (t) { t.value = ch; t.classList.add('filled'); }
-                    });
-                    var next = Math.min(idx + text.length, DIGITS - 1);
-                    inputs[next].focus();
-                    checkCode(inputs, row, errEl);
-                });
-                inp.addEventListener('focus', function () { inp.select(); });
-            });
-
-            /* auto-focus first box */
-            inputs[0].focus();
-        });
-    })();
-    </script>
+    
     <script src="html5-qrcode.min.js?v=2.3.8" defer></script>
-<script src="admin-app.js?v=blyxu-security-20261005" defer></script>
+<script src="admin-app.js?v=blyxu-security-20261005b" defer></script>
 </body>
 </html>
 

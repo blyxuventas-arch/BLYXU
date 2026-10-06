@@ -3649,6 +3649,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) {
         loginForm.hidden = true;
+        loginForm.style.display = 'none';
         const googleAccess = document.createElement('div');
         googleAccess.innerHTML = '<p>Ingresa con tu cuenta de Google autorizada para administrar BLYXU.</p><div id="secure-admin-google-button"></div><p id="secure-admin-message" role="status">Cargando acceso seguro...</p>';
         loginForm.after(googleAccess);
@@ -3668,6 +3669,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const auth=await authResponse.json();
                     if (!auth.ok) throw new Error(auth.error || 'Cuenta sin permiso de administrador.');
                     secureAdminCredential=result.credential;
+                    siteConfigPromise=null;
                     message.textContent='Acceso autorizado';
                     playAdminVaultUnlock(()=>{
                         loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
@@ -4265,6 +4267,7 @@ async function loadSiteConfigForAdmin() {
 }
 
 function updateSiteConfigCacheForAdmin(key, value) {
+    if (/password|secret|token|clave/i.test(key)) return;
     try {
         const cached = JSON.parse(localStorage.getItem(SITE_CONFIG_CACHE_KEY) || 'null');
         const cachedData = cached && typeof cached === 'object' && cached.data && typeof cached.data === 'object'
@@ -6487,7 +6490,9 @@ function getInventoryQrReference(product) {
 function getInventoryQrImageUrl(reference, size = 440) {
     const cleanReference = String(reference || '').trim();
     const dimension = Math.max(180, Math.min(800, Number(size) || 440));
-    return `https://api.qrserver.com/v1/create-qr-code/?size=${dimension}x${dimension}&margin=12&ecc=H&data=${encodeURIComponent(cleanReference)}`;
+    const localQr = qrcode(0, 'H');
+    localQr.addData(cleanReference); localQr.make();
+    return localQr.createDataURL(Math.max(2,Math.floor(dimension/(localQr.getModuleCount()+8))),16);
 }
 
 function encodeInventoryWholesalePrice(value) {
@@ -11098,6 +11103,15 @@ window.pedidosList = [];
 window.facturasList = [];
 window.activeOrdersAdminTab = 'quick-sale';
 const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
+try { localStorage.removeItem(ADMIN_ORDERS_CACHE_KEY); } catch (_) {}
+window.addEventListener('pagehide', () => {
+    secureAdminCredential = '';
+    sessionStorage.removeItem(ADMIN_ORDERS_CACHE_KEY);
+    const screen = document.getElementById('admin-login-screen');
+    const main = document.getElementById('admin-main-content');
+    if (screen) screen.style.display = '';
+    if (main) main.style.display = 'none';
+});
 const ADMIN_ORDERS_CACHE_TTL = 45 * 1000;
 let adminOrdersLoadPromise = null;
 

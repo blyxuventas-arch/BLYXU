@@ -4999,7 +4999,7 @@ function ensureCustomerAuthModal() {
                     </div>
                     <label>
                         <span>Contraseña</span>
-                        <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+                        <input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="128" required>
                     </label>
                     <button type="submit">Crear mi cuenta</button>
                 </form>
@@ -5766,6 +5766,7 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
     const payload = {
         resource: 'pedidos',
         action: 'crear',
+        token: getCustomerSession()?.token || '',
         'ID Pedido': orderId,
         'Nombre Cliente': cliente.nombre,
         'Tipo Cliente': normalizedType,
