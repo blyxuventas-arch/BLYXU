@@ -5011,6 +5011,7 @@ function ensureCustomerAuthModal() {
                     <button type="button" class="active" data-customer-dashboard-tab="orders">Mis pedidos</button>
                     <button type="button" data-customer-dashboard-tab="invoices">Facturas</button>
                     <button type="button" data-customer-dashboard-tab="favorites">Favoritos</button>
+                    <button type="button" data-customer-dashboard-tab="benefits">Mis beneficios</button>
                 </div>
                 <div class="customer-dashboard-panel active" id="customer-dashboard-orders">
                     <div class="customer-dashboard-list" id="customer-orders-list">
@@ -5027,6 +5028,7 @@ function ensureCustomerAuthModal() {
                         <div class="customer-dashboard-empty">Cargando favoritos...</div>
                     </div>
                 </div>
+                <div class="customer-dashboard-panel" id="customer-dashboard-benefits"></div>
                 <button type="button" class="customer-auth-secondary" id="customer-logout-btn">Cerrar sesión</button>
             </section>
         </div>
@@ -5078,6 +5080,10 @@ function renderCustomerProfile() {
     const card = document.getElementById('customer-profile-card');
     if (!card || !customer) return;
     const promotion = getCurrentCustomerPromotion();
+    const benefits = document.getElementById('customer-dashboard-benefits');
+    if (benefits) benefits.innerHTML = promotion.percent > 0
+        ? `<div class="customer-profile-card"><strong>${escapeHtml(promotion.label || 'Beneficio BLYXU')}</strong><div class="customer-promo-badge"><b>-${promotion.percent}%</b><span>de descuento</span></div><span>${promotion.expires ? `Válido hasta ${escapeHtml(formatCustomerDate(promotion.expires))}` : 'Sin fecha de vencimiento'}</span><small>Se aplica automáticamente en el carrito a tus pedidos minoristas mientras tengas la sesión iniciada.</small></div>`
+        : '<div class="customer-dashboard-empty">Por ahora no tienes descuentos activos. Aquí aparecerán tus beneficios cuando estén disponibles.</div>';
 
     card.innerHTML = `
         <strong>${escapeHtml(customer.nombre || 'Cliente BLYXU')}</strong>
@@ -5115,6 +5121,7 @@ function setCustomerDashboardTab(tab = 'orders') {
     ordersPanel?.classList.toggle('active', tab === 'orders');
     invoicesPanel?.classList.toggle('active', tab === 'invoices');
     favoritesPanel?.classList.toggle('active', tab === 'favorites');
+    document.getElementById('customer-dashboard-benefits')?.classList.toggle('active', tab === 'benefits');
 }
 
 function formatCustomerDate(value) {

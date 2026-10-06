@@ -1,0 +1,8 @@
+*private*
+*.bak
+chrome-temp*/
+edge-temp*/
+.security-publish/
+google-*.png
+publicacion-preparada.png
+security-*.png
