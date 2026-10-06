@@ -3647,40 +3647,13 @@ document.addEventListener('DOMContentLoaded', () => {
     syncAdminVaultState();
 
 
-    if (loginForm) {
-        loginForm.hidden = true;
-        loginForm.style.display = 'none';
-        const googleAccess = document.createElement('div');
-        googleAccess.innerHTML = '<p>Ingresa con tu cuenta de Google autorizada para administrar BLYXU.</p><div id="secure-admin-google-button"></div><p id="secure-admin-message" role="status">Cargando acceso seguro...</p>';
-        loginForm.after(googleAccess);
-        const message = googleAccess.querySelector('#secure-admin-message');
-        (async () => {
-            const response = await adminNativeFetch(GOOGLE_SHEET_API + '?action=get_config',{cache:'no-store'});
-            const data = await response.json();
-            const clientId = String(data.config?.Google_Client_ID || '').trim();
-            if (!clientId) throw new Error('Falta configurar el acceso con Google.');
-            if (!window.google?.accounts?.id) await new Promise((resolve,reject) => {
-                const script = document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.onload=resolve;script.onerror=()=>reject(new Error('No se pudo cargar Google.'));document.head.appendChild(script);
-            });
-            window.google.accounts.id.initialize({client_id:clientId,callback:async result=>{
-                message.textContent='Verificando permiso de administrador...';
-                try {
-                    const authResponse=await adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminsession',adminCredential:result.credential})});
-                    const auth=await authResponse.json();
-                    if (!auth.ok) throw new Error(auth.error || 'Cuenta sin permiso de administrador.');
-                    secureAdminCredential=result.credential;
-                    siteConfigPromise=null;
-                    message.textContent='Acceso autorizado';
-                    playAdminVaultUnlock(()=>{
-                        loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
-                        Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
-                    });
-                } catch(error) {secureAdminCredential='';message.textContent=error.message;}
-            }});
-            window.google.accounts.id.renderButton(document.getElementById('secure-admin-google-button'),{type:'standard',theme:'outline',size:'large',text:'continue_with',locale:'es'});
-            message.textContent='Solo las cuentas autorizadas pueden acceder.';
-        })().catch(error=>{message.textContent=error.message;});
-    }
+    if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
+        secureAdminCredential=credential;siteConfigPromise=null;
+        playAdminVaultUnlock(()=>{
+            loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
+            Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
+        });
+    });
     // -------------------
 
     document.getElementById('product-form').addEventListener('submit', async (e) => {

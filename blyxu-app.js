@@ -4742,14 +4742,7 @@ function hideMercadoPagoLoading() {
     document.body.classList.remove('mp-loading-active');
 }
 
-function getCustomerSession() {
-    try {
-        const session = JSON.parse(localStorage.getItem(CUSTOMER_SESSION_KEY) || 'null');
-        return session && session.token && session.cliente ? session : null;
-    } catch (error) {
-        return null;
-    }
-}
+function getCustomerSession() { return null; }
 
 function setCustomerSession(token, cliente) {
     const session = {
@@ -4771,7 +4764,7 @@ function clearCustomerSession() {
 }
 
 function getCurrentCustomer() {
-    return getCustomerSession()?.cliente || null;
+    try{return JSON.parse(sessionStorage.getItem('blyxu_contact_v1')||'null');}catch(error){return null;}
 }
 
 function isCustomerSessionFresh(session = getCustomerSession()) {
@@ -4780,49 +4773,7 @@ function isCustomerSessionFresh(session = getCustomerSession()) {
     return timestamp > 0 && Date.now() - timestamp < CUSTOMER_SESSION_REFRESH_TTL;
 }
 
-function getCurrentCustomerPromotion() {
-    const customer = getCurrentCustomer();
-    if (!customer) {
-        return { percent: 0, label: '', expires: '' };
-    }
-
-    const globalEnabled = String(getSiteConfigValue('Promo_Clientes_Enabled', 'false')).trim() === 'true';
-    const globalPercent = Number(getSiteConfigValue('Promo_Clientes_Discount', '0'));
-    const globalExpires = getSiteConfigValue('Promo_Clientes_Expire', '');
-
-    if (globalEnabled && Number.isFinite(globalPercent) && globalPercent > 0) {
-        if (globalExpires) {
-            const expiresAt = new Date(globalExpires).getTime();
-            if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
-                return { percent: 0, label: '', expires: globalExpires };
-            }
-        }
-
-        return {
-            percent: Math.min(90, Math.max(0, globalPercent)),
-            label: getSiteConfigValue('Promo_Clientes_Title', 'Promo cliente registrado'),
-            expires: globalExpires
-        };
-    }
-
-    const percent = Number(customer?.descuentoCliente || 0);
-    if (!Number.isFinite(percent) || percent <= 0) {
-        return { percent: 0, label: '', expires: '' };
-    }
-
-    if (customer.promoExpira) {
-        const expiresAt = new Date(customer.promoExpira).getTime();
-        if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
-            return { percent: 0, label: '', expires: customer.promoExpira };
-        }
-    }
-
-    return {
-        percent: Math.min(90, Math.max(0, percent)),
-        label: customer.promoCliente || 'Promo cliente registrado',
-        expires: customer.promoExpira || ''
-    };
-}
+function getCurrentCustomerPromotion() {return {percent:0,label:'',expires:''};}
 
 function getCartPricingSummary(items = cart) {
     items.forEach(item => {
@@ -5416,19 +5367,19 @@ async function renderCustomerGoogleSignIn() {
     } catch (error) { setCustomerAuthMessage(error.message, 'error'); }
 }
 
-function openCustomerAuthModal(view) {
-    const modal = ensureCustomerAuthModal();
-    const session = getCustomerSession();
-    const hasSession = Boolean(session);
-    modal.classList.add('open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('customer-auth-open');
-    setCustomerAuthView(view || (hasSession ? 'profile' : 'login'));
-    renderCustomerProfile();
-    if (!hasSession) renderCustomerGoogleSignIn();
-    if (hasSession) {
-        loadCustomerDashboard();
-    }
+function openCustomerAuthModal() {
+    let modal=document.getElementById('customer-auth-modal');
+    if(!modal){modal=document.createElement('div');modal.id='customer-auth-modal';modal.className='customer-auth-modal';document.body.append(modal);}
+    modal.innerHTML=`<div class="customer-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="customer-auth-title"><button class="customer-auth-close" type="button" aria-label="Cerrar">&times;</button><h2 id="customer-auth-title">Datos de contacto</h2><p>Úsalos para completar tu pedido.</p><form class="customer-auth-form"><label>Nombre<input name="nombre" autocomplete="name" maxlength="100" required></label><label>Celular / WhatsApp<input type="tel" name="telefono" autocomplete="tel" maxlength="20" required></label><button type="submit">Usar estos datos</button><button type="button" id="contact-clear">Borrar datos de este dispositivo</button><p role="status"></p></form></div>`;
+    modal.querySelector('.customer-auth-close').onclick=closeCustomerAuthModal;
+    modal.onclick=event=>{if(event.target===modal)closeCustomerAuthModal();};
+    const form=modal.querySelector('form'),contact=getCurrentCustomer();
+    form.elements.nombre.value=contact?.nombre||'';form.elements.telefono.value=contact?.telefono||'';
+    form.onsubmit=event=>{event.preventDefault();const nombre=form.elements.nombre.value.trim(),telefono=form.elements.telefono.value.replace(/[^0-9+]/g,'');
+        if(!nombre||!/^\+?[0-9]{7,15}$/.test(telefono)){form.querySelector('[role=status]').textContent='Escribe tu nombre y un celular válido.';return;}
+        sessionStorage.setItem('blyxu_contact_v1',JSON.stringify({nombre,telefono}));renderCustomerAccountState();hydrateCustomerCheckoutFields();closeCustomerAuthModal();};
+    modal.querySelector('#contact-clear').onclick=()=>{sessionStorage.removeItem('blyxu_contact_v1');form.reset();renderCustomerAccountState();};
+    modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('customer-auth-open');form.elements.nombre.focus();
 }
 
 function closeCustomerAuthModal() {
@@ -5518,12 +5469,13 @@ function renderCustomerAccountState() {
     const label = button.querySelector('.customer-account-label');
     const initial = button.querySelector('.customer-account-initial');
     button.classList.toggle('is-logged', Boolean(customer));
-    button.setAttribute('aria-label', customer ? 'Ver mi cuenta BLYXU' : 'Iniciar sesión o registrarme');
-    if (label) label.textContent = customer ? 'Mi cuenta' : 'Cuenta';
+    button.setAttribute('aria-label','Editar datos de contacto');
+    if (label) label.textContent = 'Mis datos';
     if (initial) initial.textContent = customer?.nombre ? customer.nombre.trim().charAt(0).toUpperCase() : '';
 }
 
 function initCustomerAuth() {
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
     const navActions = document.querySelector('.nav-actions');
     if (navActions && !document.getElementById('customer-account-btn')) {
         const button = document.createElement('button');
