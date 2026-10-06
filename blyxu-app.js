@@ -1570,7 +1570,7 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
         let activeDistance = Infinity;
 
         items.forEach((item, index) => {
-            const wrappedAngle = ((rotation + (index * step) + 540) % 360) - 180;
+            const wrappedAngle = (((rotation + (index * step) + 180) % 360 + 360) % 360) - 180;
             const offset = wrappedAngle / step;
             const distance = Math.abs(offset);
             const x = offset * spacing;
@@ -1593,6 +1593,10 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
     };
 
     const animate = () => {
+        // Keep the ring bounded through unlimited turns, including dragging backwards.
+        const turns = Math.trunc(rotation / 360) * 360;
+        rotation -= turns;
+        targetRotation -= turns;
         rotation += (targetRotation - rotation) * 0.12;
         if (!isDragging) {
             targetRotation += velocity || (track.matches(':hover') ? 0 : autoDrift);
@@ -1656,7 +1660,7 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
     const api = {
         goTo(index) {
             const desired = -index * step;
-            const diff = ((desired - targetRotation + 540) % 360) - 180;
+            const diff = (((desired - targetRotation + 180) % 360 + 360) % 360) - 180;
             targetRotation += diff;
             velocity = 0;
         },
@@ -5425,11 +5429,11 @@ function renderCustomerAccessForm(panel,mode){
     const names=`<label>Primer nombre<input name="nombre" autocomplete="given-name" maxlength="50" required></label><label>Primer apellido<input name="apellido" autocomplete="family-name" maxlength="50" required></label>`;
     const phone=`<label>Celular / WhatsApp<input name="telefono" type="tel" autocomplete="tel" maxlength="20" required></label>`;
     const password=customerPasswordField('password',mode==='reset'?'Nueva contraseña':'Contraseña',mode==='login');
-    const repeat=customerPasswordField('confirm','Repite la contraseña',false)+`<ul class="customer-password-checks" aria-live="polite"><li data-check-length>○ Escribe entre 12 y 128 caracteres.</li><li data-check-match>○ Repite exactamente la misma contraseña.</li></ul><small>Puedes usar una frase larga que recuerdes. Evita tu nombre o celular. No compartas tu contraseña.</small>`;
+    const repeat=customerPasswordField('confirm','Repite la contraseña',false)+`<ul class="customer-password-checks" aria-live="polite"><li data-check-length>○ Escribe al menos 12 caracteres.</li><li data-check-match>○ Repite exactamente la misma contraseña.</li></ul><small>Puedes usar una frase larga que recuerdes. Evita tu nombre o celular. No compartas tu contraseña.</small>`;
     const description={login:'Tus pedidos, facturas, favoritos y beneficios en un solo lugar.',register:'1. Completa tus datos y crea tu contraseña. 2. Comunica a BLYXU el código de registro que aparecerá al enviar. 3. Cuando aprueben tu cuenta, entra con tu celular y contraseña.',recover:'Envía tu solicitud. BLYXU verificará tu identidad y te entregará un enlace para crear una contraseña nueva.',reset:'Confirma tu contraseña para activar o recuperar tu cuenta. Este enlace se usa una sola vez y vence en una hora.'};
     panel.innerHTML=`<h2 id="customer-auth-title">${titles[mode]}</h2><p>${description[mode]}</p><form class="customer-auth-form">${['register','recover'].includes(mode)?names:''}${mode!=='reset'?phone:''}${mode!=='recover'?password:''}${['register','reset'].includes(mode)?repeat:''}${mode==='login'?'<label class="customer-remember"><input type="checkbox" name="remember" checked> Mantener sesión iniciada hasta que cierre sesión</label>':''}<button type="submit">${{login:'Entrar a mi cuenta',register:'Solicitar activación',recover:'Solicitar recuperación',reset:'Guardar contraseña nueva'}[mode]}</button><p role="status" aria-live="polite"></p></form><div class="customer-auth-tabs" style="margin-top:16px"><button type="button" data-access="login">Ingresar</button><button type="button" data-access="register">Registrarme</button></div><button type="button" class="customer-auth-secondary" data-access="recover">Olvidé mi contraseña</button>`;
     panel.querySelectorAll('[data-password-toggle]').forEach(toggle=>toggle.onclick=()=>{const input=panel.querySelector('[name="'+toggle.dataset.passwordToggle+'"]');const visible=input.type==='password';input.type=visible?'text':'password';toggle.setAttribute('aria-label',visible?'Ocultar contraseña':'Mostrar contraseña');toggle.setAttribute('aria-pressed',String(visible));toggle.textContent=visible?'Ocultar':'👁';});
-    const check=()=>{const fields=panel.querySelector('form').elements;if(!fields.confirm)return;const length=fields.password.value.length>=12&&fields.password.value.length<=128,match=fields.confirm.value.length>0&&fields.confirm.value===fields.password.value;panel.querySelector('[data-check-length]').textContent=(length?'✓':'○')+' Entre 12 y 128 caracteres.';panel.querySelector('[data-check-match]').textContent=(match?'✓':'○')+' Las dos contraseñas coinciden.';fields.confirm.setCustomValidity(fields.confirm.value&&!match?'Las contraseñas no coinciden.':'');};panel.querySelectorAll('input[type=password]').forEach(input=>input.addEventListener('input',check));
+    const check=()=>{const fields=panel.querySelector('form').elements;if(!fields.confirm)return;const length=fields.password.value.length>=12&&fields.password.value.length<=128,match=fields.confirm.value.length>0&&fields.confirm.value===fields.password.value;panel.querySelector('[data-check-length]').textContent=(length?'✓':'○')+' Mínimo 12 caracteres.';panel.querySelector('[data-check-match]').textContent=(match?'✓':'○')+' Las dos contraseñas coinciden.';fields.confirm.setCustomValidity(fields.confirm.value&&!match?'Las contraseñas no coinciden.':'');};panel.querySelectorAll('input[type=password]').forEach(input=>input.addEventListener('input',check));
     panel.querySelectorAll('[data-access]').forEach(button=>button.onclick=()=>renderCustomerAccessForm(panel,button.dataset.access));
     panel.querySelector('form').onsubmit=async event=>{
         event.preventDefault();const form=event.currentTarget,button=form.querySelector('button[type=submit]'),status=form.querySelector('[role=status]'),fields=form.elements;
