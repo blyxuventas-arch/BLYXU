@@ -912,7 +912,7 @@ function getInventoryCategoryGroups(options = {}) {
         groups.get(key).values.add(raw);
     }
 
-    if (includeDefaults) defaults.forEach(addCategory);
+    if (includeDefaults) defaults.filter(value => !window.isInventoryDefaultCategoryRemoved?.(normalizeInventoryCategoryKey(value))).forEach(addCategory);
     (inventario || []).forEach(product => addCategory(product.Categoria || product.categoria));
 
     return Array.from(groups.values())
@@ -3062,6 +3062,7 @@ function updateCategoryOptions() {
         adminInventoryCategoryFilter = inventorySelect.value;
     }
     renderInventoryPdfCategoryPicker(categoryGroups);
+    window.renderInventoryCategoryManager?.();
 }
 
 function getInventoryPdfCategoryGroups() {

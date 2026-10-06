@@ -7393,7 +7393,7 @@
     #admin-login-box .admin-otp-digit { height: 56px !important; font-size: 19px !important; }
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
-<link rel="stylesheet" href="admin-graphite.css?v=blyxu-camera-controls-20261006">
+<link rel="stylesheet" href="admin-graphite.css?v=blyxu-categories-20261006">
 </head>
 <body class="admin-graphite">
     <div class="bg-animation"></div>
@@ -7713,6 +7713,16 @@
                     <div class="admin-panel gradient-bg">
                         <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
+                        <details class="inventory-pdf-category-panel admin-fold" id="inventory-category-manager"><summary>Gestionar categorías</summary><div>
+                            <p>Quita categorías que ya no uses y conserva sus productos.</p>
+                            <form id="inventory-category-manager-form" class="inventory-category-manager-grid">
+                                <label>Categoría que quieres eliminar<select class="form-control" id="inventory-manage-category"><option value="">Selecciona una categoría</option></select></label>
+                                <label>Mover sus productos a<select class="form-control" id="inventory-category-destination"><option value="">Sin categoría</option></select></label>
+                                <p id="inventory-category-impact">Elige la categoría que quieres quitar.</p>
+                                <button type="submit" class="admin-btn danger" id="inventory-delete-category" disabled>Eliminar categoría</button>
+                                <p id="inventory-category-status" role="status" aria-live="polite"></p>
+                            </form>
+                        </div></details>
                         <div class="table-wrapper" style="padding:20px;"><table class="inventory-tree"><thead><tr><th>Foto</th><th>Producto</th><th>Categoria</th><th>Detal</th><th>Mayorista</th><th>Stock</th><th>Variantes</th><th>Acciones</th></tr></thead><tbody id="inventory-tbody"><tr><td colspan="8">Cargando inventario...</td></tr></tbody></table></div>
                         <div id="inventory-catalog-print-container" class="hidden-print"></div>
                     </div>
@@ -8256,7 +8266,8 @@
 <script src="admin-password-access.js?v=blyxu-private-keys-20261006" defer></script>
 <script src="customer-access-admin.js?v=blyxu-camera-hd-20261006" defer></script>
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
-<script src="admin-app.js?v=blyxu-product-session-v7-20261006" defer></script>
+<script src="admin-app.js?v=blyxu-category-manager-20261006" defer></script>
+<script src="inventory-category-manager.js?v=20261006-1" defer></script>
 </body>
 </html>
 
