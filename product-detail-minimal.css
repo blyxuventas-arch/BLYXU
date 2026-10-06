@@ -127,3 +127,20 @@
 .product-detail-page #product-detail .detail-promo-badge {background:#493254 !important;border-color:#796085 !important;color:#e0c7ef !important;}
 .product-detail-page .recommended-section {border-top-color:#3e3348;}
 @media(max-width:900px) {.product-detail-page #product-detail .product-info {border-top-color:#49384f !important;}}
+/* Neutral graphite detail panel and white primary action. */
+.product-detail-page #product-detail {background:#19191b;border-color:#414145;}
+.product-detail-page #product-detail .product-gallery {background:#19191b;}
+.product-detail-page #product-detail .product-main-img {background:#19191b !important;}
+.product-detail-page #product-detail .product-info {background:#27272a !important;color:#f1f1f2 !important;border-left-color:#46464b !important;}
+.product-detail-page #product-detail .product-info-name,.product-detail-page #product-detail #detail-price {color:#f1f1f2 !important;}
+.product-detail-page #product-detail :is(.product-info-cat,.detail-block-label,.spec-label,.product-availability-pill) {color:#adadb4 !important;}
+.product-detail-page #product-detail :is(.product-info-desc,.spec-value,.perk-item),.product-detail-page #product-detail .perk-item svg {color:#c9c9ce !important;}
+.product-detail-page #product-detail :is(.product-details-block,.product-info-actions,#product-variations,.product-perks,.spec-item) {border-color:#48484d !important;}
+.product-detail-page #product-detail .btn-save-favorite-detail {color:#dedee2 !important;border-color:#77777e !important;}
+.product-detail-page #product-detail :is(.btn-buy-now,.btn-pay-now) {background:#f5f5f5 !important;color:#242426 !important;border-color:#f5f5f5 !important;}
+.product-detail-page #product-detail .btn-buy-now:hover:not(:disabled) {background:#dedee0 !important;}
+.product-detail-page #product-detail .btn-buy-now:disabled {background:#55555a !important;color:#cacacf !important;border-color:#66666c !important;}
+.product-detail-page #product-detail .detail-variant-chip {border-color:#66666c !important;color:#d6d6db !important;}
+.product-detail-page #product-detail .detail-variant-chip.active {background:#414145 !important;border-color:#c4c4ca !important;color:#f1f1f2 !important;}
+.product-detail-page #product-detail .detail-variant-chip :is(span,.detail-variant-label) {color:#d6d6db !important;}
+@media(max-width:900px) {.product-detail-page #product-detail .product-info {border-top-color:#46464b !important;}}
