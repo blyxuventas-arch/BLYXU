@@ -150,3 +150,8 @@ html body.contact-v2[data-page=contact] #contact-page #contact-live-clock {font-
 .qr-camera-controls label {display:grid;gap:8px;}
 .qr-camera-controls input {width:100%;accent-color:#ceced8;}
 @media(max-width:600px) {html body #customer-auth-modal .customer-auth-dialog {padding:22px 18px !important;width:calc(100% - 24px) !important;} html body #customer-auth-modal h2 {font-size:23px !important;}}
+.cart-summary-downloads {display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:20px 0;}
+.cart-summary-downloads button {min-height:42px; padding:10px 16px; background:#242427; color:#eee; border:1px solid #505056; border-radius:6px; font-family:inherit; font-size:12px; font-weight:500; cursor:pointer;}
+.cart-summary-downloads button:disabled {opacity:.45; cursor:default;}
+.cart-summary-downloads [hidden] {display:none;}
+.cart-summary-downloads p {width:100%; margin:0; font-size:12px; color:#c8c8cc;}

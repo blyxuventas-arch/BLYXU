@@ -11753,6 +11753,7 @@ async function ensureInvoiceInventoryLoaded() {
 
     window.invoiceInventoryLoadingPromise = cargarInventario({ silent: true }).finally(() => {
         window.invoiceInventoryLoadingPromise = null;
+        if (document.getElementById('invoice-editor-modal')?.classList.contains('open')) renderItemsFactura();
     });
     return window.invoiceInventoryLoadingPromise;
 }
@@ -12384,6 +12385,8 @@ function hydrateInvoiceEditorFromQuickSale(invoiceIdOverride = '') {
         idVariacion: item.idVariacion,
         nombre: item.nombre,
         sku: item.sku || item.idVariacion,
+        img: item.img || item.imagen || '',
+        opcion: item.opcion || item.variantLabel || '',
         cantidad: Number(item.cantidad) || 1,
         precio: Number(item.precio) || 0
     }));
@@ -12715,6 +12718,10 @@ window.abrirEditorFactura = function(idx = null, source = 'pedido') {
                 idVariacion: i.idVariacion || i.id || i.sku || ('ITEM-' + Date.now() + '-' + itemIndex),
                 nombre: i.nombre || i.Nombre || i.Producto || 'Producto',
                 sku: i.sku || i.id || '',
+                img: i.img || i.imagen || i.Imagen || '',
+                opcion: i.opcion || i.variantLabel || '',
+                color: i.color || i.Color || '',
+                talla: i.talla || i.Talla || i.tamano || i['Tamaño'] || '',
                 cantidad: parseInt(i.cantidad || i.Cantidad || i.qty || 1),
                 precio: parseFloat(i.precio || i.Precio || 0)
             }));
@@ -12899,6 +12906,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.agregarItemBusqueda = function(idVar, nombre, sku, precio) {
+    const product = findInvoiceItemProduct({idVariacion: idVar, sku});
     const existing = window.invoiceItems.find(i => i.idVariacion === idVar);
     if (existing) {
         existing.cantidad += 1;
@@ -12907,6 +12915,8 @@ window.agregarItemBusqueda = function(idVar, nombre, sku, precio) {
             idVariacion: idVar,
             nombre: nombre,
             sku: sku,
+            img: product ? getInventoryProductImage(product) : '',
+            opcion: product ? [product.Estilo, product.Color, getInventoryPdfSizeValue(product)].filter(Boolean).join(' · ') : '',
             cantidad: 1,
             precio: parseFloat(precio)
         });
@@ -12983,6 +12993,27 @@ window.eliminarItemFactura = function(index) {
     renderItemsFactura();
 };
 
+function findInvoiceItemProduct(item) {
+    const source = Array.isArray(inventario) ? inventario : [];
+    const id = String(item.idVariacion || item.id || '').trim();
+    const byId = id && source.find(product => [product.id, product.idVariacion, product.ID, product['ID Variacion'], product['ID Variación']].some(value => value != null && String(value).trim() === id));
+    if (byId) return byId;
+    const sku = String(item.sku || '').trim();
+    const matches = sku ? source.filter(product => String(getInvoiceProductSku(product)).trim() === sku) : [];
+    return matches.length === 1 ? matches[0] : null;
+}
+
+function getInvoiceItemVisual(item) {
+    const product = findInvoiceItemProduct(item);
+    const image = normalizeImageUrl(item.img || item.imagen || '') || (product ? getInventoryProductImage(product) : '');
+    const optionParts = [item.opcion, item.color || product?.Color, item.talla || (product ? getInventoryPdfSizeValue(product) : '')].filter(Boolean);
+    const option = optionParts.filter((part, index) => !optionParts.slice(0, index).some(previous => String(previous).includes(String(part)))).join(' · ') || product?.Estilo || '';
+    // Guardar la imagen de la variante para conservarla al ajustar/guardar la factura.
+    if (image && !item.img) item.img = image;
+    if (option && !item.opcion) item.opcion = option;
+    return {image, option};
+}
+
 function renderItemsFactura() {
     const tbody = document.getElementById('inv-edit-items');
     let total = 0;
@@ -12995,13 +13026,20 @@ function renderItemsFactura() {
     }
     
     tbody.innerHTML = window.invoiceItems.map((item, i) => {
+        const visual = getInvoiceItemVisual(item);
         const subtotal = item.precio * item.cantidad;
         total += subtotal;
         return `
             <tr>
                 <td data-label="Producto">
+                    <div class="inv-item-visual">
+                        ${visual.image ? `<img class="inv-item-photo" src="${escapeHtml(visual.image)}" alt="${escapeHtml(item.nombre)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="inv-item-photo-empty" hidden>Sin imagen</span>` : '<span class="inv-item-photo-empty">Sin imagen</span>'}
+                        <div class="inv-item-fields">
                     <input type="text" class="inv-item-name-input" value="${escapeHtml(item.nombre)}" placeholder="Descripción del producto" onchange="modificarNombreItemFactura(${i}, this.value)">
                     <input type="text" class="inv-item-ref-input" value="${escapeHtml(item.sku || '')}" placeholder="Ref / SKU" onchange="modificarSkuItemFactura(${i}, this.value)">
+                            ${visual.option ? `<span class="inv-item-option">${escapeHtml(visual.option)}</span>` : ''}
+                        </div>
+                    </div>
                 </td>
                 <td data-label="Cantidad" style="text-align:center;">
                     <input type="number" class="inv-qty-input" value="${item.cantidad}" min="1" onchange="modificarCantidadFactura(${i}, this.value)">

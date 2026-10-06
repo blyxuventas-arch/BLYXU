@@ -3154,6 +3154,15 @@ function getCartVariantLabel(product, siblings = []) {
     return product?.SKU || product?.idVariacion || product?.Nombre || 'Opci\u00f3n';
 }
 
+function getProductOrderSize(product) {
+    const data = getProductMeasurementData(product);
+    if (data.textileSize) return data.textileSize;
+    if (data.capacity) return data.capacity + ' ' + data.unit;
+    const dimensions = [['Ancho', data.width], ['Largo', data.length], ['Fondo', data.depth], ['Radio', data.radius]];
+    const measures = dimensions.filter(([, value]) => value).map(([label, value]) => label + ': ' + value + ' ' + data.unit);
+    return measures.join(' / ') || String(product?.Tamano || product?.['Tamaño'] || product?.Talla || '').trim();
+}
+
 function getCartItemFromProduct(product, mode = activeCartMode, qty = 1) {
     const name = product.Nombre || product.nombre || product.Producto || 'Producto';
     const basePrice = getProductPrice(product, mode);
@@ -3172,6 +3181,8 @@ function getCartItemFromProduct(product, mode = activeCartMode, qty = 1) {
         sku,
         name,
         variantLabel,
+        color: String(product.Color || product.color || '').trim(),
+        talla: getProductOrderSize(product),
         price,
         originalPrice: priceInfo.oldPrice || basePrice,
         productDiscount: priceInfo.discountPercentage,
@@ -3484,6 +3495,10 @@ function updateCartUI() {
         const productIndex = getCartProductIndex(item);
         const product = productIndex >= 0 ? allProducts[productIndex] : null;
         if (!product) return;
+        const visualSpecs = {color: String(product.Color || product.color || '').trim(), talla: getProductOrderSize(product)};
+        for (const [key, value] of Object.entries(visualSpecs)) {
+            if (item[key] !== value) { item[key] = value; cartNeedsSave = true; }
+        }
         const variantLabel = getVariantSummary(product);
         if (variantLabel && item.variantLabel !== variantLabel) {
             item.variantLabel = variantLabel;
@@ -3508,6 +3523,14 @@ function updateCartUI() {
     if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
     if (secCountLabel) secCountLabel.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}`;
     if (secModeBadge) secModeBadge.textContent = getCartModeLabel();
+    const summaryButton = document.getElementById('cart-summary-pdf-btn');
+    if (summaryButton) summaryButton.disabled = cart.length === 0;
+    const previousSummaryButton = document.getElementById('cart-last-summary-pdf-btn');
+    if (previousSummaryButton) {
+        let previousOrder = null;
+        try { previousOrder = JSON.parse(localStorage.getItem('blyxu-last-order') || 'null'); } catch (_) {}
+        previousSummaryButton.hidden = !previousOrder?.['ID Pedido'];
+    }
 
     // Update Standalone Section Summary Totals
     const formattedSubtotal = hasHiddenPrices ? 'Por consultar' : formatMoney(pricingSummary.subtotal);
@@ -5737,6 +5760,31 @@ function buyNowWithMercadoPago(productIndex, sourceButton, mode = activeCatalogM
 
 let orderCheckoutInProgress = false;
 
+window.downloadCartOrderSummary = async function(button, registeredOnly = false) {
+    const status = document.getElementById('cart-summary-pdf-status');
+    if (status) status.textContent = '';
+    try {
+        if (!window.BlyxuOrderSummary) throw new Error('El resumen está cargando. Inténtalo nuevamente.');
+        let summary;
+        if (registeredOnly) {
+            const record = JSON.parse(localStorage.getItem('blyxu-last-order') || 'null');
+            if (!record?.['ID Pedido']) throw new Error('No hay un pedido registrado en este dispositivo.');
+            summary = window.BlyxuOrderSummary.fromRecord(record);
+        } else {
+            const pricing = getCartPricingSummary(cart);
+            summary = {
+                registered: false, mode: normalizeCartMode(activeCartMode) === 'wholesale' ? 'Mayorista' : 'Minorista',
+                date: new Date().toISOString(), consultation: isCartConsultationMode(),
+                items: cart.map(item => ({...item, precio: pricing.promotion?.percent > 0 ? Math.max(0, Math.round(item.price * (1 - pricing.promotion.percent / 100))) : item.price})), total: pricing.total
+            };
+        }
+        await window.BlyxuOrderSummary.download(summary, button);
+    } catch (error) {
+        if (status) status.textContent = error.message || 'No se pudo generar el resumen.';
+        else alert(error.message || 'No se pudo generar el resumen.');
+    }
+};
+
 async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCustomerType()) {
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
@@ -5748,6 +5796,8 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         id: item.idVariacion || item.sku || item.name,
         nombre: item.name,
         opcion: item.variantLabel || '',
+        color: item.color || '',
+        talla: item.talla || '',
         cantidad: item.qty,
         precioOriginal: isConsultation ? 0 : item.price,
         precio: isConsultation ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price),
@@ -5801,7 +5851,7 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
     }
     const savedId = result.data?.['ID Pedido'] || result.id || result.idPedido;
     if (!savedId) throw new Error('El servidor no confirmó el ID del pedido. Reintenta para verificarlo.');
-    return { ...payload, ...result.data, 'ID Pedido': savedId };
+    return { ...payload, ...result.data, 'ID Pedido': savedId, summaryCreatedAt: result.data?.Fecha || new Date().toISOString() };
 }
 
 function askCustomerInfo() {
@@ -5921,7 +5971,9 @@ async function performOrderCheckout(skipPrompt = false) {
     });
 
     if (savedOrder) {
-        localStorage.setItem('blyxu-last-order', JSON.stringify(savedOrder));
+        // Conservar únicamente los datos del resumen; nunca la credencial de sesión.
+        const {token: unusedToken, ...summaryRecord} = savedOrder;
+        localStorage.setItem('blyxu-last-order', JSON.stringify(summaryRecord));
         localStorage.removeItem('blyxu-pending-order');
     }
     cart = [];
@@ -5946,6 +5998,7 @@ async function performOrderCheckout(skipPrompt = false) {
                     <p>${isConsultation ? 'Tu consulta quedo registrada correctamente. Te llevamos a WhatsApp para terminar con un asesor.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.`}</p>
                     <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
                     <div class="cart-success-actions">
+                        <button class="cart-copy-reference-btn" type="button" onclick="downloadCartOrderSummary(this, true)">Descargar resumen PDF</button>
                         <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
                             Copiar referencia
                         </button>
