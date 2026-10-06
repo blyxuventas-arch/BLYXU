@@ -1,4 +1,4 @@
-﻿// ========== BLYXU E-COMMERCE ENGINE ==========
+// ========== BLYXU E-COMMERCE ENGINE ==========
 // Google Sheets integration + Cart + Particles + UI
 
 // -- CONFIG: Google Sheets --
@@ -1611,7 +1611,8 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
         lastX = event.clientX;
         velocity = 0;
         track.classList.add('is-dragging');
-        track.setPointerCapture?.(event.pointerId);
+        const captureTarget = event.target.closest?.('.home-category-pill') || track;
+        captureTarget.setPointerCapture?.(event.pointerId);
     };
 
     const onPointerMove = (event) => {
@@ -1627,7 +1628,8 @@ function initHomeCategoryRing(track = document.getElementById('home-category-tra
         if (!isDragging) return;
         isDragging = false;
         track.classList.remove('is-dragging');
-        track.releasePointerCapture?.(event.pointerId);
+        const captureTarget = event.target.closest?.('.home-category-pill') || track;
+        if (captureTarget.hasPointerCapture?.(event.pointerId)) captureTarget.releasePointerCapture(event.pointerId);
         if (Math.abs(event.clientX - startX) < 4) velocity = 0;
     };
 
