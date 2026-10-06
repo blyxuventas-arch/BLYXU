@@ -1,0 +1,49 @@
+/* Clear notices, quieter typography and a balanced storefront footer. */
+body.product-detail-page #product-detail .product-info-name {font-size:clamp(22px,2vw,28px) !important;font-weight:500 !important;line-height:1.3 !important;letter-spacing:-.02em !important;}
+body .recommended-section .section-title,body .collection-section .section-title {font-size:clamp(22px,2.5vw,30px) !important;font-weight:500 !important;}
+body.product-detail-page #product-detail .product-header-badges {align-items:center;gap:10px;flex-wrap:wrap;}
+body.product-detail-page #product-detail .product-availability-pill {display:inline-flex !important;align-items:center !important;background:#243f32 !important;border:1px solid #719b80 !important;border-radius:999px !important;padding:7px 12px !important;font-size:11px !important;line-height:1.4 !important;color:#d2e5d9 !important;box-shadow:0 0 14px #84c59b18 !important;}
+body.product-detail-page #product-detail .product-availability-pill strong {color:#c0f0cd !important;font-size:12px !important;font-weight:600 !important;}
+body.product-detail-page #product-detail .product-availability-pill:is(.is-out,.is-out-of-stock) {background:#4c292e !important;border-color:#b87780 !important;color:#f0cbd0 !important;}
+body.product-detail-page #product-detail .product-availability-pill:is(.is-out,.is-out-of-stock) strong {color:#ffd1d7 !important;}
+body .products-grid .product-card .product-card-badge {border-radius:999px !important;padding:7px 11px !important;font-size:10px !important;font-weight:600 !important;letter-spacing:.2px !important;line-height:1.4 !important;max-width:calc(100% - 62px);box-shadow:0 2px 12px #0005 !important;}
+body .products-grid .product-card .product-card-badge.badge-out {background:#63353d !important;border:1px solid #d697a1 !important;color:#fff0f2 !important;}
+body .products-grid .product-card .product-card-badge.badge-low {background:#58432b !important;border:1px solid #c7a36d !important;color:#fff0d7 !important;}
+body .products-grid .product-card .product-card-badge.badge-new {background:#353e52 !important;border:1px solid #a6b4d2 !important;color:#e9efff !important;}
+body.product-detail-page #product-detail .detail-promo-badge {background:#4c3b58 !important;border-color:#ac93bd !important;color:#f3e6fc !important;border-radius:999px !important;padding:6px 10px !important;}
+body .footer {display:flex !important;flex-wrap:wrap !important;align-items:flex-start !important;gap:32px !important;padding:42px 5% 24px !important;background:#141416 !important;border-top:1px solid #36363a !important;}
+body .footer > div:not(.footer-bottom) {flex:1 1 145px;min-width:0;}
+body .footer > .footer-brand {flex:1.35 1 220px !important;}
+body .footer h4 {font-size:11px !important;font-weight:500 !important;letter-spacing:1.3px !important;color:#d4d4d9 !important;margin:0 0 14px !important;}
+body .footer :is(p,li,a) {font-size:12px !important;font-weight:400 !important;line-height:1.8;color:#b8b8bf;}
+body .footer ul {padding:0;margin:0;}
+body .footer .footer-bottom {flex:1 0 100%;width:100%;box-sizing:border-box;display:flex !important;align-items:center !important;justify-content:space-between !important;flex-wrap:wrap !important;gap:12px 24px !important;margin:0 !important;padding:20px 0 0 !important;border-top:1px solid #36363a !important;color:#aaaab2 !important;}
+body .footer .footer-bottom p {margin:0;}
+body .footer .footer-legal {display:flex;align-items:center;flex-wrap:wrap;gap:8px 16px;}
+body .footer .footer-legal a {color:#c9c9cf !important;text-decoration:none;}
+body .footer a:hover {color:#fff !important;text-decoration:underline;}
+body .footer :is(.footer-search,.footer-social-icon-link,.footer-admin-link) {background:#202023 !important;border-color:#55555c !important;box-shadow:none !important;border-radius:6px !important;}
+body .footer .footer-search {width:100% !important;box-sizing:border-box;}
+body .footer .footer-social-icon-link svg {color:#d2d2d8 !important;stroke:#d2d2d8 !important;}
+body[data-page=carrito] :is(.cart-section-title,.cart-payment-title,.cart-empty-state h3) {font-weight:500 !important;letter-spacing:-.02em !important;text-shadow:none !important;}
+body[data-page=carrito] .cart-section-title {font-size:clamp(26px,3vw,34px) !important;line-height:1.25 !important;}
+body[data-page=carrito] .cart-payment-title {font-size:22px !important;}
+body[data-page=carrito] :is(.cart-table-card,.cart-payment-card) {background:#202023 !important;border:1px solid #45454b !important;border-radius:8px !important;box-shadow:none !important;backdrop-filter:none !important;}
+body[data-page=carrito] :is(.cart-table-header,.cart-sec-row,.cart-payment-header,.cart-table-bottom-bar,.cart-summary-line,.cart-payment-methods-select) {border-color:#45454b !important;}
+body[data-page=carrito] :is(.cart-table-header,.cart-section-kicker,.cart-payment-kicker,.cart-payment-method-label) {font-size:11px !important;font-weight:500 !important;letter-spacing:.6px !important;color:#bbbcc3 !important;}
+body[data-page=carrito] :is(.cart-sec-prod-name,.cart-payment-choice,.cart-payment-form label,.cart-summary-line,.cart-btn-continue,.cart-btn-browse) {font-weight:500 !important;}
+body[data-page=carrito] .cart-summary-total {font-size:20px !important;font-weight:500 !important;}
+body[data-page=carrito] .cart-payment-choice {background:#29292d !important;border:1px solid #56565d !important;border-radius:6px !important;box-shadow:none !important;}
+body[data-page=carrito] .cart-payment-choice.active {background:#35353a !important;border-color:#c4c4ca !important;}
+body[data-page=carrito] .cart-payment-form :is(input,textarea,select) {background:#29292d !important;border-color:#53535a !important;border-radius:6px !important;box-shadow:none !important;font-weight:400 !important;}
+@media(max-width:650px) {
+ body .footer {gap:26px 20px !important;}
+ body .footer > div:not(.footer-bottom) {flex:1 1 calc(50% - 20px);}
+ body .footer > .footer-brand {flex:1 0 100% !important;}
+ body .footer .footer-bottom {align-items:flex-start !important;flex-direction:column;}
+ body .products-grid .product-card .product-card-badge {padding:6px 8px !important;font-size:9px !important;max-width:calc(100% - 58px);}
+}
+/* Keep legal links above the floating contact control. */
+body .footer {padding-bottom:88px !important;}
+body[data-page=carrito] .cart-payment-tabs .cart-payment-tab.cart-payment-choice {background:#29292d !important;box-shadow:none !important;}
+body[data-page=carrito] .cart-payment-tabs .cart-payment-tab.cart-payment-choice.active {background:#35353a !important;border-color:#c4c4ca !important;}
