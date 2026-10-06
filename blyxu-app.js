@@ -2896,6 +2896,7 @@ function renderProducts(products, options = {}) {
         return `
         <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}"${detailPrepAttrs} tabindex="0">
             <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
+                <button type="button" class="product-card-favorite" style="position:absolute;top:12px;right:12px;z-index:3;border-radius:50%;width:36px;height:36px;background:#17171c;color:#fff;border:1px solid #666;cursor:pointer" aria-label="Guardar en favoritos" onclick="event.stopPropagation();saveCustomerFavorite(${productIndex},this)">♡</button>
                 ${img ? `<img ${imageSourceAttrs}${fullImageAttr} data-catalog-priority="${imagePriority}" alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onload="handleCatalogImageLoad(this)" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
@@ -4739,7 +4740,9 @@ function hideMercadoPagoLoading() {
     document.body.classList.remove('mp-loading-active');
 }
 
-function getCustomerSession() { return null; }
+function getCustomerSession() {
+    try {const saved=JSON.parse(sessionStorage.getItem('blyxu_key_session_v1')||'null');return /^BLYXU-C4-[a-f0-9]{64}$/.test(saved?.token||'')?saved:null;}catch(error){return null;}
+}
 
 function setCustomerSession(token, cliente) {
     const session = {
@@ -4748,19 +4751,22 @@ function setCustomerSession(token, cliente) {
         savedAt: Date.now(),
         refreshedAt: Date.now()
     };
-    localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
+    sessionStorage.setItem('blyxu_key_session_v1', JSON.stringify(session));
     renderCustomerAccountState();
     hydrateCustomerCheckoutFields();
     if (typeof updateCartUI === 'function') updateCartUI();
 }
 
 function clearCustomerSession() {
+    window.customerOwnInvoices=[];
+    sessionStorage.removeItem('blyxu_key_session_v1');
     localStorage.removeItem(CUSTOMER_SESSION_KEY);
     renderCustomerAccountState();
     if (typeof updateCartUI === 'function') updateCartUI();
 }
 
 function getCurrentCustomer() {
+    if(getCustomerSession())return getCustomerSession().cliente;
     try{return JSON.parse(sessionStorage.getItem('blyxu_contact_v1')||'null');}catch(error){return null;}
 }
 
@@ -4770,7 +4776,7 @@ function isCustomerSessionFresh(session = getCustomerSession()) {
     return timestamp > 0 && Date.now() - timestamp < CUSTOMER_SESSION_REFRESH_TTL;
 }
 
-function getCurrentCustomerPromotion() {return {percent:0,label:'',expires:''};}
+function getCurrentCustomerPromotion() {const c=getCustomerSession()?.cliente;return {percent:c?Math.max(0,Math.min(90,Number(c.descuentoCliente)||0)):0,label:c?.promoCliente||'',expires:c?.promoExpira||''};}
 
 function getCartPricingSummary(items = cart) {
     items.forEach(item => {
@@ -5120,6 +5126,7 @@ function renderCustomerOrdersList(orders = []) {
 }
 
 function renderCustomerInvoicesList(invoices = []) {
+    window.customerOwnInvoices = invoices;
     const list = document.getElementById('customer-invoices-list');
     if (!list) return;
 
@@ -5160,10 +5167,19 @@ function renderCustomerInvoicesList(invoices = []) {
                     <span>Abonado: ${formatMoney(Number(invoice.valorAbonado || 0))}</span>
                     <strong>Saldo: ${formatMoney(balance)}</strong>
                 </div>
-                <a class="customer-dashboard-link" href="facturas-pedidos.html${invoiceLookup ? `?buscar=${invoiceLookup}` : ''}">Ver / guardar PDF</a>
+                <button type="button" class="customer-dashboard-link" data-own-invoice="${invoices.indexOf(invoice)}">Ver / guardar PDF</button>
             </article>
         `;
     }).join('');
+    list.querySelectorAll('[data-own-invoice]').forEach(button=>button.onclick=()=>printCustomerOwnInvoice(Number(button.dataset.ownInvoice)));
+}
+
+function printCustomerOwnInvoice(index){
+    if(!getCustomerSession())return;
+    const invoice=window.customerOwnInvoices?.[index];if(!invoice)return;
+    const preview=window.open('','_blank');if(!preview){setCustomerAuthMessage('Permite abrir la vista de factura para guardarla.','error');return;}
+    const lines=(invoice.productos||[]).map(item=>`<tr><td>${escapeHtml(item.nombre||'Producto')}</td><td>${Number(item.cantidad)||0}</td><td>${formatMoney(Number(item.precio)||0)}</td></tr>`).join('');
+    preview.opener=null;preview.document.write(`<html lang="es"><head><meta charset="utf-8"><title>Factura BLYXU</title><style>body{font-family:Arial;padding:30px;color:#222}table{width:100%;border-collapse:collapse}td,th{padding:12px;text-align:left;border-bottom:1px solid #ddd}@media print{button{display:none}}</style></head><body><h1>BLYXU</h1><h2>Factura ${escapeHtml(invoice.id)}</h2><p>${escapeHtml(getCurrentCustomer()?.nombre||'')}</p><p>${escapeHtml(formatCustomerDate(invoice.fecha))}</p><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead><tbody>${lines}</tbody></table><p>Total: ${formatMoney(Number(invoice.total)||0)}</p><p>Abonado: ${formatMoney(Number(invoice.valorAbonado)||0)} · Saldo: ${formatMoney(Number(invoice.saldoPendiente)||0)}</p><button onclick="window.print()">Imprimir / guardar como PDF</button></body></html>`);preview.document.close();
 }
 
 function renderCustomerFavoritesList(favorites = []) {
@@ -5187,10 +5203,11 @@ function renderCustomerFavoritesList(favorites = []) {
                         <span>${item.precio ? formatMoney(Number(item.precio)) : 'Ver producto'}</span>
                     </div>
                 </a>
-                <button type="button" onclick="removeCustomerFavorite('${escapeHtml(item.idFavorito || '')}')">Quitar</button>
+                <button type="button" data-remove-favorite="${escapeHtml(item.idFavorito || '')}">Quitar</button>
             </article>
         `;
     }).join('');
+    list.querySelectorAll('[data-remove-favorite]').forEach(button=>button.onclick=()=>removeCustomerFavorite(button.dataset.removeFavorite));
 }
 
 function findProductIndexForFavorite(favorite) {
@@ -5228,6 +5245,7 @@ async function loadCustomerDashboard() {
     } catch (error) {
         const message = normalizeSearchText(error.message);
         if (!message.includes('accion no reconocida') && !message.includes('action not recognized')) {
+            if(message.includes('vencio')||message.includes('revocado')){clearCustomerSession();setCustomerAuthView('login');setCustomerAuthMessage(error.message,'error');}
             if (ordersList) ordersList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus pedidos.')}</div>`;
             if (invoicesList) invoicesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus facturas.')}</div>`;
             if (favoritesList) favoritesList.innerHTML = `<div class="customer-dashboard-empty">${escapeHtml(error.message || 'No se pudieron cargar tus favoritos.')}</div>`;
@@ -5365,18 +5383,21 @@ async function renderCustomerGoogleSignIn() {
 }
 
 function openCustomerAuthModal() {
-    let modal=document.getElementById('customer-auth-modal');
-    if(!modal){modal=document.createElement('div');modal.id='customer-auth-modal';modal.className='customer-auth-modal';document.body.append(modal);}
-    modal.innerHTML=`<div class="customer-auth-dialog" role="dialog" aria-modal="true" aria-labelledby="customer-auth-title"><button class="customer-auth-close" type="button" aria-label="Cerrar">&times;</button><h2 id="customer-auth-title">Datos de contacto</h2><p>Úsalos para completar tu pedido.</p><form class="customer-auth-form"><label>Nombre<input name="nombre" autocomplete="name" maxlength="100" required></label><label>Celular / WhatsApp<input type="tel" name="telefono" autocomplete="tel" maxlength="20" required></label><button type="submit">Usar estos datos</button><button type="button" id="contact-clear">Borrar datos de este dispositivo</button><p role="status"></p></form></div>`;
-    modal.querySelector('.customer-auth-close').onclick=closeCustomerAuthModal;
-    modal.onclick=event=>{if(event.target===modal)closeCustomerAuthModal();};
-    const form=modal.querySelector('form'),contact=getCurrentCustomer();
-    form.elements.nombre.value=contact?.nombre||'';form.elements.telefono.value=contact?.telefono||'';
-    form.onsubmit=event=>{event.preventDefault();const nombre=form.elements.nombre.value.trim(),telefono=form.elements.telefono.value.replace(/[^0-9+]/g,'');
-        if(!nombre||!/^\+?[0-9]{7,15}$/.test(telefono)){form.querySelector('[role=status]').textContent='Escribe tu nombre y un celular válido.';return;}
-        sessionStorage.setItem('blyxu_contact_v1',JSON.stringify({nombre,telefono}));renderCustomerAccountState();hydrateCustomerCheckoutFields();closeCustomerAuthModal();};
-    modal.querySelector('#contact-clear').onclick=()=>{sessionStorage.removeItem('blyxu_contact_v1');form.reset();renderCustomerAccountState();};
-    modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('customer-auth-open');form.elements.nombre.focus();
+    const modal=ensureCustomerAuthModal();
+    modal.querySelector('.customer-auth-tabs').hidden=true;
+    modal.querySelector('.customer-auth-tabs').style.display='none';
+    modal.querySelector('#customer-google-box').hidden=true;
+    modal.querySelector('#customer-google-box').style.display='none';
+    const login=modal.querySelector('[data-auth-panel=login]');
+    login.innerHTML=`<h2 id="customer-auth-title">Mi cuenta</h2><p>Consulta tus pedidos, facturas, favoritos y beneficios.</p><form class="customer-auth-form" id="customer-key-login"><label>Tu llave privada<input name="key" type="password" autocomplete="off" spellcheck="false" maxlength="80" required></label><button type="submit">Entrar a mi cuenta</button><p role="status"></p></form><details><summary>¿Todavía no tienes una llave?</summary><p>Solicítala a BLYXU por WhatsApp. Verificaremos tu identidad antes de darte acceso. Puedes comprar sin una cuenta, completando tus datos en el pedido.</p></details>`;
+    login.querySelector('form').onsubmit=async event=>{
+        event.preventDefault();const form=event.currentTarget,button=form.querySelector('button'),status=form.querySelector('[role=status]');button.disabled=true;status.textContent='Verificando tu acceso…';
+        try{const data=await customerAuthRequest('customerkeylogin',{key:form.elements.key.value.trim()});form.reset();setCustomerSession(data.token,data.cliente);setCustomerAuthView('profile');renderCustomerProfile();await loadCustomerDashboard();}
+        catch(error){status.textContent=error.message;form.elements.key.value='';}finally{button.disabled=false;}
+    };
+    setCustomerAuthView(getCustomerSession()?'profile':'login');
+    if(getCustomerSession()){renderCustomerProfile();loadCustomerDashboard();}
+    modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.classList.add('customer-auth-open');
 }
 
 function closeCustomerAuthModal() {
@@ -5466,8 +5487,8 @@ function renderCustomerAccountState() {
     const label = button.querySelector('.customer-account-label');
     const initial = button.querySelector('.customer-account-initial');
     button.classList.toggle('is-logged', Boolean(customer));
-    button.setAttribute('aria-label','Editar datos de contacto');
-    if (label) label.textContent = 'Mis datos';
+    button.setAttribute('aria-label','Abrir mi cuenta');
+    if (label) label.textContent = 'Mi cuenta';
     if (initial) initial.textContent = customer?.nombre ? customer.nombre.trim().charAt(0).toUpperCase() : '';
 }
 

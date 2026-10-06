@@ -4783,6 +4783,7 @@ function initHomeAdConfigAdmin() {
 }
 
 function initCustomerPromoAdmin() {
+    initCustomerPrivateKeys();
     const form = document.getElementById('customer-promo-form');
     if (!form) return;
 
@@ -4841,6 +4842,19 @@ function initCustomerPromoAdmin() {
             }
         }
     });
+}
+
+function initCustomerPrivateKeys(){
+    const promo=document.getElementById('customer-promo-form');if(!promo||document.getElementById('customer-key-admin'))return;
+    const box=document.createElement('details');box.id='customer-key-admin';box.className='admin-section-card';box.style.padding='20px';
+    box.innerHTML=`<summary>Llaves privadas de clientes</summary><p>El cliente verá sus pedidos, facturas, favoritos y beneficios. La llave vence en 30 días. Renovarla invalida la anterior.</p><form class="admin-form-grid" style="margin-top:16px;display:grid;gap:14px"><label>Celular del cliente<input class="form-control" name="telefono" type="tel" required></label><label style="display:flex;gap:10px;align-items:center"><input name="confirmed" type="checkbox" required>Verifiqué la identidad y que este celular corresponde al cliente.</label><button class="admin-btn" type="submit">Generar / renovar llave</button><button class="admin-btn" type="button" data-revoke>Revocar acceso</button><p role="status"></p><div data-result hidden><label>Llave privada (se muestra una sola vez)<textarea class="form-control" readonly data-key></textarea></label><button class="admin-btn" type="button" data-copy>Copiar llave para entregarla al cliente</button><p>Entrar en blyxu.online → Mi cuenta. Entrega la llave solo al cliente verificado.</p></div></form>`;
+    promo.before(box);const form=box.querySelector('form'),status=form.querySelector('[role=status]'),result=form.querySelector('[data-result]'),key=form.querySelector('[data-key]');
+    const run=async action=>{result.hidden=true;key.value='';status.textContent='Procesando…';const buttons=form.querySelectorAll('button');buttons.forEach(b=>b.disabled=true);
+        try{const response=await fetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,telefono:form.elements.telefono.value,confirmed:form.elements.confirmed.checked})}),data=await response.json();if(!data.ok)throw new Error(data.error||'No se pudo completar.');status.textContent=action==='customerkeyissue'?`Llave de ${data.cliente.nombre} preparada. Entrega privada pendiente.`:'Acceso revocado.';if(data.key){key.value=data.key;result.hidden=false;}}
+        catch(error){status.textContent=error.message;}finally{buttons.forEach(b=>b.disabled=false);}};
+    form.onsubmit=event=>{event.preventDefault();run('customerkeyissue');};
+    form.querySelector('[data-revoke]').onclick=()=>{if(form.elements.telefono.reportValidity())run('customerkeyrevoke');};
+    form.querySelector('[data-copy]').onclick=async()=>{try{await navigator.clipboard.writeText(key.value);status.textContent='Llave copiada. Entrégala por un canal privado al cliente.';}catch(error){key.select();status.textContent='Selecciona y copia la llave.';}};
 }
 
 function createPaymentMethodCard(data = { name: '', type: 'key', value: '', image: '', instructions: '' }, index) {
