@@ -259,14 +259,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            async function fetchResourceData(resource) {
-                let session;
-                try { session = JSON.parse(sessionStorage.getItem('blyxu_key_session_v1') || localStorage.getItem('blyxu_customer_device_session_v2') || 'null'); } catch (_) {}
-                if (!session?.token) throw new Error('Inicia sesión en Cuenta para consultar tus pedidos y facturas.');
-                const response = await fetch(apiUrl, {method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'customerrecords',resource,token:session.token}),cache:'no-store'});
-                const data = await readOrdersResponse(response);
-                if (!data || data.ok === false) throw new Error(data?.error || 'No se pudo confirmar tu sesión.');
-                return data;
+            let referenceOnly = false;
+            async function fetchPublicReference(reference) {
+                const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
+                try {
+                    const response=await fetch(apiUrl,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'publicreference',reference}),cache:'no-store',signal:controller.signal});
+                    const data=await readOrdersResponse(response);
+                    if(!response.ok || !data?.ok || data.status!=='success')throw new Error(data?.error || 'No se pudo consultar la referencia.');
+                    return [data.orders || [],data.invoices || []];
+                } catch(error) {
+                    if(error.name==='AbortError')throw new Error('La consulta tardó demasiado. Intenta nuevamente.');
+                    throw error;
+                } finally {clearTimeout(timer);}
+            }
+            function renderReferenceSummary() {
+                results.classList.remove('stack-mode');
+                const record=currentOrders[0] || currentInvoices[0];
+                if(!record){results.innerHTML='<div class="orders-empty">No encontramos un registro con ese ID completo.</div>';return;}
+                const items=parseItems(record),id=getField(record,['ID Factura','ID Pedido'],'');
+                const state=getField(record,['Estado Pedido','Estado Factura','Estado'],'Registrado');
+                results.innerHTML=`<article class="order-card"><div class="order-card-head"><div><div class="order-id">${escapeHtml(id)}</div><div class="order-meta">${formatDate(getField(record,['Fecha','Fecha Pedido'],''))}</div></div><span class="order-status ${statusClass(state)}">${escapeHtml(state)}</span></div><div class="order-body"><div class="order-metric"><span>Total</span><strong>${formatMoney(getOrderTotal(record,items))}</strong></div>${renderItemsTable(items)}<p>Consulta del registro indicado. Para ver tus datos personales y documentos completos, entra en Mi cuenta.</p></div></article>`;
             }
 
             async function verifyMercadoPagoReturn() {
@@ -292,46 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (error) {
                     status.textContent = error.message || 'No se pudo verificar el pago de Mercado Pago.';
                 }
-            }
-
-            async function fetchOrdersByPhone(phone) {
-                const data = await fetchResourceData('pedidos');
-
-                if (!data || data.status !== 'success' || !Array.isArray(data.data)) {
-                    throw new Error(data?.error || 'No se pudo cargar la informacion.');
-                }
-
-                return mergeRecordsByOrder(data.data
-                    .filter(order => matchesLookup(
-                        order,
-                        phone,
-                        ['Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Telefono Cliente', 'Celular', 'ID Cliente'],
-                        ['ID Pedido', 'ID', 'id', 'Referencia', 'Ref']
-                    ))
-                    .reverse());
-            }
-
-            async function fetchInvoicesByPhone(phone) {
-                let data = null;
-                try {
-                    data = await fetchResourceData('facturas');
-                } catch (error) {
-                    console.warn('No se pudieron cargar facturas:', error);
-                    return [];
-                }
-
-                if (!data || data.status !== 'success' || !Array.isArray(data.data)) {
-                    return [];
-                }
-
-                return data.data
-                    .filter(invoice => matchesLookup(
-                        invoice,
-                        phone,
-                        ['ID Cliente', 'Telefono', 'Tel\u00e9fono', 'Tel\u00c3\u00a9fono', 'Celular'],
-                        ['ID Factura', 'ID Pedido', 'ID', 'id', 'Referencia', 'Ref', 'Factura']
-                    ))
-                    .reverse();
             }
 
             function getItemImage(item) {
@@ -1170,6 +1142,8 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             function renderCurrentView() {
+                tabs.forEach(tab => tab.hidden = referenceOnly);
+                if(referenceOnly){renderReferenceSummary();return;}
                 tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.ordersView === currentView));
                 if (currentView === 'invoices') {
                     renderInvoices();
@@ -1225,11 +1199,8 @@ document.addEventListener('DOMContentLoaded', () => {
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const lookup = input.value.trim();
-                const comparable = comparablePhone(lookup);
-                const reference = onlyLetters(lookup);
-
-                if (comparable.length < 7 && reference.length < 3) {
-                    status.textContent = 'Escribe un número de contacto o referencia válido.';
+                if (!/^(PED|FAC)-[0-9]{14}-[0-9]{4}$/i.test(lookup)) {
+                    status.textContent = 'Escribe el ID completo del pedido o factura, o escanea su QR. No se consulta por celular.';
                     panel.classList.remove('open');
                     return;
                 }
@@ -1243,19 +1214,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     currentPhone = lookup;
-                    [currentOrders, currentInvoices] = await Promise.all([
-                        fetchOrdersByPhone(lookup),
-                        fetchInvoicesByPhone(lookup)
-                    ]);
+                    referenceOnly = true;
+                    [currentOrders, currentInvoices] = await fetchPublicReference(lookup);
                     stackIndexes.orders = 0;
                     stackIndexes.invoices = 0;
-                    const firstRecord = currentOrders[0] || currentInvoices[0];
                     const totalRecords = currentOrders.length + currentInvoices.length;
-                    const customer = firstRecord ? getField(firstRecord, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU') : 'Cliente BLYXU';
-                    const lookupLabel = /^[+\d\s().-]+$/.test(lookup) && comparable.length >= 7
-                        ? 'contacto terminado en ' + comparable.slice(-4)
-                        : 'referencia ' + lookup;
-                    heading.textContent = totalRecords ? 'Panel de ' + customer : 'Sin registros';
+                    const lookupLabel = 'referencia ' + lookup;
+                    heading.textContent = totalRecords ? 'Consulta por referencia' : 'Sin registros';
                     summary.textContent = totalRecords === 1
                         ? '1 registro encontrado para ' + lookupLabel
                         : totalRecords + ' registros encontrados para ' + lookupLabel;
@@ -1267,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     panel.classList.remove('open');
                 } finally {
                     btn.disabled = false;
-                    btn.textContent = 'Ver mi panel';
+                    btn.textContent = 'Consultar referencia';
                     btn.classList.remove('is-generating');
                     input.classList.remove('lookup-active');
                     form.closest('.orders-login')?.classList.remove('is-generating');

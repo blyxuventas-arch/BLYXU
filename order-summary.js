@@ -1,7 +1,8 @@
 /* Resumen visual local: no factura, no confirma pagos ni reserva existencias. */
 (() => {
     'use strict';
-    let libraryPromise;
+    let libraryPromise, qrPromise;
+    const imageCache = new Map();
     const clean = value => String(value ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 500);
     const money = value => '$' + (Number(value) || 0).toLocaleString('es-CO');
     function fromRecord(record) {
@@ -43,14 +44,15 @@
             return ['https:', 'http:'].includes(url.protocol) ? url.href : '';
         } catch (_) { return ''; }
     }
-    function imageData(value) {
+    function imageData(value, timeoutMs = 4000) {
         const src = value && safeImage(value);
         if (!src) return Promise.resolve(null);
-        return new Promise(resolve => {
+        if(imageCache.has(src))return imageCache.get(src);
+        const pending = new Promise(resolve => {
             const img = new Image();
             let finished = false;
             const done = result => { if (finished) return; finished = true; clearTimeout(timer); img.onload = img.onerror = null; resolve(result); };
-            const timer = setTimeout(() => done(null), 8000);
+            const timer = setTimeout(() => done(null), timeoutMs);
             img.crossOrigin = 'anonymous';
             img.referrerPolicy = 'no-referrer';
             img.onload = () => {
@@ -68,6 +70,17 @@
             img.onerror = () => done(null);
             img.src = src;
         });
+        imageCache.set(src,pending);
+        if(imageCache.size>60)imageCache.delete(imageCache.keys().next().value);
+        pending.then(result=>{if(!result && imageCache.get(src)===pending)imageCache.delete(src);});
+        return pending;
+    }
+    async function loadItemImages(items) {
+        const images = new Array(items.length).fill(null), deadline = performance.now()+5000;
+        let next=0;
+        async function worker(){while(next<items.length){const index=next++;const remaining=deadline-performance.now();if(remaining<=0)return;images[index]=await imageData(items[index].img || items[index].imagen,Math.min(4000,remaining));}}
+        await Promise.all(Array.from({length:Math.min(4,items.length)},worker));
+        return images;
     }
     function prepareViewer() {
         const viewer = window.open('', '_blank');
@@ -79,14 +92,17 @@
     }
     async function loadQr() {
         if (window.qrcode) return;
-        await new Promise((resolve, reject) => {
+        if(qrPromise)return qrPromise;
+        qrPromise = new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'qrcode-local.js?v=2.0.4';
-            script.onload = resolve;
+            script.onload = () => window.qrcode ? resolve() : reject(new Error('No se pudo preparar el QR.'));
             script.onerror = () => reject(new Error('No se pudo preparar el QR del pedido.'));
             document.head.append(script);
-        });
+        }).catch(error=>{qrPromise=null;throw error;});
+        return qrPromise;
     }
+    function warmup(){return Promise.all([loadLibrary(),loadQr()]);}
     async function download(summary, button, authorizeBeforeSave, reservedViewer) {
         if (!summary?.items?.length) throw new Error('Añade productos al carrito para generar el resumen.');
         if (button?.disabled) return;
@@ -94,8 +110,8 @@
         const original = button?.textContent;
         if (button) { button.disabled = true; button.textContent = 'Preparando PDF…'; }
         try {
-            const Pdf = await loadLibrary();
-            const pdf = new Pdf({unit: 'mm', format: 'a4'});
+            const [Pdf, , preparedImages] = await Promise.all([loadLibrary(), summary.registered ? loadQr() : Promise.resolve(), loadItemImages(summary.items)]);
+            const pdf = new Pdf({compress:true,unit: 'mm', format: 'a4'});
             const text = (value, x, y, size = 10, weight = 'normal', color = 45) => {
                 pdf.setFont('helvetica', weight); pdf.setFontSize(size); pdf.setTextColor(color);
                 pdf.text(clean(value), x, y);
@@ -122,7 +138,7 @@
             // Procesar en grupos pequeños evita saturar la cámara/memoria del móvil.
             for (let start = 0; start < items.length; start += 4) {
                 const batch = items.slice(start, start + 4);
-                const images = await Promise.all(batch.map(item => imageData(item.img || item.imagen)));
+                const images = preparedImages.slice(start,start+4);
                 for (let offset = 0; offset < batch.length; offset++) {
                     const item = batch[offset], picture = images[offset];
                     const name = clean(item.nombre || item.name || 'Producto');
@@ -166,7 +182,7 @@
                 if (y + 48 > 270) { pdf.addPage(); y = 20; }
                 pdf.addImage(qr.createDataURL(5, 16), 'GIF', 16, y + 5, 35, 35);
                 text('Consulta de pedido', 57, y + 15, 11, 'bold');
-                text('Escanea el QR e inicia sesión en tu cuenta.', 57, y + 22, 9);
+                text('Escanea el QR para consultar por referencia.', 57, y + 22, 9);
                 text('Referencia: ' + summary.id, 57, y + 29, 8);
                 pdf.link(16, y + 5, 178, 35, {url:url.href});
             }
@@ -185,5 +201,5 @@
         } catch (error) { if (!viewer.closed) viewer.close(); throw error; }
         finally { if (button) { button.disabled = false; button.textContent = original; } }
     }
-    window.BlyxuOrderSummary = {fromRecord, download, prepareViewer};
+    window.BlyxuOrderSummary = {fromRecord, download, prepareViewer, warmup};
 })();

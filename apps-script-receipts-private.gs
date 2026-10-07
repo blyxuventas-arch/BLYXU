@@ -3256,6 +3256,10 @@ function securityPublicConfig_(config) {
   return result;
 }
 function securityAuthorizeRequest_(body, params, action, resource, method) {
+  if(action === 'publicreference') {
+    if(method !== 'POST')throw new Error('Consulta no válida.');
+    return {response:securityPublicReference_(body)};
+  }
   if(['ordertempreceipt','ordercustomerreceipt','orderadminnotifications','orderadminseen','orderadminreceipt','orderadminlink'].includes(action)) {
     if(method!=='POST')throw new Error('Consulta no válida.');
     return {response:receiptAction_(body,action)};
@@ -3319,6 +3323,27 @@ function securityCustomerOwnsRecord_(customer, row) {
   const email = normalizeEmail_(customer.Email);
   return !!verified && !!email && email === normalizeEmail_(row.Email || row.email);
 }
+
+// Exact reference access exposes a single commercial summary, never contact details.
+function securityPublicReference_(body) {
+  const reference = String(body.reference || '').trim().toUpperCase();
+  if(!/^(PED|FAC)-[0-9]{14}-[0-9]{4}$/.test(reference))return {ok:false,status:'error',error:'Escribe el ID completo del pedido o factura, o escanea su QR.'};
+  caWithLock_(() => {
+    const cache=CacheService.getScriptCache(),key='reference-burst-'+Math.floor(Date.now()/60000),count=Number(cache.get(key)||0);
+    if(count>=60)throw new Error('Hay muchas consultas. Intenta nuevamente en un minuto.');
+    cache.put(key,String(count+1),120);
+  });
+  const resource=reference.startsWith('PED-')?'Pedidos':'Facturas';
+  const row=getById_(resource,reference);
+  if(!row)return {ok:true,status:'success',orders:[],invoices:[]};
+  const summary={};
+  ['ID Pedido','ID Factura','Fecha','Fecha Pedido','Estado','Estado Pedido','Estado Factura','Subtotal','Total','Cantidad Total'].forEach(key=>{if(row[key]!==undefined)summary[key]=row[key];});
+  let items=row['Productos JSON'];
+  if(typeof items==='string'){try{items=JSON.parse(items);}catch(_){items=[];}}
+  const itemKeys=['id','sku','SKU','idVariacion','nombre','Nombre','Producto','cantidad','Cantidad','qty','quantity','precio','Precio','price','subtotal','img','imagen','Imagen','image','foto','Foto','color','Color','talla','Talla','tamano','tamaño','size','variante','variacion','opcion','opciones','variant','option'];
+  summary['Productos JSON']=(Array.isArray(items)?items:[]).map(item=>{const safe={};itemKeys.forEach(key=>{if(['string','number','boolean'].includes(typeof item?.[key]))safe[key]=item[key];});return safe;});
+  return {ok:true,status:'success',orders:resource==='Pedidos'?[summary]:[],invoices:resource==='Facturas'?[summary]:[]};
+}
 function securityCustomerRecords_(body, params) {
   const found = getAuthenticatedCustomer_(body,params);
   if (!found || !found.data['Google ID']) return json_({ok:false,status:'error',error:'Ingresa con Google para verificar tu identidad y consultar tus documentos.'});
@@ -3342,17 +3367,21 @@ function securityLimitLogin_(body) {
 
 function securityCatalogItems_(items, wholesale) {
   if (!Array.isArray(items) || !items.length || items.length > 100) throw new Error('Carrito no válido.');
+  // One snapshot per request; prices and stock still come from the server.
+  const products = items.length>1 ? listRows_('Productos',{}) : null;
+  const catalog = new Map();
+  if(products)products.forEach(product=>{const id=String(product['ID Variación'] || product['ID Variacion'] || '').trim();if(id && !catalog.has(id))catalog.set(id,product);});
+  const prefix = wholesale ? 'Wholesale_Promo_' : 'Promo_';
+  const enabled = String(getConfigValue_(prefix+'Enabled','false')) === 'true';
+  const expiry = String(getConfigValue_(prefix+'Date',''));
+  const discount = Math.max(0,Math.min(90,toNumber_(getConfigValue_(prefix+'Discount',0))));
+  const active = enabled && discount > 0 && (!expiry || new Date(expiry).getTime()>Date.now());
   return items.map(function(item) {
     const id = String(item.idVariacion || item['ID Variación'] || item['ID Variacion'] || item.id || item.sku || '').trim();
-    const product = getById_('Productos',id);
+    const product = products ? catalog.get(id) : getById_('Productos',id);
     const qty = Number(item.cantidad || item.qty || item.quantity || 1);
     if (!product || !Number.isInteger(qty) || qty < 1 || qty > 1000) throw new Error('Producto o cantidad no válida.');
     let price = toNumber_(product[wholesale ? 'Precio Mayor' : 'Precio']);
-    const prefix = wholesale ? 'Wholesale_Promo_' : 'Promo_';
-    const enabled = String(getConfigValue_(prefix+'Enabled','false')) === 'true';
-    const expiry = String(getConfigValue_(prefix+'Date',''));
-    const discount = Math.max(0,Math.min(90,toNumber_(getConfigValue_(prefix+'Discount',0))));
-    const active = enabled && discount > 0 && (!expiry || new Date(expiry).getTime()>Date.now());
     const tagged = ['si','true','1'].indexOf(normalizeKey_(product.Promocion || ''))>=0;
     if (active && (wholesale || tagged)) price=Math.round(price*(1-discount/100));
     return {id:id,idVariacion:id,sku:product.SKU || id,nombre:product['Nombre del Producto'] || product.Nombre || 'Producto',opcion:String(product.Estilo || product.Color || ''),color:String(product.Color||''),talla:String(product.Talla||product['Tamaño']||product.Tamano||''),cantidad:qty,precio:Math.max(0,price),imagen:product['Imagen Principal'] || ''};

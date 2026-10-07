@@ -3524,8 +3524,12 @@ function changeCartPreviewVariant(idx, productIndex) {
 }
 
 function saveCart(mode = activeCartMode) {
-    localStorage.setItem(CART_STORAGE_KEYS[normalizeCartMode(mode)], JSON.stringify(cart));
+    try {localStorage.setItem(CART_STORAGE_KEYS[normalizeCartMode(mode)], JSON.stringify(cart));return true;}
+    catch(error){console.warn('No se pudo guardar el carrito en este navegador:',error);return false;}
 }
+// Recover the current catalog cart on Back/Forward and synchronize other tabs.
+window.addEventListener('pageshow',event=>{if(event.persisted){cart=loadCart(activeCartMode);updateCartUI();}});
+window.addEventListener('storage',event=>{if(event.key===CART_STORAGE_KEYS[normalizeCartMode(activeCartMode)]){cart=loadCart(activeCartMode);updateCartUI();}});
 
 const CART_PAYMENT_METHOD_STORAGE_KEY = 'blyxuCartPaymentMethod';
 let currentCartSectionPaymentMethod = (() => {
@@ -6015,6 +6019,8 @@ function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', c
 async function checkout(skipPrompt = false) {
     if (orderCheckoutInProgress) return;
     orderCheckoutInProgress = true;
+    // Prepare local PDF libraries while the server registers the order.
+    window.BlyxuOrderSummary?.warmup().catch(()=>{});
     try { return await performOrderCheckout(skipPrompt); }
     finally { orderCheckoutInProgress = false; }
 }
@@ -6274,7 +6280,7 @@ function initBlyxuApp() {
     const isWholesalePage = document.body?.dataset.catalogMode === 'wholesale';
     const isHomePage = !isProductDetailPage && !isContactPage && !isPaymentsPage && !isOrdersLookupPage && !isCartPage && !isWholesalePage;
 
-    // No se guarda sesion - en mayorista siempre se pide clave
+    // Delay catalog initialization only while the wholesale access gate is active.
     const shouldDelayWholesaleCatalog = isWholesalePage && !document.body.classList.contains('wholesale-unlocked');
 
     // En pagos: si el overlay de login sigue activo, no inicializar nada pesado

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Facturas y Pedidos - BLYXU</title>
-    <meta name="description" content="Consulta tus pedidos y facturas BLYXU con tu n&uacute;mero de contacto.">
+    <meta name="description" content="Consulta pedidos y facturas BLYXU por su ID completo o código QR.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
     <link rel="preconnect" href="https://script.google.com">
@@ -1515,15 +1515,15 @@
                 <div class="orders-intro">
                     <div class="orders-kicker">Panel de cliente</div>
                     <h1>Facturas y Pedidos</h1>
-                    <p>Consulta el estado de tus pedidos BLYXU y revisa el detalle de factura asociado a tu n&uacute;mero de contacto o referencia.</p>
+                    <p>Consulta un pedido o factura con su ID completo o código QR.</p>
                 </div>
 
                 <div class="orders-login">
-                    <h2>Consulta por contacto o referencia</h2>
-                    <p>Escribe el n&uacute;mero de contacto o el ID de factura/pedido.</p>
+                    <h2>Consulta por ID de pedido o factura</h2>
+                    <p>Escribe el ID completo o escanea su QR. Puedes consultar sin iniciar sesión.</p>
                     <form class="orders-form" id="orders-lookup-form">
-                        <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="N&uacute;mero de contacto o referencia" required>
-                        <button type="submit" id="orders-submit-btn">Ver mi panel</button>
+                        <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="Ej.: PED-20261007000100-1234" aria-label="ID completo de pedido o factura" required>
+                        <button type="submit" id="orders-submit-btn">Consultar referencia</button>
                         <button type="button" id="orders-scan-qr-btn">Escanear QR de pedido o factura</button>
                         <dialog id="orders-qr-dialog" aria-labelledby="orders-qr-title" style="width:min(92vw,480px);border:1px solid #555;border-radius:16px;padding:18px;background:#151515;color:#fff;">
                             <h3 id="orders-qr-title">Escanea el QR de tu pedido o factura</h3>
@@ -1616,7 +1616,7 @@
     <script src="blyxu-app.js?v=browser-qr-20261006" defer></script>
     <script src="order-summary.js?v=browser-qr-20261006" defer></script>
     <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
-    <script src="orders-page.js?v=browser-qr-20261006" defer></script>
+    <script src="orders-page.js?v=only-reference-20261007" defer></script>
 
 </body>
 
