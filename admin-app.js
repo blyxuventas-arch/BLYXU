@@ -26,7 +26,7 @@ async function refreshAdministrator(button) {
             () => typeof refreshCustomerAccessCount === 'function' ? refreshCustomerAccessCount() : undefined
         ];
         if (document.getElementById('view-users')?.classList.contains('active')) jobs.push(() => loadCustomerUsers());
-        if (document.getElementById('pending-products-panel')?.open) jobs.push(() => window.BlyxuPendingProducts?.refresh());
+        if (document.getElementById('pending-products-panel') && !document.getElementById('pending-products-panel').hidden) jobs.push(() => window.BlyxuPendingProducts?.refresh());
         const results = await Promise.allSettled(jobs.map(job => Promise.resolve().then(job)));
         renderAdminDashboard();
         showToast(results.some(result => result.status === 'rejected') ? 'Algunos datos no pudieron actualizarse. Revisa los avisos e inténtalo de nuevo.' : 'Actualización terminada. Tu sesión sigue abierta.', results.some(result => result.status === 'rejected') ? 'error' : 'success');

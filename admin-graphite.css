@@ -94,3 +94,9 @@ body.admin-graphite #pending-products-panel p {color:#ccc;line-height:1.6;}
 @media(max-width:600px) {body.admin-graphite .pending-product-row {flex-direction:column;align-items:stretch;}}
 body.admin-graphite .admin-header-actions {display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;}
 body.admin-graphite #admin-refresh-btn {white-space:nowrap;min-height:42px;}
+body.admin-graphite .product-work-tabs {display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;border-bottom:1px solid #505056;padding-bottom:12px;}
+body.admin-graphite .product-work-tabs button {border:1px solid #5b5b64;background:#252529;color:#d5d5df;border-radius:6px;padding:12px 18px;min-height:44px;font:inherit;cursor:pointer;}
+body.admin-graphite .product-work-tabs button[aria-selected="true"] {background:#eeeef2;color:#242428;border-color:#eeeef2;}
+body.admin-graphite .product-work-tabs button:focus-visible {outline:2px solid #d5d5df;outline-offset:3px;}
+body.admin-graphite :is(#products-form-pane,#pending-products-panel)[hidden] {display:none !important;}
+body.admin-graphite #pending-products-panel {padding:24px;}

@@ -7393,7 +7393,7 @@
     #admin-login-box .admin-otp-digit { height: 56px !important; font-size: 19px !important; }
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
-<link rel="stylesheet" href="admin-graphite.css?v=admin-refresh-20261006">
+<link rel="stylesheet" href="admin-graphite.css?v=pending-tabs-20261006">
 </head>
 <body class="admin-graphite">
     <div class="bg-animation"></div>
@@ -7605,7 +7605,9 @@
                 </div>
 
                 <div id="view-products" class="dashboard-section">
-                    <div class="grid-split product-admin-grid">
+                    <div class="product-work-tabs" role="tablist" aria-label="Gestión de productos"><button type="button" id="products-form-tab" role="tab" aria-selected="true" aria-controls="products-form-pane">Añadir / completar producto</button><button type="button" id="products-pending-tab" role="tab" aria-selected="false" aria-controls="pending-products-panel" tabindex="-1">Pendientes</button></div>
+                    <section id="pending-products-panel" class="admin-panel" role="tabpanel" aria-labelledby="products-pending-tab" hidden><h2>Pendientes del escáner</h2><p>Guarda la referencia con «Guardar como pendiente» y completa los datos aquí cuando quieras. Estos registros no aparecen en el catálogo.</p><button type="button" class="admin-btn secondary" id="pending-products-refresh">Actualizar pendientes</button><div id="pending-products-list" role="status" aria-live="polite">Abre la pestaña para consultar tus registros guardados.</div></section>
+                    <div class="grid-split product-admin-grid" id="products-form-pane" role="tabpanel" aria-labelledby="products-form-tab">
                         <div class="admin-panel gradient-bg product-form-panel">
                             <div class="admin-title-row">
                                 <div><span class="admin-kicker">Alta de inventario</span><h2 id="product-form-title">Nuevo Producto</h2></div>
@@ -7709,7 +7711,7 @@
                     </div>
                 </div>
 
-                <div id="view-inventory" class="dashboard-section"><details class="admin-fold inventory-pdf-category-panel" id="pending-products-panel"><summary>Pendientes por completar</summary><div><p>Referencias guardadas desde el celular. Solo visibles en Admin; se publican al completar y guardar el producto.</p><button type="button" class="admin-btn secondary" id="pending-products-refresh">Actualizar pendientes</button><div id="pending-products-list" role="status" aria-live="polite">Abre esta sección para consultar los pendientes.</div></div></details>
+                <div id="view-inventory" class="dashboard-section"><button type="button" class="admin-btn secondary" onclick="switchDashboardView('products','Gestión de Productos');BlyxuPendingProducts.showPending()">Abrir pendientes del escáner</button>
                     <div class="admin-panel gradient-bg">
                         <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
@@ -8267,12 +8269,12 @@
 <script src="customer-access-admin.js?v=blyxu-camera-hd-20261006" defer></script>
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
 <script src="barcode-frame-reader.js?v=automatic-20261006-2" defer></script>
-<script src="admin-app.js?v=admin-refresh-20261006" defer></script>
+<script src="admin-app.js?v=pending-tabs-20261006" defer></script>
 <script src="inventory-category-manager.js?v=20261006-1" defer></script>
 <script src="order-summary.js?v=browser-qr-20261006" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 <script src="order-notifications-admin.js?v=20261006-1" defer></script>
-<script src="pending-products-admin.js?v=20261006-1" defer></script>
+<script src="pending-products-admin.js?v=tabs-20261006-2" defer></script>
 </body>
 </html>
 
