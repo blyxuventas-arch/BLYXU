@@ -19,17 +19,21 @@ async function refreshAdministrator(button) {
     try {
         siteConfigPromise = null;
         const jobs = [
-            () => cargarInventario({force:true,silent:true}),
-            () => cargarPedidos({force:true}),
-            () => loadSiteConfigForAdmin(),
-            () => window.refreshOrderNotifications?.(),
-            () => typeof refreshCustomerAccessCount === 'function' ? refreshCustomerAccessCount() : undefined
+            () => cargarInventario({force:true,silent:true,throwOnError:true}),
+            () => cargarPedidos({force:true,throwOnError:true}),
+            () => loadSiteConfigForAdmin({force:true,throwOnError:true}),
+            () => window.refreshOrderNotifications?.({throwOnError:true}),
+            () => typeof refreshCustomerAccessCount === 'function' ? refreshCustomerAccessCount({throwOnError:true}) : undefined
         ];
-        if (document.getElementById('view-users')?.classList.contains('active')) jobs.push(() => loadCustomerUsers());
-        if (document.getElementById('pending-products-panel') && !document.getElementById('pending-products-panel').hidden) jobs.push(() => window.BlyxuPendingProducts?.refresh());
+        if (document.getElementById('view-users')?.classList.contains('active')) jobs.push(() => loadCustomerUsers({throwOnError:true}));
+        if (document.getElementById('pending-products-panel') && !document.getElementById('pending-products-panel').hidden) jobs.push(() => window.BlyxuPendingProducts?.refresh({throwOnError:true}));
+        const names = ['inventario','pedidos y facturas','configuración','pedidos nuevos','solicitudes'];
+        if(document.getElementById('view-users')?.classList.contains('active'))names.push('usuarios');
+        if(document.getElementById('pending-products-panel') && !document.getElementById('pending-products-panel').hidden)names.push('pendientes');
         const results = await Promise.allSettled(jobs.map(job => Promise.resolve().then(job)));
         renderAdminDashboard();
-        showToast(results.some(result => result.status === 'rejected') ? 'Algunos datos no pudieron actualizarse. Revisa los avisos e inténtalo de nuevo.' : 'Actualización terminada. Tu sesión sigue abierta.', results.some(result => result.status === 'rejected') ? 'error' : 'success');
+        const failed = results.flatMap((result,index) => result.status === 'rejected' ? [names[index]] : []);
+        showToast(failed.length ? 'No se pudo actualizar: '+failed.join(', ')+'. Revisa tu conexión e inténtalo de nuevo.' : 'Datos actualizados. Tu sesión sigue abierta.', failed.length ? 'error' : 'success');
     } finally {
         adminRefreshInProgress = false;
         if (button) { button.disabled = false; button.textContent = label; }
@@ -45,10 +49,21 @@ window.fetch = async function(input, options = {}) {
     else if (typeof options.body === 'string') payload = {...payload, ...JSON.parse(options.body)};
     if (!options.method || options.method.toUpperCase() === 'GET') payload.action = payload.action || 'get';
     payload.adminCredential = secureAdminCredential;
-    const response = await adminNativeFetch(GOOGLE_SHEET_API, {...options, method:'POST',mode:'cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
-    const result = await response.clone().json();
-    if (result.ok === false || result.status === 'error') throw new Error(result.error || 'No se pudo completar la operación.');
-    return response;
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (options.signal?.aborted) abort();
+    options.signal?.addEventListener('abort', abort, {once:true});
+    const timeout = setTimeout(abort, 25000);
+    try {
+        const response = await adminNativeFetch(GOOGLE_SHEET_API, {...options,cache:'no-store',signal:controller.signal,method:'POST',mode:'cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+        if (!response.ok) throw new Error('El servidor no respondió correctamente.');
+        const result = await response.clone().json();
+        if (result.ok === false || result.status === 'error') throw new Error(result.error || 'No se pudo completar la operación.');
+        return response;
+    } catch(error) {
+        if(error.name === 'AbortError') throw new Error('La consulta tardó demasiado. Vuelve a actualizar los datos.');
+        throw error;
+    } finally {clearTimeout(timeout);options.signal?.removeEventListener('abort',abort);}
 };
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 let inventario = [];
@@ -4297,18 +4312,19 @@ function initMercadoPagoPublicToggle() {
     });
 }
 
-async function loadSiteConfigForAdmin() {
+async function loadSiteConfigForAdmin(options = {}) {
+    if (options.force) siteConfigPromise = null;
     if (!siteConfigPromise) {
-        siteConfigPromise = fetch(`${GOOGLE_SHEET_API}?action=get_config`, { cache: 'no-store' })
-            .then(res => res.json())
-            .then(data => data && data.status === 'success' ? (data.config || {}) : {})
-            .catch(err => {
-                console.warn('No se pudo cargar configuración:', err);
-                siteConfigPromise = null;
-                return {};
+        const pending = fetch(GOOGLE_SHEET_API+'?action=get_config&_='+Date.now(), {cache:'no-store'})
+            .then(res => res.json()).then(data => {
+                if(data?.status !== 'success' || !data.config) throw new Error(data?.error || 'No se pudo cargar la configuración.');
+                return data.config;
             });
+        siteConfigPromise = pending;
+        pending.catch(() => {if(siteConfigPromise === pending)siteConfigPromise=null;});
     }
-    return siteConfigPromise;
+    try {return await siteConfigPromise;}
+    catch(err){console.warn('No se pudo cargar configuración:',err);if(options.throwOnError)throw err;return {};}
 }
 
 function updateSiteConfigCacheForAdmin(key, value) {
@@ -6375,7 +6391,8 @@ async function cargarInventario(options) {
             throw new Error(data.message || data.error || 'Error del Apps Script');
         }
 
-        var rawProducts = Array.isArray(data) ? data : (data.data || data.productos || []);
+        var rawProducts = Array.isArray(data) ? data : (data?.data || data?.productos);
+        if(!Array.isArray(rawProducts))throw new Error('La respuesta del inventario no es válida.');
         var nextInventory = normalizeInventoryList(rawProducts);
         writeInventoryCache(nextInventory);
         paintInventory(nextInventory);
@@ -6401,6 +6418,7 @@ async function cargarInventario(options) {
                 </div>
             `;
         }
+        if(options.throwOnError)throw err;
     }
     };
 
@@ -11209,7 +11227,7 @@ async function cargarPedidos(options = {}) {
         .map(id => document.getElementById(id))
         .filter(Boolean);
     const cached = readAdminOrdersCache();
-    if (cached) {
+    if (cached && !force) {
         window.pedidosList = cached.pedidos;
         window.facturasList = cached.facturas;
         renderPedidos();
@@ -11217,7 +11235,7 @@ async function cargarPedidos(options = {}) {
         renderAdminDashboard();
         if (!force && isAdminOrdersCacheFresh(cached)) return;
         if (!force && adminOrdersLoadPromise) return adminOrdersLoadPromise;
-    } else {
+    } else if (!cached) {
         orderBodies.forEach(tbody => { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">Sincronizando pedidos...</td></tr>'; });
         invoiceBodies.forEach(tbody => { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 40px;">Sincronizando facturas...</td></tr>'; });
     }
@@ -11236,7 +11254,7 @@ async function cargarPedidos(options = {}) {
         ]);
 
         if (pedidosResult && pedidosResult.status === 'success' && Array.isArray(pedidosResult.data)) {
-            window.pedidosList = pedidosResult.data.slice().reverse(); // Más recientes primero
+            // Validate both responses before replacing the displayed records.
         } else {
             throw new Error(pedidosResult.error || 'Error al cargar los pedidos');
         }
@@ -11244,10 +11262,10 @@ async function cargarPedidos(options = {}) {
         if (facturasResult && facturasResult.status === 'success' && Array.isArray(facturasResult.data)) {
             window.facturasList = facturasResult.data.slice().reverse();
         } else {
-            window.facturasList = [];
-            console.warn('No se pudieron cargar facturas:', facturasResult && facturasResult.error);
+            throw new Error(facturasResult?.error || 'No se pudieron cargar las facturas.');
         }
 
+        window.pedidosList = pedidosResult.data.slice().reverse();
         writeAdminOrdersCache();
         renderPedidos();
         renderFacturas();
@@ -11258,7 +11276,8 @@ async function cargarPedidos(options = {}) {
             orderBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${escapeHtml(err.message)}</td></tr>`; });
             invoiceBodies.forEach(tbody => { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: #ff4d4d;">Error conectando con la base de datos: ${escapeHtml(err.message)}</td></tr>`; });
         }
-        showToast(cached ? 'Mostrando pedidos guardados localmente' : 'Error cargando pedidos', cached ? 'warning' : 'error');
+        showToast(cached ? 'No se actualizaron los pedidos. Se conserva el listado anterior.' : 'Error cargando pedidos', cached ? 'warning' : 'error');
+        if(options.throwOnError)throw err;
     } finally {
         adminOrdersLoadPromise = null;
     }

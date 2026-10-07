@@ -5,7 +5,7 @@
         const response=await fetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload),cache:'no-store'});
         const result=await response.json();if(!result.ok)throw new Error(result.error||'No se pudo consultar el pedido.');return result;
     }
-    async function refresh(){
+    async function refresh(options = {}){
         if(busy||document.hidden||!secureAdminCredential)return;
         busy=true;
         try{
@@ -13,7 +13,7 @@
             document.querySelectorAll('[data-new-orders-count]').forEach(el=>el.textContent=data.count);
             document.getElementById('order-notification-bell').setAttribute('aria-label','Pedidos nuevos: '+data.count);
             return data;
-        }catch(error){document.getElementById('order-notifications-status').textContent=error.message;}
+        }catch(error){document.getElementById('order-notifications-status').textContent=error.message;if(options.throwOnError)throw error;}
         finally{busy=false;}
     }
     async function download(id,button){

@@ -21,7 +21,7 @@
         if (!result.ok || result.status !== 'success') throw new Error('No se confirmó el guardado del pendiente.');
         siteConfigPromise = null;
     }
-    async function refresh() {
+    async function refresh(options = {}) {
         const list = document.getElementById('pending-products-list');
         if (!list) return;
         list.textContent = 'Cargando pendientes…';
@@ -59,7 +59,7 @@
                 };
                 row.append(text,button); list.append(row);
             }
-        } catch (error) { list.textContent = error.message; }
+        } catch (error) { list.textContent = error.message; if(options.throwOnError)throw error; }
     }
     async function save(button) {
         const form = document.getElementById('product-form');
