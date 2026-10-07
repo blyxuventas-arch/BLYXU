@@ -163,3 +163,16 @@ html body .nav-actions .nav-ally-btn:focus-visible {outline:2px solid #ead0ff;ou
 html body .nav-actions .nav-ally-btn img {width:42px;height:36px;object-fit:contain;mix-blend-mode:screen;}
 @media(max-width:1200px) and (min-width:769px) {html body .navbar {flex-wrap:wrap;gap:12px;} html body .navbar .nav-links {order:3;width:100%;justify-content:center;} html body .navbar .nav-actions {margin-left:auto;}}
 @media(max-width:600px) {html body .nav-actions {gap:6px;} html body .nav-actions .nav-ally-btn {padding:4px 8px;gap:5px;font-size:11px;min-height:38px;} html body .nav-actions .nav-ally-btn img {width:30px;height:30px;} html body .nav-search-btn span {display:none;} }
+
+/* Keep the section menu a little further right, with room for every action. */
+@media(min-width:1481px) {
+    html body .navbar {box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;}
+    html body .navbar .nav-logo {flex-shrink:0;}
+    html body .navbar .nav-links {margin:0;transform:translateX(24px);flex-shrink:0;}
+    html body .navbar .nav-actions {justify-self:end;flex-shrink:0;gap:8px;}
+}
+@media(min-width:981px) and (max-width:1480px) {
+    html body .navbar {flex-wrap:wrap;gap:12px;}
+    html body .navbar .nav-links {order:3;width:100%;margin:0;justify-content:center;}
+    html body .navbar .nav-actions {margin-left:auto;}
+}

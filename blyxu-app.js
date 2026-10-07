@@ -3083,8 +3083,7 @@ function getCartOrderLabel(mode = activeCartMode) {
 }
 
 function shouldRegisterCartOrder(mode = activeCartMode) {
-    const normalizedMode = normalizeCartMode(mode);
-    return normalizedMode === 'wholesale' || cart.some(item => !cartItemShowsPrice(item)) || shouldShowProductPrices('retail');
+    return true; // Pedidos y consultas siempre se registran antes de confirmar.
 }
 
 function isRetailCheckoutConsultationMode(mode = activeCartMode, items = cart) {
@@ -3459,10 +3458,10 @@ function setCartPaymentMethod(method) {
             wsTab.setAttribute('aria-pressed', 'true');
             mpTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.add('btn-ws-mode');
-            if (btnText) btnText.textContent = 'Finalizar Pedido por WhatsApp';
+            if (btnText) btnText.textContent = 'Registrar pedido';
             if (mpBadges) mpBadges.style.display = 'none';
             if (emailField) emailField.style.display = 'flex';
-            if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
+            if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta';
         } else {
             mpTab.classList.remove('active');
             wsTab.classList.remove('active');
@@ -3627,8 +3626,8 @@ function updateCartUI() {
         if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr';
         setCartPaymentMethod('ws');
         if (secCheckoutBtnText) secCheckoutBtnText.textContent = 'Confirmar y Registrar Pedido Mayorista ✦';
-        if (secCheckoutBtnText && retailConsultationMode) secCheckoutBtnText.textContent = 'Registrar consulta y finalizar por WhatsApp';
-        if (secCheckoutBtnText && !isWholesale && !retailConsultationMode && !mpCheckoutEnabled) secCheckoutBtnText.textContent = 'Finalizar pedido por WhatsApp';
+        if (secCheckoutBtnText && retailConsultationMode) secCheckoutBtnText.textContent = 'Registrar consulta';
+        if (secCheckoutBtnText && !isWholesale && !retailConsultationMode && !mpCheckoutEnabled) secCheckoutBtnText.textContent = 'Registrar pedido';
     } else {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'flex';
@@ -5129,7 +5128,7 @@ function renderCustomerOrdersList(orders = []) {
             <article class="customer-order-card">
                 <div>
                     <strong>${escapeHtml(order.id || 'Pedido')}</strong>
-                    <button type="button" data-order-id="${escapeHtml(order.id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Descargar comprobante de pedido</button>
+                    <button type="button" data-order-id="${escapeHtml(order.id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Abrir comprobante de pedido</button>
                     <span>${escapeHtml(formatCustomerDate(order.fecha))}</span>
                 </div>
                 ${previews.length ? `<div class="customer-order-products">
@@ -5595,7 +5594,7 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
         setCartPaymentMethod('ws');
         const secErrorBox = document.getElementById('cart-section-form-error');
         if (secErrorBox) {
-            secErrorBox.textContent = 'Mercado Pago esta desactivado. Finaliza este pedido por WhatsApp.';
+            secErrorBox.textContent = 'Mercado Pago esta desactivado. Registra el pedido y te contactaremos.';
             secErrorBox.style.display = 'block';
         }
         return;
@@ -5604,7 +5603,7 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
         setCartPaymentMethod('ws');
         const secErrorBox = document.getElementById('cart-section-form-error');
         if (secErrorBox) {
-            secErrorBox.textContent = 'Mercado Pago solo esta disponible cuando los precios minoristas estan visibles. Finaliza esta consulta por WhatsApp.';
+            secErrorBox.textContent = 'Mercado Pago solo esta disponible cuando los precios minoristas estan visibles. Registra la consulta y te contactaremos.';
             secErrorBox.style.display = 'block';
             secErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -5679,7 +5678,7 @@ async function checkoutWithMercadoPago(cliente, options = {}) {
         console.error('Error al conectar con Mercado Pago:', error);
         const secErrorBox = document.getElementById('cart-section-form-error');
         if (secErrorBox) {
-            secErrorBox.innerHTML = `<strong>Error en pasarela:</strong> ${escapeHtml(error.message || 'No se pudo generar el pago con Mercado Pago.')}<br><small style="margin-top:4px; display:inline-block;">Puedes seleccionar <strong>WhatsApp Directo</strong> para finalizar tu pedido con un asesor.</small>`;
+            secErrorBox.innerHTML = `<strong>Error en pasarela:</strong> ${escapeHtml(error.message || 'No se pudo generar el pago con Mercado Pago.')}<br><small style="margin-top:4px; display:inline-block;">Puedes seleccionar <strong>Registrar pedido</strong> para finalizar tu pedido con un asesor.</small>`;
             secErrorBox.style.display = 'block';
             secErrorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -5803,11 +5802,11 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
         'Subtotal': isConsultation ? 0 : pricingSummary.total,
         'Estado Pedido': isConsultation ? 'Consulta pendiente' : 'Pendiente',
-        'Metodo Contacto': isConsultation ? 'Consulta General WhatsApp' : `Sistema ${orderLabel}`,
+        'Metodo Contacto': isConsultation ? 'Consulta registrada en el sistema' : `Sistema ${orderLabel}`,
         'Stock Descontado': isConsultation ? 'NO' : '',
         'Nota Cliente': [
             cliente.nota || '',
-            isConsultation ? 'Precios ocultos: consulta general por WhatsApp' : '',
+            isConsultation ? 'Precios ocultos: consulta pendiente de contacto' : '',
             !isConsultation && promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''
         ].filter(Boolean).join(' | ')
     };
@@ -5884,6 +5883,10 @@ async function checkout(skipPrompt = false) {
     orderCheckoutInProgress = true;
     try { return await performOrderCheckout(skipPrompt); }
     finally { orderCheckoutInProgress = false; }
+}
+
+function canSendOrderWhatsApp() {
+    return navigator.userAgentData?.mobile === true || /Android.*Mobile|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
 }
 
 async function performOrderCheckout(skipPrompt = false) {
@@ -5966,20 +5969,20 @@ async function performOrderCheckout(skipPrompt = false) {
                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     <h4>Pedido registrado correctamente</h4>
-                    <p>${isConsultation ? 'Tu consulta quedo registrada correctamente. Te llevamos a WhatsApp para terminar con un asesor.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Copia la referencia para cualquier duda.`}</p>
+                    <p>${isConsultation ? 'Tu consulta quedó registrada correctamente. Nos pondremos en contacto contigo.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Nos pondremos en contacto contigo. Copia la referencia para cualquier duda.`}</p>
                     <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
                     <div class="cart-success-actions">
                         <div data-temporary-receipt>
-                            <button class="cart-copy-reference-btn" type="button" data-receipt-download onclick="BlyxuReceiptAccess.downloadTemporary(this)">Descargar comprobante de pedido</button>
+                            <button class="cart-copy-reference-btn" type="button" data-receipt-download onclick="BlyxuReceiptAccess.downloadTemporary(this)">Abrir comprobante de pedido</button>
                             <p data-receipt-status role="status">Acceso privado disponible durante un máximo de 5 minutos.</p>
                         </div>
                         <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
                             Copiar referencia
                         </button>
-                        <a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
+                        ${canSendOrderWhatsApp() ? `<a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5Z"></path><path d="M9.2 8.8c.2 2.8 2.3 5 5.1 5.5"></path></svg>
                             Enviar pedido por WhatsApp
-                        </a>
+                        </a>` : ''}
                         <button class="btn-checkout" onclick="dismissWholesaleOrderNotice()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar</button>
                     </div>
                 </div>
@@ -5987,10 +5990,9 @@ async function performOrderCheckout(skipPrompt = false) {
             window.BlyxuReceiptAccess?.refresh();
             if (typeof launchWholesaleConfetti === 'function') launchWholesaleConfetti();
         }
-        openWhatsAppMessage(msg);
     } else {
         closeCart();
-        openWhatsAppMessage(msg);
+        if (canSendOrderWhatsApp()) openWhatsAppMessage(msg);
     }
 
     if (btn) {

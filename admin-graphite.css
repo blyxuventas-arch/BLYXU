@@ -81,3 +81,9 @@ body.admin-graphite .barcode-reader-mode {display:grid;gap:6px;margin:10px 0;col
 body.admin-graphite .barcode-phone-hint {font-size:12px;line-height:1.6;color:#cccdd5;margin:10px 0;}
 body.admin-graphite :is(.barcode-scanner-stage video,#barcode-scanner-reader video) {object-fit:contain !important;}
 body.admin-graphite .barcode-scanner-card {max-height:calc(100dvh - 24px);overflow-y:auto;}
+
+body.admin-graphite .barcode-frame-controls {margin-top:12px;padding:12px;border:1px solid #53535d;border-radius:6px;background:#242428;}
+body.admin-graphite .barcode-frame-actions {display:flex;flex-wrap:wrap;gap:8px;}
+body.admin-graphite .barcode-frame-controls p {font-size:12px;line-height:1.6;color:#d2d2da;margin:10px 0 0;}
+body.admin-graphite .barcode-frame-controls img {display:block;max-width:100%;max-height:220px;object-fit:contain;margin-top:12px;background:#fff;}
+body.admin-graphite .barcode-frame-controls [hidden] {display:none !important;}

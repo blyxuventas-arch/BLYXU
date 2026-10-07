@@ -69,9 +69,28 @@
             img.src = src;
         });
     }
-    async function download(summary, button, authorizeBeforeSave) {
+    function prepareViewer() {
+        const viewer = window.open('', '_blank');
+        if (!viewer) throw new Error('Permite abrir una pestaña nueva para ver el comprobante y vuelve a intentarlo.');
+        viewer.opener = null;
+        viewer.document.title = 'Comprobante de pedido · BLYXU';
+        viewer.document.body.textContent = 'Preparando tu comprobante privado…';
+        return viewer;
+    }
+    async function loadQr() {
+        if (window.qrcode) return;
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'qrcode-local.js?v=2.0.4';
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('No se pudo preparar el QR del pedido.'));
+            document.head.append(script);
+        });
+    }
+    async function download(summary, button, authorizeBeforeSave, reservedViewer) {
         if (!summary?.items?.length) throw new Error('Añade productos al carrito para generar el resumen.');
         if (button?.disabled) return;
+        const viewer = reservedViewer || prepareViewer();
         const original = button?.textContent;
         if (button) { button.disabled = true; button.textContent = 'Preparando PDF…'; }
         try {
@@ -138,17 +157,33 @@
             text(unpriced ? 'Valor pendiente de cotización' : 'Valor de productos: ' + money(summary.total), 16, y += 7, 11, 'bold');
             text('Este documento resume los productos solicitados.', 16, y += 10, 9);
             text('No constituye una factura de venta ni un comprobante de pago.', 16, y += 6, 9);
-            text('El envío y la disponibilidad se confirman con BLYXU por WhatsApp.', 16, y += 6, 9);
+            text('BLYXU te contactará para confirmar disponibilidad y envío.', 16, y += 6, 9);
+            if (summary.registered && summary.id) {
+                await loadQr();
+                const url = new URL('https://blyxu.online/facturas-pedidos.html');
+                url.searchParams.set('buscar', summary.id);
+                const qr = window.qrcode(0, 'M'); qr.addData(url.href); qr.make();
+                if (y + 48 > 270) { pdf.addPage(); y = 20; }
+                pdf.addImage(qr.createDataURL(5, 16), 'GIF', 16, y + 5, 35, 35);
+                text('Consulta de pedido', 57, y + 15, 11, 'bold');
+                text('Escanea el QR e inicia sesión en tu cuenta.', 57, y + 22, 9);
+                text('Referencia: ' + summary.id, 57, y + 29, 8);
+                pdf.link(16, y + 5, 178, 35, {url:url.href});
+            }
             for (let page = 1; page <= pdf.getNumberOfPages(); page++) {
                 pdf.setPage(page); text('BLYXU · ' + page + ' / ' + pdf.getNumberOfPages(), 16, 285, 8, 'normal', 120);
             }
             if(authorizeBeforeSave)await authorizeBeforeSave();
-            pdf.save('BLYXU-Comprobante-' + (clean(summary.id) || 'carrito').replace(/[^a-zA-Z0-9_-]/g, '-') + '.pdf');
+            if (viewer.closed) throw new Error('Cerraste la pestaña del comprobante. Vuelve a abrirlo.');
+            const pdfUrl = URL.createObjectURL(pdf.output('blob'));
+            viewer.location.replace(pdfUrl);
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 600000);
             if (missingImages && button) {
                 const status = document.getElementById('cart-summary-pdf-status');
-                if (status) status.textContent = 'PDF descargado. Algunas imágenes no pudieron cargarse; sus códigos y opciones están incluidos.';
+                if (status) status.textContent = 'PDF abierto. Algunas imágenes no pudieron cargarse; sus códigos y opciones están incluidos.';
             }
-        } finally { if (button) { button.disabled = false; button.textContent = original; } }
+        } catch (error) { if (!viewer.closed) viewer.close(); throw error; }
+        finally { if (button) { button.disabled = false; button.textContent = original; } }
     }
-    window.BlyxuOrderSummary = {fromRecord, download};
+    window.BlyxuOrderSummary = {fromRecord, download, prepareViewer};
 })();

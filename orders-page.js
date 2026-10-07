@@ -28,24 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function matchesLookup(record, lookup, phoneKeys, referenceKeys) {
-                const targetPhone = comparablePhone(lookup);
-                const targetRef = onlyLetters(lookup);
-                const canMatchPhone = targetPhone.length >= 7;
-                const canMatchReference = targetRef.length >= 3;
-
-                if (canMatchPhone) {
-                    const recordPhone = comparablePhone(getField(record, phoneKeys));
-                    if (recordPhone === targetPhone || recordPhone.endsWith(targetPhone)) return true;
+                const raw = String(lookup || '').trim();
+                // References must match exactly; a PED ID is never treated as a phone.
+                if (/^[+\d\s().-]+$/.test(raw)) {
+                    const phone = comparablePhone(raw);
+                    if (phone.length >= 7 && comparablePhone(getField(record, phoneKeys)) === phone) return true;
                 }
-
-                if (canMatchReference) {
-                    return referenceKeys.some(key => {
-                        const value = onlyLetters(getField(record, [key]));
-                        return value && (value === targetRef || value.includes(targetRef) || targetRef.includes(value));
-                    });
-                }
-
-                return false;
+                const reference = onlyLetters(raw);
+                return reference.length >= 3 && referenceKeys.some(key => onlyLetters(getField(record, [key])) === reference);
             }
 
             function getField(source, keys, fallback = '') {
@@ -519,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ${note ? `<div class="order-metric"><span>Nota</span><strong>${escapeHtml(note)}</strong></div>` : ''}
                                 </div>
                                 <button type="button" class="order-details-toggle" aria-expanded="false">Ver detalle completo</button>
-                                <button type="button" class="orders-action-btn" data-order-id="${escapeHtml(id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Descargar comprobante de pedido</button>
+                                <button type="button" class="orders-action-btn" data-order-id="${escapeHtml(id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Abrir comprobante de pedido</button>
                             </div>
                         </article>
                     `;
@@ -1262,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const firstRecord = currentOrders[0] || currentInvoices[0];
                     const totalRecords = currentOrders.length + currentInvoices.length;
                     const customer = firstRecord ? getField(firstRecord, ['Nombre Cliente', 'Nombre', 'Cliente'], 'Cliente BLYXU') : 'Cliente BLYXU';
-                    const lookupLabel = comparable.length >= 7
+                    const lookupLabel = /^[+\d\s().-]+$/.test(lookup) && comparable.length >= 7
                         ? 'contacto terminado en ' + comparable.slice(-4)
                         : 'referencia ' + lookup;
                     heading.textContent = totalRecords ? 'Panel de ' + customer : 'Sin registros';
@@ -1320,7 +1310,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         try {
                             const url = new URL(reference);
                             if (url.origin !== window.location.origin || !url.pathname.endsWith('/facturas-pedidos.html')) {
-                                scannerError.textContent = 'Este QR no corresponde a una factura BLYXU.';
+                                scannerError.textContent = 'Este QR no corresponde a un pedido o factura BLYXU.';
                                 return;
                             }
                             reference = url.searchParams.get('buscar') || '';

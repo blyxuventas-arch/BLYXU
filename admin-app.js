@@ -1517,6 +1517,7 @@ let activeBarcodeScannerFrame = null;
 let activeHtml5BarcodeScanner = null;
 let html5QrcodeLoadPromise = null;
 let barcodeScannerSession = 0;
+let stopBarcodeFrameReader = null;
 let barcodeCameraStopPromise = Promise.resolve();
 
 function loadHtml5QrcodeLibrary() {
@@ -1525,7 +1526,7 @@ function loadHtml5QrcodeLibrary() {
 
     html5QrcodeLoadPromise = new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'html5-qrcode.min.js?v=2.3.8';
+        script.src = 'html5-qrcode.min.js?v=2.3.8-frame1';
         script.async = true;
         script.onload = () => resolve(typeof window.Html5Qrcode === 'function');
         script.onerror = () => reject(new Error('No se pudo cargar el lector compatible'));
@@ -1538,6 +1539,8 @@ function loadHtml5QrcodeLibrary() {
 }
 
 function closeBarcodeScanner() {
+    stopBarcodeFrameReader?.();
+    stopBarcodeFrameReader = null;
     barcodeScannerSession += 1;
     document.getElementById('barcode-scanner-modal')?.remove();
     if (activeBarcodeScannerFrame) {
@@ -1820,21 +1823,21 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
     };
 }
 
-async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady } = {}) {
+async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady, onCaptured } = {}) {
     await loadHtml5QrcodeLibrary();
     if (typeof window.Html5Qrcode !== 'function') return false;
     if (video) video.style.display = 'none';
     if (reader) reader.style.display = 'block';
     const formatsToSupport = getHtml5BarcodeFormats();
     const scannerConfig = {
-        fps: isIosBarcodeDevice() ? 10 : 15,
+        fps: isMobileBarcodeDevice() ? (isIosBarcodeDevice() ? 10 : 15) : 8,
         // Decode the full frame, including smaller or off-center QR codes.
         disableFlip: false,
         videoConstraints: getBarcodeVideoConstraints(preferredDeviceId)
     };
     const onScanSuccess = (decodedText, decodedResult) => {
         const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
-        handleDetectedCode(decodedText, detectedFormat);
+        if (!document.querySelector('#barcode-scanner-modal [data-frame-preview]:not([hidden])')) handleDetectedCode(decodedText, detectedFormat);
     };
 
     const createScanner = () => {
@@ -1903,6 +1906,11 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     }
     await window.BlyxuQrCamera?.scanner(scanner, reader);
     await onCameraReady?.();
+    if (!isMobileBarcodeDevice() && scannerVideo && window.BlyxuBarcodeFrames) {
+        stopBarcodeFrameReader = window.BlyxuBarcodeFrames.start({ video: scannerVideo, container: reader.parentElement.parentElement, formats: formatsToSupport,
+            onDetected: (text, format) => { if (!reader.isConnected) return; handleDetectedCode(text, format); },
+            onCaptured: (text, format) => { if (reader.isConnected) onCaptured?.(text, format); } });
+    }
     return true;
 }
 
@@ -2026,6 +2034,13 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
 
         if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
             preferredDeviceId,
+            onCaptured: (text, format) => {
+                const value = normalizeBarcodeValue(text);
+                if (!value || scannerSession !== barcodeScannerSession) return;
+                manualInput.value = value; valueLabel.textContent = value;
+                formatLabel.textContent = getBarcodeFormatLabel(format) + ' · Captura pendiente de confirmar';
+                readout.classList.add('is-detected');
+            },
             onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
         })) {
             clearTimeout(permissionHintTimer);
@@ -2050,7 +2065,14 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             try {
                 if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
                     preferredDeviceId,
-                    onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
+                    onCaptured: (text, format) => {
+                const value = normalizeBarcodeValue(text);
+                if (!value || scannerSession !== barcodeScannerSession) return;
+                manualInput.value = value; valueLabel.textContent = value;
+                formatLabel.textContent = getBarcodeFormatLabel(format) + ' · Captura pendiente de confirmar';
+                readout.classList.add('is-detected');
+            },
+            onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
                 })) {
                     clearTimeout(permissionHintTimer);
                     return;

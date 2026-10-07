@@ -1464,7 +1464,7 @@
         }
     </style>
     <script src="qrcode-local.js?v=2.0.4" defer></script>
-    <link rel="stylesheet" href="storefront-refinement.css?v=ally-account-20261006-2">
+    <link rel="stylesheet" href="storefront-refinement.css?v=nav-order-20261006">
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
 </head>
 
@@ -1524,9 +1524,9 @@
                     <form class="orders-form" id="orders-lookup-form">
                         <input type="text" id="orders-phone-input" inputmode="search" autocomplete="off" placeholder="N&uacute;mero de contacto o referencia" required>
                         <button type="submit" id="orders-submit-btn">Ver mi panel</button>
-                        <button type="button" id="orders-scan-qr-btn">Escanear QR de factura</button>
+                        <button type="button" id="orders-scan-qr-btn">Escanear QR de pedido o factura</button>
                         <dialog id="orders-qr-dialog" aria-labelledby="orders-qr-title" style="width:min(92vw,480px);border:1px solid #555;border-radius:16px;padding:18px;background:#151515;color:#fff;">
-                            <h3 id="orders-qr-title">Escanea el QR de tu factura</h3>
+                            <h3 id="orders-qr-title">Escanea el QR de tu pedido o factura</h3>
                             <div id="orders-qr-reader"></div><p id="orders-qr-error" role="status"></p>
                             <button type="button" id="orders-qr-close">Cerrar cámara</button>
                         </dialog>
@@ -1613,10 +1613,10 @@
         </div>
     </footer>
 
-    <script src="blyxu-app.js?v=ally-account-20261006-2" defer></script>
-    <script src="order-summary.js?v=receipt-private-20261006" defer></script>
-    <script src="order-receipt-access.js?v=20261006-1" defer></script>
-    <script src="orders-page.js?v=20261006-1" defer></script>
+    <script src="blyxu-app.js?v=browser-qr-20261006" defer></script>
+    <script src="order-summary.js?v=browser-qr-20261006" defer></script>
+    <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
+    <script src="orders-page.js?v=browser-qr-20261006" defer></script>
 
 </body>
 
