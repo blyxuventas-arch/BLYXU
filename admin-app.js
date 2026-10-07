@@ -1584,7 +1584,7 @@ function buildBarcodeScannerModal() {
             <label class="barcode-reader-mode">Tipo de lectura
                 <select id="barcode-reader-mode" class="form-control" aria-label="Tipo de lectura"><option value="auto">Automática (compatible en PC)</option><option value="compatible">Compatible — si no reconoce el código</option></select>
             </label>
-            <p class="barcode-phone-hint">Puedes usar una cámara USB o un celular configurado como webcam. Conéctalo, pulsa Actualizar cámaras y selecciónalo. Mantén todas las barras visibles y el código horizontal, con buena luz.</p>
+            <p class="barcode-phone-hint">Escanea desde el celular y pulsa Guardar como pendiente para completar el producto después en el PC. Mantén todas las barras visibles, el código enfocado y buena luz.</p>
             <button type="button" id="barcode-camera-refresh" class="admin-btn secondary">Actualizar cámaras</button>
             <div class="barcode-camera-picker" id="barcode-camera-picker" hidden>
                 <label for="barcode-camera-select">Cámara en uso</label>
@@ -3002,6 +3002,8 @@ function renderProductGalleryManager() {
 }
 
 function resetProductForm() {
+    const pendingForm = document.getElementById('product-form');
+    if (pendingForm) delete pendingForm.dataset.pendingKey;
     const form = el('product-form');
     if (form) form.reset();
     if (form) delete form.dataset.originalVariationId;
@@ -3743,6 +3745,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
                     fallbackEditOverride: isEditingProduct ? true : false
                 });
+                const pendingKey = document.getElementById('product-form')?.dataset.pendingKey;
+                if (pendingKey) {
+                    try { await window.BlyxuPendingProducts?.complete(pendingKey); }
+                    catch (_) { showToast('Producto guardado; no se pudo cerrar el pendiente. Actualiza la lista antes de retomarlo.', 'error'); }
+                }
                 clearPublicProductsCache();
                 
                 try {

@@ -7393,7 +7393,7 @@
     #admin-login-box .admin-otp-digit { height: 56px !important; font-size: 19px !important; }
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
-<link rel="stylesheet" href="admin-graphite.css?v=frame-reader-20261006">
+<link rel="stylesheet" href="admin-graphite.css?v=pending-products-20261006">
 </head>
 <body class="admin-graphite">
     <div class="bg-animation"></div>
@@ -7670,7 +7670,7 @@
 <input type="hidden" id="prod-fecha-creacion" name="Fecha de Creacion">
                                 <div id="variation-options-panel" class="product-config-card" style="display:none;"><h3>Variantes hijas</h3><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"><button type="button" class="admin-btn" id="btn-add-manual-variant">Agregar variante manual</button><button type="button" class="admin-btn secondary" id="btn-show-variation-generator">Generar variantes</button></div><div id="variation-generator-fields" style="display:none;"><div class="admin-form-grid"><div class="form-group"><label>Variable principal</label><select class="form-control" id="variation-primary-field"><option value="style">Estilo</option><option value="color">Color</option><option value="size">Tamaño</option><option value="auto">Automático</option></select></div><div class="form-group"><label>Opcion 1: Estilo</label><input type="text" class="form-control" id="variation-styles" placeholder="corazon, estrella, inicial"></div><div class="form-group"><label>Opcion 2: Tamaño</label><input type="text" class="form-control" id="variation-sizes" placeholder="S, M, L o 45 cm, 50 cm"></div><div class="form-group"><label>Opcion 3: Color</label><input type="hidden" id="variation-colors"><div class="color-picker" data-color-target="#variation-colors" data-color-multiple="true" aria-label="Seleccionar colores para variantes"></div></div></div><p id="variation-generator-summary" class="field-hint">Genera tarjetas editables para cada combinacion antes de guardar.</p><button type="button" class="admin-btn" id="btn-generate-variations">Generar variaciones</button></div></div>
                                 <div id="variants-container" class="variants-stack"></div>
-                                <div class="product-form-actions"><div><button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button><button type="button" class="admin-btn" id="btn-add-variant">Añadir variantes</button></div><button type="submit" class="admin-btn" id="btn-save">Guardar producto y variantes</button></div>
+                                <div class="product-form-actions"><div><button type="button" class="admin-btn secondary" id="btn-reset-product">Limpiar</button><button type="button" class="admin-btn" id="btn-add-variant">Añadir variantes</button></div><button type="button" class="admin-btn secondary" id="btn-save-pending-product">Guardar como pendiente</button><button type="submit" class="admin-btn" id="btn-save">Guardar producto y variantes</button></div>
                             </form>
                         </div>
 
@@ -7709,7 +7709,7 @@
                     </div>
                 </div>
 
-                <div id="view-inventory" class="dashboard-section">
+                <div id="view-inventory" class="dashboard-section"><details class="admin-fold inventory-pdf-category-panel" id="pending-products-panel"><summary>Pendientes por completar</summary><div><p>Referencias guardadas desde el celular. Solo visibles en Admin; se publican al completar y guardar el producto.</p><button type="button" class="admin-btn secondary" id="pending-products-refresh">Actualizar pendientes</button><div id="pending-products-list" role="status" aria-live="polite">Abre esta sección para consultar los pendientes.</div></div></details>
                     <div class="admin-panel gradient-bg">
                         <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
@@ -8267,11 +8267,12 @@
 <script src="customer-access-admin.js?v=blyxu-camera-hd-20261006" defer></script>
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
 <script src="barcode-frame-reader.js?v=automatic-20261006-2" defer></script>
-<script src="admin-app.js?v=automatic-20261006-2" defer></script>
+<script src="admin-app.js?v=pending-products-20261006" defer></script>
 <script src="inventory-category-manager.js?v=20261006-1" defer></script>
 <script src="order-summary.js?v=browser-qr-20261006" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 <script src="order-notifications-admin.js?v=20261006-1" defer></script>
+<script src="pending-products-admin.js?v=20261006-1" defer></script>
 </body>
 </html>
 

@@ -87,3 +87,8 @@ body.admin-graphite .barcode-frame-actions {display:flex;flex-wrap:wrap;gap:8px;
 body.admin-graphite .barcode-frame-controls p {font-size:12px;line-height:1.6;color:#d2d2da;margin:10px 0 0;}
 body.admin-graphite .barcode-frame-controls img {display:block;max-width:100%;max-height:220px;object-fit:contain;margin-top:12px;background:#fff;}
 body.admin-graphite .barcode-frame-controls [hidden] {display:none !important;}
+body.admin-graphite .pending-product-row {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid #494950;}
+body.admin-graphite .pending-product-row span {overflow-wrap:anywhere;}
+body.admin-graphite .pending-product-row button {flex-shrink:0;}
+body.admin-graphite #pending-products-panel p {color:#ccc;line-height:1.6;}
+@media(max-width:600px) {body.admin-graphite .pending-product-row {flex-direction:column;align-items:stretch;}}
