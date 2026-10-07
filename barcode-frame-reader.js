@@ -44,18 +44,17 @@
     function decoded(result) {
         return { text: result.decodedText || '', format: result.result?.format?.formatName || '' };
     }
-    function start({ video, container, formats, onDetected, onCaptured }) {
+    function start({ video, container, formats, onDetected }) {
         if (!video || !container || !window.Html5Qrcode) return () => {};
-        let closed = false, busy = false, frozen = null, sequence = 0, timer = 0;
+        let closed = false, busy = false, timer = 0, preferredVariant = 0;
         const decoderHost = document.createElement('div');
         decoderHost.id = 'barcode-frame-decoder-' + Math.random().toString(36).slice(2);
         decoderHost.hidden = true; container.append(decoderHost);
         const decoder = new window.Html5Qrcode(decoderHost.id, { formatsToSupport: formats, useBarCodeDetectorIfSupported: false });
         const controls = document.createElement('section'); controls.className = 'barcode-frame-controls';
-        controls.innerHTML = '<div class="barcode-frame-actions"><button type="button" class="admin-btn secondary" data-frame-capture>Capturar y analizar</button><button type="button" class="admin-btn secondary" data-frame-resume hidden>Volver a cámara en vivo</button></div><p data-frame-status aria-live="polite">Análisis automático de fotogramas: recorte, contraste y orientación. Las imágenes se procesan solo en este dispositivo.</p><img data-frame-preview alt="Captura del código para revisar su lectura" hidden>';
+        controls.innerHTML = '<p data-frame-status aria-live="polite">Captura y análisis automáticos activos. Centra el código, deja visibles todas las barras y sus márgenes blancos. Acerca o aleja hasta que las líneas se vean nítidas y mantenlo quieto. No necesitas pulsar ningún botón.</p><p>Se analiza toda la imagen y también recortes del centro. Las capturas se procesan solo en este dispositivo.</p>';
         container.append(controls);
-        const capture = controls.querySelector('[data-frame-capture]'), resume = controls.querySelector('[data-frame-resume]');
-        const message = controls.querySelector('[data-frame-status]'), preview = controls.querySelector('[data-frame-preview]');
+        const message = controls.querySelector('[data-frame-status]');
         const active = () => !closed && container.isConnected && video.isConnected;
         function cleanup() { try { decoder.clear(); } catch (_) {} decoderHost.remove(); controls.remove(); }
         async function decodeCanvas(canvas) {
@@ -68,36 +67,31 @@
         }
         async function tick() {
             if (!active()) return;
-            if (!busy && !frozen && !document.hidden && video.readyState >= 2) {
+            if (!busy && !document.hidden && video.readyState >= 2) {
                 busy = true;
                 try {
-                    const result = await decodeCanvas(prepare(video, sequence++ % 5));
-                    if (active() && !frozen && result?.text) onDetected(result.text, result.format);
-                } catch (_) {} finally { busy = false; }
+                    // Freeze one frame automatically, then scan every enhanced version.
+                    const still = document.createElement('canvas');
+                    still.width = video.videoWidth; still.height = video.videoHeight;
+                    if (!still.width || !still.height) throw new Error('Esperando imagen de la cámara.');
+                    still.getContext('2d').drawImage(video, 0, 0);
+                    const variants = [preferredVariant, ...[0, 1, 2, 3, 4].filter(v => v !== preferredVariant)];
+                    for (const variant of variants) {
+                        if (!active() || document.hidden) break;
+                        const result = await decodeCanvas(prepare(still, variant));
+                        if (active() && result?.text) {
+                            preferredVariant = variant;
+                            message.textContent = 'Código detectado automáticamente. Mantenlo quieto para confirmar la lectura.';
+                            onDetected(result.text, result.format);
+                            break; // One vote per captured frame, never one per crop.
+                        }
+                    }
+                } catch (_) {} finally { busy = false; if (closed) cleanup(); }
             }
-            if (active()) timer = setTimeout(tick, 650);
+            if (active()) timer = setTimeout(tick, 250);
         }
-        capture.addEventListener('click', async () => {
-            if (busy || !active()) { message.textContent = 'Espera un instante y vuelve a capturar.'; return; }
-            busy = true; capture.disabled = true; resume.disabled = true;
-            try {
-                // Capture once: every enhanced pass uses exactly the same picture.
-                const still = document.createElement('canvas'); still.width = video.videoWidth; still.height = video.videoHeight;
-                if (!still.width || !still.height) throw new Error('Espera a que aparezca la imagen de la cámara.');
-                still.getContext('2d').drawImage(video, 0, 0); frozen = still;
-                preview.src = still.toDataURL('image/jpeg', .85); preview.hidden = false; resume.hidden = false;
-                message.textContent = 'Analizando captura: imagen completa, recortes, contraste y giro…';
-                let result = null;
-                for (let i = 0; i < 5 && active(); i++) { result = await decodeCanvas(prepare(still, i)); if (result?.text) break; }
-                if (!active()) return;
-                if (result?.text) { onCaptured(result.text, result.format); message.textContent = 'Código leído. Revisa la referencia y pulsa Confirmar para usarla.'; }
-                else message.textContent = 'No pude leer esta captura. Vuelve a la cámara, mejora la luz o el enfoque y captura otra vez. Si solo hay una referencia escrita, introdúcela manualmente; no se inventan códigos.';
-            } catch (error) { if (active()) message.textContent = error.message; }
-            finally { busy = false; capture.disabled = false; resume.disabled = false; }
-        });
-        resume.addEventListener('click', () => { frozen = null; preview.removeAttribute('src'); preview.hidden = true; resume.hidden = true; message.textContent = 'Análisis automático activo. Mantén el código completo y enfocado.'; });
         tick();
-        return () => { closed = true; clearTimeout(timer); frozen = null; preview.removeAttribute('src'); if (!busy) cleanup(); };
+        return () => { closed = true; clearTimeout(timer); if (!busy) cleanup(); };
     }
     window.BlyxuBarcodeFrames = { start, prepare };
 })();

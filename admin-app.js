@@ -1783,7 +1783,7 @@ function attachBarcodeCameraStream(video, stream, { status, retryButton, scanner
     }, 4500);
 }
 
-function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed }) {
+function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed, stabilityWindowMs = 1600 }) {
     let candidate = '';
     let candidateHits = 0;
     let lastSeenAt = 0;
@@ -1795,7 +1795,7 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
         if (!cleanCode) return false;
 
         const now = Date.now();
-        if (candidate === cleanCode && now - lastSeenAt < 1600) {
+        if (candidate === cleanCode && now - lastSeenAt < stabilityWindowMs) {
             candidateHits += 1;
         } else {
             candidate = cleanCode;
@@ -1823,7 +1823,7 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
     };
 }
 
-async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady, onCaptured } = {}) {
+async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady } = {}) {
     await loadHtml5QrcodeLibrary();
     if (typeof window.Html5Qrcode !== 'function') return false;
     if (video) video.style.display = 'none';
@@ -1837,7 +1837,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     };
     const onScanSuccess = (decodedText, decodedResult) => {
         const detectedFormat = decodedResult?.result?.format?.formatName || decodedResult?.format?.formatName || '';
-        if (!document.querySelector('#barcode-scanner-modal [data-frame-preview]:not([hidden])')) handleDetectedCode(decodedText, detectedFormat);
+        handleDetectedCode(decodedText, detectedFormat);
     };
 
     const createScanner = () => {
@@ -1908,8 +1908,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     await onCameraReady?.();
     if (!isMobileBarcodeDevice() && scannerVideo && window.BlyxuBarcodeFrames) {
         stopBarcodeFrameReader = window.BlyxuBarcodeFrames.start({ video: scannerVideo, container: reader.parentElement.parentElement, formats: formatsToSupport,
-            onDetected: (text, format) => { if (!reader.isConnected) return; handleDetectedCode(text, format); },
-            onCaptured: (text, format) => { if (reader.isConnected) onCaptured?.(text, format); } });
+            onDetected: (text, format) => { if (!reader.isConnected) return; handleDetectedCode(text, format); } });
     }
     return true;
 }
@@ -1945,7 +1944,8 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         readout,
         valueLabel,
         formatLabel,
-        onConfirmed: useCode
+        onConfirmed: useCode,
+        stabilityWindowMs: isMobileBarcodeDevice() ? 1600 : 4000
     });
 
     modal.querySelector('#barcode-scanner-use-manual')?.addEventListener('click', () => useCode(manualInput?.value || ''));
@@ -2034,13 +2034,6 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
 
         if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
             preferredDeviceId,
-            onCaptured: (text, format) => {
-                const value = normalizeBarcodeValue(text);
-                if (!value || scannerSession !== barcodeScannerSession) return;
-                manualInput.value = value; valueLabel.textContent = value;
-                formatLabel.textContent = getBarcodeFormatLabel(format) + ' · Captura pendiente de confirmar';
-                readout.classList.add('is-detected');
-            },
             onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
         })) {
             clearTimeout(permissionHintTimer);
@@ -2065,13 +2058,6 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             try {
                 if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
                     preferredDeviceId,
-                    onCaptured: (text, format) => {
-                const value = normalizeBarcodeValue(text);
-                if (!value || scannerSession !== barcodeScannerSession) return;
-                manualInput.value = value; valueLabel.textContent = value;
-                formatLabel.textContent = getBarcodeFormatLabel(format) + ' · Captura pendiente de confirmar';
-                readout.classList.add('is-detected');
-            },
             onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
                 })) {
                     clearTimeout(permissionHintTimer);
