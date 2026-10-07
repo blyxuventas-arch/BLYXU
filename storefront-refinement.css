@@ -166,9 +166,9 @@ html body .nav-actions .nav-ally-btn img {width:42px;height:36px;object-fit:cont
 
 /* Keep the section menu a little further right, with room for every action. */
 @media(min-width:1481px) {
-    html body .navbar {box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:8px;}
+    html body .navbar {box-sizing:border-box;display:grid;grid-template-columns:minmax(80px,1fr) auto minmax(max-content,1fr);column-gap:28px;}
     html body .navbar .nav-logo {flex-shrink:0;}
-    html body .navbar .nav-links {margin:0;transform:translateX(24px);flex-shrink:0;}
+    html body .navbar .nav-links {margin:0 0 0 24px;transform:none !important;flex-shrink:0;}
     html body .navbar .nav-actions {justify-self:end;flex-shrink:0;gap:8px;}
 }
 @media(min-width:981px) and (max-width:1480px) {
