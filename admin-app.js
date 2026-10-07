@@ -9,6 +9,32 @@ function revokeAdminSession() {
     if(token.startsWith('BLYXU-A3-'))adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminlogout',adminCredential:token}),keepalive:true}).catch(()=>{});
 }
 function logoutAdminSecurely(){revokeAdminSession();sessionStorage.removeItem('blyxu_admin_orders_invoices_cache_v2');location.href='index.html';}
+let adminRefreshInProgress = false;
+async function refreshAdministrator(button) {
+    if (adminRefreshInProgress) return;
+    if (!secureAdminCredential) { showToast('Inicia sesión para actualizar el administrador.', 'error'); return; }
+    adminRefreshInProgress = true;
+    const label = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = 'Actualizando…'; }
+    try {
+        siteConfigPromise = null;
+        const jobs = [
+            () => cargarInventario({force:true,silent:true}),
+            () => cargarPedidos({force:true}),
+            () => loadSiteConfigForAdmin(),
+            () => window.refreshOrderNotifications?.(),
+            () => typeof refreshCustomerAccessCount === 'function' ? refreshCustomerAccessCount() : undefined
+        ];
+        if (document.getElementById('view-users')?.classList.contains('active')) jobs.push(() => loadCustomerUsers());
+        if (document.getElementById('pending-products-panel')?.open) jobs.push(() => window.BlyxuPendingProducts?.refresh());
+        const results = await Promise.allSettled(jobs.map(job => Promise.resolve().then(job)));
+        renderAdminDashboard();
+        showToast(results.some(result => result.status === 'rejected') ? 'Algunos datos no pudieron actualizarse. Revisa los avisos e inténtalo de nuevo.' : 'Actualización terminada. Tu sesión sigue abierta.', results.some(result => result.status === 'rejected') ? 'error' : 'success');
+    } finally {
+        adminRefreshInProgress = false;
+        if (button) { button.disabled = false; button.textContent = label; }
+    }
+}
 window.logoutAdminSecurely=logoutAdminSecurely;
 window.fetch = async function(input, options = {}) {
     const address = typeof input === 'string' ? input : input?.url;

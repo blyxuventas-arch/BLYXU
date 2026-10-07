@@ -135,6 +135,7 @@ html body.contact-v2[data-page=contact] :is(.contact-social-icon,.contact-phone-
 html body.contact-v2[data-page=contact] :is(.contact-social-band,.contact-social-links,.contact-connect) {border-color:#45454d !important;}
 html body.contact-v2[data-page=contact] .contact-status-pill {background:#34343b !important;border:1px solid #676772 !important;color:#eeeef3 !important;font-weight:500 !important;}
 html body.contact-v2[data-page=contact] .contact-status-pill.is-open {background:#273b30 !important;color:#c5ecd4 !important;border-color:#63816f !important;}
+html body.contact-v2[data-page=contact] .contact-hero-actions :is(.contact-hero-btn,.contact-secondary-btn) {margin:0 !important;transform:none !important;position:relative !important;top:auto !important;bottom:auto !important;min-height:46px !important;box-sizing:border-box !important;}
 .qr-camera-controls {padding:12px 0;color:#cccdd5;font-size:13px;line-height:1.5;}
 html body.contact-v2[data-page=contact] {--cp:#c5c5cf;}
 html body.contact-v2[data-page=contact] :is(.contact-kicker i,.contact-service-note span::before) {background:#aaaab6 !important;box-shadow:none !important;}
