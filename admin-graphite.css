@@ -69,3 +69,15 @@ body.admin-graphite #inventory-delete-category {justify-self:start;}
     .admin-graphite .inv-item-fields {flex:1; min-width:0;}
     .admin-graphite .inv-item-option {display:block; color:#c6c6cb; font-size:12px; margin-top:6px; line-height:1.5;}
 }
+
+/* Keep every admin section reachable in short windows and expanded menus. */
+@media(min-width:1025px) {
+ body.admin-graphite #admin-main-content .sub-sidebar {height:100vh;height:100dvh;max-height:100dvh;box-sizing:border-box;min-height:0;overflow:hidden !important;}
+ body.admin-graphite #admin-main-content .sub-sidebar > :is(.desktop-sidebar-toggle,.sidebar-logo) {flex-shrink:0;}
+ body.admin-graphite #admin-main-content .sub-sidebar .sidebar-menu-wrapper {flex:1 1 auto !important;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#74747d #242428;padding-bottom:18px;scroll-padding-block:12px;}
+ body.admin-graphite #admin-main-content .sub-sidebar .sidebar-section {flex-shrink:0;}
+}
+body.admin-graphite .barcode-reader-mode {display:grid;gap:6px;margin:10px 0;color:#dedee4;font-size:13px;}
+body.admin-graphite .barcode-phone-hint {font-size:12px;line-height:1.6;color:#cccdd5;margin:10px 0;}
+body.admin-graphite :is(.barcode-scanner-stage video,#barcode-scanner-reader video) {object-fit:contain !important;}
+body.admin-graphite .barcode-scanner-card {max-height:calc(100dvh - 24px);overflow-y:auto;}

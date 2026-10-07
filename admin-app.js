@@ -1517,6 +1517,7 @@ let activeBarcodeScannerFrame = null;
 let activeHtml5BarcodeScanner = null;
 let html5QrcodeLoadPromise = null;
 let barcodeScannerSession = 0;
+let barcodeCameraStopPromise = Promise.resolve();
 
 function loadHtml5QrcodeLibrary() {
     if (typeof window.Html5Qrcode === 'function') return Promise.resolve(true);
@@ -1551,7 +1552,7 @@ function closeBarcodeScanner() {
         const scanner = activeHtml5BarcodeScanner;
         activeHtml5BarcodeScanner = null;
         try {
-            Promise.resolve(scanner.stop?.())
+            barcodeCameraStopPromise = Promise.resolve(scanner.stop?.())
                 .catch(() => {})
                 .finally(() => {
                     try { scanner.clear?.(); } catch (error) {}
@@ -1577,6 +1578,11 @@ function buildBarcodeScannerModal() {
                 <div id="barcode-scanner-status" class="barcode-scanner-status" aria-live="polite">Solicitando permiso de camara. En el celular selecciona Permitir.</div>
                 <button type="button" class="admin-btn secondary barcode-camera-retry" id="barcode-camera-retry" hidden>Reintentar camara</button>
             </div>
+            <label class="barcode-reader-mode">Tipo de lectura
+                <select id="barcode-reader-mode" class="form-control" aria-label="Tipo de lectura"><option value="auto">Automática (compatible en PC)</option><option value="compatible">Compatible — si no reconoce el código</option></select>
+            </label>
+            <p class="barcode-phone-hint">Puedes usar una cámara USB o un celular configurado como webcam. Conéctalo, pulsa Actualizar cámaras y selecciónalo. Mantén todas las barras visibles y el código horizontal, con buena luz.</p>
+            <button type="button" id="barcode-camera-refresh" class="admin-btn secondary">Actualizar cámaras</button>
             <div class="barcode-camera-picker" id="barcode-camera-picker" hidden>
                 <label for="barcode-camera-select">Cámara en uso</label>
                 <select id="barcode-camera-select" class="form-control" aria-label="Seleccionar cámara"></select>
@@ -1611,6 +1617,8 @@ function getHtml5BarcodeFormats() {
         formats.QR_CODE,
         formats.CODE_128,
         formats.CODE_39,
+        formats.CODE_93,
+        formats.CODABAR,
         formats.EAN_13,
         formats.EAN_8,
         formats.UPC_A,
@@ -1656,6 +1664,8 @@ function getBarcodeFormatLabel(format) {
         qr: 'QR',
         code_128: 'CODE 128',
         code_39: 'CODE 39',
+        code_93: 'CODE 93',
+        codabar: 'CODABAR',
         ean_13: 'EAN-13',
         ean_8: 'EAN-8',
         upc_a: 'UPC-A',
@@ -1712,7 +1722,7 @@ async function populateBarcodeCameraPicker(modal, selectedDeviceId = '') {
     if (!picker || !select || !navigator.mediaDevices?.enumerateDevices) return;
     const cameras = (await navigator.mediaDevices.enumerateDevices().catch(() => []))
         .filter(device => device.kind === 'videoinput');
-    if (cameras.length < 2) return;
+    if (!cameras.length) { picker.hidden = true; return; }
 
     select.innerHTML = cameras.map((camera, index) => {
         const name = camera.label || `Cámara ${index + 1}`;
@@ -1830,7 +1840,8 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     const createScanner = () => {
         const instance = new window.Html5Qrcode('barcode-scanner-reader', {
             formatsToSupport,
-            useBarCodeDetectorIfSupported: true
+            // Always keep the software decoder: some desktop detectors only read QR.
+            useBarCodeDetectorIfSupported: false
         });
         activeHtml5BarcodeScanner = instance;
         return instance;
@@ -1843,7 +1854,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
 
     let scanner = createScanner();
     let startError = null;
-    const preferredConfig = preferredDeviceId || getBarcodeVideoConstraints();
+    const preferredConfig = preferredDeviceId || { facingMode: isMobileBarcodeDevice() ? 'environment' : 'user' };
     try {
         await scanner.start(preferredConfig, scannerConfig, onScanSuccess, () => {});
     } catch (error) {
@@ -1887,7 +1898,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
         status.textContent = isIosBarcodeDevice()
             ? 'Camara trasera activa en iPhone. Manten el codigo centrado y con buena luz.'
             : (!isMobileBarcodeDevice()
-                ? 'Webcam activa. La lectura es automatica: ubica el codigo centrado y con buena luz.'
+                ? 'Webcam activa con lector compatible. Mantén el código horizontal, completo y enfocado. Puedes cambiar la cámara arriba.'
                 : 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.');
     }
     await window.BlyxuQrCamera?.scanner(scanner, reader);
@@ -1895,7 +1906,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     return true;
 }
 
-async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '' } = {}) {
+async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto' } = {}) {
     const modal = buildBarcodeScannerModal();
     const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
@@ -1904,6 +1915,8 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
     const reader = modal.querySelector('#barcode-scanner-reader');
     const retryButton = modal.querySelector('#barcode-camera-retry');
     const cameraSelect = modal.querySelector('#barcode-camera-select');
+    const modeSelect = modal.querySelector('#barcode-reader-mode');
+    modeSelect.value = scannerMode;
     const readout = modal.querySelector('#barcode-live-readout');
     const valueLabel = modal.querySelector('#barcode-live-value');
     const formatLabel = modal.querySelector('#barcode-live-format');
@@ -1935,12 +1948,14 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         }
     });
     const reopenWithCamera = deviceId => {
-        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '' });
+        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '', scannerMode: modeSelect.value });
     };
     retryButton?.addEventListener('click', () => {
         reopenWithCamera(preferredDeviceId);
     });
     cameraSelect?.addEventListener('change', () => reopenWithCamera(cameraSelect.value));
+    modeSelect.addEventListener('change', () => reopenWithCamera(cameraSelect.value || preferredDeviceId));
+    modal.querySelector('#barcode-camera-refresh').addEventListener('click', () => populateBarcodeCameraPicker(modal, cameraSelect.value || preferredDeviceId));
     const permissionHintTimer = setTimeout(() => {
         if (scannerSession === barcodeScannerSession && modal.isConnected && status) {
             status.textContent = 'La camara esta tardando en iniciar. Revisa el permiso del sitio o pulsa Reintentar camara.';
@@ -1949,7 +1964,9 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
     }, 6500);
 
     try {
-        if ('BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
+        await barcodeCameraStopPromise;
+        if (scannerSession !== barcodeScannerSession || !modal.isConnected) { clearTimeout(permissionHintTimer); return; }
+        if (isMobileBarcodeDevice() && scannerMode !== 'compatible' && 'BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia) {
             const requestedFormats = ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'qr_code'];
             const supportedFormats = typeof BarcodeDetector.getSupportedFormats === 'function'
                 ? await BarcodeDetector.getSupportedFormats()
@@ -1979,7 +1996,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
             await window.BlyxuQrCamera?.stream(activeBarcodeScannerStream, modal.querySelector('.barcode-scanner-status-wrap'));
             attachBarcodeCameraStream(video, activeBarcodeScannerStream, { status, retryButton, scannerSession });
-            await populateBarcodeCameraPicker(modal, preferredDeviceId);
+            await populateBarcodeCameraPicker(modal, stream.getVideoTracks()[0]?.getSettings?.().deviceId || preferredDeviceId);
             clearTimeout(permissionHintTimer);
             if (status) status.textContent = isMobileBarcodeDevice()
                 ? 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.'
@@ -2009,7 +2026,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
 
         if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
             preferredDeviceId,
-            onCameraReady: () => populateBarcodeCameraPicker(modal, preferredDeviceId)
+            onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
         })) {
             clearTimeout(permissionHintTimer);
             return;
@@ -2033,7 +2050,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             try {
                 if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
                     preferredDeviceId,
-                    onCameraReady: () => populateBarcodeCameraPicker(modal, preferredDeviceId)
+                    onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
                 })) {
                     clearTimeout(permissionHintTimer);
                     return;
