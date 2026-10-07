@@ -57,7 +57,23 @@
                     if (mode) mode.textContent = 'Pendiente por completar';
                     showToast('Completa los datos y pulsa Guardar producto y variantes para publicarlo.', 'success');
                 };
-                row.append(text,button); list.append(row);
+                const actions = document.createElement('div'); actions.className = 'pending-product-actions';
+                const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'admin-btn secondary pending-product-delete';
+                remove.title = 'Eliminar pendiente'; remove.setAttribute('aria-label', 'Eliminar pendiente ' + draft.reference);
+                remove.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg>';
+                remove.onclick = async () => {
+                    if (!confirm('¿Eliminar el pendiente ' + draft.reference + '? No se publicará en el catálogo.')) return;
+                    remove.disabled = button.disabled = true;
+                    try {
+                        await write(draft.key, null);
+                        const form = document.getElementById('product-form');
+                        if (form?.dataset.pendingKey === draft.key) delete form.dataset.pendingKey;
+                        showToast('Pendiente eliminado.', 'success');
+                        await refresh();
+                    } catch (error) { showToast(error.message, 'error'); }
+                    finally { remove.disabled = button.disabled = false; }
+                };
+                actions.append(button,remove); row.append(text,actions); list.append(row);
             }
         } catch (error) { list.textContent = error.message; if(options.throwOnError)throw error; }
     }

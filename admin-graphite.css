@@ -100,3 +100,13 @@ body.admin-graphite .product-work-tabs button[aria-selected="true"] {background:
 body.admin-graphite .product-work-tabs button:focus-visible {outline:2px solid #d5d5df;outline-offset:3px;}
 body.admin-graphite :is(#products-form-pane,#pending-products-panel)[hidden] {display:none !important;}
 body.admin-graphite #pending-products-panel {padding:24px;}
+
+/* Equal-sized product actions, with no orphaned submit button. */
+body.admin-graphite #view-products .product-form-actions {grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:12px;}
+body.admin-graphite #view-products .product-form-actions > div {display:contents !important;}
+body.admin-graphite #view-products .product-form-actions .admin-btn {width:100%;min-width:0;min-height:54px;margin:0;box-sizing:border-box;white-space:normal;line-height:1.4;padding:12px 16px;}
+body.admin-graphite .pending-product-actions {display:flex;align-items:center;gap:10px;flex-shrink:0;}
+body.admin-graphite .pending-product-actions .pending-product-delete {display:inline-flex;align-items:center;justify-content:center;width:46px;min-width:46px;min-height:46px;padding:10px;color:#f1b3b3 !important;}
+body.admin-graphite .pending-product-delete:hover {background:#432b2e !important;border-color:#b6757c !important;}
+@media(max-width:600px) {body.admin-graphite .pending-product-actions .admin-btn:first-child {flex:1;}}
+@media(max-width:380px) {body.admin-graphite #view-products .product-form-actions {grid-template-columns:minmax(0,1fr) !important;}}
