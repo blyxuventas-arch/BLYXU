@@ -103,6 +103,7 @@ const JSPDF_CDN_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.
 function clearPublicProductsCache() {
     try {
         localStorage.removeItem(PUBLIC_PRODUCTS_CACHE_KEY);
+        localStorage.setItem('blyxu_catalog_revision_v1',Date.now()+'-'+Math.random());
         localStorage.removeItem('blyxu_products_cache_v2');
         localStorage.removeItem(SITE_CONFIG_CACHE_KEY);
     } catch (e) {
@@ -8336,6 +8337,7 @@ async function delFromSheet(id, idProd, rowMeta) {
             });
             var result = await res.json();
             if (result && (result.deleted > 0 || result.status === 'success' || result.ok === true)) {
+                clearPublicProductsCache();
                 console.log('Producto eliminado fisicamente de Google Sheets');
                 return true;
             }

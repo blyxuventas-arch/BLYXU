@@ -1215,6 +1215,10 @@ function applyPromotionsToProducts() {
 }
 
 // -- LOAD PRODUCTS FROM GOOGLE SHEETS --
+function requestFreshProducts(options = {}) {
+    if(!productsLoadPromise)productsLoadPromise=fetchProducts(options).finally(()=>{productsLoadPromise=null;});
+    return productsLoadPromise;
+}
 async function loadProducts(options = {}) {
     const { renderCatalog = true, useCache = true, showLoading = true } = options;
     const productCache = readCache(PRODUCTS_CACHE_KEY);
@@ -1235,9 +1239,8 @@ async function loadProducts(options = {}) {
         }
     }
 
-    if (!productsLoadPromise && !productCacheIsFresh) {
-        productsLoadPromise = fetchProducts({ showLoading: showLoading && !usedProductCache && renderCatalog });
-    }
+    // Cached data is only an instant preview; always validate it against the current inventory.
+    requestFreshProducts({showLoading:showLoading && !usedProductCache && renderCatalog});
     if (!configLoadPromise && !configCacheIsFresh) {
         configLoadPromise = fetchSiteConfig();
     }
@@ -1257,7 +1260,7 @@ async function loadProducts(options = {}) {
                 renderFloatingWhatsApp();
                 renderFooterSocialLinks();
                 renderPromoWidget();
-            });
+            }).catch(error=>console.warn('No se pudo actualizar el catálogo:',error));
         }
         return allProducts;
     }
@@ -1875,7 +1878,11 @@ async function fetchProducts(options = {}) {
             if (data && (data.status === 'error' || data.ok === false)) {
                 throw new Error(data.message || data.error || 'Error del Apps Script');
             }
-            dataProducts = (Array.isArray(data) ? data : (data.data || data.productos || []))
+            if(!res.ok)throw new Error('No se pudo consultar el inventario.');
+            const rows=Array.isArray(data)?data:(data?.data || data?.productos);
+            if(!Array.isArray(rows))throw new Error('La respuesta del inventario no es válida.');
+            productsLoadError='';
+            dataProducts = rows
                 .map(normalizeGoogleProduct)
                 .filter(isActiveProduct);
             
@@ -1891,15 +1898,12 @@ async function fetchProducts(options = {}) {
                 setProductsLoading(false);
                 return allProducts;
             }
-            dataProducts = [];
+            setProductsLoading(false);
+            return allProducts;
         }
     }
     
     setProductsLoading(false);
-
-    if (!dataProducts.length && allProducts.length) {
-        return allProducts;
-    }
     
     // Separar banners del catalogo regular
     bannerProducts = dataProducts.filter(p => isPublicBannerProduct(p) && isActiveProduct(p) && getPublicProductImage(p));
