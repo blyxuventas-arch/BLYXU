@@ -438,7 +438,8 @@ function getCatalogProductImageSource(product) {
 }
 
 function getCatalogPreviewImageUrl(source) {
-    return normalizeImageUrl(source, IS_MOBILE_VIEWPORT ? 'thumb' : 'catalogPreview');
+    // Use the final card size so each card downloads only one image.
+    return normalizeImageUrl(source, 'card');
 }
 
 function preloadCatalogImageUrl(src, priority = 'auto') {
@@ -554,7 +555,7 @@ function initCatalogImageLoading(scope = document) {
                 if (entry.isIntersecting) loadDeferredCatalogImage(entry.target);
             });
         }, {
-            rootMargin: IS_MOBILE_VIEWPORT ? '700px 0px' : '950px 0px',
+            rootMargin: '350px 0px',
             threshold: 0.01
         });
     }
@@ -699,8 +700,12 @@ function getImageTargetWidth(kindOrWidth = 'default') {
     const key = String(kindOrWidth || 'default');
     const base = IMAGE_WIDTHS[key] || IMAGE_WIDTHS.default;
     if (key === 'banner' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1400;
-    if (key === 'detail' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1100;
-    if ((key === 'card' || key === 'spotlight') && typeof window !== 'undefined' && window.innerWidth <= 640) return 320;
+    if (key === 'detail' && typeof window !== 'undefined') return window.innerWidth <= 640 ? 640 : 800;
+    if (key === 'card' && typeof window !== 'undefined') {
+        const baseWidth = window.innerWidth <= 640 ? 320 : 360;
+        return Math.min(640, Math.round(baseWidth * Math.min(window.devicePixelRatio || 1, 2)));
+    }
+    if (key === 'spotlight' && typeof window !== 'undefined' && window.innerWidth <= 640) return 320;
     return base;
 }
 
@@ -788,12 +793,7 @@ function prepareProductDetailPreview(productIndex, mode = 'retail') {
         }));
     } catch (_) {}
 
-    if (image) {
-        const img = new Image();
-        img.decoding = 'async';
-        img.referrerPolicy = 'no-referrer';
-        img.src = image;
-    }
+    if (image) preloadCatalogImageUrl(image, 'low');
 }
 
 function openProductDetail(productIndex, mode = 'retail') {
@@ -3002,11 +3002,11 @@ function renderProducts(products, options = {}) {
     grid.innerHTML = '';
     let rendered = 0;
     const immediateImageCount = initialBatchSize;
-    const highPriorityImageCount = Math.min(initialBatchSize, Math.max(CATALOG_BATCH_SIZE, getCatalogGridColumnCount(grid) * 2));
+    const highPriorityImageCount = Math.min(initialBatchSize, getCatalogGridColumnCount(grid));
     const shouldPrioritizeCatalogImages = mode === 'wholesale'
         || gridId === 'wholesale-products-grid'
         || (typeof window !== 'undefined' && window.location.hash === '#coleccion');
-    primeCatalogImages(filtered, grid);
+    // Native lazy loading defers cards below the viewport; no bulk preloads.
 
     function productCardTemplate(p, i) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
@@ -3031,7 +3031,7 @@ function renderProducts(products, options = {}) {
         const shouldLoadImageNow = i < immediateImageCount;
         const isHighPriorityImage = i < highPriorityImageCount && shouldPrioritizeCatalogImages;
         const imagePriority = isHighPriorityImage ? 'high' : shouldLoadImageNow ? 'auto' : 'low';
-        const imageLoading = i < highPriorityImageCount ? 'eager' : 'lazy';
+        const imageLoading = isHighPriorityImage ? 'eager' : 'lazy';
         const imageSourceAttrs = shouldLoadImageNow
             ? `src="${escapeHtml(previewImg)}"`
             : `data-src="${escapeHtml(previewImg)}" data-catalog-lazy="true"`;

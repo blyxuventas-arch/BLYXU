@@ -1057,7 +1057,7 @@
                             const preview = JSON.parse(sessionStorage.getItem('blyxu_product_detail_preview_v1') || 'null');
                             const fresh = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
                             if (fresh && preview.id === productId && preview.mode === mode) {
-                                initialSrc = preview.imageCard || preview.image || preview.imageDetail || '';
+                                initialSrc = preview.imageDetail || preview.image || preview.imageCard || '';
                                 initialName = preview.name || '';
                             }
                         } catch (_) {}
@@ -1067,7 +1067,7 @@
                             const product = cache?.data?.products?.[productId];
                             if (product) {
                                 initialName = product.Nombre || product.nombre || product.Producto || '';
-                                initialSrc = normalizeImage(product.Imagen || product.imagen || product.Foto || (product.Galeria && product.Galeria[0]), 420);
+                                initialSrc = normalizeImage(product.Imagen || product.imagen || product.Foto || (product.Galeria && product.Galeria[0]), window.innerWidth <= 640 ? 640 : 800);
                             }
                         } catch (_) {}
 
@@ -1080,7 +1080,7 @@
                             if (mobileName && initialName) mobileName.textContent = initialName;
                         }
 
-                        document.write(`<img src="${escapeAttr(initialSrc)}" alt="${escapeAttr(initialName)}" id="detail-img" class="is-ready" loading="eager" decoding="sync" fetchpriority="high" referrerpolicy="no-referrer">`);
+                        document.write(`<img ${initialSrc ? `src="${escapeAttr(initialSrc)}"` : ''} alt="${escapeAttr(initialName)}" id="detail-img" class="is-ready" loading="eager" decoding="async" fetchpriority="high" referrerpolicy="no-referrer">`);
                     })();
                 </script>
                 <button class="btn-save-favorite-detail product-favorite-mobile" id="btn-save-favorite-detail-mobile" type="button" aria-label="Guardar favorito" title="Guardar favorito">
@@ -1216,7 +1216,7 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=catalog-sync-20261007" defer></script>
+    <script src="blyxu-app.js?v=image-loading-20261008" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1398,18 +1398,10 @@
                 if (!src || preloadedDetailImages.has(src)) return;
                 preloadedDetailImages.add(src);
 
-                const link = document.createElement('link');
-                link.rel = 'preload';
-                link.as = 'image';
-                link.href = src;
-                link.fetchPriority = 'high';
-                link.setAttribute('fetchpriority', 'high');
-                link.referrerPolicy = 'no-referrer';
-                document.head.appendChild(link);
-
                 const img = new Image();
                 img.decoding = 'async';
                 img.referrerPolicy = 'no-referrer';
+                img.fetchPriority = 'low';
                 img.src = src;
             }
 
@@ -1429,15 +1421,6 @@
                 const currentSrc = detailImg.getAttribute('src') || '';
                 const isSameImage = currentSrc === nextSrc;
                 if (isSameImage && detailImg.complete && detailImg.naturalWidth > 0) return;
-                if (currentSrc && getImageIdentity(currentSrc) === getImageIdentity(nextSrc) && detailImg.naturalWidth > 0) {
-                    preloadDetailImage(nextSrc);
-                    detailImg.alt = alt || detailImg.alt || '';
-                    detailImg.classList.add('is-ready');
-                    detailImgContainer.classList.remove('is-loading', 'is-fallback');
-                    detailImgContainer.style.backgroundImage = '';
-                    return;
-                }
-
                 detailImgContainer.classList.add('is-loading');
                 detailImg.classList.add('is-ready');
                 detailImg.alt = alt || '';
