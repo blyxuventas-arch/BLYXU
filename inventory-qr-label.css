@@ -23,6 +23,16 @@
 .inventory-label-size label {display:grid;gap:6px;font-size:12px;}
 .inventory-label-preview {min-width:0;overflow:auto;}
 .inventory-label-preview .iq-label {margin-inline:auto;}
+.iq-label {grid-template-columns:minmax(0,1fr) calc(19mm * var(--iq-scale,1));}
+.iq-label .iq-copy {order:0;}
+.iq-label .iq-qr {order:1;}
+.iq-label.iq-compact {padding:.6mm;grid-template-columns:minmax(0,1fr) 11mm;gap:.5mm;}
+.iq-label.iq-compact .iq-qr {width:11mm;height:11mm;}
+.iq-label.iq-compact .iq-copy {gap:.2mm;}
+.iq-label.iq-compact .iq-logo {width:8mm;height:3mm;}
+.iq-label.iq-compact .iq-id {font-size:4.5pt;line-height:1.05;}
+.iq-label.iq-compact .iq-price {font-size:6.5pt;line-height:1.05;}
+.iq-label.iq-compact .iq-pm {font-size:4pt;line-height:1.05;}
 @media print {@page {size:50mm 30mm;margin:0;} html,body {width:50mm;height:30mm;margin:0 !important;padding:0 !important;background:#fff;} .iq-label {margin:0;box-shadow:none;break-inside:avoid;}}
 @media screen {
  #inventory-qr-modal {padding:12px;}

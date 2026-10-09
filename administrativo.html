@@ -7394,7 +7394,7 @@
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
 <link rel="stylesheet" href="admin-graphite.css?v=pending-actions-20261006-4">
-<link rel="stylesheet" href="inventory-qr-label.css?v=label-logo-20261008">
+<link rel="stylesheet" href="inventory-qr-label.css?v=label-two-sizes-20261008">
 </head>
 <body class="admin-graphite">
     <div class="bg-animation"></div>
@@ -7862,7 +7862,7 @@
                 <div>
                     <span class="admin-kicker">Ticket de referencia</span>
                     <h2>Codigo QR del producto</h2>
-                    <p>Ajusta el ancho y alto de la etiqueta. El QR conserva la referencia para escanearla en inventario.</p>
+                    <p>Elige 30 × 15 mm o 50 × 30 mm. El QR conserva la referencia para escanearla en inventario.</p>
                 </div>
                 <button type="button" class="quick-payment-close" data-inventory-qr-action="close" aria-label="Cerrar">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -7882,8 +7882,7 @@
                         <div data-qr-element="pm"><span>PM</span><strong id="inventory-qr-pm">PM: -</strong></div>
                     </div>
                     <div class="inventory-label-size" aria-label="Tamaño de la etiqueta">
-                        <label>Ancho (mm)<input class="form-control" type="number" id="inventory-label-width" data-qr-size min="40" max="100" step="1" value="50"></label>
-                        <label>Alto (mm)<input class="form-control" type="number" id="inventory-label-height" data-qr-size min="25" max="80" step="1" value="30"></label>
+                        <label>Tamaño de etiqueta<select class="form-control" id="inventory-label-size" data-qr-size><option value="30x15">30 × 15 mm · compacta</option><option value="50x30">50 × 30 mm · completa</option></select></label>
                     </div>
                     <div class="inventory-qr-options" aria-label="Elementos del ticket QR">
                         <label><input type="checkbox" data-qr-option="name"> Nombre</label>
@@ -8273,7 +8272,7 @@
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
 <script src="barcode-frame-reader.js?v=automatic-20261006-2" defer></script>
 <script src="inventory-label-export.js?v=label-size-20261008" defer></script>
-<script src="admin-app.js?v=label-size-20261008" defer></script>
+<script src="admin-app.js?v=label-two-sizes-20261008" defer></script>
 <script src="inventory-category-manager.js?v=20261006-1" defer></script>
 <script src="order-summary.js?v=pdf-fast-20261007" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>

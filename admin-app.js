@@ -6570,10 +6570,10 @@ function getInventoryQrReference(product) {
     );
 }
 
-function getInventoryQrImageUrl(reference, size = 440) {
+function getInventoryQrImageUrl(reference, size = 440, correction = 'H') {
     const cleanReference = String(reference || '').trim();
     const dimension = Math.max(180, Math.min(800, Number(size) || 440));
-    const localQr = qrcode(0, 'H');
+    const localQr = qrcode(0, correction === 'M' ? 'M' : 'H');
     localQr.addData(cleanReference); localQr.make();
     const moduleSize = Math.max(2,Math.floor(dimension/(localQr.getModuleCount()+8)));
     return localQr.createDataURL(moduleSize, moduleSize * 4);
@@ -6696,8 +6696,10 @@ function getInventoryQrTicketOptions() {
     modal.querySelectorAll('[data-qr-option]').forEach(input => {
         defaults[input.dataset.qrOption] = input.checked;
     });
-    defaults.width = Math.max(40,Math.min(100,Number(modal.querySelector('#inventory-label-width')?.value) || 50));
-    defaults.height = Math.max(25,Math.min(80,Number(modal.querySelector('#inventory-label-height')?.value) || 30));
+    const compact = modal.querySelector('#inventory-label-size')?.value === '30x15';
+    defaults.width = compact ? 30 : 50;
+    defaults.height = compact ? 15 : 30;
+    if (compact) { defaults.name = false; defaults.reference = false; }
     return defaults;
 }
 
@@ -6705,6 +6707,7 @@ window.updateInventoryQrPreviewOptions = function() {
     const modal = document.getElementById('inventory-qr-modal');
     if (!modal) return;
     const options = getInventoryQrTicketOptions();
+    modal.querySelectorAll('[data-qr-option="name"], [data-qr-option="reference"]').forEach(input => { input.disabled = options.width === 30; });
     modal.querySelectorAll('[data-qr-element]').forEach(element => {
         const key = element.dataset.qrElement;
         element.hidden = options[key] === false;
@@ -6780,18 +6783,19 @@ function buildInventoryQrLabel(ticket, options = {}) {
     const brandLogo = document.querySelector('.sidebar-logo img');
     const logo = brandLogo?.src || new URL('Logo2-nav.png', window.location.href).href;
     const id = ticket.variationId || ticket.sku || ticket.motherId || ticket.reference;
-    const width = Math.max(40,Math.min(100,Number(options.width)||50));
-    const height = Math.max(25,Math.min(80,Number(options.height)||30));
+    const compact = Number(options.width) === 30 && Number(options.height) === 15;
+    const width = compact ? 30 : 50;
+    const height = compact ? 15 : 30;
     const scale = Math.min(width/50,height/30);
-    return `<section class="iq-label" data-width="${width}" data-height="${height}" style="--iq-width:${width}mm;--iq-height:${height}mm;--iq-scale:${scale}" aria-label="Etiqueta de producto ${width} por ${height} milímetros">
-        <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400))}" alt="QR ${escapeHtml(ticket.reference)}">
+    return `<section class="iq-label${compact ? ' iq-compact' : ''}" data-width="${width}" data-height="${height}" style="--iq-width:${width}mm;--iq-height:${height}mm;--iq-scale:${scale}" aria-label="Etiqueta de producto ${width} por ${height} milímetros">
+        <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400, compact ? 'M' : 'H'))}" alt="QR ${escapeHtml(ticket.reference)}">
         <div class="iq-copy">
             <img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">
             <b class="iq-id">ID: ${escapeHtml(id)}</b>
-            ${options.name ? `<span class="iq-name">${escapeHtml(ticket.name)}</span>` : ''}
+            ${options.name && !compact ? `<span class="iq-name">${escapeHtml(ticket.name)}</span>` : ''}
             <b class="iq-price">${escapeHtml(formatAdminMoney(ticket.price))}</b>
             <span class="iq-pm">PM: ${escapeHtml(ticket.wholesaleCode || '-')}</span>
-            ${options.reference && ticket.reference !== id ? `<span class="iq-reference">${escapeHtml(ticket.reference)}</span>` : ''}
+            ${options.reference && !compact && ticket.reference !== id ? `<span class="iq-reference">${escapeHtml(ticket.reference)}</span>` : ''}
         </div>
     </section>`;
 }
@@ -6806,7 +6810,7 @@ window.printInventoryQrTicket = function() {
     if (!ticket?.reference) { showToast('No se encontro el producto para imprimir', 'error'); return; }
     const printWindow = window.open('', '_blank');
     if (!printWindow) { showToast('El navegador bloqueo la ventana de impresion', 'warning'); return; }
-    const cssUrl = new URL('inventory-qr-label.css?v=label-logo-20261008', window.location.href).href;
+    const cssUrl = new URL('inventory-qr-label.css?v=label-two-sizes-20261008', window.location.href).href;
     const options = getInventoryQrTicketOptions();
     printWindow.document.open();
     printWindow.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
