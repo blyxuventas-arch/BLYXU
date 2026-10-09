@@ -110,3 +110,42 @@ body.admin-graphite .pending-product-actions .pending-product-delete {display:in
 body.admin-graphite .pending-product-delete:hover {background:#432b2e !important;border-color:#b6757c !important;}
 @media(max-width:600px) {body.admin-graphite .pending-product-actions .admin-btn:first-child {flex:1;}}
 @media(max-width:380px) {body.admin-graphite #view-products .product-form-actions {grid-template-columns:minmax(0,1fr) !important;}}
+
+/* Keep camera pixels and the decoder's video geometry aligned in portrait. */
+body.admin-graphite .barcode-scanner-stage {
+    height:auto !important;
+    min-height:0;
+    aspect-ratio:var(--barcode-camera-ratio, 16 / 9);
+}
+body.admin-graphite #barcode-scanner-video {
+    position:absolute;
+    inset:0;
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+}
+body.admin-graphite #barcode-scanner-reader {
+    height:auto !important;
+    min-height:0 !important;
+}
+body.admin-graphite #barcode-scanner-reader video {
+    display:block;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+}
+@media(max-width:600px) {
+    body.admin-graphite .barcode-scanner-card {
+        display:block;
+        height:auto;
+        max-height:calc(100dvh - 24px);
+        overflow-y:auto;
+    }
+    body.admin-graphite .barcode-scanner-stage {
+        aspect-ratio:var(--barcode-camera-ratio, 3 / 4);
+    }
+    body.admin-graphite .barcode-scanner-guide {
+        width:calc(100% - 22px);
+        height:calc(100% - 22px);
+    }
+}

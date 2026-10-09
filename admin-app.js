@@ -1725,9 +1725,10 @@ function isMobileBarcodeDevice() {
 }
 
 function getBarcodeVideoConstraints(deviceId = '') {
+    const portrait = isMobileBarcodeDevice() && window.matchMedia?.('(orientation: portrait)').matches;
     const constraints = {
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: portrait ? 1080 : 1920 },
+        height: { ideal: portrait ? 1920 : 1080 }
     };
     if (deviceId) {
         constraints.deviceId = { exact: deviceId };
@@ -1798,6 +1799,19 @@ async function optimizeBarcodeCameraStream(stream) {
     } catch (error) {}
 }
 
+function syncBarcodeCameraViewport(video) {
+    const stage = video?.closest('.barcode-scanner-stage');
+    if (!stage) return;
+    const update = () => {
+        if (!stage.isConnected || !video.videoWidth || !video.videoHeight) return;
+        stage.style.setProperty('--barcode-camera-ratio', `${video.videoWidth} / ${video.videoHeight}`);
+    };
+    video.addEventListener('loadedmetadata', update);
+    // Video dimensions change when mobile browsers rotate the camera stream.
+    video.addEventListener('resize', update);
+    update();
+}
+
 function attachBarcodeCameraStream(video, stream, { status, retryButton, scannerSession } = {}) {
     if (!video) throw new DOMException('Vista de camara no disponible', 'NotReadableError');
     video.muted = true;
@@ -1806,6 +1820,7 @@ function attachBarcodeCameraStream(video, stream, { status, retryButton, scanner
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.srcObject = stream;
+    syncBarcodeCameraViewport(video);
 
     const startPlayback = () => {
         if (!video.paused) return;
@@ -1936,6 +1951,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
 
     const scannerVideo = reader.querySelector('video');
     if (scannerVideo) {
+        syncBarcodeCameraViewport(scannerVideo);
         scannerVideo.muted = true;
         scannerVideo.autoplay = true;
         scannerVideo.playsInline = true;
