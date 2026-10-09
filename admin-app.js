@@ -6696,8 +6696,8 @@ function getInventoryQrTicketOptions() {
     modal.querySelectorAll('[data-qr-option]').forEach(input => {
         defaults[input.dataset.qrOption] = input.checked;
     });
-    const compact = modal.querySelector('#inventory-label-size')?.value === '30x15';
-    defaults.width = compact ? 30 : 50;
+    const compact = modal.querySelector('#inventory-label-size')?.value === '40x15';
+    defaults.width = compact ? 40 : 50;
     defaults.height = compact ? 15 : 30;
     if (compact) { defaults.name = false; defaults.reference = false; }
     return defaults;
@@ -6707,7 +6707,7 @@ window.updateInventoryQrPreviewOptions = function() {
     const modal = document.getElementById('inventory-qr-modal');
     if (!modal) return;
     const options = getInventoryQrTicketOptions();
-    modal.querySelectorAll('[data-qr-option="name"], [data-qr-option="reference"]').forEach(input => { input.disabled = options.width === 30; });
+    modal.querySelectorAll('[data-qr-option="name"], [data-qr-option="reference"]').forEach(input => { input.disabled = options.width === 40; });
     modal.querySelectorAll('[data-qr-element]').forEach(element => {
         const key = element.dataset.qrElement;
         element.hidden = options[key] === false;
@@ -6783,14 +6783,16 @@ function buildInventoryQrLabel(ticket, options = {}) {
     const brandLogo = document.querySelector('.sidebar-logo img');
     const logo = brandLogo?.src || new URL('Logo2-nav.png', window.location.href).href;
     const id = ticket.variationId || ticket.sku || ticket.motherId || ticket.reference;
-    const compact = Number(options.width) === 30 && Number(options.height) === 15;
-    const width = compact ? 30 : 50;
+    const compact = Number(options.width) === 40 && Number(options.height) === 15;
+    const width = compact ? 40 : 50;
     const height = compact ? 15 : 30;
     const scale = Math.min(width/50,height/30);
+    const logoMarkup = `<img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">`;
     return `<section class="iq-label${compact ? ' iq-compact' : ''}" data-width="${width}" data-height="${height}" style="--iq-width:${width}mm;--iq-height:${height}mm;--iq-scale:${scale}" aria-label="Etiqueta de producto ${width} por ${height} milímetros">
+        ${compact ? logoMarkup : ''}
         <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400, compact ? 'M' : 'H'))}" alt="QR ${escapeHtml(ticket.reference)}">
         <div class="iq-copy">
-            <img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">
+            ${compact ? '' : logoMarkup}
             <b class="iq-id">ID: ${escapeHtml(id)}</b>
             ${options.name && !compact ? `<span class="iq-name">${escapeHtml(ticket.name)}</span>` : ''}
             <b class="iq-price">${escapeHtml(formatAdminMoney(ticket.price))}</b>
@@ -6810,7 +6812,7 @@ window.printInventoryQrTicket = function() {
     if (!ticket?.reference) { showToast('No se encontro el producto para imprimir', 'error'); return; }
     const printWindow = window.open('', '_blank');
     if (!printWindow) { showToast('El navegador bloqueo la ventana de impresion', 'warning'); return; }
-    const cssUrl = new URL('inventory-qr-label.css?v=label-two-sizes-20261008', window.location.href).href;
+    const cssUrl = new URL('inventory-qr-label.css?v=label-40x15-20261009', window.location.href).href;
     const options = getInventoryQrTicketOptions();
     printWindow.document.open();
     printWindow.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">

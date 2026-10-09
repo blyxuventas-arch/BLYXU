@@ -52,13 +52,13 @@
         }
         label.querySelectorAll('img').forEach(image => {
             const rect = image.getBoundingClientRect(), style = getComputedStyle(image);
-            pictures.push({src:image.src,x:rect.left-bounds.left,y:rect.top-bounds.top,width:rect.width,height:rect.height,filter:style.filter,left:style.objectPosition.startsWith('0%')||style.objectPosition.startsWith('left')});
+            pictures.push({src:image.src,x:rect.left-bounds.left,y:rect.top-bounds.top,width:rect.width,height:rect.height,filter:style.filter,qr:image.classList.contains('iq-qr'),left:style.objectPosition.startsWith('0%')||style.objectPosition.startsWith('left')});
         });
         const images = await Promise.all(pictures.map(picture => loadImage(picture.src)));
         pictures.forEach((picture,index) => {
             const image = images[index], ratio = Math.min(picture.width/image.naturalWidth,picture.height/image.naturalHeight);
             const width = image.naturalWidth*ratio, height = image.naturalHeight*ratio;
-            ctx.save(); ctx.filter = picture.filter; ctx.imageSmoothingEnabled = index !== 0;
+            ctx.save(); ctx.filter = picture.filter; ctx.imageSmoothingEnabled = !picture.qr;
             ctx.drawImage(image,picture.x+(picture.left?0:(picture.width-width)/2),picture.y+(picture.height-height)/2,width,height); ctx.restore();
         });
         text.forEach(item => {ctx.font=item.font;ctx.fillStyle=item.color;ctx.fillText(item.character,item.x,item.y);});
