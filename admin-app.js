@@ -1851,7 +1851,10 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
         }
         readout?.classList.add('is-detected');
 
-        if (candidateHits < 2) {
+        // QR decoding already validates its error-correction data. A single clear
+        // reading is enough; linear barcodes still require two matching frames.
+        const requiredHits = /qr/i.test(String(format)) ? 1 : 2;
+        if (candidateHits < requiredHits) {
             if (status) status.textContent = 'Codigo detectado. Mantenlo quieto un instante para confirmarlo.';
             return false;
         }
@@ -11830,17 +11833,23 @@ function groupQuickSaleProducts(products) {
 function findQuickSaleProductByReference(rawCode) {
     const code = normalizeBarcodeValue(rawCode);
     if (!code || !Array.isArray(inventario)) return null;
-    return inventario.find(product => {
+    const matches = inventario.filter(product => {
         if (isBannerInventoryProduct(product)) return false;
         const references = [
             getProductBarcode(product),
             getInvoiceProductSku(product),
             getInvoiceProductId(product),
             getInventoryVariationId(product),
-            getInventoryMotherId(product)
+            getInventoryMotherId(product),
+            makeProductBarcode('', getInventoryVariationId(product)),
+            makeProductBarcode(getInventoryMotherId(product), '')
         ].map(normalizeBarcodeValue).filter(Boolean);
         return references.includes(code);
-    }) || null;
+    });
+    // Prefer the exact variant over a shared mother ID, regardless of row order.
+    return matches.find(product => [getInventoryVariationId(product),
+        makeProductBarcode('', getInventoryVariationId(product)), getProductBarcode(product),
+        getInvoiceProductSku(product)].map(normalizeBarcodeValue).includes(code)) || matches[0] || null;
 }
 
 async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
@@ -11852,9 +11861,11 @@ async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
     if (!Array.isArray(inventario) || !inventario.length) {
         await cargarInventario({ silent: true });
     }
-    renderQuickSaleResults();
-
-    const product = findQuickSaleProductByReference(code);
+    let product = findQuickSaleProductByReference(code);
+    if (!product) {
+        await cargarInventario({ silent: true });
+        product = findQuickSaleProductByReference(code);
+    }
     if (!product) {
         showToast('No se encontro un producto con esa referencia', 'warning');
         input.focus();
@@ -11863,6 +11874,9 @@ async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
     }
 
     const key = getInventoryProductKey(product);
+    window.quickSaleCategory = 'all';
+    input.value = getInventoryVariationId(product) || getInvoiceProductSku(product) || code;
+    renderQuickSaleResults();
     selectQuickSaleProduct(key);
     if (addToSale && getQuickSaleStock(product) > 0) {
         addQuickSaleProduct(key, 1);
