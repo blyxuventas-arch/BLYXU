@@ -1,8 +1,8 @@
 .iq-label,.iq-label * {box-sizing:border-box;}
 .iq-label {width:50mm;height:30mm;padding:1.5mm;display:grid;grid-template-columns:19mm minmax(0,1fr);gap:1.5mm;align-items:center;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;overflow:hidden;}
 .iq-label .iq-qr {width:19mm;height:19mm;display:block;object-fit:contain;image-rendering:pixelated;}
-.iq-label .iq-copy {min-width:0;display:flex;flex-direction:column;gap:.7mm;}
-.iq-label .iq-logo {display:block;width:10mm;height:5.5mm;object-fit:contain;object-position:left center;filter:grayscale(1) brightness(0);}
+.iq-label .iq-copy {min-width:0;display:flex;flex-direction:column;gap:.25mm;}
+.iq-label .iq-logo {display:block;width:20mm;height:8mm;object-fit:contain;object-position:left center;filter:grayscale(1) brightness(0);flex-shrink:0;}
 .iq-label .iq-id {display:block;font-size:6.5pt;font-weight:700;line-height:1.12;overflow-wrap:anywhere;}
 .iq-label .iq-price {display:block;font-size:10pt;line-height:1.1;font-weight:700;white-space:nowrap;}
 .iq-label .iq-pm {display:block;font-size:6.5pt;line-height:1.1;font-weight:400;}
@@ -13,8 +13,8 @@
 .inventory-label-preview > small {color:#333;font-size:12px;}
 .iq-label {width:var(--iq-width,50mm);height:var(--iq-height,30mm);padding:calc(1.5mm * var(--iq-scale,1));grid-template-columns:calc(19mm * var(--iq-scale,1)) minmax(0,1fr);gap:calc(1.5mm * var(--iq-scale,1));}
 .iq-label .iq-qr {width:calc(19mm * var(--iq-scale,1));height:calc(19mm * var(--iq-scale,1));}
-.iq-label .iq-copy {gap:calc(.7mm * var(--iq-scale,1));}
-.iq-label .iq-logo {width:calc(10mm * var(--iq-scale,1));height:calc(5.5mm * var(--iq-scale,1));}
+.iq-label .iq-copy {gap:calc(.25mm * var(--iq-scale,1));}
+.iq-label .iq-logo {width:calc(20mm * var(--iq-scale,1));height:calc(8mm * var(--iq-scale,1));}
 .iq-label .iq-id,.iq-label .iq-pm {font-size:calc(6.5pt * var(--iq-scale,1));}
 .iq-label .iq-price {font-size:calc(10pt * var(--iq-scale,1));}
 .iq-label .iq-name {font-size:calc(5.5pt * var(--iq-scale,1));}

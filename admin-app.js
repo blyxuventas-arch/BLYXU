@@ -6806,7 +6806,7 @@ window.printInventoryQrTicket = function() {
     if (!ticket?.reference) { showToast('No se encontro el producto para imprimir', 'error'); return; }
     const printWindow = window.open('', '_blank');
     if (!printWindow) { showToast('El navegador bloqueo la ventana de impresion', 'warning'); return; }
-    const cssUrl = new URL('inventory-qr-label.css?v=label-size-20261008', window.location.href).href;
+    const cssUrl = new URL('inventory-qr-label.css?v=label-logo-20261008', window.location.href).href;
     const options = getInventoryQrTicketOptions();
     printWindow.document.open();
     printWindow.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
