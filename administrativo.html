@@ -7394,6 +7394,7 @@
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
 <link rel="stylesheet" href="admin-graphite.css?v=pending-actions-20261006-4">
+<link rel="stylesheet" href="inventory-qr-label.css?v=50x30-20261008">
 </head>
 <body class="admin-graphite">
     <div class="bg-animation"></div>
@@ -7861,21 +7862,19 @@
                 <div>
                     <span class="admin-kicker">Ticket de referencia</span>
                     <h2>Codigo QR del producto</h2>
-                    <p>El QR codifica la referencia para escanearla en inventario.</p>
+                    <p>Etiqueta de 50 × 30 mm. El QR conserva la referencia para escanearla en inventario.</p>
                 </div>
                 <button type="button" class="quick-payment-close" data-inventory-qr-action="close" aria-label="Cerrar">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
             <div class="inventory-qr-body">
-                <div class="inventory-qr-preview">
-                    <img id="inventory-qr-image" alt="QR de producto">
-                    <strong id="inventory-qr-ref" data-qr-element="reference">BLYXU-REF</strong>
-                </div>
+                <div class="inventory-label-preview" id="inventory-label-preview"></div>
                 <div class="inventory-qr-info">
                     <span>Producto</span>
                     <h3 id="inventory-qr-name" data-qr-element="name">Producto BLYXU</h3>
                     <div class="inventory-qr-meta">
+                        <div><span>Referencia QR</span><strong id="inventory-qr-ref">BLYXU-REF</strong></div>
                         <div data-qr-element="sku"><span>SKU / ID</span><strong id="inventory-qr-sku">-</strong></div>
                         <div data-qr-element="category"><span>Categoria</span><strong id="inventory-qr-category">-</strong></div>
                         <div data-qr-element="stock"><span>Stock</span><strong id="inventory-qr-stock">0 und.</strong></div>
@@ -7883,15 +7882,13 @@
                         <div data-qr-element="pm"><span>PM</span><strong id="inventory-qr-pm">PM: -</strong></div>
                     </div>
                     <div class="inventory-qr-options" aria-label="Elementos del ticket QR">
-                        <label><input type="checkbox" data-qr-option="name" checked> Nombre</label>
-                        <label><input type="checkbox" data-qr-option="reference" checked> Referencia</label>
-                        <label><input type="checkbox" data-qr-option="sku" checked> SKU / ID</label>
-                        <label><input type="checkbox" data-qr-option="category" checked> Categoria</label>
-                        <label><input type="checkbox" data-qr-option="stock" checked> Stock</label>
-                        <label><input type="checkbox" data-qr-option="price" checked> Precio</label>
-                        <label><input type="checkbox" data-qr-option="pm" checked> PM cifrado</label>
+                        <label><input type="checkbox" data-qr-option="name"> Nombre</label>
+                        <label><input type="checkbox" data-qr-option="reference"> Referencia adicional</label>
+                        <label><input type="checkbox" data-qr-option="sku" checked disabled> ID</label>
+                        <label><input type="checkbox" data-qr-option="price" checked disabled> Precio</label>
+                        <label><input type="checkbox" data-qr-option="pm" checked disabled> PM cifrado</label>
                     </div>
-                    <div class="inventory-qr-note">Puedes abrir la imagen del QR o imprimir un ticket de 58 mm para marquillas y referencias.</div>
+                    <div class="inventory-qr-note">Logo, ID, precio y PM siempre incluidos. Imprime en papel de 50 × 30 mm, a escala 100 %, sin márgenes ni encabezados.</div>
                 </div>
             </div>
             <div class="inventory-qr-actions">
@@ -8269,7 +8266,7 @@
 <script src="customer-access-admin.js?v=admin-refresh-access-20261006-3" defer></script>
 <script src="qr-camera-tools.js?v=20261006-1" defer></script>
 <script src="barcode-frame-reader.js?v=automatic-20261006-2" defer></script>
-<script src="admin-app.js?v=catalog-delete-sync-20261007" defer></script>
+<script src="admin-app.js?v=label-50x30-20261008" defer></script>
 <script src="inventory-category-manager.js?v=20261006-1" defer></script>
 <script src="order-summary.js?v=pdf-fast-20261007" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>

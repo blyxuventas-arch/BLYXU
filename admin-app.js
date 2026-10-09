@@ -1,4 +1,4 @@
-﻿const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 
 // Las credenciales administrativas se mantienen en memoria y se envían solo al servidor.
 const adminNativeFetch = window.fetch.bind(window);
@@ -6570,7 +6570,8 @@ function getInventoryQrImageUrl(reference, size = 440) {
     const dimension = Math.max(180, Math.min(800, Number(size) || 440));
     const localQr = qrcode(0, 'H');
     localQr.addData(cleanReference); localQr.make();
-    return localQr.createDataURL(Math.max(2,Math.floor(dimension/(localQr.getModuleCount()+8))),16);
+    const moduleSize = Math.max(2,Math.floor(dimension/(localQr.getModuleCount()+8)));
+    return localQr.createDataURL(moduleSize, moduleSize * 4);
 }
 
 function encodeInventoryWholesalePrice(value) {
@@ -6677,11 +6678,11 @@ function setInventoryQrText(id, value) {
 function getInventoryQrTicketOptions() {
     const modal = document.getElementById('inventory-qr-modal');
     const defaults = {
-        name: true,
-        reference: true,
+        name: false,
+        reference: false,
         sku: true,
-        category: true,
-        stock: true,
+        category: false,
+        stock: false,
         price: true,
         pm: true
     };
@@ -6701,6 +6702,11 @@ window.updateInventoryQrPreviewOptions = function() {
         const key = element.dataset.qrElement;
         element.hidden = options[key] === false;
     });
+    const preview = document.getElementById('inventory-label-preview');
+    if (preview && modal.dataset.ticketJson) {
+        try { preview.innerHTML = buildInventoryQrLabel(JSON.parse(modal.dataset.ticketJson), options) + '<small>50 × 30 mm · tamaño de impresión</small>'; }
+        catch (error) { console.warn('No se pudo mostrar la etiqueta', error); }
+    }
 };
 
 window.openInventoryQrTicket = function(key) {
@@ -6760,154 +6766,45 @@ window.copyInventoryQrReference = function() {
     showToast('Copia manualmente la referencia del ticket', 'info');
 };
 
+function buildInventoryQrLabel(ticket, options = {}) {
+    const brandLogo = document.querySelector('.sidebar-logo img');
+    const logo = brandLogo?.src || new URL('Logo2-nav.png', window.location.href).href;
+    const id = ticket.variationId || ticket.sku || ticket.motherId || ticket.reference;
+    return `<section class="iq-label" aria-label="Etiqueta de producto 50 por 30 milímetros">
+        <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400))}" alt="QR ${escapeHtml(ticket.reference)}">
+        <div class="iq-copy">
+            <img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">
+            <b class="iq-id">ID: ${escapeHtml(id)}</b>
+            ${options.name ? `<span class="iq-name">${escapeHtml(ticket.name)}</span>` : ''}
+            <b class="iq-price">${escapeHtml(formatAdminMoney(ticket.price))}</b>
+            <span class="iq-pm">PM: ${escapeHtml(ticket.wholesaleCode || '-')}</span>
+            ${options.reference && ticket.reference !== id ? `<span class="iq-reference">${escapeHtml(ticket.reference)}</span>` : ''}
+        </div>
+    </section>`;
+}
+
 window.printInventoryQrTicket = function() {
     const modal = document.getElementById('inventory-qr-modal');
     const product = getInventoryProductByKey(modal?.dataset.productKey || '');
     let ticket = product ? getInventoryQrTicketData(product) : null;
     if (!ticket && modal?.dataset.ticketJson) {
-        try {
-            ticket = JSON.parse(modal.dataset.ticketJson);
-        } catch (error) {
-            ticket = null;
-        }
+        try { ticket = JSON.parse(modal.dataset.ticketJson); } catch (_) {}
     }
-    if (!ticket?.reference) {
-        showToast('No se encontro el producto para imprimir', 'error');
-        return;
-    }
-    const options = getInventoryQrTicketOptions();
+    if (!ticket?.reference) { showToast('No se encontro el producto para imprimir', 'error'); return; }
     const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        showToast('El navegador bloqueo la ventana de impresion', 'warning');
-        return;
-    }
-
-    const qrUrl = getInventoryQrImageUrl(ticket.reference, 520);
-    const metaItems = [
-        options.sku ? `<div><span>SKU / ID</span>${escapeHtml(ticket.sku || ticket.variationId || '-')}</div>` : '',
-        options.category ? `<div><span>Categoria</span>${escapeHtml(ticket.category || '-')}</div>` : '',
-        options.stock ? `<div><span>Stock</span>${ticket.stock} und.</div>` : '',
-        options.price ? `<div><span>Precio</span>${escapeHtml(formatAdminMoney(ticket.price))}</div>` : '',
-        options.pm ? `<div><span>PM</span>PM: ${escapeHtml(ticket.wholesaleCode || '-')}</div>` : ''
-    ].filter(Boolean).join('');
+    if (!printWindow) { showToast('El navegador bloqueo la ventana de impresion', 'warning'); return; }
+    const cssUrl = new URL('inventory-qr-label.css?v=50x30-20261008', window.location.href).href;
     printWindow.document.open();
-    printWindow.document.write(`<!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Ticket QR ${escapeHtml(ticket.reference)}</title>
-            <style>
-                * { box-sizing: border-box; }
-                html, body {
-                    margin: 0;
-                    background: #f4f4f5;
-                    color: #111;
-                    font-family: Arial, Helvetica, sans-serif;
-                }
-                body { padding: 18px; }
-                .toolbar {
-                    display: flex;
-                    justify-content: center;
-                    margin-bottom: 14px;
-                }
-                .toolbar button {
-                    min-height: 40px;
-                    border: 0;
-                    border-radius: 8px;
-                    padding: 0 16px;
-                    background: #111;
-                    color: #fff;
-                    font-weight: 800;
-                    cursor: pointer;
-                }
-                .ticket {
-                    width: 58mm;
-                    min-height: 82mm;
-                    margin: 0 auto;
-                    padding: 5mm;
-                    background: #fff;
-                    border: 1px solid #111;
-                    text-align: center;
-                }
-                .brand {
-                    font-size: 16px;
-                    font-weight: 900;
-                    letter-spacing: 1.8px;
-                    margin-bottom: 2mm;
-                }
-                .name {
-                    font-size: 11px;
-                    line-height: 1.25;
-                    font-weight: 800;
-                    min-height: 9mm;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                .qr {
-                    width: 42mm;
-                    height: 42mm;
-                    display: block;
-                    margin: 3mm auto 2mm;
-                    image-rendering: pixelated;
-                }
-                .ref {
-                    border: 1px solid #111;
-                    padding: 2mm;
-                    font-family: "Courier New", monospace;
-                    font-size: 12px;
-                    font-weight: 900;
-                    word-break: break-all;
-                }
-                .meta {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1.5mm;
-                    margin-top: 2mm;
-                    font-size: 9px;
-                    text-align: left;
-                }
-                .meta div {
-                    border: 1px solid #ddd;
-                    padding: 1.5mm;
-                    min-height: 7mm;
-                }
-                .meta span {
-                    display: block;
-                    color: #666;
-                    font-size: 7px;
-                    font-weight: 800;
-                    text-transform: uppercase;
-                    margin-bottom: 1mm;
-                }
-                @media print {
-                    @page { size: 58mm auto; margin: 0; }
-                    body { background: #fff; padding: 0; }
-                    .toolbar { display: none; }
-                    .ticket { margin: 0; border: 0; width: 58mm; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="toolbar"><button onclick="window.print()">Imprimir ticket</button></div>
-            <main class="ticket">
-                <div class="brand">BLYXU</div>
-                ${options.name ? `<div class="name">${escapeHtml(ticket.name)}</div>` : ''}
-                <img class="qr" src="${escapeHtml(qrUrl)}" alt="QR ${escapeHtml(ticket.reference)}">
-                ${options.reference ? `<div class="ref">${escapeHtml(ticket.reference)}</div>` : ''}
-                ${metaItems ? `<section class="meta">${metaItems}</section>` : ''}
-            </main>
-            <script>
-                window.addEventListener('load', function () {
-                    setTimeout(function () { window.print(); }, 350);
-                });
-            <\/script>
-        </body>
-        </html>`);
+    printWindow.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+        <title>Etiqueta 50x30 ${escapeHtml(ticket.reference)}</title>
+        <link rel="stylesheet" href="${escapeHtml(cssUrl)}">
+        <style>body{margin:0;padding:24px;background:#eee;font-family:Arial,sans-serif}.toolbar{text-align:center;margin-bottom:20px}.toolbar button{padding:12px 18px;cursor:pointer}.iq-label{margin:0 auto}@media print{.toolbar{display:none}}</style>
+        </head><body><div class="toolbar"><button onclick="window.print()">Imprimir etiqueta 50 × 30 mm</button><p>Escala 100 % · sin márgenes ni encabezados.</p></div>
+        ${buildInventoryQrLabel(ticket, getInventoryQrTicketOptions())}
+        <script>window.addEventListener('load',function(){window.print();});<\/script>
+        </body></html>`);
     printWindow.document.close();
 };
-
 function getInventoryEditLabel(product, index) {
     const name = product?.Nombre || product?.Producto || 'Producto sin nombre';
     const variant = getInventoryVariationId(product);
