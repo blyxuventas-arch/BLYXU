@@ -3537,12 +3537,17 @@ document.addEventListener('DOMContentLoaded', () => {
             close: window.closeInventoryQrTicket,
             copy: window.copyInventoryQrReference,
             image: window.openInventoryQrImage,
+            download: window.downloadInventoryLabelImage,
+            share: window.shareInventoryLabelImage,
             print: window.printInventoryQrTicket
         };
         actions[control.dataset.inventoryQrAction]?.();
     });
     document.addEventListener('change', event => {
-        if (event.target.matches('[data-qr-option]')) window.updateInventoryQrPreviewOptions?.();
+        if (event.target.matches('[data-qr-option], [data-qr-size]')) window.updateInventoryQrPreviewOptions?.();
+    });
+    document.addEventListener('input', event => {
+        if (event.target.matches('[data-qr-size]')) window.updateInventoryQrPreviewOptions?.();
     });
     // initAdminCustomCursor(); // Desactivado para evitar lag del cursor
     initLoginBokehBackgrounds();
@@ -6691,6 +6696,8 @@ function getInventoryQrTicketOptions() {
     modal.querySelectorAll('[data-qr-option]').forEach(input => {
         defaults[input.dataset.qrOption] = input.checked;
     });
+    defaults.width = Math.max(40,Math.min(100,Number(modal.querySelector('#inventory-label-width')?.value) || 50));
+    defaults.height = Math.max(25,Math.min(80,Number(modal.querySelector('#inventory-label-height')?.value) || 30));
     return defaults;
 }
 
@@ -6704,7 +6711,10 @@ window.updateInventoryQrPreviewOptions = function() {
     });
     const preview = document.getElementById('inventory-label-preview');
     if (preview && modal.dataset.ticketJson) {
-        try { preview.innerHTML = buildInventoryQrLabel(JSON.parse(modal.dataset.ticketJson), options) + '<small>50 × 30 mm · tamaño de impresión</small>'; }
+        try {
+            preview.innerHTML = buildInventoryQrLabel(JSON.parse(modal.dataset.ticketJson), options) + `<small>${options.width} × ${options.height} mm · tamaño de impresión</small>`;
+            requestAnimationFrame(() => window.prepareInventoryLabelImage?.().catch(() => {}));
+        }
         catch (error) { console.warn('No se pudo mostrar la etiqueta', error); }
     }
 };
@@ -6770,7 +6780,10 @@ function buildInventoryQrLabel(ticket, options = {}) {
     const brandLogo = document.querySelector('.sidebar-logo img');
     const logo = brandLogo?.src || new URL('Logo2-nav.png', window.location.href).href;
     const id = ticket.variationId || ticket.sku || ticket.motherId || ticket.reference;
-    return `<section class="iq-label" aria-label="Etiqueta de producto 50 por 30 milímetros">
+    const width = Math.max(40,Math.min(100,Number(options.width)||50));
+    const height = Math.max(25,Math.min(80,Number(options.height)||30));
+    const scale = Math.min(width/50,height/30);
+    return `<section class="iq-label" data-width="${width}" data-height="${height}" style="--iq-width:${width}mm;--iq-height:${height}mm;--iq-scale:${scale}" aria-label="Etiqueta de producto ${width} por ${height} milímetros">
         <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400))}" alt="QR ${escapeHtml(ticket.reference)}">
         <div class="iq-copy">
             <img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">
@@ -6793,14 +6806,15 @@ window.printInventoryQrTicket = function() {
     if (!ticket?.reference) { showToast('No se encontro el producto para imprimir', 'error'); return; }
     const printWindow = window.open('', '_blank');
     if (!printWindow) { showToast('El navegador bloqueo la ventana de impresion', 'warning'); return; }
-    const cssUrl = new URL('inventory-qr-label.css?v=50x30-20261008', window.location.href).href;
+    const cssUrl = new URL('inventory-qr-label.css?v=label-size-20261008', window.location.href).href;
+    const options = getInventoryQrTicketOptions();
     printWindow.document.open();
     printWindow.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-        <title>Etiqueta 50x30 ${escapeHtml(ticket.reference)}</title>
+        <title>Etiqueta ${options.width}x${options.height} ${escapeHtml(ticket.reference)}</title>
         <link rel="stylesheet" href="${escapeHtml(cssUrl)}">
-        <style>body{margin:0;padding:24px;background:#eee;font-family:Arial,sans-serif}.toolbar{text-align:center;margin-bottom:20px}.toolbar button{padding:12px 18px;cursor:pointer}.iq-label{margin:0 auto}@media print{.toolbar{display:none}}</style>
-        </head><body><div class="toolbar"><button onclick="window.print()">Imprimir etiqueta 50 × 30 mm</button><p>Escala 100 % · sin márgenes ni encabezados.</p></div>
-        ${buildInventoryQrLabel(ticket, getInventoryQrTicketOptions())}
+        <style>body{margin:0;padding:24px;background:#eee;font-family:Arial,sans-serif}.toolbar{text-align:center;margin-bottom:20px}.toolbar button{padding:12px 18px;cursor:pointer}.iq-label{margin:0 auto}@media print{@page{size:${options.width}mm ${options.height}mm;margin:0}html,body{width:${options.width}mm !important;height:${options.height}mm !important}.toolbar{display:none}}</style>
+        </head><body><div class="toolbar"><button onclick="window.print()">Imprimir etiqueta ${options.width} × ${options.height} mm</button><p>Escala 100 % · sin márgenes ni encabezados.</p></div>
+        ${buildInventoryQrLabel(ticket, options)}
         <script>window.addEventListener('load',function(){window.print();});<\/script>
         </body></html>`);
     printWindow.document.close();
