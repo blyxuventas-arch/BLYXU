@@ -1,0 +1,168 @@
+/* Visual layer only. Existing IDs, handlers, permissions and print layouts stay intact. */
+@media screen {
+body#admin-workspace.admin-graphite {
+ --bg:#0b101b;--panel:#151c2a;--panel-2:#1c2536;--line:#2b364a;
+ --line-strong:#465a75;--text:#f4f7fc;--muted:#acbad0;--soft:#8192af;
+ --primary:#b8f36c;--secondary:#88a2c6;--cyan:#69d8fa;--purple:#b4a0ff;
+ --green:#b8f36c;--gold:#d7e3f7;--text-muted:#acbad0;--glass-bg:#151c2a;
+ background:radial-gradient(ellipse at 78% 0%,#192a4533,transparent 60%),#0b101b !important;
+ color:var(--text) !important;
+}
+body#admin-workspace.admin-graphite :is(h1,h2,h3,h4) {color:#f3f6fc !important;letter-spacing:-.035em !important;font-weight:600 !important;}
+body#admin-workspace.admin-graphite :is(.dashboard-main,.dashboard-content-area) {min-width:0;}
+body#admin-workspace.admin-graphite .dashboard-content-area {padding:28px clamp(18px,3vw,42px) 48px;}
+body#admin-workspace.admin-graphite .sub-sidebar {
+ background:linear-gradient(180deg,#151c2c,#101623) !important;
+ border-right:1px solid #263348 !important;box-shadow:8px 0 30px #0002 !important;
+}
+body#admin-workspace.admin-graphite .sidebar-logo {border-color:#29354a !important;padding-block:24px !important;}
+body#admin-workspace.admin-graphite .sidebar-section h4 {font-size:10px !important;letter-spacing:.14em !important;color:#7f94b5 !important;}
+body#admin-workspace.admin-graphite .sidebar-btn {
+ min-height:46px;border:1px solid transparent !important;background:transparent !important;
+ color:#afbed5 !important;border-radius:12px !important;transition:background .16s,border-color .16s;
+}
+body#admin-workspace.admin-graphite .sidebar-btn > span:first-child {
+ display:inline-flex;align-items:center;justify-content:center;border-radius:9px;
+ color:#91a9cc;min-width:30px;height:30px;font-size:10px;font-weight:700;
+}
+body#admin-workspace.admin-graphite .sidebar-btn:hover {background:#24334b !important;color:#fff !important;filter:none !important;}
+body#admin-workspace.admin-graphite .sidebar-btn.active {
+ background:linear-gradient(110deg,#70d8f522,#7187fb18) !important;
+ border-color:#70d8f540 !important;color:#d7f6ff !important;
+ box-shadow:inset 3px 0 #69d8fa !important;
+}
+body#admin-workspace.admin-graphite .sidebar-btn.active > span:first-child {color:#6ad9fc;background:#69d8fa14;}
+body#admin-workspace.admin-graphite .sidebar-label {color:inherit !important;font-size:12px !important;letter-spacing:0 !important;}
+body#admin-workspace.admin-graphite .desktop-sidebar-toggle {border:1px solid #35445d !important;background:#1c283c !important;color:#d9e9ff !important;border-radius:12px !important;}
+body#admin-workspace.admin-graphite .dashboard-header {
+ background:#0f1726 !important;border-color:#2a3549 !important;
+ padding:20px clamp(18px,3vw,42px);gap:18px;box-shadow:0 8px 24px #0002 !important;
+}
+body#admin-workspace.admin-graphite .dashboard-header h1 {font-size:24px !important;}
+body#admin-workspace.admin-graphite .dashboard-badge {
+ color:#bad0ed !important;background:#1c293d !important;border:1px solid #344560 !important;
+ border-radius:100px !important;font-size:10px;letter-spacing:.1em;padding:10px 15px;
+}
+body#admin-workspace.admin-graphite .admin-dashboard-hero {
+ position:relative;overflow:hidden;padding:28px 30px !important;border-radius:22px !important;
+ background:radial-gradient(ellipse at 100% 0%,#3a76964a,transparent 70%),linear-gradient(110deg,#182438,#101a2c) !important;
+ border:1px solid #344d6d !important;box-shadow:0 18px 36px #0002 !important;
+}
+body#admin-workspace.admin-graphite .admin-dashboard-hero h2 {font-size:clamp(24px,3vw,34px) !important;margin:9px 0 !important;}
+body#admin-workspace.admin-graphite .admin-dashboard-hero p {color:#adbed6 !important;font-size:13px;line-height:1.7;}
+body#admin-workspace.admin-graphite :is(.admin-kicker,.enterprise-panel-kicker,.quick-sale-panel-kicker) {color:#7cd4f0 !important;font-size:10px !important;letter-spacing:.12em !important;}
+body#admin-workspace.admin-graphite .dashboard-quick-actions {gap:12px;margin:20px 0;}
+body#admin-workspace.admin-graphite .dashboard-quick-actions button {
+ background:#151f30 !important;border:1px solid #2e3f59 !important;border-radius:16px !important;
+ padding:18px !important;min-height:86px;transition:background .16s,border-color .16s;
+}
+body#admin-workspace.admin-graphite .dashboard-quick-actions button:hover {background:#203049 !important;border-color:#5b83ae !important;}
+body#admin-workspace.admin-graphite #view-dashboard .dashboard-quick-actions b {background:#69d8fa16 !important;color:#78dfff !important;border-radius:12px !important;min-width:38px;height:38px;font-size:13px;}
+body#admin-workspace.admin-graphite #view-dashboard .dashboard-quick-actions span {color:#e8f0fc !important;font-size:13px;}
+body#admin-workspace.admin-graphite .dashboard-quick-actions small {color:#90a5c3 !important;font-size:11px;line-height:1.5;}
+body#admin-workspace.admin-graphite .dashboard-stat-grid {gap:16px;}
+body#admin-workspace.admin-graphite .dashboard-stat-card {
+ padding:24px !important;border:1px solid #334158 !important;border-radius:20px !important;
+ background:linear-gradient(135deg,#202b40,#161e2e) !important;box-shadow:0 12px 25px #0002 !important;
+ min-width:0;position:relative;overflow:hidden;
+}
+body#admin-workspace.admin-graphite .dashboard-stat-card::after {content:'';position:absolute;top:22px;right:22px;width:7px;height:7px;border-radius:50%;background:#71d7f5;box-shadow:0 0 12px #71d7f560;}
+body#admin-workspace.admin-graphite .dashboard-stat-card:first-child {background:linear-gradient(135deg,#2b3e38,#17262a) !important;border-color:#54795a !important;}
+body#admin-workspace.admin-graphite .dashboard-stat-card:first-child::after {background:#b8f36c;box-shadow:0 0 12px #b8f36c60;}
+body#admin-workspace.admin-graphite .dashboard-stat-card span {font-size:11px;color:#b5c4da !important;}
+body#admin-workspace.admin-graphite .dashboard-stat-card strong {display:block;margin:16px 0 9px;font-size:clamp(24px,2.7vw,36px) !important;line-height:1.2;font-variant-numeric:tabular-nums;font-weight:500 !important;color:#f1f7ff !important;overflow-wrap:anywhere;}
+body#admin-workspace.admin-graphite .dashboard-stat-card small {color:#8da4c6 !important;font-size:11px;}
+body#admin-workspace.admin-graphite .dashboard-section-heading {margin:28px 0 16px;gap:12px;}
+body#admin-workspace.admin-graphite .dashboard-section-heading h3 {font-size:17px !important;}
+body#admin-workspace.admin-graphite .dashboard-section-heading > span {color:#93a6c2 !important;font-size:11px;}
+body#admin-workspace.admin-graphite :is(.dashboard-card,.admin-panel,.product-config-card,.settings-tab-panel,.quick-sale-shell,.quick-sale-client-panel,.quick-sale-catalog-panel,.quick-sale-checkout-panel,.product-preview-panel,.china-admin-card,.china-item-card,.measurement-panel,.inv-summary-card,.retail-toggle-card,.payment-method-card,.preview-desc-card,.preview-variant-panel) {
+ background:#151e2e !important;border:1px solid #2e3c54 !important;border-radius:18px !important;
+ box-shadow:0 10px 26px #0002 !important;
+}
+body#admin-workspace.admin-graphite :is(.dashboard-card-head,.quick-sale-client-head,.enterprise-panel-head) {border-color:#2f3d55 !important;}
+body#admin-workspace.admin-graphite .dashboard-card-head h3 {font-size:16px !important;}
+body#admin-workspace.admin-graphite .dashboard-card-head span {color:#99aecc !important;font-size:11px;}
+body#admin-workspace.admin-graphite :is(.dashboard-empty,.dashboard-chart-legend,.field-hint) {color:#98abc8 !important;}
+body#admin-workspace.admin-graphite .dashboard-toggle-btn {background:#213047 !important;color:#c6d9f2 !important;border:1px solid #3c5270 !important;border-radius:100px !important;min-height:34px;padding:7px 13px;}
+body#admin-workspace.admin-graphite :is(.admin-btn,.admin-otp-submit,.enterprise-charge-btn) {
+ min-height:42px;padding:11px 18px;border-radius:11px !important;
+ background:#b8f36c !important;border:1px solid #b8f36c !important;color:#162312 !important;
+ font-weight:600 !important;box-shadow:0 4px 16px #b8f36c10 !important;
+}
+body#admin-workspace.admin-graphite :is(.admin-btn.secondary,.settings-tab-btn,.orders-tab-btn,.product-config-tab,.cost-calculator-tab,.quick-sale-mobile-tabs button,.quick-sale-category-btn,.quick-sale-payment-btn,.quick-sale-action-btn,.enterprise-ticket-action,.quick-sale-refresh-btn,.quick-sale-scan-btn,[data-quick-sale-method],.quick-sale-category-chip) {
+ background:#1c2a40 !important;border:1px solid #3b506e !important;color:#d3e3f9 !important;
+ border-radius:11px !important;box-shadow:none !important;
+}
+body#admin-workspace.admin-graphite :is(.settings-tab-btn.active,.orders-tab-btn.active,.product-config-tab.active,.quick-sale-mobile-tabs button.active,.quick-sale-category-btn.active,.quick-sale-payment-btn.active,[data-quick-sale-method].active) {
+ background:#b8f36c !important;border-color:#b8f36c !important;color:#162312 !important;
+}
+body#admin-workspace.admin-graphite :is(.admin-btn.danger,.sidebar-btn.logout,.btn-delete,.delete-btn,.pending-product-delete) {background:#422b39 !important;border-color:#875064 !important;color:#ffbbc9 !important;}
+body#admin-workspace.admin-graphite :is(.form-control,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea) {
+ background:#0f1827 !important;border:1px solid #3b4c67 !important;color:#edf4ff !important;
+ border-radius:11px !important;min-height:42px;line-height:1.5;
+}
+body#admin-workspace.admin-graphite :is(input,textarea)::placeholder {color:#879bb9 !important;}
+body#admin-workspace.admin-graphite :is(.form-group label,.product-config-card label,.detail-block-label) {color:#a9bdd9 !important;font-size:11px !important;}
+body#admin-workspace.admin-graphite :is(input[type=checkbox],input[type=radio],input[type=range]) {accent-color:#b8f36c;}
+body#admin-workspace.admin-graphite :is(button,a,input,select,textarea,summary):focus-visible {outline:2px solid #73dfff !important;outline-offset:3px !important;}
+body#admin-workspace.admin-graphite :is(.admin-title-row,.orders-admin-header,.china-header,.product-form-intro,.carousel-admin-intro,.product-config-card > summary,.admin-fold > summary,.settings-fold > summary,.orders-navigation-fold > summary,.inv-modal-header,.inv-modal-footer) {
+ background:#1a263a !important;border-color:#34435b !important;color:#d8e7fa !important;
+}
+body#admin-workspace.admin-graphite :is(.settings-fold,.cost-result-card,.enterprise-pos-header,.enterprise-pos-metrics > div,.quick-sale-change-card,.enterprise-ticket-summary) {background:#1a2538 !important;border-color:#334664 !important;border-radius:14px !important;}
+body#admin-workspace.admin-graphite :is(.table-wrapper,.inv-table-wrapper,.invoice-table,.inventory-table,.orders-table) {background:#141e2d !important;border-color:#334460 !important;border-radius:14px;overflow-x:auto;}
+body#admin-workspace.admin-graphite th {background:#1c2a40 !important;color:#adbfda !important;font-size:10px !important;letter-spacing:.09em !important;padding-block:16px;}
+body#admin-workspace.admin-graphite :is(th,td) {border-color:#2a3a52 !important;}
+body#admin-workspace.admin-graphite tbody tr:hover {background:#22334b !important;}
+body#admin-workspace.admin-graphite :is(.quick-sale-product-tile,.inventory-qr-card) {background:#1a2537 !important;border-color:#364966 !important;border-radius:14px !important;}
+body#admin-workspace.admin-graphite .quick-sale-product-tile.active {border-color:#69d8fa !important;box-shadow:0 0 0 1px #69d8fa40 !important;}
+body#admin-workspace.admin-graphite :is(.modal-card,#customer-access-dialog,.quick-sale-image-dialog,#admin-login-box,.cost-calculator-panel,.admin-section-panel) {background:#141f31 !important;border-color:#3b506f !important;border-radius:20px !important;box-shadow:0 24px 80px #0008 !important;}
+body#admin-workspace.admin-graphite :is(.product-work-tabs,.settings-tabs,.orders-tabs) {gap:8px;border-color:#34435b !important;}
+body#admin-workspace.admin-graphite .product-work-tabs button {background:#1b2940;border-color:#3a4f6f;color:#bdd0ec;border-radius:100px !important;font-size:12px;}
+body#admin-workspace.admin-graphite .product-work-tabs button[aria-selected=true] {background:#b8f36c;color:#172610;border-color:#b8f36c;}
+body#admin-workspace.admin-graphite :is(.admin-section-tab,.cost-calculator-tab) {background:#21324b !important;border-color:#4a6589 !important;color:#c6e6ff !important;}
+body#admin-workspace.admin-graphite #admin-login-box {background:radial-gradient(ellipse at 50% 0%,#2b486933,transparent 70%),#141e30 !important;}
+body#admin-workspace.admin-graphite .admin-secure-access {color:#dbe9fc;}
+body#admin-workspace.admin-graphite .admin-secure-access [role=status] {color:#8cdefa;}
+body#admin-workspace.admin-graphite ::-webkit-scrollbar {width:7px;height:7px;}
+body#admin-workspace.admin-graphite ::-webkit-scrollbar-thumb {background:#425677;border-radius:20px;}
+body#admin-workspace.admin-graphite ::-webkit-scrollbar-track {background:#101a2b;}
+@media(min-width:1025px) {
+ body#admin-workspace.admin-graphite .dashboard-header {position:sticky;top:0;z-index:20;}
+ body#admin-workspace.admin-graphite .sub-sidebar .sidebar-menu-wrapper {scrollbar-color:#456183 #111b2b !important;}
+}
+@media(max-width:1024px) {
+ body#admin-workspace.admin-graphite .dashboard-content-area {padding:18px 16px 34px;}
+ body#admin-workspace.admin-graphite .dashboard-header {padding:16px;flex-wrap:wrap;}
+ body#admin-workspace.admin-graphite .admin-header-actions {gap:8px;}
+ body#admin-workspace.admin-graphite .dashboard-badge {display:none;}
+ body#admin-workspace.admin-graphite .dashboard-stat-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+ body#admin-workspace.admin-graphite .dashboard-stat-card {padding:18px !important;}
+ body#admin-workspace.admin-graphite .admin-dashboard-hero {padding:22px !important;}
+ body#admin-workspace.admin-graphite .dashboard-quick-actions {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+ body#admin-workspace.admin-graphite :is(.dashboard-main-grid,.dashboard-charts-grid,.dashboard-bottom-grid) {grid-template-columns:minmax(0,1fr);}
+ body#admin-workspace.admin-graphite .dashboard-section-heading {align-items:flex-start;flex-direction:column;gap:5px;}
+}
+@media(max-width:560px) {
+ body#admin-workspace.admin-graphite #product-form {padding:14px !important;}
+ body#admin-workspace.admin-graphite .product-entry-body {padding:14px !important;}
+ body#admin-workspace.admin-graphite .product-entry-fold {padding:0 !important;}
+ body#admin-workspace.admin-graphite .product-entry-fold > summary {padding:14px !important;}
+ body#admin-workspace.admin-graphite .dashboard-content-area {padding-bottom:96px;}
+ body#admin-workspace.admin-graphite .dashboard-stat-card::after {display:none;}
+ body#admin-workspace.admin-graphite #admin-mobile-view-select {display:block !important;width:100%;max-width:none;order:2;}
+ body#admin-workspace.admin-graphite .admin-header-actions {order:3;}
+ body#admin-workspace.admin-graphite :is(.admin-section-drawer,.cost-calculator-drawer) {top:auto !important;bottom:20px;max-height:calc(100dvh - 100px);}
+ body#admin-workspace.admin-graphite :is(.admin-section-panel,.cost-calculator-panel) {max-height:calc(100dvh - 100px) !important;}
+ body#admin-workspace.admin-graphite :is(.admin-section-tab,.cost-calculator-tab) {top:auto !important;bottom:0;min-height:44px !important;height:44px !important;}
+ body#admin-workspace.admin-graphite .cost-calculator-tab {writing-mode:horizontal-tb;width:70px;left:-70px;font-size:10px;}
+ body#admin-workspace.admin-graphite .dashboard-header h1 {font-size:21px !important;}
+ body#admin-workspace.admin-graphite .admin-header-actions {width:100%;}
+ body#admin-workspace.admin-graphite #admin-refresh-btn {width:100%;}
+ body#admin-workspace.admin-graphite .dashboard-quick-actions button {padding:13px !important;min-height:86px;}
+ body#admin-workspace.admin-graphite .dashboard-stat-card strong {font-size:26px !important;}
+ body#admin-workspace.admin-graphite .admin-dashboard-hero {align-items:flex-start;flex-direction:column;gap:14px;}
+ body#admin-workspace.admin-graphite :is(.admin-panel,.dashboard-card) {border-radius:16px !important;}
+ body#admin-workspace.admin-graphite :is(.admin-btn,.sidebar-btn,.settings-tab-btn,.orders-tab-btn) {min-height:44px;}
+}
+@media(prefers-reduced-motion:reduce) {body#admin-workspace.admin-graphite .sidebar-btn,body#admin-workspace.admin-graphite .dashboard-quick-actions button {transition:none;}}
+}
