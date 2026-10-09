@@ -1863,7 +1863,8 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
         readout?.classList.add('is-confirmed');
         if (formatLabel) formatLabel.textContent = `${getBarcodeFormatLabel(format)} · Lectura confirmada`;
         if (status) status.textContent = 'Codigo confirmado. Generando su referencia QR...';
-        window.setTimeout(() => onConfirmed(cleanCode), 180);
+        if (requiredHits === 1) onConfirmed(cleanCode);
+        else window.setTimeout(() => onConfirmed(cleanCode), 180);
         return true;
     };
 }
@@ -1875,7 +1876,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     if (reader) reader.style.display = 'block';
     const formatsToSupport = getHtml5BarcodeFormats();
     const scannerConfig = {
-        fps: isMobileBarcodeDevice() ? (isIosBarcodeDevice() ? 10 : 15) : 8,
+        fps: isMobileBarcodeDevice() ? 20 : 8,
         // Decode the full frame, including smaller or off-center QR codes.
         disableFlip: false,
         videoConstraints: getBarcodeVideoConstraints(preferredDeviceId)
@@ -2025,6 +2026,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
                 ? await BarcodeDetector.getSupportedFormats()
                 : requestedFormats;
             const detectorFormats = requestedFormats.filter(format => supportedFormats.includes(format));
+            if (!detectorFormats.includes('qr_code')) throw new Error('Usar lector compatible para QR');
             const detector = detectorFormats.length
                 ? new BarcodeDetector({ formats: detectorFormats })
                 : new BarcodeDetector();
@@ -2046,10 +2048,10 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
                 return;
             }
             activeBarcodeScannerStream = stream;
-            await optimizeBarcodeCameraStream(activeBarcodeScannerStream);
-            await window.BlyxuQrCamera?.stream(activeBarcodeScannerStream, modal.querySelector('.barcode-scanner-status-wrap'));
             attachBarcodeCameraStream(video, activeBarcodeScannerStream, { status, retryButton, scannerSession });
-            await populateBarcodeCameraPicker(modal, stream.getVideoTracks()[0]?.getSettings?.().deviceId || preferredDeviceId);
+            // Camera controls and device enumeration must not delay the first read.
+            Promise.resolve(window.BlyxuQrCamera?.stream(stream, modal.querySelector('.barcode-scanner-status-wrap'))).catch(() => {});
+            populateBarcodeCameraPicker(modal, stream.getVideoTracks()[0]?.getSettings?.().deviceId || preferredDeviceId).catch(() => {});
             clearTimeout(permissionHintTimer);
             if (status) status.textContent = isMobileBarcodeDevice()
                 ? 'Camara activa. La lectura es automatica: ubica el codigo en el area iluminada, sin pegarlo tanto a la camara.'
@@ -2057,15 +2059,16 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
 
             let lastDetectionAt = 0;
             const scan = async () => {
-                if (!document.getElementById('barcode-scanner-modal')) return;
+                if (scannerSession !== barcodeScannerSession || !modal.isConnected) return;
                 const now = performance.now();
-                if (now - lastDetectionAt < 90) {
+                if (now - lastDetectionAt < 50 || video.readyState < 2) {
                     activeBarcodeScannerFrame = requestAnimationFrame(scan);
                     return;
                 }
                 lastDetectionAt = now;
                 try {
                     const codes = await detector.detect(video);
+                    if (scannerSession !== barcodeScannerSession || !modal.isConnected) return;
                     if (codes && codes.length) {
                         const detectedCode = codes[0];
                         if (handleDetectedCode(detectedCode.rawValue || detectedCode.rawText || '', detectedCode.format || '')) return;
@@ -11859,7 +11862,7 @@ async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
 
     input.value = code;
     if (!Array.isArray(inventario) || !inventario.length) {
-        await cargarInventario({ silent: true });
+        await (window.quickSaleScanInventoryPromise || cargarInventario({ silent: true }));
     }
     let product = findQuickSaleProductByReference(code);
     if (!product) {
@@ -11892,6 +11895,13 @@ async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
 window.handleQuickSaleScannedCode = handleQuickSaleScannedCode;
 
 function openQuickSaleScanner() {
+    if (!Array.isArray(inventario) || !inventario.length) {
+        if (!window.quickSaleScanInventoryPromise) {
+            window.quickSaleScanInventoryPromise = cargarInventario({ silent: true })
+                .finally(() => { window.quickSaleScanInventoryPromise = null; });
+            window.quickSaleScanInventoryPromise.catch(() => {});
+        }
+    }
     openBarcodeScanner({
         targetInputId: 'quick-sale-search',
         onDetected: code => {
