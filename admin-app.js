@@ -3759,10 +3759,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.refreshOrderNotifications?.();
         initCustomerAccessNotifications();
         clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
-        playAdminVaultUnlock(()=>{
-            loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
-            Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
-        });
+        loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
+        Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
     });
     // -------------------
 

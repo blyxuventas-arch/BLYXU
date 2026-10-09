@@ -48,39 +48,21 @@ async function initializeAdminPasswordAccess(api, nativeFetch, form, onAccess) {
             });
             return;
         }
-        area.innerHTML = '<p>Accede con tu cuenta autorizada para configurar la contraseña y el autenticador.</p><div id="admin-bootstrap-google"></div><p role="status"></p>';
+        area.innerHTML = '<p>Inicia sesión con tu cuenta de Google autorizada.</p><div id="admin-bootstrap-google"></div><p role="status"></p>';
         const message = area.querySelector('[role=status]');
         if (!config.Google_Client_ID) throw new Error('Falta configurar el acceso actual del administrador.');
         if (!window.google?.accounts?.id) await new Promise((resolve,reject)=>{
             const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';const timeout=setTimeout(()=>{script.remove();reject(new Error('Google tardó demasiado en cargar. Revisa tu conexión y pulsa Reintentar acceso.'));},20000);script.onload=()=>{clearTimeout(timeout);if(window.google?.accounts?.id)resolve();else reject(new Error('No se pudo iniciar el acceso de Google.'));};script.onerror=()=>{clearTimeout(timeout);script.remove();reject(new Error('No se pudo cargar el acceso de Google.'));};document.head.appendChild(script);
         });
+        let verifyingAccount = false;
         window.google.accounts.id.initialize({client_id:config.Google_Client_ID,callback:async result=>{
+            if (verifyingAccount) return;
+            verifyingAccount = true;
+            message.textContent = 'Verificando cuenta…';
             try {
                 await request({action:'adminsession',adminCredential:result.credential});
-                area.innerHTML='<button type="button" id="admin-continue-current">Entrar con el acceso actual</button><button type="button" id="admin-begin-password">Configurar contraseña y autenticador</button><p role="status"></p>';
-                area.querySelector('#admin-continue-current').onclick=()=>onAccess(result.credential);
-                area.querySelector('#admin-begin-password').onclick=async()=>{
-                    const status=area.querySelector('[role=status]');status.textContent='Preparando configuración…';
-                    try {
-                        const enrollment=await request({action:'adminpasswordbegin',adminCredential:result.credential});
-                        const qr=qrcode(0,'M');qr.addData(enrollment.uri);qr.make();
-                        area.innerHTML=`<h2>Configura tu acceso en 3 pasos</h2><ol><li>Abre una aplicación autenticadora en tu celular (por ejemplo, Microsoft Authenticator). Selecciona añadir cuenta y escanear QR.</li><li>Escanea el QR de abajo. Si estás usando el mismo celular, abre este panel en otro dispositivo para escanearlo.</li><li>Crea tu contraseña y escribe los 6 números que aparecen en la aplicación. El código cambia cada 30 segundos.</li></ol><p>Esta configuración vence en 10 minutos. Mantén el QR privado.</p><img id="admin-enrollment-qr" alt="QR privado para configurar el autenticador" width="200" height="200"><form class="customer-auth-form"><label>Nueva contraseña<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required><small>Usa al menos 12 caracteres.</small></label><label>Repite la contraseña<input name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>Código de 6 números de la aplicación<input name="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label><button type="submit">Activar mi acceso seguro</button><p role="status"></p></form>`;
-                        area.querySelector('img').src=qr.createDataURL(4,4);
-                        area.querySelector('form').onsubmit=async event=>{
-                            event.preventDefault();const setup=event.currentTarget,button=setup.querySelector('button'),status=setup.querySelector('[role=status]');
-                            if(setup.elements.password.value!==setup.elements.confirm.value){status.textContent='Las contraseñas no coinciden.';return;}
-                            button.disabled=true;status.textContent='Activando acceso…';
-                            try {
-                                const saved=await request({action:'adminpasswordfinish',adminCredential:result.credential,nonce:enrollment.nonce,password:setup.elements.password.value,codigo:setup.elements.codigo.value});
-                                setup.reset();area.replaceChildren();
-                                const title=document.createElement('p');title.textContent='Acceso activado. Guarda estos códigos de respaldo en un lugar privado. Cada código sirve una sola vez y requiere tu contraseña.';
-                                const codes=document.createElement('pre');codes.textContent=saved.recovery.join('\n');
-                                const done=document.createElement('button');done.type='button';done.textContent='Ya guardé los códigos: iniciar sesión';done.onclick=()=>location.reload();area.append(title,codes,done);
-                            }catch(error){status.textContent=error.message;button.disabled=false;}
-                        };
-                    }catch(error){status.textContent=error.message;}
-                };
-            }catch(error){message.textContent=error.message;}
+                onAccess(result.credential);
+            }catch(error){message.textContent=error.message;verifyingAccount=false;}
         }});
         window.google.accounts.id.renderButton(area.querySelector('#admin-bootstrap-google'),{type:'standard',theme:'outline',size:'large',text:'continue_with',locale:'es'});
     } catch(error) {area.replaceChildren();const message=document.createElement('p');message.role='status';message.textContent=error.message;const retry=document.createElement('button');retry.type='button';retry.textContent='Reintentar acceso';retry.onclick=()=>initializeAdminPasswordAccess(api,nativeFetch,form,onAccess);area.append(message,retry);}
