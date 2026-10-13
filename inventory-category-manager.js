@@ -6,7 +6,22 @@
     const categoryOf = product => normalizeInventoryCategoryKey(product.Categoria || product.categoria || '');
     const rowsFor = key => inventario.filter(product => categoryOf(product) === key);
     const allowed = key => key && !['banner', 'sin categoria', 'todos'].includes(key);
-    const deleteProducts = () => document.getElementById('inventory-category-delete-products')?.checked === true;
+    const deleteProducts = () => document.getElementById('inventory-category-operation')?.value === 'delete';
+    function confirmCategory(label,rows,deleting,destination) {
+        return new Promise(resolve=>{
+            const dialog=document.createElement('dialog');dialog.className='category-confirm-dialog';dialog.setAttribute('aria-label',deleting?'Verificar eliminación de categoría':'Verificar traslado de productos');
+            dialog.innerHTML='<form method="dialog"><span class="drive-eyebrow">VERIFICAR OPERACIÓN</span><h3></h3><p class="category-confirm-impact"></p><p>Los pedidos, facturas y archivos de Drive se conservarán.</p><label>Escribe el nombre de la categoría para confirmar<strong></strong><input class="form-control" autocomplete="off" aria-label="Nombre de categoría para confirmar"></label><div class="category-confirm-actions"><button value="cancel" class="admin-btn secondary">Cancelar</button><button value="confirm" class="admin-btn danger" disabled>Confirmar</button></div></form>';
+            const count=new Set(rows.map(row=>getInventoryMotherId(row)||getInventoryVariationId(row))).size;
+            dialog.querySelector('h3').textContent=deleting?'Eliminar categoría y productos':'Trasladar productos y quitar categoría';
+            dialog.querySelector('.category-confirm-impact').textContent=deleting?`Se eliminarán ${count} ${count===1?'producto':'productos'} y ${rows.length} registros de variantes de «${label}». Esta acción no se puede deshacer.`:`Se trasladarán ${count} ${count===1?'producto':'productos'} y ${rows.length} registros de variantes a «${destination}».`;
+            dialog.querySelector('strong').textContent=label;
+            const input=dialog.querySelector('input'),confirm=dialog.querySelector('[value="confirm"]');
+            input.addEventListener('input',()=>{confirm.disabled=input.value!==label;});
+            dialog.querySelector('form').addEventListener('submit',event=>{if(event.submitter===confirm&&input.value!==label)event.preventDefault();});
+            dialog.addEventListener('close',()=>{const accepted=dialog.returnValue==='confirm'&&input.value===label;dialog.remove();resolve(accepted);},{once:true});
+            document.body.appendChild(dialog);dialog.showModal();input.focus();
+        });
+    }
 
     window.isInventoryDefaultCategoryRemoved = key => removedDefaults.has(key);
     window.renderInventoryCategoryManager = () => {
@@ -40,15 +55,6 @@
         document.getElementById('inventory-delete-category').textContent = deleteProducts() ? 'Eliminar categoría y productos' : 'Eliminar categoría';
         document.getElementById('inventory-delete-category').disabled = !source.value;
     }
-    async function saveRemovedDefaults(next) {
-        const value = JSON.stringify([...next]);
-        const response = await fetch(GOOGLE_SHEET_API, {method:'POST', body:JSON.stringify({action:'set_config',Clave:configKey,Valor:value})});
-        const result = await response.json();
-        if (!(result.ok || result.status === 'success')) throw new Error(result.error || 'No se pudo guardar la categoría.');
-        removedDefaults = next;
-        updateSiteConfigCacheForAdmin(configKey, value);
-        siteConfigPromise = null;
-    }
     async function removeCategory(event) {
         event.preventDefault();
         if (busy) return;
@@ -75,29 +81,18 @@
             const ids = rows.map(getInventoryVariationId);
             const allIds = inventario.map(getInventoryVariationId);
             if (ids.some(id=>!id || allIds.filter(value=>value===id).length!==1)) throw new Error('Hay referencias vacías o repetidas. Corrígelas antes de modificar esta categoría.');
-            const confirmation = deleting
-                ? `¿Eliminar «${sourceLabel}» y sus ${rows.length} registros de productos y variantes?\nEste borrado es permanente y no se puede deshacer.\nLas facturas, pedidos y archivos de Drive se conservarán.`
-                : `¿Quitar «${sourceLabel}»?\n${rows.length} registros pasarán a «${destinationLabel}».\nNo se eliminarán productos ni variantes.`;
-            if (!window.confirm(confirmation)) {status.textContent = 'Operación cancelada.'; return;}
-            for (let index=0;index<rows.length;index++) {
-                status.textContent = `${deleting ? 'Eliminando' : 'Moviendo'} registros: ${index+1} de ${rows.length}…`;
-                const payload = deleting
-                    ? {resource:'productos',action:'eliminar',id:ids[index]}
-                    : {resource:'productos',action:'editar',id:ids[index],data:{Categoria:destinationLabel,'Categoría':destinationLabel}};
-                const response = await fetch(GOOGLE_SHEET_API,{method:'POST',body:JSON.stringify(payload)});
-                const result = await response.json();
-                if (!(result.ok || result.status === 'success')) throw new Error(result.error || (deleting ? 'No se pudo eliminar un producto.' : 'No se pudo mover un producto.'));
-                if (!deleting) {
-                    rows[index].Categoria = destinationLabel;
-                    rows[index].categoria = destinationLabel;
-                }
-                moved++;
-            }
-            await saveRemovedDefaults(new Set([...removedDefaults,source]));
+            if (!await confirmCategory(sourceLabel,rows,deleting,destinationLabel)) {status.textContent = 'Operación cancelada.'; return;}
+            status.textContent=deleting?'Eliminando categoría e inventario en una sola operación…':'Trasladando productos en una sola operación…';
+            const response=await fetch(GOOGLE_SHEET_API,{method:'POST',body:JSON.stringify({action:'categorybatch',adminCredential:secureAdminCredential,category:source,categoryLabel:sourceLabel,confirmation:sourceLabel,mode:deleting?'delete':'move',destination:destinationLabel,expectedIds:ids})});
+            const result=await response.json();
+            if(!result.ok)throw new Error(result.error || 'No se pudo confirmar la operación.');
+            moved=result.variants;
+            removedDefaults=new Set(result.removedDefaults);
+            updateSiteConfigCacheForAdmin(configKey,JSON.stringify([...removedDefaults]));siteConfigPromise=null;
             clearPublicProductsCache();
             await cargarInventario({force:true,silent:true});
             if (rowsFor(source).length) throw new Error('La categoría recibió nuevos productos durante el cambio. Revisa los registros restantes.');
-            status.textContent = deleting ? `Categoría eliminada. ${moved} registros eliminados.` : `Categoría quitada. ${moved} registros movidos a ${destinationLabel}.`;
+            status.textContent = deleting ? `Categoría eliminada con ${result.products} productos y ${moved} registros de variantes.` : `Categoría quitada. ${result.products} productos y ${moved} registros trasladados a ${destinationLabel}.`;
             showToast(deleting ? 'Categoría y productos eliminados.' : 'Categoría quitada; productos conservados.', 'success');
         } catch(error) {
             status.textContent = `${moved ? `${moved} registros ya fueron ${deleting ? 'eliminados' : 'movidos'}. ` : ''}${error.message} Puedes revisar el inventario y reintentar.`;
@@ -110,9 +105,14 @@
         }
     }
     document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('inventory-clear-search')?.addEventListener('click',()=>{
+            document.getElementById('admin-inventory-search').value='';
+            document.getElementById('admin-inventory-category-filter').value='todos';
+            adminInventorySearchQuery='';adminInventoryCategoryFilter='todos';renderInventoryInBatches();
+        });
         document.getElementById('inventory-category-manager-form')?.addEventListener('submit', removeCategory);
         document.getElementById('inventory-manage-category')?.addEventListener('change', updateDestination);
-        document.getElementById('inventory-category-delete-products')?.addEventListener('change', updateDestination);
+        document.getElementById('inventory-category-operation')?.addEventListener('change', updateDestination);
         const config = await loadSiteConfigForAdmin();
         try {const list=JSON.parse(config[configKey] || '[]'); if(Array.isArray(list)) removedDefaults=new Set(list.map(normalizeInventoryCategoryKey));} catch (_) {}
         updateCategoryOptions();
