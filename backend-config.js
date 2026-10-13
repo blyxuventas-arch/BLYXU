@@ -1,6 +1,6 @@
-// Change provider to 'supabase' only after the independent server passes live checks.
+// Supabase is active. Apps Script remains available only as a rollback option.
 window.BLYXU_BACKEND = Object.freeze({
-  provider: 'apps-script',
+  provider: 'supabase',
   appsScript: 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec',
   supabase: 'https://cufptttzflkdwizpqaot.supabase.co/functions/v1/blyxu-api'
 });

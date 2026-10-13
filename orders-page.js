@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const tabs = Array.from(document.querySelectorAll('[data-orders-view]'));
             const apiUrl = typeof GOOGLE_SHEET_API !== 'undefined'
                 ? GOOGLE_SHEET_API
-                : 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+                : (window.BLYXU_API_URL || 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec');
             let currentOrders = [];
             let currentInvoices = [];
             let currentView = 'orders';

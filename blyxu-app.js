@@ -8,7 +8,7 @@
 // 3. Pega el codigo del archivo google-apps-script.gs
 // 4. Despliega como aplicacion web
 // 5. Pega la URL aqui abajo:
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+const GOOGLE_SHEET_API = window.BLYXU_API_URL || 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const GOOGLE_SHEET_PRODUCTS_URL = `${GOOGLE_SHEET_API}?resource=productos`;
 const BLYXU_WHATSAPP_PHONE = '573112368622';
 const MERCADO_PAGO_PUBLIC_KEY = 'APP_USR-72ab41d6-5fc7-4867-8e02-564ab0ae9f99';

@@ -1,5 +1,5 @@
 ﻿// BLYXU lightweight runtime for informational pages.
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+const GOOGLE_SHEET_API = window.BLYXU_API_URL || 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 const BLYXU_WHATSAPP_PHONE = '573112368622';
 const SITE_CONFIG_CACHE_KEY = 'blyxu_site_config_cache_v1';
 const SITE_CONFIG_TTL = 5 * 60 * 1000;
