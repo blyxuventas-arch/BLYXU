@@ -1,4 +1,4 @@
-const GOOGLE_SHEET_API = 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
+const GOOGLE_SHEET_API = window.BLYXU_API_URL || 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 
 // Las credenciales administrativas se mantienen en memoria y se envían solo al servidor.
 const adminNativeFetch = window.fetch.bind(window);
@@ -3756,6 +3756,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
         secureAdminCredential=credential;siteConfigPromise=null;
+        window.initializeBlyxuDriveConnection?.(()=>secureAdminCredential);
         window.refreshOrderNotifications?.();
         initCustomerAccessNotifications();
         clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
