@@ -499,6 +499,40 @@
             margin: 0;
         }
 
+        body.product-detail-page #product-detail .detail-variant-list.colors-only {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        body.product-detail-page #product-detail .colors-only .detail-variant-chip {
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            padding: 5px !important;
+            border-radius: 50% !important;
+            border: 2px solid transparent !important;
+            background: transparent !important;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+        body.product-detail-page #product-detail .colors-only .detail-variant-chip .detail-variant-color-dot {
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            margin: 0;
+            border: 1px solid rgba(255,255,255,.65);
+            box-sizing: border-box;
+        }
+        body.product-detail-page #product-detail .colors-only .detail-variant-chip.active {
+            border-color: #c9a3f6 !important;
+        }
+        body.product-detail-page #product-detail .colors-only .detail-variant-chip:focus-visible {
+            outline: 2px solid #fff;
+            outline-offset: 3px;
+        }
+
         /* Actions CTA */
         .product-detail-luxury .product-info-actions {
             display: flex;
@@ -1379,6 +1413,11 @@
                 return winner.count > 1 ? winner.field : 'style';
             }
 
+            function hasOnlyColorVariants(siblings) {
+                const values = field => new Set(siblings.map(item => normalizeSearchText(getVariantFieldValue(item, field))).filter(Boolean));
+                return values('color').size > 1 && values('style').size <= 1 && values('size').size <= 1;
+            }
+
             function getAvailabilityText(stock) {
                 return stock > 0 ? 'Disponible' : 'Agotado por ahora';
             }
@@ -1546,6 +1585,7 @@
                 }
 
                 const variantDimension = getGroupVariantDimension(siblings);
+                const colorsOnly = hasOnlyColorVariants(siblings);
                 const activeSib = siblings.find(sib => allProducts.indexOf(sib) === productId) || product;
                 const activeDimLabel = getVariantFieldValue(activeSib, variantDimension);
                 const activeParts = getVisibleVariantParts(activeSib);
@@ -1559,6 +1599,7 @@
                     <div class="detail-variant-list"></div>
                 `;
                 const list = variationContainer.querySelector('.detail-variant-list');
+                list.classList.toggle('colors-only', colorsOnly);
 
                 siblings.forEach((sib, index) => {
                     const sibIndex = allProducts.indexOf(sib);
@@ -1567,12 +1608,26 @@
                     chip.type = 'button';
                     chip.className = `detail-variant-chip ${isActive ? 'active' : ''}`;
                     chip.dataset.productIndex = String(sibIndex);
+                    chip.setAttribute('aria-pressed', String(isActive));
 
                     const dimensionLabel = getVariantFieldValue(sib, variantDimension);
                     const labelParts = getVisibleVariantParts(sib);
                     const label = dimensionLabel || labelParts.join(' - ') || `Opción ${index + 1}`;
                     const variantImg = getProductImageSet(sib, 'thumb')[0] || 'Logo2.png';
                     const colorValue = getVariantFieldValue(sib, 'color');
+                    if (colorsOnly) {
+                        const colorLabel = colorValue || 'Sin color especificado';
+                        chip.classList.add('color-only');
+                        chip.style.setProperty('--variant-color', colorValue ? getColorHex(colorValue) : '#9b9ba1');
+                        chip.setAttribute('aria-label', colorLabel);
+                        chip.title = colorLabel;
+                        const dot = document.createElement('span');
+                        dot.className = 'detail-variant-color-dot';
+                        dot.setAttribute('aria-hidden', 'true');
+                        chip.appendChild(dot);
+                        list.appendChild(chip);
+                        return;
+                    }
                     const showColorOnly = variantDimension === 'color' && colorValue;
                     if (showColorOnly) {
                         chip.classList.add('color-only');
