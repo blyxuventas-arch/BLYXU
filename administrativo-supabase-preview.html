@@ -7719,10 +7719,11 @@
                         <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><input type="search" class="form-control" id="admin-inventory-search" placeholder="Buscar producto, categoria, SKU o ID..." autocomplete="off"><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-category-manager"><summary>Gestionar categorías</summary><div>
-                            <p>Quita categorías que ya no uses y conserva sus productos.</p>
+                            <p>Quita categorías conservando sus productos o elimínalas junto con todos sus productos y variantes.</p>
                             <form id="inventory-category-manager-form" class="inventory-category-manager-grid">
                                 <label>Categoría que quieres eliminar<select class="form-control" id="inventory-manage-category"><option value="">Selecciona una categoría</option></select></label>
                                 <label>Mover sus productos a<select class="form-control" id="inventory-category-destination"><option value="">Sin categoría</option></select></label>
+                                <label class="inventory-category-delete-option" style="grid-column:1/-1;display:flex;align-items:center;gap:10px;line-height:1.5"><input type="checkbox" id="inventory-category-delete-products" style="width:auto;flex:0 0 auto;accent-color:#c095ff"> Eliminar también todos los productos y variantes de esta categoría</label>
                                 <p id="inventory-category-impact">Elige la categoría que quieres quitar.</p>
                                 <button type="submit" class="admin-btn danger" id="inventory-delete-category" disabled>Eliminar categoría</button>
                                 <p id="inventory-category-status" role="status" aria-live="polite"></p>
@@ -8277,7 +8278,7 @@
 <link rel="stylesheet" href="drive-connect.css?v=20261013-status">
 <script src="drive-connect-admin.js?v=20261013-status" defer></script>
 <script src="admin-app.js?v=drive-connection-20261012" defer></script>
-<script src="inventory-category-manager.js?v=20261006-1" defer></script>
+<script src="inventory-category-manager.js?v=20261013-delete-products" defer></script>
 <script src="order-summary.js?v=pdf-fast-20261007" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 <script src="order-notifications-admin.js?v=admin-refresh-access-20261006-3" defer></script>
