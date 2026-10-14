@@ -1,0 +1,20 @@
+/* Static, compressed artwork, scoped to the public order lookup page. */
+@media screen {
+ .orders-page::before{
+  inset:0;
+  background-image:linear-gradient(180deg,rgba(10,4,20,.28),rgba(10,4,20,.48) 65%,rgba(10,4,20,.85)),url('pedidos-facturas-fondo.webp');
+  background-size:cover;
+  background-position:center top;
+  background-repeat:no-repeat;
+  opacity:1;
+  animation:none;
+  filter:none;
+ }
+}
+@media screen and (max-width:700px){
+ .orders-page::before{
+  background-image:linear-gradient(180deg,rgba(10,4,20,.3),rgba(10,4,20,.62) 65%,rgba(10,4,20,.88)),url('pedidos-facturas-fondo-movil.webp');
+  background-position:35% top;
+ }
+ .orders-page .orders-intro,.orders-page .orders-login,.orders-page .orders-panel{backdrop-filter:none}
+}
