@@ -6693,7 +6693,7 @@ function getPdfFriendlyImageUrl(url) {
         || normalized.match(/drive\.google\.com\/file\/d\/([^/?&#]+)/)?.[1]
         || normalized.match(/googleusercontent\.com\/d\/([^=?&#]+)/)?.[1];
     if (driveId) {
-        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveId)}=w420`;
+        return `https://lh3.googleusercontent.com/d/${encodeURIComponent(driveId)}=w800`;
     }
     return normalized || 'Logo2.png';
 }
@@ -6793,10 +6793,10 @@ function drawInventoryPdfHeader(doc, meta) {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
-    doc.text('BLYXU - Inventario actual', 10, 10.5);
+    doc.text('BLYXU - Catálogo de productos', 10, 10.5);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(`Categoría: ${meta.categoryTitle}`, 10, 16.5);
+    doc.text(doc.splitTextToSize(`Categorías: ${meta.categoryTitle}`, 135).slice(0, 1), 10, 16.5);
     doc.text(`Expedido: ${meta.fullDateString}`, 10, 22);
     doc.text(`Productos: ${meta.totalProducts}`, pageWidth - 10, 16.5, { align: 'right' });
     doc.text(meta.priceModeLabel, pageWidth - 10, 22, { align: 'right' });
@@ -6830,7 +6830,8 @@ async function buildInventoryPdfRows(products) {
         const priceDetal = Number(product.Precio || product.precio || 0) || 0;
         const priceMayor = Number(product.Precio_Mayorista || product.precio_mayorista || product.Mayorista || product['Precio Mayor'] || product['Precio_Mayor'] || 0) || 0;
         rows.push({
-            image: await imageUrlToPdfDataUrl(getInventoryPdfProductImage(product), 260),
+            image: await imageUrlToPdfDataUrl(getInventoryPdfProductImage(product), 600),
+            qrReference: getInventoryQrReference(product),
             name: String(product.Nombre || product.Producto || 'Producto BLYXU').trim(),
             reference: String(getInventoryPdfReference(product) || '').trim(),
             sizes: Array.isArray(product._availableSizes) ? product._availableSizes.filter(Boolean).join(', ') : '',
@@ -6907,104 +6908,12 @@ async function downloadInventoryCatalogPdf() {
             priceModeLabel: `Precios: ${priceModeLabel}`
         };
 
-        const bothPrices = showDetal && showMayorista;
-        const columns = [
-            { key: 'image', label: 'FOTO', x: 12, w: 34 },
-            { key: 'product', label: 'PRODUCTO', x: 52, w: bothPrices ? 60 : 78 },
-            { key: 'category', label: 'CATEGORÍA', x: bothPrices ? 116 : 136, w: bothPrices ? 30 : 34 },
-            ...(showDetal ? [{ key: 'detal', label: 'DETAL', x: showMayorista ? 151 : 170, w: 20, align: 'right' }] : []),
-            ...(showMayorista ? [{ key: 'mayorista', label: 'MAYORISTA', x: 176, w: 22, align: 'right' }] : [])
-        ];
-
-        let pageNumber = 1;
-        let y = 36;
-        const rowHeight = 38;
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const bottomLimit = pageHeight - 17;
-        let lastCategoryKey = '';
-
-        drawInventoryPdfHeader(doc, meta);
-        drawInventoryPdfTableHeader(doc, columns, y);
-        y += 11;
-
-        for (const row of rows) {
-            const rowCategoryKey = row.categoryKey || normalizeInventoryCategoryKey(row.category || '');
-            const isNewCategory = rowCategoryKey !== lastCategoryKey;
-            const categoryBandHeight = isNewCategory ? 8 : 0;
-
-            if (y + categoryBandHeight + rowHeight > bottomLimit) {
-                drawInventoryPdfFooter(doc, pageNumber);
-                doc.addPage();
-                pageNumber += 1;
-                drawInventoryPdfHeader(doc, meta);
-                y = 36;
-                drawInventoryPdfTableHeader(doc, columns, y);
-                y += 11;
-            }
-
-            if (isNewCategory) {
-                doc.setFillColor(248, 246, 252);
-                doc.rect(10, y - 1, 190, 6, 'F');
-                doc.setDrawColor(109, 40, 217);
-                doc.line(10, y - 1, 200, y - 1);
-                doc.setTextColor(85, 65, 135);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7.5);
-                doc.text((row.categoryLabel || row.category || 'Categoría').toUpperCase(), 12, y + 3.4);
-                y += 8;
-                lastCategoryKey = rowCategoryKey;
-            }
-
-            doc.setDrawColor(232, 232, 232);
-            doc.line(10, y - 2, 200, y - 2);
-
-            if (row.image) {
-                doc.addImage(row.image, 'JPEG', 12, y, 34, 34);
-            } else {
-                doc.setFillColor(245, 245, 245);
-                doc.roundedRect(12, y, 34, 34, 2, 2, 'F');
-            }
-
-            const productCol = columns.find(item => item.key === 'product');
-            const categoryCol = columns.find(item => item.key === 'category');
-
-            doc.setTextColor(20, 20, 24);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(7.8);
-            doc.text(doc.splitTextToSize(row.name, productCol.w).slice(0, 2), productCol.x, y + 5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(90, 90, 90);
-            doc.setFontSize(6.2);
-            doc.text(doc.splitTextToSize(`Ref: ${row.reference || '-'}`, productCol.w).slice(0, 1), productCol.x, y + 16);
-            if (row.sizes) {
-                doc.setTextColor(85, 65, 135);
-                doc.setFont('helvetica', 'bold');
-                doc.text(doc.splitTextToSize(`Tamaños: ${row.sizes}`, productCol.w).slice(0, 2), productCol.x, y + 22);
-            }
-
-            doc.setTextColor(45, 45, 45);
-            doc.setFontSize(6.8);
-            doc.text(doc.splitTextToSize(row.category || '-', categoryCol.w).slice(0, 2), categoryCol.x, y + 7);
-
-            if (showDetal) {
-                const col = columns.find(item => item.key === 'detal');
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(30, 30, 30);
-                doc.setFontSize(7.2);
-                doc.text(row.detal, col.x + col.w, y + 8, { align: 'right' });
-            }
-            if (showMayorista) {
-                const col = columns.find(item => item.key === 'mayorista');
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(180, 128, 0);
-                doc.setFontSize(7.2);
-                doc.text(row.mayorista, col.x + col.w, y + 8, { align: 'right' });
-            }
-
-            y += rowHeight;
-        }
-
-        drawInventoryPdfFooter(doc, pageNumber);
+        const pageNumber = window.BlyxuInventoryPdf.draw(doc, rows, {
+            showDetal, showMayorista, meta,
+            makeQr: qrcode,
+            header: drawInventoryPdfHeader,
+            footer: drawInventoryPdfFooter
+        });
         const cleanCategorySlug = String(categoryText || 'inventario')
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
