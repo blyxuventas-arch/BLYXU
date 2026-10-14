@@ -14,6 +14,7 @@
   scene.classList.toggle('is-after',-rect.top>range);
   scene.style.width=rect.width+'px';scene.style.left=(pinned?rect.left:0)+'px';
   scene.style.setProperty('--banner-progress',progress);
+  scene.style.setProperty('--banner-pan',Math.min(50,progress/.35*50)+'%');
   scene.style.setProperty('--banner-scale',reduced?1:1.025+progress*.04);
   scene.style.setProperty('--banner-shift',(reduced?0:progress*30)+'px');
   scene.style.setProperty('--banner-copy',Math.max(0,1-Math.max(0,progress-.68)/.23));
