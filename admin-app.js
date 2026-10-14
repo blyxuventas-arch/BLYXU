@@ -5,6 +5,7 @@ const adminNativeFetch = window.fetch.bind(window);
 let secureAdminCredential = '';
 let secureAdminExpiryTimer;
 function revokeAdminSession() {
+    window.BlyxuSharedScan?.shutdown();
     const token=secureAdminCredential;secureAdminCredential='';clearTimeout(secureAdminExpiryTimer);
     if(token.startsWith('BLYXU-A3-'))adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminlogout',adminCredential:token}),keepalive:true}).catch(()=>{});
 }
@@ -1840,7 +1841,7 @@ function attachBarcodeCameraStream(video, stream, { status, retryButton, scanner
     }, 4500);
 }
 
-function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed, stabilityWindowMs = 1600 }) {
+function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, onConfirmed, stabilityWindowMs = 1600, normalizeValue = normalizeBarcodeValue }) {
     let candidate = '';
     let candidateHits = 0;
     let lastSeenAt = 0;
@@ -1848,7 +1849,7 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
 
     return (rawCode, format = '') => {
         if (confirmed) return true;
-        const cleanCode = normalizeBarcodeValue(rawCode);
+        const cleanCode = normalizeValue(rawCode);
         if (!cleanCode) return false;
 
         const now = Date.now();
@@ -1975,7 +1976,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     return true;
 }
 
-async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto' } = {}) {
+async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto', continuous = false, getContext = () => '', preserveRawValue = false } = {}) {
     const modal = buildBarcodeScannerModal();
     const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
@@ -1989,9 +1990,20 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
     const readout = modal.querySelector('#barcode-live-readout');
     const valueLabel = modal.querySelector('#barcode-live-value');
     const formatLabel = modal.querySelector('#barcode-live-format');
-    const useCode = code => {
-        const cleanCode = normalizeBarcodeValue(code);
+    let captureBusy=false,lastSharedCode='',lastSharedContext='';
+    let stableReader;
+    const useCode = async code => {
+        if(scannerSession!==barcodeScannerSession)return;
+        const cleanCode = preserveRawValue ? String(code || '').trim().slice(0, 2048) : normalizeBarcodeValue(code);
         if (!cleanCode) return;
+        if(continuous){
+            if(captureBusy)return;captureBusy=true;
+            const capturedContext=getContext();
+            try{await onDetected?.(cleanCode);lastSharedCode=cleanCode;lastSharedContext=capturedContext;status.textContent='Recibido en el PC. Presenta el siguiente código.';}
+            catch(error){status.textContent=error.message||'No se pudo enviar al PC. Vuelve a intentar.';await new Promise(resolve=>setTimeout(resolve,1800));}
+            finally{captureBusy=false;stableReader=createReader();}
+            return;
+        }
         if (typeof onDetected === 'function') {
             onDetected(cleanCode);
         } else if (targetInputId) {
@@ -2001,14 +2013,21 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         showToast('Referencia capturada', 'success');
         closeBarcodeScanner();
     };
-    const handleDetectedCode = createStableBarcodeHandler({
+    const createReader = () => createStableBarcodeHandler({
         status,
         readout,
         valueLabel,
         formatLabel,
         onConfirmed: useCode,
+        normalizeValue: preserveRawValue ? value => String(value || '').trim().slice(0, 2048) : normalizeBarcodeValue,
         stabilityWindowMs: isMobileBarcodeDevice() ? 1600 : 4000
     });
+    stableReader=createReader();
+    const handleDetectedCode=(code,format)=>{
+        if(continuous&&(captureBusy||(normalizeBarcodeValue(code)===lastSharedCode&&getContext()===lastSharedContext)))return false;
+        return stableReader(code,format);
+    };
+    if(continuous){const hint=modal.querySelector('.barcode-phone-hint');if(hint)hint.textContent='Las lecturas van al campo seleccionado en el PC. Espera su confirmación y presenta el siguiente código. No se guardan productos.';}
 
     modal.querySelector('#barcode-scanner-use-manual')?.addEventListener('click', () => useCode(manualInput?.value || ''));
     manualInput?.addEventListener('keydown', event => {
@@ -2018,7 +2037,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         }
     });
     const reopenWithCamera = deviceId => {
-        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '', scannerMode: modeSelect.value });
+        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '', scannerMode: modeSelect.value, continuous, getContext, preserveRawValue });
     };
     retryButton?.addEventListener('click', () => {
         reopenWithCamera(preferredDeviceId);
@@ -2154,6 +2173,8 @@ window.scanBarcodeToElement = function (elementId) {
         }
     });
 };
+
+window.BlyxuSharedScanBridge={barcodeMode:()=>setProductBarcodeScanMode(true),closeScanner:closeBarcodeScanner};
 
 function getSubmittedStockValue(payload) {
     const candidates = [
@@ -3089,6 +3110,7 @@ function renderProductGalleryManager() {
 }
 
 function resetProductForm() {
+    window.BlyxuSharedScan?.invalidateForm();
     const pendingForm = document.getElementById('product-form');
     if (pendingForm) delete pendingForm.dataset.pendingKey;
     const form = el('product-form');
@@ -3778,6 +3800,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
         secureAdminCredential=credential;siteConfigPromise=null;
+        window.BlyxuSharedScan?.initialize({getCredential:()=>secureAdminCredential,fetcher:adminNativeFetch,openScanner:openBarcodeScanner});
         window.initializeBlyxuDriveConnection?.(()=>secureAdminCredential);
         window.refreshOrderNotifications?.();
         initCustomerAccessNotifications();
@@ -7335,6 +7358,7 @@ window.guardarGrupoCompleto = async function (idProducto) {
 };
 
 function editarProducto(index) {
+    window.BlyxuSharedScan?.invalidateForm();
     var p = inventario[index];
     var idVar = p.idVariacion || p.ID || p['ID Variacion'] || p['ID Variación'] || '';
     var idProd = getInventoryMotherId(p);
