@@ -1,0 +1,22 @@
+.registered-category-picker{position:relative}
+.registered-category-picker input{padding-right:45px!important}
+.registered-category-picker>button{position:absolute;right:5px;top:5px;bottom:5px;width:36px;border:0;border-radius:8px;background:#8b5cf626;color:#dcc6ff;font-size:23px;cursor:pointer}
+.registered-category-popup{position:fixed;z-index:100000;overflow-y:auto;overscroll-behavior:contain;background:#21152f;border:1px solid #72538f;border-radius:12px;padding:6px;box-shadow:0 15px 40px #0009;box-sizing:border-box}
+.registered-category-popup[hidden]{display:none}
+.registered-category-popup button{display:block;width:100%;min-height:44px;text-align:left;border:0;border-radius:7px;padding:10px 12px;background:transparent;color:#f5ecff;font:inherit;font-size:13px;cursor:pointer}
+.registered-category-popup button:hover,.registered-category-popup button[aria-selected=true]{background:#925de938}
+.registered-category-popup .category-create{border-top:1px solid #ffffff1c;color:#ceb0ff;margin-top:4px}
+.category-empty{display:block;padding:12px;color:#c6b6d5;font-size:12px}
+#variants-container .variant-edit-summary{grid-template-columns:48px minmax(0,1fr) auto;gap:10px;padding:12px}
+#variants-container .variant-edit-summary>div:nth-child(n+3){display:none}
+#variants-container .variant-edit-thumb{width:48px;height:48px}
+#variants-container .variant-edit-summary strong{overflow-wrap:anywhere;font-size:11px}
+#variants-container .variant-edit-toggle{display:block!important;grid-column:3;grid-row:1;min-height:40px}
+#variants-container .variant-edit-panel{padding:12px}
+#variants-container .variant-edit-section{padding:12px;margin-bottom:10px}
+#variants-container details.variant-edit-section summary{cursor:pointer;color:#dbc4f7;font-size:12px;font-weight:600;padding:4px}
+#variants-container details.variant-edit-section[open] summary{margin-bottom:12px}
+#variants-container .variant-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#variants-container .variant-edit-panel .form-control{min-width:0;width:100%;box-sizing:border-box}
+#variants-container .variant-edit-actions{flex-wrap:wrap}
+@media(max-width:600px){#variants-container .variant-edit-section{padding:10px}#variants-container .variant-edit-panel{padding:10px}#variants-container .variant-edit-actions button{flex:1;min-width:130px}}

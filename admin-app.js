@@ -2239,13 +2239,20 @@ function normalizeProductPayloadForSubmit(data) {
 }
 
 function setProductCategoryAliases(payload, categoria) {
-    const cleanCategory = String(categoria || '').trim();
+    const cleanCategory = resolveRegisteredProductCategory(categoria);
     payload.Categoria = cleanCategory;
     payload['Categor\u00eda'] = cleanCategory;
     payload['Categor\u00c3\u00ada'] = cleanCategory;
     payload['Categor\u00c3\u0192\u00c2\u00ada'] = cleanCategory;
     payload.categoria = cleanCategory;
     return payload;
+}
+
+function resolveRegisteredProductCategory(value) {
+    const raw = String(value || '').trim();
+    const group = getInventoryCategoryGroups({ includeDefaults: false })
+        .find(item => item.key === normalizeInventoryCategoryKey(raw));
+    return group?.label || formatInventoryCategoryLabel(raw);
 }
 
 function normalizePromotionValue(value) {
@@ -2504,10 +2511,26 @@ function buildVariantPayloadFromCard(card) {
 
 function collectVariantPayloads() {
     const cards = Array.from(document.querySelectorAll('#variants-container .admin-panel'));
-    return cards
+    const newVariants = cards
         .filter(card => card.dataset.saved !== '1')
         .map(buildVariantPayloadFromCard)
         .filter(Boolean);
+    const savedVariants = Array.from(document.querySelectorAll('#variants-container .variant-edit-card .var-edit-expanded'))
+        .map(row => buildRegisteredVariantEditPayload(row, getInputValue('prod-id-producto')));
+    return [...savedVariants, ...newVariants];
+}
+
+function validateProductEditReferences(items) {
+    const originals = new Set(items.map(item => String(item.__adminOriginalId || '').trim()).filter(Boolean));
+    const seen = new Set();
+    for (const item of items) {
+        const id = String(item['ID Variacion'] || item['ID Variación'] || item.idVariacion || '').trim();
+        if (!id || seen.has(id)) throw new Error('Revisa las referencias: hay un ID vacío o repetido (' + id + ').');
+        seen.add(id);
+        if (inventario.some(product => getInventoryVariationId(product) === id && !originals.has(id))) {
+            throw new Error('La referencia ' + id + ' ya pertenece a otro producto.');
+        }
+    }
 }
 
 function setProductFormMode(isEditing) {
@@ -2517,7 +2540,7 @@ function setProductFormMode(isEditing) {
     const btn = el('btn-save');
     if (title) title.textContent = isEditing ? 'Editar Producto' : 'Nuevo Producto';
     if (mode) mode.textContent = isEditing ? 'Editando' : 'Creando';
-    if (btn) btn.textContent = isEditing ? 'Guardar cambios' : 'Guardar producto y variantes';
+    if (btn) btn.textContent = isEditing ? 'Guardar toda la referencia' : 'Guardar producto y variantes';
 }
 
 function updateProductImagePreviewBox(url) {
@@ -3129,7 +3152,8 @@ function updateCategoryOptions() {
     const list = el('admin-category-options');
     const select = el('prod-categoria');
     const inventorySelect = el('admin-inventory-category-filter');
-    const categoryGroups = getInventoryCategoryGroups();
+    const categoryGroups = getInventoryCategoryGroups({ includeDefaults: false });
+    window.BlyxuProductEditor?.updateCategories(categoryGroups);
 
     if (list) {
         list.innerHTML = categoryGroups
@@ -3803,10 +3827,13 @@ document.addEventListener('DOMContentLoaded', () => {
         async function proceedSubmit(finalData) {
             try {
                 const variants = collectVariantPayloads();
+                const editedVariantIds = new Set(variants.map(item => String(item.__adminOriginalId || item['ID Variacion'] || '')));
                 const groupCategoryUpdates = isEditingProduct
                     ? buildGroupCategorySyncPayloads(motherProductId, finalData['ID Variacion'] || finalData['ID Variación'] || originalVariationId, finalData.Categoria, finalData.Promocion)
+                        .filter(item => !editedVariantIds.has(String(item.__adminOriginalId || item['ID Variacion'] || '')))
                     : [];
                 const itemsToSave = [finalData, ...groupCategoryUpdates, ...variants];
+                validateProductEditReferences(itemsToSave);
                 
                 const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
                     fallbackEditOverride: isEditingProduct ? true : false
@@ -6952,6 +6979,43 @@ function initInventoryPdfExport() {
     btn.addEventListener('click', downloadInventoryCatalogPdf);
 }
 
+function buildRegisteredVariantEditPayload(row, idProducto) {
+    const originalId = row.dataset.originalVarid;
+    const original = inventario.find(item => getInventoryVariationId(item) === originalId && getInventoryMotherId(item) === idProducto);
+    if (!original) throw new Error('No se encontró la variante ' + originalId + '. Actualiza el inventario.');
+    const value = selector => row.querySelector(selector)?.value?.trim() ?? '';
+    const id = value('.ve-id');
+    if (!id) throw new Error('La variante necesita una referencia.');
+    const stock = Number(value('.ve-stock'));
+    if (!Number.isFinite(stock) || stock < 0) throw new Error('Revisa el stock de ' + id + '.');
+    if (/^-/.test(value('.ve-precio')) || /^-/.test(value('.ve-precio-mayorista'))) throw new Error('Los precios no pueden ser negativos: ' + id);
+    const price = parseAmount(value('.ve-precio'));
+    const wholesale = parseAmount(value('.ve-precio-mayorista'));
+    if (price < 0 || wholesale < 0) throw new Error('Los precios no pueden ser negativos: ' + id);
+    const image = value('.ve-imagen') || getInputValue('prod-imagen') || original.Imagen || '';
+    const size = value('.ve-tamano');
+    const data = {
+        ...original,
+        __adminOriginalId: originalId,
+        'ID Variacion': id, 'ID Variación': id, idVariacion: id, ID: id,
+        'ID Producto': idProducto, idProducto,
+        Nombre: getInputValue('prod-nombre'), 'Nombre del Producto': getInputValue('prod-nombre'),
+        Precio: price, precio: price,
+        'Precio Mayor': wholesale, Precio_Mayorista: wholesale, precio_mayorista: wholesale, Mayorista: wholesale,
+        Cantidad: stock, Stock: stock,
+        Descripcion: getInputValue('prod-descripcion'),
+        Tamano: size, Talla: size, 'Tamaño': size,
+        ...getVariantEditMeasurementPayload(row, size),
+        Color: value('.ve-color'), Estilo: cleanProductStyleValue(value('.ve-estilo')),
+        SKU: value('.ve-sku'), Imagen: image, 'Imagen Principal': image,
+        Catalogo: getInputValue('prod-catalogo') || original.Catalogo || 'Ambos'
+    };
+    setProductCategoryAliases(data, getInputValue('prod-categoria'));
+    setProductPromotionAliases(data, getInputValue('prod-promocion'));
+    setProductBarcodeAliases(data, value('.ve-barcode') || makeProductBarcode(idProducto, id));
+    return applyAutomaticStockStatus(data);
+}
+
 function buildVariantEditorCardHtml(v, idProducto) {
     var vid = getInventoryVariationId(v) || '-';
     var safeVid = escapeHtml(vid);
@@ -6966,7 +7030,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     var vCapacidad = v.Capacidad || (vUnidadMedida === 'ml' ? vAncho : '');
     var vTallaTextil = v.TallaTextil || v['Talla Textil'] || '';
     var vColor = v.Color || '-';
-    var vStock = v.Stock || v.Cantidad || 0;
+    var vStock = v.Stock ?? v.Cantidad ?? 0;
     var vPrecio = Number(v.Precio || 0).toLocaleString('es-CO');
     var vSku = v.SKU || '-';
     var vBarcode = getProductBarcode(v);
@@ -6974,7 +7038,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     var barcodeInputId = 've-barcode-' + cleanInventoryId(vid);
     var html = '';
 
-    html += '<article class="variant-edit-card" data-varid="' + safeVid + '">';
+    html += '<article class="variant-edit-card is-editing" data-varid="' + safeVid + '">';
     html += '<div class="variant-edit-summary">';
     html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="handleInventoryImageError(this)"></div>';
     html += '<div><span>ID variante</span><strong>' + escapeHtml(vid) + '</strong></div>';
@@ -6982,16 +7046,16 @@ function buildVariantEditorCardHtml(v, idProducto) {
     html += '<div><span>Stock</span><b style="color:' + (Number(vStock) > 0 ? '#10B981' : '#EF4444') + ';">' + escapeHtml(vStock) + '</b></div>';
     html += '<div><span>Precio</span><b>$' + escapeHtml(vPrecio) + '</b></div>';
     html += '<div><span>SKU</span><b>' + escapeHtml(vSku) + '</b></div>';
-    html += '<button type="button" class="admin-btn secondary variant-edit-toggle" aria-expanded="false" onclick="expandirVarianteEdicion(\'' + vid + '\')">Editar</button>';
+    html += '<button type="button" class="admin-btn secondary variant-edit-toggle" aria-expanded="true" onclick="expandirVarianteEdicion(\'' + vid + '\')">Ocultar</button>';
     html += '</div>';
 
-    html += '<div class="variant-edit-panel var-edit-expanded" id="var-expand-' + safeVid + '" data-original-varid="' + safeVid + '">';
-    html += '<section class="variant-edit-section"><h5><span>01</span> Identidad e imagen</h5><div class="variant-edit-grid">';
+    html += '<div class="variant-edit-panel var-edit-expanded is-open" id="var-expand-' + safeVid + '" data-original-varid="' + safeVid + '">';
+    html += '<details class="variant-edit-section"><summary>Referencia, código e imagen</summary><div class="variant-edit-grid">';
     html += '<div><label>ID</label><input class="form-control ve-id" value="' + escapeHtml(vid) + '"></div>';
     html += '<div><label>SKU</label><input class="form-control ve-sku" value="' + escapeHtml(v.SKU || '') + '"></div>';
     html += '<div><label>Codigo barras</label><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;"><input class="form-control ve-barcode" id="' + barcodeInputId + '" value="' + escapeHtml(vBarcode) + '"><button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement(\'' + barcodeInputId + '\')" style="width:auto;min-height:40px;padding:8px 12px;font-size:10px;">Scan</button></div></div>';
     html += '<div style="grid-column:1/-1;"><label>Imagen URL</label><input class="form-control ve-imagen" value="' + escapeHtml(v.Imagen || '') + '" placeholder="https://..."></div>';
-    html += '</div></section>';
+    html += '</div></details>';
 
     html += '<section class="variant-edit-section"><h5><span>02</span> Atributos visibles</h5><div class="variant-edit-grid">';
     html += '<div><label>Estilo</label><input class="form-control ve-estilo" value="' + escapeHtml(vEstilo) + '"></div>';
@@ -7001,11 +7065,11 @@ function buildVariantEditorCardHtml(v, idProducto) {
 
     html += '<section class="variant-edit-section"><h5><span>03</span> Precios e inventario</h5><div class="variant-edit-grid">';
     html += '<div><label>Stock</label><input type="number" class="form-control ve-stock" value="' + escapeHtml(vStock) + '"></div>';
-    html += '<div><label>Precio detal</label><input class="form-control ve-precio" value="' + escapeHtml(v.Precio || '') + '"></div>';
-    html += '<div><label>Precio mayorista</label><input class="form-control ve-precio-mayorista" value="' + escapeHtml(v.Precio_Mayorista || v.precio_mayorista || v.Mayorista || v['Precio Mayor'] || '') + '"></div>';
+    html += '<div><label>Precio detal</label><input class="form-control ve-precio" value="' + escapeHtml(v.Precio ?? '') + '"></div>';
+    html += '<div><label>Precio mayorista</label><input class="form-control ve-precio-mayorista" value="' + escapeHtml(v.Precio_Mayorista ?? v.precio_mayorista ?? v.Mayorista ?? v['Precio Mayor'] ?? '') + '"></div>';
     html += '</div></section>';
 
-    html += '<section class="variant-edit-section"><h5><span>04</span> Medidas opcionales</h5><div class="variant-edit-grid four">';
+    html += '<details class="variant-edit-section"><summary>Medidas opcionales</summary><div class="variant-edit-grid four">';
     html += '<div><label>Tipo tamano</label><select class="form-control ve-size-kind"><option value=""' + (!vTipoMedida ? ' selected' : '') + '>Normal</option><option value="textil"' + (vTipoMedida === 'textil' ? ' selected' : '') + '>Textil</option><option value="medidas"' + (vTipoMedida === 'medidas' ? ' selected' : '') + '>Medidas</option><option value="liquido"' + (vTipoMedida === 'liquido' ? ' selected' : '') + '>Liquidos / ml</option></select></div>';
     html += '<div><label>Unidad</label><select class="form-control ve-measure-unit"><option value="cm"' + (vUnidadMedida === 'cm' ? ' selected' : '') + '>cm</option><option value="m"' + (vUnidadMedida === 'm' ? ' selected' : '') + '>m</option><option value="m3"' + (vUnidadMedida === 'm3' ? ' selected' : '') + '>m3</option><option value="ml"' + (vUnidadMedida === 'ml' ? ' selected' : '') + '>ml</option></select></div>';
     html += '<div><label>Capacidad ml</label><input class="form-control ve-measure-capacity" value="' + escapeHtml(vCapacidad) + '" placeholder="500"></div>';
@@ -7014,7 +7078,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     html += '<div><label>Largo</label><input class="form-control ve-measure-length" value="' + escapeHtml(vLargo) + '"></div>';
     html += '<div><label>Fondo</label><input class="form-control ve-measure-depth" value="' + escapeHtml(vFondo) + '"></div>';
     html += '<div><label>Radio</label><input class="form-control ve-measure-radius" value="' + escapeHtml(vRadio) + '"></div>';
-    html += '</div></section>';
+    html += '</div></details>';
 
     html += '<div class="variant-edit-actions">';
     html += '<button type="button" class="admin-btn secondary" onclick="cerrarVarianteEdicion(\'' + vid + '\')" style="width:auto;padding:9px 16px;font-size:11px;">Cerrar editor</button>';
@@ -7024,7 +7088,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
 }
 
 function buildVariantEditorCardsHtml(variantes, idProducto) {
-    return '<div class="variant-editor-shell"><div class="variant-editor-head"><div><h4>Variantes de este ID (' + variantes.length + ')</h4><span>Ordenadas igual que el alta de producto: identidad, atributos, precios y medidas.</span></div></div>'
+    return '<div class="variant-editor-shell"><div class="variant-editor-head"><div><h4>Variantes de esta referencia (' + variantes.length + ')</h4><span>El producto seleccionado se edita arriba. Ajusta aquí las demás variantes y pulsa Guardar toda la referencia.</span></div></div>'
         + variantes.map(function (variant) { return buildVariantEditorCardHtml(variant, idProducto); }).join('')
         + '</div>';
 }
@@ -7226,34 +7290,8 @@ function getVariantEditMeasurementPayload(row, tamano = '') {
 window.guardarVarianteEditada = async function (vid, idProducto) {
     var row = document.getElementById('var-expand-' + vid);
     if (!row) return;
-    var editedTamano = row.querySelector('.ve-tamano')?.value || '';
-    var data = {
-        __adminOriginalId: vid,
-        'ID Variacion': row.querySelector('.ve-id').value,
-        'ID Producto': idProducto,
-        'Nombre del Producto': getInputValue('prod-nombre'),
-        Nombre: getInputValue('prod-nombre'),
-        Categoria: getInputValue('prod-categoria'),
-        'Categoría': getInputValue('prod-categoria'),
-        Precio: parseAmount(row.querySelector('.ve-precio').value || getInputValue('prod-precio')),
-        'Precio Mayor': parseAmount(row.querySelector('.ve-precio-mayorista')?.value || getInputValue('prod-precio-mayorista')),
-        Cantidad: Number(row.querySelector('.ve-stock').value || 0),
-        'Stock Inicial': Number(row.querySelector('.ve-stock').value || 0),
-        Descripcion: getInputValue('prod-descripcion'),
-        Tamano: editedTamano,
-        Talla: editedTamano,
-        'Tamaño': row.querySelector('.ve-tamano')?.value || '',
-        ...getVariantEditMeasurementPayload(row, editedTamano),
-        Color: row.querySelector('.ve-color').value,
-        Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
-        'Codigo Barras': row.querySelector('.ve-barcode')?.value || makeProductBarcode(idProducto, row.querySelector('.ve-id').value),
-        SKU: row.querySelector('.ve-sku').value,
-        Imagen: row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
-        'Imagen Principal': row.querySelector('.ve-imagen').value || getInputValue('prod-imagen'),
-        Catalogo: getInputValue('prod-catalogo') || 'Ambos',
-        Estado: getInputValue('prod-estado') || 'Activo'
-    };
     try {
+        const data = buildRegisteredVariantEditPayload(row, idProducto);
         await postProductToGoogleSheets(data, true);
         clearPublicProductsCache();
         showToast('Variante actualizada', 'success');
@@ -7275,42 +7313,11 @@ window.guardarGrupoCompleto = async function (idProducto) {
     if (isEditingProduct && originalVariationId) motherData.__adminOriginalId = originalVariationId;
     itemsToSave.push(motherData);
 
-    // 2. Save all variants in the group, including collapsed edit rows.
-    var expandedRows = document.querySelectorAll('.var-edit-expanded');
-    for (var i = 0; i < expandedRows.length; i++) {
-        var row = expandedRows[i];
-        var vid = row.querySelector('.ve-id')?.value || '';
-        var editedTamano = row.querySelector('.ve-tamano')?.value || '';
-        var vdata = {
-            __adminOriginalId: row.getAttribute('id')?.replace('var-expand-', '') || vid,
-            'ID Variacion': vid,
-            'ID Producto': idProducto,
-            'Nombre del Producto': getInputValue('prod-nombre'),
-            Nombre: getInputValue('prod-nombre'),
-            Categoria: getInputValue('prod-categoria'),
-            'Categoría': getInputValue('prod-categoria'),
-            Precio: parseAmount(row.querySelector('.ve-precio')?.value || getInputValue('prod-precio')),
-            'Precio Mayor': parseAmount(row.querySelector('.ve-precio-mayorista')?.value || getInputValue('prod-precio-mayorista')),
-            Cantidad: Number(row.querySelector('.ve-stock')?.value || 0),
-            'Stock Inicial': Number(row.querySelector('.ve-stock')?.value || 0),
-            Descripcion: getInputValue('prod-descripcion'),
-            Tamano: editedTamano,
-            Talla: editedTamano,
-            'Tamaño': row.querySelector('.ve-tamano')?.value || '',
-            ...getVariantEditMeasurementPayload(row, editedTamano),
-            Color: row.querySelector('.ve-color')?.value || '',
-            Estilo: cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || ''),
-            'Codigo Barras': row.querySelector('.ve-barcode')?.value || makeProductBarcode(idProducto, vid),
-            SKU: row.querySelector('.ve-sku')?.value || '',
-            Imagen: row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
-            'Imagen Principal': row.querySelector('.ve-imagen')?.value || getInputValue('prod-imagen'),
-            Catalogo: getInputValue('prod-catalogo') || 'Ambos',
-            Estado: getInputValue('prod-estado') || 'Activo'
-        };
-        itemsToSave.push(vdata);
-    }
-
+    // Registered variant editors are included even when a card is collapsed.
     try {
+        itemsToSave.push(...Array.from(document.querySelectorAll('#variants-container .var-edit-expanded')).map(row => buildRegisteredVariantEditPayload(row, idProducto)));
+        validateProductEditReferences(itemsToSave);
+
         const savedList = await saveProductListToGoogleSheets(itemsToSave, {
             fallbackEditOverride: true
         });
@@ -7410,6 +7417,7 @@ function editarProducto(index) {
     }
     setInputValue('prod-estado', p.Estado || 'Activo');
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
+    document.querySelector('#product-form .main-product-fold')?.setAttribute('open', '');
     setProductFormMode(true);
     updateLivePreview();
 
