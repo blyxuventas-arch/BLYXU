@@ -6688,7 +6688,7 @@ function loadJsPdfLibrary() {
 }
 
 function getPdfFriendlyImageUrl(url) {
-    const normalized = normalizeImageUrl(url || '', 'thumb') || '';
+    const normalized = normalizeImageUrl(url || '', 800) || '';
     const driveId = normalized.match(/[?&]id=([^&]+)/)?.[1]
         || normalized.match(/drive\.google\.com\/file\/d\/([^/?&#]+)/)?.[1]
         || normalized.match(/googleusercontent\.com\/d\/([^=?&#]+)/)?.[1];
@@ -6740,7 +6740,8 @@ function resizeImageForPdf(src, maxEdge = 96) {
             try {
                 const width = img.naturalWidth || img.width || maxEdge;
                 const height = img.naturalHeight || img.height || maxEdge;
-                const scale = Math.min(1, maxEdge / Math.max(width, height));
+                // Fill the PDF photo area even when the original is a small thumbnail.
+                const scale = maxEdge / Math.max(width, height);
                 const drawWidth = Math.max(1, Math.round(width * scale));
                 const drawHeight = Math.max(1, Math.round(height * scale));
                 const canvas = document.createElement('canvas');
@@ -6762,7 +6763,7 @@ function resizeImageForPdf(src, maxEdge = 96) {
 }
 
 async function imageUrlToPdfDataUrl(url, maxEdge = 96) {
-    const cleanUrl = normalizeImageUrl(url || '', 'thumb') || 'Logo2.png';
+    const cleanUrl = normalizeImageUrl(url || '', Math.max(800, maxEdge)) || 'Logo2.png';
     try {
         const response = await fetch(cleanUrl, { mode: 'cors', cache: 'force-cache' });
         if (!response.ok) throw new Error('Imagen no disponible');
