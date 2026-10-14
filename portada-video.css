@@ -1,0 +1,30 @@
+/* Scoped to the presentation banner. Existing navigation and catalog styles remain intact. */
+.blyxu-video-track{height:265svh;position:relative;background:#09080d;isolation:isolate}
+.blyxu-video-scene{position:absolute;top:0;left:0;width:100%;height:100svh;min-height:600px;overflow:hidden;background:#09080d}
+.blyxu-video-scene.is-pinned{position:fixed;top:0;bottom:auto}
+.blyxu-video-scene.is-after{position:absolute;top:auto;bottom:0}
+.blyxu-video-scene video{display:block;width:100%;height:100%;object-fit:cover;transform:scale(var(--banner-scale,1.025));pointer-events:none}
+.blyxu-video-shade{position:absolute;inset:0;background:linear-gradient(90deg,#09080ded 0%,#09080d90 36%,#09080d05 70%),linear-gradient(0deg,#09080ddb,transparent 35%);pointer-events:none}
+.blyxu-video-copy{position:absolute;left:7vw;top:50%;transform:translateY(calc(-45% - var(--banner-shift,0px)));max-width:600px;opacity:var(--banner-copy,1);color:#faf7ff}
+.blyxu-video-kicker{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#d8b7ff;margin:0 0 24px}
+.blyxu-video-copy h1{font-size:clamp(44px,5.4vw,80px)!important;line-height:1.05!important;letter-spacing:-2.8px!important;font-weight:500!important;margin:0 0 24px;color:#faf7ff;text-transform:none}
+.blyxu-video-copy h1 em{font-style:normal;color:#ceb2eb}
+.blyxu-video-description{font-size:15px;line-height:1.8;color:#d3c9dc;margin:0 0 28px;max-width:350px}
+.blyxu-video-actions{display:flex;flex-wrap:wrap;gap:12px}
+.blyxu-video-actions a{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:50px;padding:14px 23px;border:1px solid #f4eef7;border-radius:8px;background:#f4eef7;color:#23192c;text-decoration:none;font-size:13px;font-weight:600;transition:background .2s,border-color .2s}
+.blyxu-video-actions a:hover{background:#e4d4f4;border-color:#e4d4f4}
+.blyxu-video-actions a.blyxu-video-wholesale{background:#16101b99;color:#f7efff;border-color:#bca0d069;backdrop-filter:blur(12px)}
+.blyxu-video-actions a.blyxu-video-wholesale:hover{background:#3e2b51;border-color:#c3a4df}
+.blyxu-video-actions a:focus-visible{outline:2px solid #fff;outline-offset:4px}
+.blyxu-video-scroll{position:absolute;bottom:35px;left:7vw;display:flex;align-items:center;gap:14px;opacity:var(--banner-copy,1);pointer-events:none}
+.blyxu-video-scroll i{height:39px;width:26px;border:1px solid #ffffff80;border-radius:20px;position:relative}
+.blyxu-video-scroll i:after{content:'';position:absolute;left:10px;top:8px;width:3px;height:7px;border-radius:3px;background:#dac0fa;animation:blyxu-scroll-cue 1.8s infinite}
+.blyxu-video-scroll span{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#d1c7da}
+.blyxu-video-fade{position:absolute;inset:0;background:#09080d;opacity:var(--banner-end,0);pointer-events:none}
+.blyxu-video-progress{position:absolute;bottom:0;left:0;width:100%;height:2px;background:#ffffff18;pointer-events:none}
+.blyxu-video-progress i{display:block;width:calc(var(--banner-progress,0)*100%);height:100%;background:#cbb0ef}
+.blyxu-video-status{position:absolute;right:5vw;bottom:32px;font-size:12px;color:#e4d8ee;max-width:250px;margin:0}.blyxu-video-status:empty{display:none}
+@keyframes blyxu-scroll-cue{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(9px);opacity:1}}
+@media(max-width:700px){.blyxu-video-track{height:235svh}.blyxu-video-scene{min-height:0}.blyxu-video-scene video{object-fit:contain;object-position:center 30%}.blyxu-video-shade{background:linear-gradient(0deg,#09080dfa 8%,#09080dbb 30%,transparent 62%)}.blyxu-video-copy{left:24px;right:24px;top:auto;bottom:95px;transform:translateY(calc(0px - var(--banner-shift,0px)))}.blyxu-video-copy h1{font-size:clamp(36px,10vw,46px)!important;letter-spacing:-1.8px!important;margin-bottom:16px}.blyxu-video-kicker{font-size:10px;margin-bottom:15px}.blyxu-video-description{font-size:13px;line-height:1.7;margin-bottom:20px}.blyxu-video-actions{gap:10px}.blyxu-video-actions a{min-height:46px;padding:12px 15px;font-size:11px}.blyxu-video-scroll{left:24px;bottom:26px}.blyxu-video-status{right:24px;bottom:72px;font-size:11px}}
+@media(max-height:620px) and (min-width:701px){.blyxu-video-scene{min-height:100svh}.blyxu-video-copy{top:52%}.blyxu-video-copy h1{font-size:42px!important;margin-bottom:14px}.blyxu-video-description{margin-bottom:18px}.blyxu-video-kicker{margin-bottom:14px}.blyxu-video-scroll{bottom:20px}}
+@media(prefers-reduced-motion:reduce){.blyxu-video-scroll i:after{animation:none}.blyxu-video-actions a{transition:none}}

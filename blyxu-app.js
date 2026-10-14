@@ -100,7 +100,6 @@ let activePriceFilter = 'todos';
 let activeWholesalePriceFilter = 'todos';
 let activeWholesaleSearchQuery = '';
 let heroProductCarouselTimer = null;
-let mainBannerCarouselTimer = null;
 let homeCategoryCarouselTimer = null;
 let inventorySpotlightTimer = null;
 let inventorySpotlightRendered = false;
@@ -566,7 +565,6 @@ function initCatalogImageLoading(scope = document) {
 async function renderHomeSectionsStaggered(options = {}) {
     const { renderCatalog = true } = options;
     const token = ++homeRenderToken;
-    renderBanners(bannerProducts);
     await yieldToBrowser();
     if (token !== homeRenderToken) return;
     renderHomeAdBanner();
@@ -1758,13 +1756,9 @@ function renderHomeAdBanner() {
     }
 
     const rawImage = getSiteConfigValue('Home_Ad_Image', '');
-    const carouselImage = Array.isArray(bannerProducts)
-        ? getPublicProductImage(bannerProducts.find(product => isActiveProduct(product) && getPublicProductImage(product, 'banner')), 'banner')
-        : '';
     const imageCandidates = Array.from(new Set([
         normalizeImageUrl(rawImage, 'banner'),
         String(rawImage || '').trim(),
-        carouselImage,
         'hero_necklace.png'
     ].filter(Boolean)));
     const kicker = getSiteConfigValue('Home_Ad_Kicker', 'Edicion limitada');
@@ -2237,129 +2231,6 @@ function renderContactPage() {
     renderContactTimeline(hours);
     renderContactWeek(days);
     startContactClock(days, hours);
-}
-
-// -- RENDER BANNERS --
-function renderBanners(banners) {
-    const track = document.getElementById('main-banner-track');
-    const nav = document.getElementById('main-banner-nav');
-    if (!track) return;
-
-    banners = (Array.isArray(banners) ? banners : [])
-        .map(normalizeGoogleProduct)
-        .filter(isActiveProduct)
-        .filter(isPublicBannerProduct)
-        .filter(getPublicProductImage);
-    
-    if (!banners.length) {
-        banners = [{
-            Nombre: 'BLYXU',
-            Descripcion: '',
-            Imagen: ''
-        }];
-    }
-    
-    track.innerHTML = banners.map((b, i) => {
-        const rawDesc = String(b.Descripcion || b.Color || '').trim();
-        const isPlaceholder = !rawDesc || rawDesc.toLowerCase().includes('nueva imagen');
-        const descHtml = isPlaceholder ? '' : `<p class="main-banner-desc">${escapeHtml(rawDesc)}</p>`;
-        const imageUrl = getPublicProductImage(b, 'banner');
-        const imageHtml = imageUrl
-            ? `<img src="${escapeHtml(imageUrl)}" alt="Banner BLYXU" style="filter: brightness(0.55);" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" ${i === 0 ? 'fetchpriority="high"' : 'fetchpriority="low"'} referrerpolicy="no-referrer" onerror="handleBannerImageError(this)">`
-            : `<img class="main-banner-fallback-media" src="Logo2.png" alt="BLYXU" loading="eager" decoding="sync">`;
-
-        return `
-        <div class="main-banner-slide ${i===0?'active':''} ${imageUrl ? '' : 'is-placeholder'}">
-            ${imageHtml}
-            <div class="main-banner-overlay"></div>
-            <div class="main-banner-content">
-                <h1 class="main-banner-title">
-                    <svg class="blyxu-svg-title" viewBox="0 0 226 100" xmlns="http://www.w3.org/2000/svg" aria-label="BLYXU">
-                        <defs>
-                            <linearGradient id="blyxuG${i}" x1="0" y1="0" x2="226" y2="0" gradientUnits="userSpaceOnUse">
-                                <stop offset="0%" stop-color="#ffffff"/>
-                                <stop offset="40%" stop-color="#c4b5fd"/>
-                                <stop offset="100%" stop-color="#7c3aed"/>
-                            </linearGradient>
-                        </defs>
-                        <g class="blyxu-letter-g g1">
-                            <path class="blyxu-line" stroke="url(#blyxuG${i})" d="M 8,86 L 8,14 Q 44,14 44,32 Q 44,50 8,50 Q 46,50 46,68 Q 46,86 8,86"/>
-                        </g>
-                        <g class="blyxu-letter-g g2">
-                            <polyline class="blyxu-line" stroke="url(#blyxuG${i})" points="54,14 54,86 82,86"/>
-                        </g>
-                        <g class="blyxu-letter-g g3">
-                            <polyline class="blyxu-line" stroke="url(#blyxuG${i})" points="90,14 106,52 106,86"/>
-                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="122" y1="14" x2="106" y2="52"/>
-                        </g>
-                        <g class="blyxu-letter-g g4">
-                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="130" y1="14" x2="166" y2="86"/>
-                            <line class="blyxu-line" stroke="url(#blyxuG${i})" x1="166" y1="14" x2="130" y2="86"/>
-                        </g>
-                        <g class="blyxu-letter-g g5">
-                            <path class="blyxu-line" stroke="url(#blyxuG${i})" d="M 174,14 L 174,68 Q 174,86 193,86 Q 212,86 212,68 L 212,14"/>
-                        </g>
-                    </svg>
-                </h1>
-                ${descHtml}
-                <div class="main-banner-actions">
-                    <a href="#coleccion" class="main-banner-btn">Explorar Colecci\u00f3n</a>
-                    <a href="mayorista.html" class="main-banner-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.2);">Acceso Mayorista</a>
-                </div>
-                <div class="hero-promo-inject" style="margin-top: 32px; width: 100%;"></div>
-            </div>
-        </div>
-        `;
-    }).join('');
-    
-    if (nav) {
-        nav.innerHTML = banners.map((b, i) => `
-            <div class="main-banner-dot ${i===0?'active':''}"></div>
-        `).join('');
-    }
-    
-    initMainBannerCarousel(banners.length);
-}
-
-function initMainBannerCarousel(totalSlides) {
-    if (mainBannerCarouselTimer) {
-        clearInterval(mainBannerCarouselTimer);
-        mainBannerCarouselTimer = null;
-    }
-
-    const prevBtn = document.getElementById('banner-prev');
-    const nextBtn = document.getElementById('banner-next');
-    const nav = document.getElementById('main-banner-nav');
-    const track = document.getElementById('main-banner-track');
-
-    if (totalSlides <= 1) {
-        if (track) track.style.transform = 'translateX(0)';
-        if (prevBtn) prevBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
-        if (nav) nav.style.display = 'none';
-        return;
-    }
-
-    if (prevBtn) prevBtn.style.display = 'flex';
-    if (nextBtn) nextBtn.style.display = 'flex';
-    if (nav) nav.style.display = 'flex';
-    const dots = document.querySelectorAll('.main-banner-dot');
-    let currentIndex = 0;
-
-    function update() {
-        track.style.transform = `translateX(-${currentIndex * 100}%)`;
-        document.querySelectorAll('.main-banner-slide').forEach((s, i) => s.classList.toggle('active', i === currentIndex));
-        dots.forEach((d, i) => d.classList.toggle('active', i === currentIndex));
-    }
-
-    if (nextBtn) nextBtn.onclick = () => { currentIndex = (currentIndex + 1) % totalSlides; update(); };
-    if (prevBtn) prevBtn.onclick = () => { currentIndex = (currentIndex - 1 + totalSlides) % totalSlides; update(); };
-    dots.forEach((d, i) => d.onclick = () => { currentIndex = i; update(); });
-
-    mainBannerCarouselTimer = setInterval(() => {
-        currentIndex = (currentIndex + 1) % totalSlides;
-        update();
-    }, 6000);
 }
 
 // -- CATALOG MODES --
