@@ -30,7 +30,7 @@
  .blyxu-video-scene{min-height:640px}
  .blyxu-video-scene .blyxu-frame-image{position:absolute;top:64px;left:0;width:100%;height:calc(57% + var(--banner-progress,0)*23%);object-fit:cover;object-position:var(--banner-pan,0%) center;transform:none}
  .blyxu-video-shade{background:linear-gradient(0deg,#09080d 0%,#09080ded 16%,#09080d80 36%,#09080d20 52%,transparent 66%)}
- .blyxu-video-copy{left:20px;right:20px;top:auto;bottom:88px;max-width:none;transform:none;opacity:1;z-index:1}
+ .blyxu-video-copy{left:20px;right:20px;top:auto;bottom:calc(88px + (1 - var(--banner-progress,0))*80px);max-width:none;transform:none;opacity:1;z-index:1}
  .blyxu-video-copy .blyxu-video-kicker,.blyxu-video-copy h1,.blyxu-video-copy .blyxu-video-description{opacity:var(--banner-copy,1)}
  .blyxu-video-fade{opacity:0}
  .blyxu-video-copy h1{font-size:clamp(30px,8.5vw,40px)!important;line-height:1.1!important;letter-spacing:-1.2px!important;margin-bottom:14px}
@@ -38,7 +38,7 @@
  .blyxu-video-description{font-size:12px;line-height:1.65;margin-bottom:20px;max-width:100%}
  .blyxu-video-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
  .blyxu-video-actions a{min-width:0;min-height:48px;padding:12px 10px;font-size:11px;gap:8px;border-radius:8px}
- .blyxu-video-scroll{left:20px;bottom:24px;gap:10px}
+ .blyxu-video-scroll{left:20px;bottom:calc(24px + (1 - var(--banner-progress,0))*80px);gap:10px}
  .blyxu-video-scroll span{font-size:9px;letter-spacing:1.3px}
  .blyxu-video-scroll i{width:23px;height:34px}.blyxu-video-scroll i:after{left:9px}
  .blyxu-video-status{right:20px;bottom:72px;font-size:10px}
