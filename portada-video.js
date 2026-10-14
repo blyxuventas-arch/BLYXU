@@ -2,8 +2,8 @@
  const track=document.getElementById('inicio'),scene=document.getElementById('blyxu-video-scene'),image=document.getElementById('blyxu-intro-frames'),status=document.getElementById('blyxu-video-status');
  if(!track||!scene||!image)return;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- let frame=0,target=1,shown=1,active=0,range=1,measure=true,lastProgress=-1,lastPinned=null,lastAfter=null,inView=true;
- const count=100,cache=new Map(),pending=new Set(),failed=new Map();
+ const first=15,count=100,cache=new Map(),pending=new Set(),failed=new Map();
+ let frame=0,target=first,shown=first,active=0,range=1,measure=true,lastProgress=-1,lastPinned=null,lastAfter=null,inView=true;
  const frameUrl=index=>`conejo_webp_10fps/frame_${String(index).padStart(3,'0')}.webp`;
  // Decode only nearby frames; keep memory bounded rather than expanding 100 images.
  function trim(){while(cache.size>12){let farthest=null,distance=-1;for(const index of cache.keys()){if(index===target||index===shown)continue;const d=Math.abs(index-target);if(d>distance){distance=d;farthest=index;}}if(farthest===null)break;cache.delete(farthest);}}
@@ -15,7 +15,7 @@
  }
  function pump(){
   if(!inView||document.hidden)return;
-  const wanted=[target];for(let step=1;step<=6;step++){if(target+step<=count)wanted.push(target+step);if(step<=3&&target-step>=1)wanted.push(target-step);}
+  const wanted=[target];for(let step=1;step<=6;step++){if(target+step<=count)wanted.push(target+step);if(step<=3&&target-step>=first)wanted.push(target-step);}
   for(const index of wanted){if(active>=4)break;if(!cache.has(index)&&!pending.has(index)&&(!failed.has(index)||Date.now()-failed.get(index)>30000))load(index);}
  }
  function render(){show();pump();}
@@ -25,7 +25,7 @@
   if(measure){range=Math.max(1,track.offsetHeight-scene.offsetHeight);scene.style.width=rect.width+'px';measure=false;}
   const progress=Math.max(0,Math.min(1,-rect.top/range));
   inView=rect.top<innerHeight&&rect.bottom>0;
-  target=1+Math.round(progress*(count-1));
+  target=first+Math.round(progress*(count-first));
   // The storefront body's overflow rules create a separate sticky container.
   // Pin only this banner while its scroll track is in view.
   const pinned=rect.top<=0&&-rect.top<=range;
@@ -36,7 +36,7 @@
   if(progress===lastProgress){render();return;}
   lastProgress=progress;
   scene.style.setProperty('--banner-progress',progress);
-  scene.style.setProperty('--banner-pan',Math.min(50,progress/.35*50)+'%');
+  scene.style.setProperty('--banner-pan',Math.min(50,45+progress/.35*5)+'%');
   scene.style.setProperty('--banner-scale',reduced?1:1.025+progress*.04);
   scene.style.setProperty('--banner-shift',(reduced?0:progress*30)+'px');
   scene.style.setProperty('--banner-copy',Math.max(0,1-Math.max(0,progress-.68)/.23));
@@ -44,7 +44,7 @@
   render();
  }
  function schedule(){if(!frame)frame=requestAnimationFrame(update);}
- image.dataset.frame='1';
+ image.dataset.frame=String(first);
  image.addEventListener('load',()=>{status.textContent='';});
  image.addEventListener('error',()=>{status.textContent='Puedes continuar hacia la colección.';});
  addEventListener('scroll',schedule,{passive:true});
