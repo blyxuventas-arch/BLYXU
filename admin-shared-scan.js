@@ -129,7 +129,7 @@
     if(panel){panel.querySelector('[data-share-pc]').hidden=true;panel.querySelector('[data-share-phone]').hidden=true;status('Sin vincular · el escáner habitual sigue disponible');}
     if(previous)try{await request('scanclose',{id:previous.id,pcToken:previous.pcToken,tab});}catch{}
   }
-  function invalidateForm(){formId=uuid();epoch=uuid();lastSequence=0;context='';if(pc)setTimeout(publishTarget,0);}
+  function invalidateForm(){formId=uuid();epoch=uuid();lastSequence=0;context='';if(pc)setTimeout(()=>{if(!pc)return;options();if(targetId==='prod-barcode')window.BlyxuSharedScanBridge?.barcodeMode();revealTarget();publishTarget();},0);}
   function initialize({getCredential,fetcher,openScanner}){
     credential=getCredential;nativeFetch=fetcher;scanner=openScanner;if(panel)return;
     panel=document.createElement('details');panel.className='shared-scan-panel';

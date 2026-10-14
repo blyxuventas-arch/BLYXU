@@ -2174,7 +2174,7 @@ window.scanBarcodeToElement = function (elementId) {
     });
 };
 
-window.BlyxuSharedScanBridge={barcodeMode:()=>setProductBarcodeScanMode(true),closeScanner:closeBarcodeScanner};
+window.BlyxuSharedScanBridge={barcodeMode:()=>{const field=document.getElementById('prod-barcode'),value=field?.value;setProductBarcodeScanMode(true);if(field)field.value=value||'';},closeScanner:closeBarcodeScanner};
 
 function getSubmittedStockValue(payload) {
     const candidates = [
