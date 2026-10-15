@@ -17,6 +17,22 @@ window.BlyxuQrCamera = {
         const hint = document.createElement('p');
         hint.textContent = 'Mantén el código completo a la vista y espera a que enfoque. Evita reflejos; no lo pegues a la cámara.';
         controls.append(hint);
+        if (caps.torch === true) {
+            const torch = document.createElement('button');
+            torch.type = 'button'; torch.className = 'admin-btn secondary';
+            torch.textContent = 'Encender linterna'; torch.setAttribute('aria-pressed', 'false');
+            let enabled = false;
+            torch.addEventListener('click', async () => {
+                torch.disabled = true;
+                try {
+                    await apply({advanced:[{torch:!enabled}]}); enabled = !enabled;
+                    torch.textContent = enabled ? 'Apagar linterna' : 'Encender linterna';
+                    torch.setAttribute('aria-pressed', String(enabled));
+                } catch (_) { hint.textContent = 'La cámara no permite cambiar la linterna en este navegador.'; }
+                finally { torch.disabled = false; }
+            });
+            controls.append(torch);
+        }
         if (Number.isFinite(caps.zoom?.min) && caps.zoom.max > caps.zoom.min) {
             const label = document.createElement('label');
             label.textContent = 'Acercamiento de cámara';
