@@ -1919,12 +1919,12 @@ function createStableBarcodeHandler({ status, readout, valueLabel, formatLabel, 
     };
 }
 
-async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady } = {}) {
+async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, { preferredDeviceId = '', onCameraReady, qrOnly = false } = {}) {
     await loadHtml5QrcodeLibrary();
     if (typeof window.Html5Qrcode !== 'function') return false;
     if (video) video.style.display = 'none';
     if (reader) reader.style.display = 'block';
-    const formatsToSupport = getHtml5BarcodeFormats();
+    const formatsToSupport = qrOnly ? [window.Html5QrcodeSupportedFormats.QR_CODE] : getHtml5BarcodeFormats();
     const scannerConfig = {
         fps: isMobileBarcodeDevice() ? 10 : 8,
         // Decode the full frame, including smaller or off-center QR codes.
@@ -2010,8 +2010,8 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
     return true;
 }
 
-async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto', continuous = false, getContext = () => '', preserveRawValue = false } = {}) {
-    ({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue}=window.BlyxuSharedScan?.scannerOptions({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue})||{targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue});
+async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto', continuous = false, getContext = () => '', preserveRawValue = false, qrOnly = false } = {}) {
+    ({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue,qrOnly}=window.BlyxuSharedScan?.scannerOptions({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue})||{targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue,qrOnly});
     const modal = buildBarcodeScannerModal();
     const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
@@ -2022,6 +2022,12 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
     const cameraSelect = modal.querySelector('#barcode-camera-select');
     const modeSelect = modal.querySelector('#barcode-reader-mode');
     modeSelect.value = scannerMode;
+    if(qrOnly){
+        modal.querySelector('.admin-kicker').textContent='Vinculación de dispositivos';
+        modal.querySelector('h2').textContent='Escanear QR del PC';
+        modal.querySelector('.barcode-phone-hint').textContent='Apunta al QR grande de vinculación que aparece en el PC. Se reconoce en una sola lectura.';
+        modal.querySelector('#barcode-live-format').textContent='QR de vinculación · lectura rápida';
+    }
     const readout = modal.querySelector('#barcode-live-readout');
     const valueLabel = modal.querySelector('#barcode-live-value');
     const formatLabel = modal.querySelector('#barcode-live-format');
@@ -2073,7 +2079,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         }
     });
     const reopenWithCamera = deviceId => {
-        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '', scannerMode: modeSelect.value, continuous, getContext, preserveRawValue });
+        openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId: deviceId || '', scannerMode: modeSelect.value, continuous, getContext, preserveRawValue, qrOnly });
     };
     retryButton?.addEventListener('click', () => {
         reopenWithCamera(preferredDeviceId);
@@ -2106,8 +2112,8 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             status.textContent='Cámara abierta. Preparando lectura rápida…';
             Promise.resolve(window.BlyxuQrCamera?.stream(stream,modal.querySelector('.barcode-scanner-status-wrap'))).catch(()=>{});
             populateBarcodeCameraPicker(modal,stream.getVideoTracks()[0]?.getSettings?.().deviceId||preferredDeviceId).catch(()=>{});
-            const stop = await window.BlyxuFastScanner.start({video,container:modal,onDetected:handleDetectedCode,onFailure:()=>{
-                if(scannerSession===barcodeScannerSession&&modal.isConnected)openBarcodeScanner({targetInputId,onDetected,preferredDeviceId:cameraSelect.value||preferredDeviceId,scannerMode:'compatible',continuous,getContext,preserveRawValue});
+            const stop = await window.BlyxuFastScanner.start({video,container:modal,onDetected:handleDetectedCode,qrOnly,onFailure:()=>{
+                if(scannerSession===barcodeScannerSession&&modal.isConnected)openBarcodeScanner({targetInputId,onDetected,preferredDeviceId:cameraSelect.value||preferredDeviceId,scannerMode:'compatible',continuous,getContext,preserveRawValue,qrOnly});
             }});
             if(scannerSession!==barcodeScannerSession||!modal.isConnected){stop();clearTimeout(permissionHintTimer);return;}
             stopBarcodeFrameReader=stop;
@@ -2117,7 +2123,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         }
 
         if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
-            preferredDeviceId,
+            preferredDeviceId,qrOnly,
             onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
         })) {
             clearTimeout(permissionHintTimer);
@@ -2142,7 +2148,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
             }
             try {
                 if (await startHtml5BarcodeCamera(reader, video, status, handleDetectedCode, {
-                    preferredDeviceId,
+                    preferredDeviceId,qrOnly,
             onCameraReady: () => populateBarcodeCameraPicker(modal, activeHtml5BarcodeScanner?.getRunningTrackSettings?.().deviceId || preferredDeviceId)
                 })) {
                     clearTimeout(permissionHintTimer);

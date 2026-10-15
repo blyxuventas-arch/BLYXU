@@ -14,7 +14,7 @@ self.onmessage = async ({data}) => {
         await ready;
         const image = new ImageData(new Uint8ClampedArray(data.buffer), data.width, data.height);
         const results = await ZXingWASM.readBarcodes(image, {
-            formats: ['QRCode','EANUPC','Code128','Code39','Code93','Codabar','ITF','DataMatrix','PDF417','Aztec'],
+            formats: data.qrOnly ? ['QRCode'] : ['QRCode','EANUPC','Code128','Code39','Code93','Codabar','ITF','DataMatrix','PDF417','Aztec'],
             tryHarder: data.harder === true, tryRotate:true, tryInvert:true, tryDownscale:true,
             minLineCount:2, maxNumberOfSymbols:1, returnErrors:false
         });

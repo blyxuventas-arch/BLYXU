@@ -20,3 +20,21 @@
 #variants-container .variant-edit-panel .form-control{min-width:0;width:100%;box-sizing:border-box}
 #variants-container .variant-edit-actions{flex-wrap:wrap}
 @media(max-width:600px){#variants-container .variant-edit-section{padding:10px}#variants-container .variant-edit-panel{padding:10px}#variants-container .variant-edit-actions button{flex:1;min-width:130px}}
+
+/* Each desktop editor column owns its scroll, including inside the edit modal. */
+@media(min-width:1301px){
+  #view-products .product-admin-grid{height:calc(100vh - 220px);height:calc(100dvh - 220px);min-height:0;align-items:stretch}
+  :is(#view-products,#edit-product-modal) .product-admin-grid>:is(.product-form-panel,.product-preview-panel){
+    position:relative;top:auto;min-width:0;min-height:0;height:100%;max-height:100%;
+    box-sizing:border-box;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-gutter:stable;
+    scrollbar-width:thin;scrollbar-color:#8d65b0 #181020;
+  }
+  :is(#view-products,#edit-product-modal) .product-preview-panel:focus-visible,
+  :is(#view-products,#edit-product-modal) .product-form-panel:focus-visible{outline:2px solid #bc96ea;outline-offset:2px}
+  #edit-product-modal .modal-card{display:flex;flex-direction:column;height:calc(100vh - 20px);height:calc(100dvh - 20px);overflow:hidden}
+  #edit-product-modal .edit-modal-header{flex-shrink:0}
+  #edit-product-modal #edit-modal-content-area{flex:1;min-height:0;overflow:hidden}
+  #edit-product-modal .product-admin-grid{height:100%;min-height:0;align-items:stretch;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #edit-product-modal .admin-detail-preview{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+  #edit-product-modal :is(.preview-product-gallery,.preview-product-info){min-width:0}
+}

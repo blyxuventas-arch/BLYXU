@@ -147,7 +147,7 @@
     form().dataset.sharedRole='pc';
     panel.querySelector('[data-share-pc]').hidden=false;panel.querySelector('[data-share-phone]').hidden=true;
     const link=location.origin+location.pathname+'#scanPair='+pc.id+'.'+pc.pairCode;
-    const qr=window.qrcode(0,'M');qr.addData(link);qr.make();panel.querySelector('[data-share-qr]').src=qr.createDataURL(3,12);
+    const qr=window.qrcode(0,'M');qr.addData(link);qr.make();panel.querySelector('[data-share-qr]').src=qr.createDataURL(5,20);
     panel.querySelector('[data-share-code]').value=pc.id+'.'+pc.pairCode;
     pcStream=stream(pcData(),'pc',(event,payload)=>{if(event==='scan')receive(payload);if(event==='ready')publishTarget();if(event==='offline')status('Reconectando el PC…','error');if(event==='expired'){disconnect();status(payload.error,'error');}});
     await publishTarget();heartbeat=setInterval(publishTarget,20000);
@@ -173,7 +173,7 @@
     form().prepend(panel);
     const run=fn=>Promise.resolve().then(fn).catch(error=>status(error.message,'error'));
     panel.querySelector('[data-share-create]').onclick=()=>run(create);
-    panel.querySelector('[data-share-join]').onclick=()=>scanner({preserveRawValue:true,onDetected:value=>run(()=>join(value))});
+    panel.querySelector('[data-share-join]').onclick=()=>scanner({preserveRawValue:true,qrOnly:true,scannerMode:'auto',onDetected:value=>run(()=>join(value))});
     panel.querySelector('[data-share-disconnect]').onclick=()=>run(disconnect);
     panel.querySelector('[data-share-pair-use]').onclick=()=>run(()=>join(panel.querySelector('[data-share-pair]').value));
     panel.querySelector('[data-share-read]').onclick=()=>scanner({continuous:true,onDetected:sendScan,getContext:()=>phone?.target?.epoch||''});
