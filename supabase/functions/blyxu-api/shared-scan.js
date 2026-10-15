@@ -47,7 +47,7 @@ export async function sharedScanAction({body,owner,cache,checkpoint,now,env,fetc
     // Discard an unconsumed scan when its exact destination changes.
     const superseded=s.form!==body.form||s.target?.epoch!==body.epoch||s.target?.id!==body.targetId;
     if(superseded&&s.pending){s.lastAck={eventId:s.pending.eventId,accepted:false};s.pending=null;}
-    s.form=body.form;s.target=body.active?{id:body.targetId,epoch:body.epoch,label:String(body.label||'Código del producto').slice(0,160)}:null;
+    s.form=body.form;s.target=body.active?{id:body.targetId,epoch:body.epoch,label:String(body.label||'Código del producto').slice(0,160),reference:String(body.reference||'').slice(0,100),mother:String(body.mother||'').slice(0,100),code:String(body.code||'').slice(0,512)}:null;
     s.pcSeen=time;await save(s);await broadcast('target',view(s));return {ok:true,...view(s),pending:s.pending};
   }
   if(action==='scanack'){
