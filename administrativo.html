@@ -7395,10 +7395,10 @@
 }
 </style>    <script src="qrcode-local.js?v=2.0.4" defer></script>
 <link rel="stylesheet" href="admin-graphite.css?v=portrait-scanner-20261009">
-<link rel="stylesheet" href="admin-luxe.css?v=20261015-caja-independiente">
+<link rel="stylesheet" href="admin-luxe.css?v=20261015-retail-pricing">
 <link rel="stylesheet" href="inventory-qr-label.css?v=label-40x15-20261009">
 <link rel="stylesheet" href="inventory-category-manager.css?v=20261013-batch">
-</head>
+<link rel="stylesheet" href="admin-retail-pricing.css?v=20261015-1"><link rel="stylesheet" href="admin-order-workflow.css?v=20261015-1"></head>
 <body id="admin-workspace" class="admin-graphite">
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
@@ -7629,7 +7629,7 @@
                                         <div class="form-group"><label>Categoria</label><input type="text" class="form-control" id="prod-categoria" name="Categoria" autocomplete="off" placeholder="Escribe o elige una categoria" required><small class="field-hint">Ayuda a ordenar tienda e inventario.</small></div>
                                         <div class="form-group"><label>Catálogo</label><select class="form-control" id="prod-catalogo" name="Catálogo"><option value="Ambos">Minorista y Mayorista</option><option value="Minorista">Solo Minorista</option><option value="Mayorista">Solo Mayorista</option></select><small class="field-hint">Define en que catalogo se publica.</small></div>
                                         <div class="product-subdivider">Precios y descripción</div>
-                                        <div class="form-group price-field"><label>Precio minorista</label><input type="text" class="form-control" id="prod-precio" name="Precio" placeholder="Ej: 25000" required><small class="field-hint">Precio para compra normal.</small></div>
+                                        <div class="form-group price-field"><label>Precio minorista</label><select class="form-control" id="prod-retail-mode" aria-label="Cálculo del precio minorista"><option value="manual">Precio manual</option><option value="percentage">Usar porcentaje general</option></select><input type="text" class="form-control" id="prod-precio" name="Precio" placeholder="Ej: 25000" required><small class="field-hint">Precio para compra normal.</small></div>
                                         <div class="form-group price-field"><label>Precio mayorista</label><input type="text" class="form-control" id="prod-precio-mayorista" name="Precio_Mayorista" placeholder="Ej: 18000"><small class="field-hint">Opcional para clientes por mayor.</small></div>
                                         <div class="form-group"><label>Promoción / descuento</label><select class="form-control highlight-select" id="prod-promoción" name="Promoción"><option value="FALSO">No aplica promoción</option><option value="Ambos">Aplica a ambos</option><option value="Minorista">Solo minorista</option><option value="Mayorista">Solo mayorista</option></select><small class="field-hint">La vista previa calcula el descuento.</small></div>
                                         <div class="form-group admin-form-wide"><label>Características / descripción</label><textarea class="form-control" id="prod-descripcion" placeholder="Materiales, medidas, cuidados o notas importantes..."></textarea><small class="field-hint">Escribe datos útiles para evitar dudas.</small></div>
@@ -7720,7 +7720,7 @@
 
                 <div id="view-inventory" class="dashboard-section"><button type="button" class="admin-btn secondary" onclick="switchDashboardView('products','Gestión de Productos');BlyxuPendingProducts.showPending()">Abrir pendientes del escáner</button>
                     <div class="admin-panel gradient-bg">
-                        <div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><label class="inventory-search-field"><span>Buscar en el inventario</span><input type="search" class="form-control" id="admin-inventory-search" placeholder="Nombre, referencia, código, SKU o ID…" autocomplete="off"></label><button type="button" class="admin-btn secondary" id="inventory-clear-search">Limpiar filtros</button><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
+                        <form id="retail-pricing-form" class="retail-pricing-toolbar"><div><strong>Ganancia sobre el precio mayorista</strong><p>Minorista = mayorista + porcentaje. Solo se actualizan las referencias automáticas; los precios manuales se conservan.</p></div><label>Porcentaje general (%)<input class="form-control" id="retail-pricing-percent" type="number" min="0" max="10000" step="0.01" placeholder="Ej: 40" required disabled></label><button class="admin-btn" id="retail-pricing-save" disabled>Guardar y recalcular</button><p id="retail-pricing-status" role="status">Porcentaje pendiente de cargar.</p></form><div class="inventory-filter-row"><label class="inventory-category-filter"><span>Categoria</span><select class="form-control" id="admin-inventory-category-filter"><option value="todos">Todas las categorias</option></select></label><label class="inventory-search-field"><span>Buscar en el inventario</span><input type="search" class="form-control" id="admin-inventory-search" placeholder="Nombre, referencia, código, SKU o ID…" autocomplete="off"></label><button type="button" class="admin-btn secondary" id="inventory-clear-search">Limpiar filtros</button><div class="inventory-pdf-toolbar"><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-detal" checked> Detal</label><label class="inventory-toggle-switch"><input type="checkbox" id="inventory-pdf-show-mayorista" checked> Mayorista</label><button type="button" class="admin-btn" id="btn-download-inventory-pdf">Ver PDF</button></div></div>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-pdf-category-panel"><summary>PDF por categorías · elegir categorías</summary><div><div class="inventory-pdf-category-head"><div><span>PDF por categorias</span><strong id="inventory-pdf-category-summary">Todas las categorias</strong></div><div class="inventory-pdf-category-actions"><button type="button" data-inventory-pdf-categories-action="all">Todas</button><button type="button" data-inventory-pdf-categories-action="clear">Limpiar</button></div></div><div class="inventory-pdf-category-list" id="inventory-pdf-category-list"></div></div></details>
                         <details class="inventory-pdf-category-panel admin-fold" id="inventory-category-manager"><summary>Gestionar categorías</summary><div>
                             <p>Quita categorías conservando sus productos o elimínalas junto con todos sus productos y variantes.</p>
@@ -7830,9 +7830,9 @@
                         </div>
                         <details class="admin-fold orders-navigation-fold" open><summary>Pedidos y facturas</summary>
                         <div class="orders-search-row">
-                            <input class="form-control" id="admin-orders-search" placeholder="Buscar cliente, pedido o factura...">
+                            <label>Tipo de solicitud<select class="form-control" id="admin-order-type-filter"><option value="all">Todos los pedidos y cotizaciones</option><option value="wholesale">Pedidos mayoristas</option><option value="quotes">Cotizaciones minoristas</option><option value="retail">Pedidos minoristas</option></select></label><input class="form-control" id="admin-orders-search" placeholder="Buscar cliente, pedido o factura...">
                             <div class="orders-tabs">
-                                <button class="orders-tab-btn active" data-orders-tab-target="orders-mayor">Pedidos <span id="orders-count-badge">0</span></button>
+                                <button class="orders-tab-btn active" data-orders-tab-target="orders-mayor">Pedidos y cotizaciones <span id="orders-count-badge">0</span></button>
                                 <button class="orders-tab-btn" data-orders-tab-target="invoices-mayor">Facturas <span id="invoices-count-badge">0</span></button>
                             </div>
                         </div>
@@ -8286,9 +8286,11 @@
 <link rel="stylesheet" href="admin-shared-scan.css?v=20261014-pairing-5">
 <script src="admin-shared-scan.js?v=20261014-pairing-5" defer></script>
 <script src="admin-work-session.js?v=20261014-1" defer></script>
-<script src="admin-app.js?v=20261015-caja-independiente" defer></script>
+<script type="module" src="admin-retail-pricing.mjs?v=20261015-1"></script>
+<script src="admin-order-workflow.js?v=20261015-1" defer></script>
+<script src="admin-app.js?v=customer-flow-20261015" defer></script>
 <script src="inventory-category-manager.js?v=20261013-batch" defer></script>
-<script src="order-summary.js?v=pdf-fast-20261007" defer></script>
+<script src="order-summary.js?v=customer-flow-20261015" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 <script src="order-notifications-admin.js?v=admin-refresh-access-20261006-3" defer></script>
 <script src="pending-products-admin.js?v=pending-actions-20261006-4" defer></script>

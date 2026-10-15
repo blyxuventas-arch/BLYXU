@@ -2210,6 +2210,7 @@ async function restoreSharedProductDraft(draft){
         const barcode=card.querySelector('.ve-barcode,.var-barcode');if(barcode&&variant.barcodeId)map[variant.barcodeId]=barcode.id;
     }
     const form=document.getElementById('product-form');if(draft.pendingKey)form.dataset.pendingKey=draft.pendingKey;
+    window.BlyxuRetailAdmin?.refreshControls();
     updateProductMeasurementFields();renderProductGalleryManager();updateLivePreview();updateProductQrPreview();
     return map;
 }
@@ -2294,7 +2295,7 @@ function normalizeProductPayloadForSubmit(data) {
     if (cantidad !== '') payload.Stock = cantidad;
     applyAutomaticStockStatus(payload);
 
-    return payload;
+    return window.BlyxuRetailAdmin?.preparePayload(payload) || payload;
 }
 
 function setProductCategoryAliases(payload, categoria) {
@@ -2405,6 +2406,7 @@ function buildProductPayload() {
         Catalogo: getInputValue('prod-catalogo') || 'Ambos',
         'Categoría': categoria,
         'Catálogo': getInputValue('prod-catalogo') || 'Ambos',
+        'Modo Precio Minorista': document.getElementById('prod-retail-mode')?.value || 'manual',
         Precio: parseAmount(getInputValue('prod-precio')),
         'Precio Mayor': parseAmount(getInputValue('prod-precio-mayorista')),
         'Stock Inicial': stockInicial,
@@ -3153,6 +3155,7 @@ function resetProductForm() {
     if (pendingForm) delete pendingForm.dataset.pendingKey;
     const form = el('product-form');
     if (form) form.reset();
+    window.BlyxuRetailAdmin?.reset();
     if (form) delete form.dataset.originalVariationId;
     const variantsContainer = document.getElementById('variants-container');
     if (variantsContainer) delete variantsContainer.dataset.activePreviewVariantKey;
@@ -3830,6 +3833,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function onAdminAccess(credential,identity={}){
         secureAdminCredential=credential;siteConfigPromise=null;
+        window.BlyxuRetailAdmin?.load();
         const activeSession=window.BlyxuAdminWorkSession?.start({credential,identity,api:GOOGLE_SHEET_API,onLock:message=>{
             revokeAdminSession({preserveWork:true});
             loginScreen.style.display='';mainContent.style.display='none';
@@ -5998,6 +6002,7 @@ function renderNextInventoryBatch(renderToken = inventoryRenderToken) {
         .join('');
 
     tbody.insertAdjacentHTML('beforeend', rows);
+    window.BlyxuRetailAdmin?.decorateInventory();
     inventoryRenderedRows = end;
 
     if (inventoryRenderedRows < filteredInventario.length) {
@@ -7418,6 +7423,7 @@ function editarProducto(index) {
     document.getElementById('prod-categoria').value = p.Categoria || '';
     document.getElementById('prod-precio').value = p.Precio || '';
     document.getElementById('prod-precio-mayorista').value = p.Precio_Mayorista || p.precio_mayorista || p.Mayorista || '';
+    window.BlyxuRetailAdmin?.edit(p);
     document.getElementById('prod-catalogo').value = p.Catalogo || p.catalogo || 'Ambos';
     var stockVal = [p.Stock, p.Cantidad, ''].find(v => v !== undefined && String(v).trim() !== '');
     if (stockVal === undefined) stockVal = '';
@@ -8395,6 +8401,7 @@ function switchDashboardView(viewId, title) {
 
     if (viewId === 'users' && typeof loadCustomerUsers === 'function')loadCustomerUsers();
     if (viewId === 'quick-sale') prepareQuickSaleView();
+    if (viewId === 'inventory') window.BlyxuRetailAdmin?.load();
     if (viewId === 'orders') {
         cargarPedidos();
     }
@@ -10854,19 +10861,20 @@ function buildOrderRowHtml(p, idx) {
     const cliente = p['Nombre Cliente'] || p.Nombre || '-';
     const total = parseFloat(p.Subtotal || p.Total || 0);
     const estado = p['Estado Pedido'] || p.Estado || 'Pendiente';
+    const quotation = /cotiza|consulta/i.test(String(p['Tipo Solicitud']||'')+' '+estado);
     const colorEstado = getInvoiceStatusColor(estado);
 
     return `
         <tr style="background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td data-label="Pedido" style="font-weight:700;">${escapeHtml(id)}</td>
+            <td data-label="Pedido" style="font-weight:700;">${escapeHtml(id)}<small style="display:block">${quotation ? 'Cotización minorista' : inferOrderCustomerType(p)==='mayor' ? 'Pedido mayorista' : 'Pedido minorista'}</small></td>
             <td data-label="Fecha" style="font-size:12px; color:var(--text-muted);">${formatInvoiceListDate(fecha)}</td>
             <td data-label="Cliente" style="font-weight:600;">${escapeHtml(cliente)} <br><span style="font-size:10px; color:var(--primary);">${escapeHtml(p['Teléfono'] || p.Telefono || '')}</span></td>
-            <td data-label="Total" style="font-weight:800; color:#fff;">$${total.toLocaleString('es-CO')}</td>
+            <td data-label="Total" style="font-weight:800; color:#fff;">${quotation && !total ? 'Por cotizar' : formatAdminInvoiceMoney(total)}</td>
             <td data-label="Estado"><span style="background:rgba(255,255,255,0.1); color:${colorEstado}; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700;">${escapeHtml(estado)}</span></td>
             <td data-label="Accion" class="orders-actions-cell">
-                <button class="orders-action-btn" onclick="abrirEditorFactura(${idx})" type="button" title="Ajustar factura">
+                <button class="orders-action-btn" onclick="${quotation ? 'BlyxuOrderWorkflow.open('+idx+')' : 'abrirEditorFactura('+idx+')'}" type="button" title="${quotation ? 'Revisar cotización' : 'Ajustar factura'}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-                    Facturar
+                    ${quotation ? 'Revisar cotización' : 'Facturar'}
                 </button>
             </td>
         </tr>
@@ -10923,6 +10931,11 @@ function renderPedidos() {
             if (id && facturedOrderIds.has(id)) return false;
             const estado = p['Estado Pedido'] || p.Estado || '';
             if (String(estado).toLowerCase().includes('factur')) return false;
+            const filter=document.getElementById('admin-order-type-filter')?.value||'all';
+            const quote=/cotiza|consulta/i.test(String(p['Tipo Solicitud']||'')+' '+estado);
+            if(filter==='quotes'&&!quote)return false;
+            if(filter==='wholesale'&&(quote||inferOrderCustomerType(p)!=='mayor'))return false;
+            if(filter==='retail'&&(quote||inferOrderCustomerType(p)==='mayor'))return false;
             return recordMatchesOrdersSearch(p, [
                 id,
                 p.Fecha,
@@ -11086,8 +11099,10 @@ function initOrdersAdminTabs() {
         if (ordersShell) ordersShell.scrollLeft = 0;
         container.scrollLeft = 0;
         if (searchInput) searchInput.style.display = '';
+        const typeFilter=document.getElementById('admin-order-type-filter');if(typeFilter)typeFilter.closest('label').hidden=tabId!=='orders-mayor';
     }
 
+    document.getElementById('admin-order-type-filter')?.addEventListener('change',renderPedidos);
     window.switchOrdersAdminTab = activate;
     tabs.forEach(btn => btn.addEventListener('click', () => activate(btn.dataset.ordersTabTarget)));
     if (searchInput) {
@@ -12070,6 +12085,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.abrirEditorFactura = function(idx = null, source = 'pedido') {
+    if(idx!==null&&source==='pedido'){const order=window.pedidosList[idx];if(order&&/cotiza|consulta/i.test(String(order['Tipo Solicitud']||'')+' '+String(order['Estado Pedido']||''))){window.BlyxuOrderWorkflow?.open(idx);return;}} 
     window.invoiceItems = [];
     window.invoiceEditIndex = idx;
     window.invoiceEditSource = idx === null ? 'manual' : source;

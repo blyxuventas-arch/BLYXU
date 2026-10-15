@@ -1166,7 +1166,7 @@
                     <span>Guardar favorito</span>
                 </button>
                 <button class="btn-consult-direct" id="btn-consult-product-detail" type="button" style="display:none;">Consultar este producto por WhatsApp</button>
-                <p class="cart-consult-note" id="detail-cart-note" style="display:none;">Añadir al carrito sirve para hacer una consulta general de varios productos.</p>
+                <p class="cart-consult-note" id="detail-cart-note" style="display:none;">Añade los productos y revisa tu selección antes de enviar la solicitud.</p>
             </div>
 
             <!-- 6. Trust Perks -->
@@ -1247,11 +1247,11 @@
             </div>
             <p class="cart-consult-note" id="cart-consult-note"></p>
             <textarea id="cart-note" class="cart-note-input" placeholder="Pregunta o nota para enviar por WhatsApp (opcional)"></textarea>
-            <button class="btn-checkout" id="btn-checkout">Finalizar Compra vía WhatsApp</button>
+            <button class="btn-checkout" id="btn-checkout">Revisar mi selección</button>
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=supabase-live-20261013" defer></script>
+    <script src="blyxu-app.js?v=customer-flow-20261015" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1702,7 +1702,7 @@
                 const mobileName = document.getElementById('detail-name-mobile');
                 if (mobileName) mobileName.textContent = name;
                 document.getElementById('detail-cat').textContent = detailCatalogMode === 'wholesale' ? `Mayorista - ${cat}` : cat;
-                document.getElementById('detail-price').textContent = detailShowsPrices ? formatMoney(price) : 'Precio por consultar';
+                document.getElementById('detail-price').textContent = detailShowsPrices && price>0 ? formatMoney(price) : 'Precio por cotizar';
                 document.getElementById('detail-desc').textContent = desc;
                 document.getElementById('detail-stock').textContent = getAvailabilityText(stock);
                 document.getElementById('detail-availability-pill')?.classList.toggle('is-out', stock <= 0);
@@ -1756,10 +1756,10 @@
                 renderRecommendations(productId, product);
 
                 cartBtn.disabled = stock <= 0;
-                cartBtn.textContent = stock > 0 ? (detailCatalogMode === 'wholesale' ? 'Añadir al pedido' : (detailShowsPrices ? 'Añadir al Carrito' : 'Añadir a consulta general')) : 'Agotado por ahora';
+                cartBtn.textContent = stock > 0 ? getCustomerFlowCopy(detailCatalogMode, [{mode:detailCatalogMode,price}]).add : 'Agotado por ahora';
                 cartBtn.onclick = () => {
                     if (stock <= 0) return;
-                    addToCart(productId, null, detailCatalogMode);
+                    addToCart(productId, cartBtn, detailCatalogMode);
                 };
                 if (favoriteBtn) {
                     favoriteBtn.onclick = () => saveCustomerFavorite(productId, favoriteBtn);
@@ -1774,7 +1774,7 @@
                     consultBtn.style.display = !detailShowsPrices && stock > 0 ? 'inline-flex' : 'none';
                     consultBtn.onclick = !detailShowsPrices && stock > 0 ? () => consultProductByWhatsApp(product) : null;
                 }
-                if (cartNote) cartNote.style.display = !detailShowsPrices && stock > 0 ? 'block' : 'none';
+                if (cartNote) {cartNote.textContent=getCustomerFlowCopy(detailCatalogMode,[{mode:detailCatalogMode,price}]).note;cartNote.style.display=stock>0?'block':'none';}
 
                 document.title = `${name} - BLYXU`;
 
@@ -1842,7 +1842,7 @@
             }, true);
         });
     </script>
-<script src="order-summary.js?v=pdf-fast-20261007" defer></script>
+<script src="order-summary.js?v=customer-flow-20261015" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 </body>
 </html>

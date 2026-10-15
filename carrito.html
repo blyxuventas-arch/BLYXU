@@ -5,12 +5,12 @@
     <script src="backend-config.js?v=supabase-live-20261013"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Carrito de Compras - BLYXU</title>
-    <meta name="description" content="Revisa tu carrito BLYXU y finaliza tu pedido.">
+    <title>Mi selección - BLYXU</title>
+    <meta name="description" content="Revisa tu pedido mayorista o solicita una cotización minorista en BLYXU.">
     <link rel="icon" type="image/png" href="/blyxu-search-logo.png">
     <link rel="apple-touch-icon" href="/blyxu-search-logo.png">
-    <meta property="og:title" content="Carrito de Compras - BLYXU">
-    <meta property="og:description" content="Revisa tu carrito BLYXU y finaliza tu pedido.">
+    <meta property="og:title" content="Mi selección - BLYXU">
+    <meta property="og:description" content="Revisa tu pedido mayorista o solicita una cotización minorista en BLYXU.">
     <meta property="og:image" content="https://blyxu.online/blyxu-search-logo.png">
     <meta property="og:url" content="https://blyxu.online/carrito.html">
     <meta name="twitter:card" content="summary_large_image">
@@ -76,13 +76,13 @@
     </nav>
 
     <main>
-        <section class="cart-standalone-section cart-page-section" id="carrito-seccion" aria-label="Carrito de Compras y Checkout">
+        <section class="cart-standalone-section cart-page-section" id="carrito-seccion" aria-label="Revisión de pedido o cotización">
             <div class="cart-section-container">
                 <div class="cart-section-head">
                     <div class="cart-section-title-wrap">
-                        <span class="cart-section-kicker">BLYXU&trade; Checkout Exclusivo</span>
-                        <h1 class="cart-section-title">Mi carrito</h1>
-                        <p class="cart-section-subtitle">Revisa los productos seleccionados y gestiona tu orden en un solo lugar.</p>
+                        <span class="cart-section-kicker">BLYXU&trade; Selección de productos</span>
+                        <h1 class="cart-section-title">Mi selección</h1><p id="cart-flow-explanation" role="status" style="font-size:13px;line-height:1.6;max-width:620px;">Revisa productos, variantes y cantidades antes de enviar.</p>
+                        <p class="cart-section-subtitle">Puedes cambiar variantes, cantidades o quitar productos antes de enviar.</p>
                     </div>
                     <div class="cart-section-meta">
                         <span class="cart-badge-pill" id="cart-mode-badge">Cat&aacute;logo Minorista</span>
@@ -118,7 +118,7 @@
                                     <line x1="19" y1="12" x2="5" y2="12"></line>
                                     <polyline points="12 19 5 12 12 5"></polyline>
                                 </svg>
-                                <span>Continuar Comprando</span>
+                                <span>Seguir explorando</span>
                             </a>
 
                             <div class="cart-summary-box">
@@ -198,7 +198,7 @@
                                 <span class="cart-sec-chip">Efecty</span>
                             </div>
                             <button type="button" class="btn-cart-checkout-main" id="btn-cart-sec-checkout">
-                                <span id="btn-cart-sec-checkout-text">Check Out con Mercado Pago</span>
+                                <span id="btn-cart-sec-checkout-text">Continuar al pago</span>
                             </button>
                             <div class="cart-sec-trust">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -240,8 +240,8 @@
         </div>
     </footer>
 
-    <script src="order-summary.js?v=pdf-fast-20261007" defer></script>
-    <script src="blyxu-app.js?v=supabase-live-20261013" defer></script>
+    <script src="order-summary.js?v=customer-flow-20261015" defer></script>
+    <script src="blyxu-app.js?v=customer-flow-20261015" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
 </body>
 

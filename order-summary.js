@@ -13,7 +13,7 @@
             id: clean(record?.['ID Pedido']),
             mode: record?.['Tipo Cliente'] === 'Mayor' ? 'Mayorista' : 'Minorista',
             date: record?.Fecha || record?.['Fecha Registro'] || record?.summaryCreatedAt || '',
-            consultation: /consulta/i.test(record?.['Estado Pedido'] || ''),
+            consultation: /cotiza|consulta/i.test((record?.['Tipo Solicitud'] || '')+' '+(record?.['Estado Pedido'] || '')),
             customer: clean(record?.['Nombre Cliente']),
             contact: [record?.Telefono || record?.['Teléfono'], record?.Email, record?.Direccion || record?.['Dirección'], record?.Ciudad].filter(Boolean).map(clean).join(' · '),
             note: clean(record?.['Nota Cliente']),
@@ -118,8 +118,8 @@
             };
             let y = 18;
             text('BLYXU', 16, y, 20, 'bold');
-            text('COMPROBANTE DE PEDIDO · ' + clean(summary.mode), 16, y += 9, 10);
-            text(summary.registered ? 'Pedido realizado y registrado' : 'Selección del carrito · Sin registrar', 16, y += 11, 15, 'bold');
+            text((summary.consultation?'COMPROBANTE DE COTIZACIÓN · ':'COMPROBANTE DE PEDIDO · ') + clean(summary.mode), 16, y += 9, 10);
+            text(summary.registered ? (summary.consultation?'Solicitud de cotización registrada':'Pedido recibido y registrado') : 'Selección de productos · Sin registrar', 16, y += 11, 15, 'bold');
             if (summary.registered) text('Referencia: ' + clean(summary.id), 16, y += 7, 10);
             const date = new Date(summary.date || Date.now());
             const dateLabel = Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleString('es-CO', {timeZone:'America/Bogota', dateStyle:'medium', timeStyle:'short'});
@@ -131,7 +131,7 @@
                 if(y+lines.length*5>245){pdf.addPage();y=20;}
                 pdf.text(lines,16,y+=7);y+=(lines.length-1)*5;
             }
-            text(summary.consultation ? 'Consulta pendiente de respuesta y confirmación.' : 'Pendiente de confirmar disponibilidad, envío y pago.', 16, y += 9, 10);
+            text(summary.consultation ? 'Cotización pendiente de aceptación. No confirma pago ni reserva existencias.' : 'Pendiente de confirmar disponibilidad, envío y pago.', 16, y += 9, 10);
             y += 10;
             const items = summary.items;
             let missingImages = 0;
@@ -161,7 +161,7 @@
                     pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.text(metaLines, 51, rowY);
                     rowY += metaLines.length * 4 + 4;
                     const quantity = Math.max(1, Number(item.cantidad ?? item.qty) || 1);
-                    const quoted = summary.consultation || item.precioEstado === 'Por consultar' || item.priceVisible === false || Number(item.precio ?? item.price) <= 0;
+                    const quoted = item.precioEstado === 'Por consultar' || item.priceVisible === false || Number(item.precio ?? item.price) <= 0;
                     text('Cantidad: ' + quantity + '  |  ' + (quoted ? 'Precio: por consultar' : 'Unidad: ' + money(item.precio ?? item.price) + '  |  Subtotal: ' + money(quantity * Number(item.precio ?? item.price))), 51, rowY, 9);
                     y += height;
                 }
@@ -169,7 +169,7 @@
             if (y > 238) { pdf.addPage(); y = 20; }
             pdf.setDrawColor(190); pdf.line(16, y, 194, y);
             text('Productos: ' + items.reduce((sum, item) => sum + Math.max(1, Number(item.cantidad ?? item.qty) || 1), 0), 16, y += 8, 11, 'bold');
-            const unpriced = summary.consultation || items.some(item => item.precioEstado === 'Por consultar' || item.priceVisible === false || Number(item.precio ?? item.price) <= 0);
+            const unpriced = items.some(item => item.precioEstado === 'Por consultar' || item.priceVisible === false || Number(item.precio ?? item.price) <= 0);
             text(unpriced ? 'Valor pendiente de cotización' : 'Valor de productos: ' + money(summary.total), 16, y += 7, 11, 'bold');
             text('Este documento resume los productos solicitados.', 16, y += 10, 9);
             text('No constituye una factura de venta ni un comprobante de pago.', 16, y += 6, 9);

@@ -1933,7 +1933,7 @@ async function fetchSiteConfig(options = {}) {
             const data = await res.json();
             if (data && data.status === 'success' && data.config) {
                 siteConfig = data.config;
-                showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] || '0') === '1';
+                showRetailPrices = String(siteConfig[RETAIL_PRICE_CONFIG_KEY] ?? '1') === '1';
                 localStorage.setItem(RETAIL_PRICE_VISIBILITY_KEY, showRetailPrices ? '1' : '0');
                 writeCache(SITE_CONFIG_CACHE_KEY, siteConfig);
                 if (typeof updateCartUI === 'function') updateCartUI();
@@ -2883,6 +2883,7 @@ function renderProducts(products, options = {}) {
         const name = p.Nombre || p.nombre || p.Producto || 'Producto';
         const priceInfo = getProductCardPriceInfo(p, mode);
         const price = priceInfo.price;
+        const showPrices = shouldShowProductPrices(mode) && price > 0;
         const oldPrice = priceInfo.oldPrice;
         const rawImg = getCatalogProductImageSource(p);
         const img = normalizeImageUrl(rawImg, 'card');
@@ -2916,7 +2917,7 @@ function renderProducts(products, options = {}) {
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
-                ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${showPrices ? 'Agregar al carrito' : 'Agregar a consulta general'}">
+                ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${getCustomerFlowCopy(mode, [{mode,price}]).add}" aria-label="${getCustomerFlowCopy(mode, [{mode,price}]).add}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                 </button>` : ''}
             </div>
@@ -3096,7 +3097,7 @@ function shouldRegisterCartOrder(mode = activeCartMode) {
 }
 
 function isRetailCheckoutConsultationMode(mode = activeCartMode, items = cart) {
-    return normalizeCartMode(mode) === 'retail' && (!shouldShowProductPrices('retail') || items.some(item => !cartItemShowsPrice(item)));
+    return normalizeCartMode(mode) === 'retail' && (!shouldShowProductPrices('retail') || !isMercadoPagoCheckoutEnabled() || items.some(item => !cartItemShowsPrice(item)));
 }
 
 function isCartConsultationMode(items = cart) {
@@ -3104,12 +3105,26 @@ function isCartConsultationMode(items = cart) {
 }
 
 function cartItemShowsPrice(item) {
-    return shouldShowProductPrices(normalizeCartMode(item?.mode || activeCartMode));
+    return shouldShowProductPrices(normalizeCartMode(item?.mode || activeCartMode)) && Number(item?.price) > 0;
 }
 
 function getProductVariationId(product) {
     return product?.idVariacion || product?.['ID Variaci\u00f3n'] || product?.['ID Variacion'] || product?.SKU || product?.Nombre || '';
 }
+
+function getCustomerFlowCopy(mode = activeCartMode, items = cart) {
+    const wholesale = normalizeCartMode(mode) === 'wholesale';
+    const quote = !wholesale && isRetailCheckoutConsultationMode(mode, items);
+    return {
+        wholesale, quote,
+        title: wholesale ? 'Mi pedido' : quote ? 'Mi cotización' : 'Mi carrito',
+        noun: quote ? 'cotización' : 'pedido',
+        add: wholesale ? 'Añadir al pedido' : quote ? 'Añadir a cotización' : 'Añadir al carrito',
+        submit: wholesale ? 'Enviar pedido mayorista' : quote ? 'Solicitar cotización' : 'Enviar pedido',
+        note: quote ? 'Revisa los productos y solicita tu cotización. Confirmaremos precios y disponibilidad. No realizas ningún pago en este paso.' : 'Revisa variantes y cantidades. Confirmaremos disponibilidad, envío y forma de pago. Enviar el pedido no confirma un pago.'
+    };
+}
+window.getCustomerFlowCopy = getCustomerFlowCopy;
 
 function getCartProductIndex(item) {
     const itemVariationId = String(item?.idVariacion || '').trim();
@@ -3462,7 +3477,7 @@ function setCartPaymentMethod(method) {
             mpTab.setAttribute('aria-pressed', 'true');
             wsTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.remove('btn-ws-mode');
-            if (btnText) btnText.textContent = 'Check Out con Mercado Pago ✦';
+            if (btnText) btnText.textContent = 'Continuar al pago';
             if (mpBadges) mpBadges.style.display = 'flex';
             if (emailField) emailField.style.display = 'flex';
         } else if (resolvedMethod === 'ws') {
@@ -3471,10 +3486,10 @@ function setCartPaymentMethod(method) {
             wsTab.setAttribute('aria-pressed', 'true');
             mpTab.setAttribute('aria-pressed', 'false');
             if (btnCheckout) btnCheckout.classList.add('btn-ws-mode');
-            if (btnText) btnText.textContent = 'Registrar pedido';
+            if (btnText) btnText.textContent = getCustomerFlowCopy().submit;
             if (mpBadges) mpBadges.style.display = 'none';
             if (emailField) emailField.style.display = 'flex';
-            if (isConsultationMode && btnText) btnText.textContent = 'Registrar consulta';
+            if (isConsultationMode && btnText) btnText.textContent = 'Solicitar cotización';
         } else {
             mpTab.classList.remove('active');
             wsTab.classList.remove('active');
@@ -3486,6 +3501,7 @@ function setCartPaymentMethod(method) {
             if (emailField) emailField.style.display = 'flex';
         }
     }
+    const trust=document.querySelector('.cart-sec-trust span');if(trust)trust.textContent=resolvedMethod==='mp'?'Continuarás al pago seguro en Mercado Pago.':getCustomerFlowCopy().quote?'Tu solicitud no realiza ningún pago.':'El registro del pedido no confirma un pago.';
     updateCartPaymentFormState(resolvedMethod);
 }
 window.setCartPaymentMethod = setCartPaymentMethod;
@@ -3536,15 +3552,25 @@ function updateCartUI() {
     const mpCheckoutEnabled = isMercadoPagoCheckoutEnabled();
 
     if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
-    if (titleEl) titleEl.innerHTML = `Carrito ${getCartModeLabel()}`;
-    if (secCountLabel) secCountLabel.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}`;
-    if (secModeBadge) secModeBadge.textContent = getCartModeLabel();
+    const flowCopy = getCustomerFlowCopy();
+    if (titleEl) titleEl.textContent = flowCopy.title;
+    document.querySelectorAll('.cart-section-title').forEach(el=>el.textContent=flowCopy.title);
+    document.querySelectorAll('#cart-btn').forEach(el=>{el.setAttribute('aria-label',flowCopy.title);el.title=flowCopy.title;});
+    const intro=document.getElementById('cart-flow-explanation');if(intro)intro.textContent=flowCopy.note;
+    const chooser=document.querySelector('.cart-payment-methods-select');if(chooser)chooser.style.display=flowCopy.wholesale||flowCopy.quote||!mpCheckoutEnabled?'none':'';
+    const trust=document.querySelector('.cart-sec-trust span');if(trust)trust.textContent=flowCopy.quote?'Tu solicitud no realiza ningún pago.':'El registro del pedido no confirma un pago.';
+    const paymentTitle=document.querySelector('.cart-payment-title');if(paymentTitle)paymentTitle.textContent=flowCopy.quote?'Datos para tu cotización':'Datos del pedido';
+    const wsTab=document.querySelector('#tab-payment-ws strong');if(wsTab)wsTab.textContent=flowCopy.submit;
+    if (secCountLabel) secCountLabel.textContent = `${cart.length} ${cart.length===1?'referencia':'referencias'} · ${count} ${count===1?'unidad':'unidades'}`;
+    if (secModeBadge) secModeBadge.textContent = getCustomerFlowCopy().quote?'Cotización minorista':getCartModeLabel();
+    if(document.body?.dataset.page==='carrito') document.title=getCustomerFlowCopy().title+' · BLYXU';
     localStorage.removeItem('blyxu-last-order');
     // Update Standalone Section Summary Totals
     const formattedSubtotal = hasHiddenPrices ? 'Por consultar' : formatMoney(pricingSummary.subtotal);
     const formattedTotal = hasHiddenPrices ? 'Por consultar' : formatMoney(total);
     if (secSubtotalEl) secSubtotalEl.textContent = formattedSubtotal;
     if (secTotalEl) secTotalEl.textContent = formattedTotal;
+    const totalCaption=document.querySelector('.cart-summary-total > span');if(totalCaption)totalCaption.textContent=getCustomerFlowCopy().quote?'Total estimado':'Total';
     const summaryBox = secSubtotalEl?.closest('.cart-summary-box');
     if (summaryBox) {
         let discountRow = document.getElementById('cart-summary-customer-discount');
@@ -3574,7 +3600,7 @@ function updateCartUI() {
             secItemsEl.innerHTML = `
                 <div class="cart-empty-state">
                     <div class="cart-empty-icon">BLYXU</div>
-                    <h3>Tu carrito ${getCartModeLabel()} está vacío ✦</h3>
+                    <h3>${getCustomerFlowCopy().title} no tiene productos</h3>
                     <p>Descubre nuestras joyas y accesorios exclusivos y añade tus piezas preferidas.</p>
                     <a href="${browseCatalogUrl}" class="cart-btn-browse">Explorar Catálogo</a>
                 </div>
@@ -3638,9 +3664,7 @@ function updateCartUI() {
         const paymentTabs = mpTab?.closest('.cart-payment-tabs');
         if (paymentTabs) paymentTabs.style.gridTemplateColumns = '1fr';
         setCartPaymentMethod('ws');
-        if (secCheckoutBtnText) secCheckoutBtnText.textContent = 'Confirmar y Registrar Pedido Mayorista ✦';
-        if (secCheckoutBtnText && retailConsultationMode) secCheckoutBtnText.textContent = 'Registrar consulta';
-        if (secCheckoutBtnText && !isWholesale && !retailConsultationMode && !mpCheckoutEnabled) secCheckoutBtnText.textContent = 'Registrar pedido';
+        if (secCheckoutBtnText) secCheckoutBtnText.textContent = getCustomerFlowCopy().submit;
     } else {
         const mpTab = document.getElementById('tab-payment-mp');
         if (mpTab) mpTab.style.display = 'flex';
@@ -3754,7 +3778,7 @@ function updateCartUI() {
     // Sidebar Fallback update (if present)
     if (itemsEl) {
         if (!cart.length) {
-            itemsEl.innerHTML = `<div class="cart-empty">Tu carrito ${getCartModeLabel()} est&aacute; vac&iacute;o</div>`;
+            itemsEl.innerHTML = `<div class="cart-empty">${getCustomerFlowCopy().title} no tiene productos</div>`;
             if (totalEl) totalEl.textContent = '$0';
             if (consultNoteEl) consultNoteEl.textContent = '';
             const checkoutBtn = document.getElementById('btn-checkout');
@@ -3762,8 +3786,8 @@ function updateCartUI() {
             if (formContainer) formContainer.style.display = 'none';
             if (checkoutBtn) {
                 checkoutBtn.textContent = isCartConsultationMode()
-                    ? 'Registrar consulta por WhatsApp'
-                    : (shouldRegisterCartOrder() ? `Registrar Pedido ${getCartOrderLabel()}` : 'Enviar consulta por WhatsApp');
+                    ? 'Solicitar cotización'
+                    : getCustomerFlowCopy().submit;
                 checkoutBtn.style.display = 'block';
             }
         } else {
@@ -3812,9 +3836,7 @@ function updateCartUI() {
             }).join('');
             if (totalEl) totalEl.textContent = formattedTotal;
             if (consultNoteEl) {
-                consultNoteEl.textContent = hasHiddenPrices
-                    ? 'Este carrito se enviará como consulta general por WhatsApp.'
-                    : `Al finalizar, se registrará el pedido ${getCartOrderLabel().toLowerCase()} en el sistema.`;
+                consultNoteEl.textContent = getCustomerFlowCopy().note;
             }
         }
     }
@@ -5141,7 +5163,7 @@ function renderCustomerOrdersList(orders = []) {
             <article class="customer-order-card">
                 <div>
                     <strong>${escapeHtml(order.id || 'Pedido')}</strong>
-                    <button type="button" data-order-id="${escapeHtml(order.id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Abrir comprobante de pedido</button>
+                    <button type="button" data-order-id="${escapeHtml(order.id)}" onclick="BlyxuReceiptAccess.downloadCustomer(this.dataset.orderId,this)">Abrir comprobante de la solicitud</button>
                     <span>${escapeHtml(formatCustomerDate(order.fecha))}</span>
                 </div>
                 ${previews.length ? `<div class="customer-order-products">
@@ -5773,6 +5795,7 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
     const normalizedType = customerType === 'Mayor' ? 'Mayor' : 'Detal';
     const orderLabel = normalizedType === 'Mayor' ? 'Mayorista' : 'Detal';
     const isConsultation = normalizedType === 'Detal' && isCartConsultationMode();
+    const unpriced = cart.some(item=>!cartItemShowsPrice(item));
     const pricingSummary = getCartPricingSummary(cart);
     const promotion = pricingSummary.promotion;
     const productos = cart.map(item => ({
@@ -5783,10 +5806,10 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         color: item.color || '',
         talla: item.talla || '',
         cantidad: item.qty,
-        precioOriginal: isConsultation ? 0 : item.price,
-        precio: isConsultation ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price),
-        subtotal: isConsultation ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price) * item.qty,
-        precioEstado: isConsultation ? 'Por consultar' : '',
+        precioOriginal: unpriced ? 0 : item.price,
+        precio: unpriced ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price),
+        subtotal: unpriced ? 0 : (promotion.percent > 0 ? Math.max(0, Math.round(item.price * (1 - promotion.percent / 100))) : item.price) * item.qty,
+        precioEstado: unpriced ? 'Por consultar' : '',
         descuentoCliente: isConsultation ? '' : (promotion.percent || ''),
         promoCliente: isConsultation ? '' : (promotion.label || ''),
         sku: item.sku || '',
@@ -5799,8 +5822,10 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
     let pendingOrder = null;
     try { pendingOrder = JSON.parse(localStorage.getItem('blyxu-pending-order') || 'null'); } catch (_) {}
     const orderId = pendingOrder?.fingerprint === fingerprint ? pendingOrder.id : `${normalizedType === 'Mayor' ? 'MAY' : 'DET'}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    localStorage.setItem('blyxu-pending-order', JSON.stringify({ id: orderId, fingerprint }));
+    const requestKey = pendingOrder?.fingerprint === fingerprint && pendingOrder.requestKey ? pendingOrder.requestKey : crypto.randomUUID();
+    localStorage.setItem('blyxu-pending-order', JSON.stringify({id:orderId,fingerprint,requestKey}));
     const payload = {
+        requestKey,
         resource: 'pedidos',
         action: 'crear',
         token: getCustomerSession()?.token || '',
@@ -5813,14 +5838,15 @@ async function saveOrderToGoogleSheets(cliente, total, customerType = getCartCus
         'Ciudad': cliente.ciudad,
         'Productos JSON': JSON.stringify(productos),
         'Cantidad Total': cart.reduce((sum, item) => sum + item.qty, 0),
-        'Subtotal': isConsultation ? 0 : pricingSummary.total,
-        'Estado Pedido': isConsultation ? 'Consulta pendiente' : 'Pendiente',
+        'Subtotal': unpriced ? 0 : pricingSummary.total,
+        'Tipo Solicitud': isConsultation ? 'Cotización' : 'Pedido',
+        'Estado Pedido': isConsultation ? 'Cotización pendiente' : 'Pendiente de confirmación',
         'Metodo Contacto': isConsultation ? 'Consulta registrada en el sistema' : `Sistema ${orderLabel}`,
         'Stock Descontado': isConsultation ? 'NO' : '',
         'Nota Cliente': [
             cliente.nota || '',
             isConsultation ? 'Precios ocultos: consulta pendiente de contacto' : '',
-            !isConsultation && promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''
+            !unpriced && promotion.percent > 0 ? `Promo cliente registrado: ${promotion.label} (-${promotion.percent}%)` : ''
         ].filter(Boolean).join(' | ')
     };
 
@@ -5850,7 +5876,7 @@ function askRetailQuestion() {
 
 function buildCartWhatsAppMessage({ isRegisteredOrder, customerType = 'Detal', cliente = null, savedOrder = null, total = 0, note = '' }) {
     if (isRegisteredOrder && savedOrder?.['ID Pedido']) {
-        return `Pedido registrado con éxito\nID del pedido: ${savedOrder['ID Pedido']}\nCliente: ${cliente?.nombre || savedOrder['Nombre Cliente'] || ''}`;
+        return `${/cotiza|consulta/i.test(savedOrder['Tipo Solicitud'] || savedOrder['Estado Pedido'] || '') ? 'Cotización recibida' : 'Pedido recibido'} en BLYXU\nReferencia: ${savedOrder['ID Pedido']}\nCliente: ${cliente?.nombre || savedOrder['Nombre Cliente'] || ''}\nHola, quisiera continuar con esta solicitud.`;
     }
 
     const hasHiddenPrices = cart.some(item => !cartItemShowsPrice(item));
@@ -5901,17 +5927,17 @@ async function checkout(skipPrompt = false) {
 }
 
 function canSendOrderWhatsApp() {
-    return navigator.userAgentData?.mobile === true || /Android.*Mobile|iPhone|iPod|Windows Phone/i.test(navigator.userAgent);
+    return true; // WhatsApp Web y móvil están disponibles como canales opcionales.
 }
 
 async function performOrderCheckout(skipPrompt = false) {
     if (!cart.length) return;
     await syncRetailPriceVisibility();
     const total = getCartPricingSummary(cart).total;
-    const isConsultation = isCartConsultationMode();
+    let isConsultation = isCartConsultationMode();
     const isRegisteredOrder = shouldRegisterCartOrder();
     const customerType = getCartCustomerType();
-    const orderLabel = isConsultation ? 'Consulta' : getCartOrderLabel();
+    let orderLabel = isConsultation ? 'Cotización' : getCartOrderLabel();
     
     const cliente = isRegisteredOrder ? window.wsClienteTemp : null;
     if (isRegisteredOrder && !cliente) {
@@ -5929,13 +5955,15 @@ async function performOrderCheckout(skipPrompt = false) {
     const originalText = btn ? btn.textContent : '';
     if (btn) {
         btn.disabled = true;
-        btn.textContent = isRegisteredOrder ? 'Registrando pedido...' : 'Preparando WhatsApp...';
+        btn.textContent = isRegisteredOrder ? (isConsultation ? 'Enviando cotización...' : 'Enviando pedido...') : 'Preparando WhatsApp...';
     }
 
     let savedOrder = null;
     if (isRegisteredOrder) {
         try {
             savedOrder = await saveOrderToGoogleSheets(cliente, total, customerType);
+            isConsultation=/cotiza|consulta/i.test(String(savedOrder['Tipo Solicitud']||'')+' '+String(savedOrder['Estado Pedido']||''));
+            orderLabel=savedOrder['Tipo Cliente']==='Mayor'?'Mayorista':'Minorista';
         } catch (error) {
             console.error('Error guardando pedido:', error);
             const errorBox = document.getElementById('cart-section-form-error');
@@ -5974,8 +6002,14 @@ async function performOrderCheckout(skipPrompt = false) {
     if (isRegisteredOrder) {
         const formContainer = document.getElementById('cart-section-payment-form') || document.getElementById('cart-wholesale-form');
         if (formContainer) {
-            const orderId = savedOrder?.['ID Pedido'] || 'Pedido registrado';
+            const orderId = savedOrder?.['ID Pedido'] || 'Solicitud registrada';
             const whatsappHref = `https://wa.me/${getCommerceWhatsAppPhone()}?text=${encodeURIComponent(msg)}`;
+            const submittedItems=typeof savedOrder['Productos JSON']==='string'?JSON.parse(savedOrder['Productos JSON']):savedOrder['Productos JSON']||[];
+            const summary=document.getElementById('cart-section-items');
+            if(summary)summary.innerHTML='<div class="cart-customer-card"><h3>Productos enviados</h3>'+submittedItems.map(item=>'<p><strong>'+escapeHtml(item.nombre||item.Nombre||'Producto')+'</strong> · '+escapeHtml(item.opcion||item.idVariacion||item.id||'')+' · '+Number(item.cantidad||1)+' unidades</p>').join('')+'</div>';
+            const sentCount=document.getElementById('cart-count-label');if(sentCount)sentCount.textContent=Number(savedOrder['Cantidad Total']||0)+' unidades enviadas';
+            const finalTotal=savedOrder['Precios Pendientes']==='SI'?'Por cotizar':formatMoney(savedOrder.Subtotal||0);
+            for(const id of ['cart-summary-subtotal','cart-summary-total']){const field=document.getElementById(id);if(field)field.textContent=finalTotal;}
             formContainer.style.display = 'block';
             document.getElementById('btn-checkout')?.style && (document.getElementById('btn-checkout').style.display = 'none');
             formContainer.innerHTML = `
@@ -5983,12 +6017,12 @@ async function performOrderCheckout(skipPrompt = false) {
                     <div class="cart-success-icon">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <h4>Pedido registrado correctamente</h4>
-                    <p>${isConsultation ? 'Tu consulta quedó registrada correctamente. Nos pondremos en contacto contigo.' : `Tu pedido ${orderLabel.toLowerCase()} quedo registrado correctamente. Nos pondremos en contacto contigo. Copia la referencia para cualquier duda.`}</p>
-                    <div class="cart-order-id">Pedido ${escapeHtml(orderId)}</div>
+                    <h4>${isConsultation ? 'Solicitud de cotización recibida' : 'Pedido recibido'}</h4>
+                    <p>${isConsultation ? 'Tu solicitud quedó registrada. Te confirmaremos precios y disponibilidad. No se ha realizado ningún pago.' : `Tu pedido ${orderLabel.toLowerCase()} quedó registrado. Confirmaremos disponibilidad, envío y forma de pago. No se ha realizado ningún pago.`}</p>
+                    <div class="cart-order-id">Referencia ${escapeHtml(orderId)}</div><a href="facturas-pedidos.html?buscar=${encodeURIComponent(orderId)}">Consultar estado de mi solicitud</a>
                     <div class="cart-success-actions">
                         <div data-temporary-receipt>
-                            <button class="cart-copy-reference-btn" type="button" data-receipt-download onclick="BlyxuReceiptAccess.downloadTemporary(this)">Abrir comprobante de pedido</button>
+                            <button class="cart-copy-reference-btn" type="button" data-receipt-download onclick="BlyxuReceiptAccess.downloadTemporary(this)">Abrir comprobante de ${isConsultation ? 'cotización' : 'pedido'}</button>
                             <p data-receipt-status role="status">Acceso privado disponible durante un máximo de 5 minutos.</p>
                         </div>
                         <button class="cart-copy-reference-btn" type="button" data-order-reference="${escapeHtml(orderId)}" onclick="copyOrderReference(this.dataset.orderReference, this)">
@@ -5996,9 +6030,9 @@ async function performOrderCheckout(skipPrompt = false) {
                         </button>
                         ${canSendOrderWhatsApp() ? `<a class="cart-whatsapp-link" href="${whatsappHref}" target="_blank" rel="noopener">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-5.2A8.5 8.5 0 1 1 21 11.5Z"></path><path d="M9.2 8.8c.2 2.8 2.3 5 5.1 5.5"></path></svg>
-                            Enviar pedido por WhatsApp
+                            Continuar por WhatsApp (opcional)
                         </a>` : ''}
-                        <button class="btn-checkout" onclick="dismissWholesaleOrderNotice()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);">Cerrar</button>
+                        <a class="btn-checkout" href="${customerType==='Mayor'?'mayorista.html':'index.html#coleccion'}">Seguir explorando</a>
                     </div>
                 </div>
             `;

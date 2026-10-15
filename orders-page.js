@@ -2,7 +2,7 @@ function normalizePublicOrderReference(value) {
     return String(value || '').trim().toUpperCase().replace(/[\u2010-\u2015\u2212]/g, '-');
 }
 function isPublicOrderReference(value) {
-    return value.length >= 8 && value.length <= 100 && /^(?:PED|FAC|CAJA)-[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(value);
+    return value.length >= 8 && value.length <= 100 && /^(?:PED|FAC|CAJA|MAY|DET|COT)-[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(value);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -285,7 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(!record){results.innerHTML='<div class="orders-empty">No encontramos un registro con ese ID completo.</div>';return;}
                 const items=parseItems(record),id=getField(record,['ID Factura','ID Pedido'],'');
                 const state=getField(record,['Estado Pedido','Estado Factura','Estado'],'Registrado');
-                results.innerHTML=`<article class="order-card"><div class="order-card-head"><div><div class="order-id">${escapeHtml(id)}</div><div class="order-meta">${formatDate(getField(record,['Fecha','Fecha Pedido'],''))}</div></div><span class="order-status ${statusClass(state)}">${escapeHtml(state)}</span></div><div class="order-body"><div class="order-metric"><span>Total</span><strong>${formatMoney(getOrderTotal(record,items))}</strong></div>${renderItemsTable(items)}<p>Consulta del registro indicado. Para ver tus datos personales y documentos completos, entra en Mi cuenta.</p></div></article>`;
+                const quote=/cotiza|consulta/i.test(String(record['Tipo Solicitud']||'')+' '+state);
+                const pending=String(record['Precios Pendientes']||'')==='SI'||(quote&&items.some(i=>Number(i.precio??i.Precio??0)<=0));
+                results.innerHTML=`<article class="order-card"><div class="order-card-head"><div><div class="order-id">${escapeHtml(id)}</div><div class="order-meta">${formatDate(getField(record,['Fecha','Fecha Pedido'],''))}</div></div><span class="order-status ${statusClass(state)}">${escapeHtml(state)}</span></div><div class="order-body"><div class="order-metric"><span>${quote ? 'Cotización · total estimado' : 'Total'}</span><strong>${pending ? 'Por cotizar' : formatMoney(getOrderTotal(record,items))}</strong></div>${renderItemsTable(items)}<p>Consulta del registro indicado. Para ver tus datos personales y documentos completos, entra en Mi cuenta.</p></div></article>`;
             }
 
             async function verifyMercadoPagoReturn() {
@@ -343,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `
                     <div class="items-summary">
                         <div class="items-summary-head">
-                            <span>Productos del pedido</span>
+                            <span>Productos de la solicitud</span>
                             <strong>${totalQty} ${totalQty === 1 ? 'unidad' : 'unidades'}</strong>
                         </div>
                         <div class="items-compact-grid">
@@ -362,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
                                         <div class="item-compact-total">
                                             <small>x${qty}</small>
-                                            ${formatMoney(price * qty)}
+                                            ${price>0?formatMoney(price * qty):'Por cotizar'}
                                         </div>
                                     </article>
                                 `;
