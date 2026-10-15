@@ -8371,15 +8371,12 @@ function drawDashboardDonutChart(canvasId, legendId, entries, total) {
 
 
 function switchDashboardView(viewId, title) {
-    if (viewId === 'quick-sale') {
-        openQuickSaleInOrders();
-        return;
-    }
     document.querySelectorAll('.dashboard-section').forEach(function (el) { el.classList.remove('active'); });
     document.querySelectorAll('.sidebar-btn').forEach(function (el) { el.classList.remove('active'); });
     var target = document.getElementById('view-' + viewId);
     if (target) target.classList.add('active');
     var btn = document.querySelector('.sidebar-btn[data-view="' + viewId + '"]') || document.querySelector('.sidebar-btn[onclick*="' + viewId + '"]');
+    document.querySelectorAll('.sidebar-btn[data-view="' + viewId + '"]').forEach(el => el.classList.add('active'));
     if (btn) btn.classList.add('active');
     var titleEl = document.getElementById('current-section-title');
     if (titleEl) titleEl.textContent = title || 'Panel';
@@ -8397,6 +8394,7 @@ function switchDashboardView(viewId, title) {
     }
 
     if (viewId === 'users' && typeof loadCustomerUsers === 'function')loadCustomerUsers();
+    if (viewId === 'quick-sale') prepareQuickSaleView();
     if (viewId === 'orders') {
         cargarPedidos();
     }
@@ -8413,13 +8411,12 @@ function switchDashboardView(viewId, title) {
 
 window.switchDashboardView = switchDashboardView;
 
+// Conserva los accesos existentes del dashboard a la caja independiente.
 function openQuickSaleInOrders() {
-    switchDashboardView('orders', 'Ventas y Facturación');
-    if (typeof window.switchOrdersAdminTab === 'function') {
-        window.switchOrdersAdminTab('quick-sale');
-    } else {
-        window.activeOrdersAdminTab = 'quick-sale';
-    }
+    switchDashboardView('quick-sale', 'Caja rápida');
+}
+
+function prepareQuickSaleView() {
     if (!Array.isArray(inventario) || !inventario.length) {
         cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
     } else {
@@ -10517,7 +10514,7 @@ async function initChinaOrdersBuilder() {
 
 window.pedidosList = [];
 window.facturasList = [];
-window.activeOrdersAdminTab = 'quick-sale';
+window.activeOrdersAdminTab = 'orders-mayor';
 const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
 try { localStorage.removeItem(ADMIN_ORDERS_CACHE_KEY); } catch (_) {}
 window.addEventListener('pagehide', () => {
@@ -11069,6 +11066,11 @@ function initOrdersAdminTabs() {
     const searchInput = document.getElementById('admin-orders-search');
 
     function activate(tabId) {
+        if (tabId === 'quick-sale') {
+            openQuickSaleInOrders();
+            return;
+        }
+        if (!panels.some(panel => panel.dataset.ordersTab === tabId)) tabId = 'orders-mayor';
         window.activeOrdersAdminTab = tabId;
         tabs.forEach(btn => {
             const active = btn.dataset.ordersTabTarget === tabId;
@@ -11083,17 +11085,7 @@ function initOrdersAdminTabs() {
         const ordersShell = container.querySelector('.orders-admin-shell');
         if (ordersShell) ordersShell.scrollLeft = 0;
         container.scrollLeft = 0;
-        if (searchInput) {
-            searchInput.style.display = tabId === 'quick-sale' ? 'none' : '';
-        }
-        if (tabId === 'quick-sale') {
-            if (!Array.isArray(inventario) || !inventario.length) {
-                cargarInventario({ silent: true }).then(renderQuickSaleResults).catch(() => {});
-            } else {
-                renderQuickSaleResults();
-            }
-            setTimeout(() => document.getElementById('quick-sale-search')?.focus(), 60);
-        }
+        if (searchInput) searchInput.style.display = '';
     }
 
     window.switchOrdersAdminTab = activate;
@@ -11105,7 +11097,7 @@ function initOrdersAdminTabs() {
         });
     }
 
-    activate(window.activeOrdersAdminTab || 'quick-sale');
+    activate(window.activeOrdersAdminTab === 'quick-sale' ? 'orders-mayor' : (window.activeOrdersAdminTab || 'orders-mayor'));
 }
 
 // === CREADOR Y EDITOR DE FACTURAS ===

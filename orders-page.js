@@ -1,3 +1,10 @@
+function normalizePublicOrderReference(value) {
+    return String(value || '').trim().toUpperCase().replace(/[\u2010-\u2015\u2212]/g, '-');
+}
+function isPublicOrderReference(value) {
+    return value.length >= 8 && value.length <= 100 && /^(?:PED|FAC|CAJA)-[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(value);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('orders-lookup-form');
             const input = document.getElementById('orders-phone-input');
@@ -1198,13 +1205,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
-                const lookup = input.value.trim();
-                if (!/^(PED|FAC)-[0-9]{14}-[0-9]{4}$/i.test(lookup)) {
+                const lookup = normalizePublicOrderReference(input.value);
+                if (!isPublicOrderReference(lookup)) {
                     status.textContent = 'Escribe el ID completo del pedido o factura, o escanea su QR. No se consulta por celular.';
                     panel.classList.remove('open');
                     return;
                 }
 
+                input.value = lookup;
                 status.textContent = '';
                 btn.disabled = true;
                 btn.textContent = 'Buscando...';
