@@ -1466,29 +1466,62 @@ function setProductBarcodeScanMode(enabled) {
     updateProductQrPreview();
 }
 
+function syncProductHierarchyFromMother(value) {
+    const motherId = normalizeBarcodeValue(value);
+    if (!motherId) return '';
+    const previousMother = getInputValue('prod-id-producto');
+    setMotherProductId(motherId);
+    const fields = [document.getElementById('prod-id'), ...document.querySelectorAll('#variants-container .var-id, #variants-container .ve-id')].filter(Boolean);
+    const used = new Set();
+    // Reserve existing suffixes before assigning numbers to legacy/custom references.
+    const numbers = fields.map(field => Number(/-V(\d+)$/i.exec(field.value)?.[1]) || 0);
+    const reserved = new Set(numbers.filter(number => number > 0));
+    fields.forEach((field, index) => {
+        let number = numbers[index];
+        if (!number || used.has(number)) { number = 1; while (used.has(number) || reserved.has(number)) number++; }
+        used.add(number);
+        const previousReference = field.value;
+        field.value = motherId + '-V' + String(number).padStart(2, '0');
+        delete field.dataset.scannedReference;
+        field.dispatchEvent(new Event('input', {bubbles:true}));
+        field.dispatchEvent(new Event('change', {bubbles:true}));
+        const card = field.closest('.admin-panel, .variant-edit-card');
+        const barcode = card?.querySelector('.var-barcode, .ve-barcode');
+        if (barcode) {
+            const generated = makeProductBarcode(motherId, field.value);
+            if (barcode.dataset.autoBarcode === '1' || !barcode.value || barcode.value === barcode.dataset.generatedBarcode || barcode.value === makeProductBarcode(previousMother, previousReference)) {
+                barcode.value = generated; barcode.dataset.autoBarcode = '1';
+            }
+            barcode.dataset.generatedBarcode = generated;
+        }
+    });
+    updateProductBarcodeField();
+    updateLivePreview();
+    return motherId;
+}
+
 function syncScannedCodeToChildReference(code, sourceInput = null) {
     const cleanCode = normalizeBarcodeValue(code);
     if (!cleanCode) return '';
-
-    let childInput = null;
     if (!sourceInput || sourceInput.id === 'prod-barcode') {
-        childInput = document.getElementById('prod-id');
+        // A physical code identifies the family; its children retain V01, V02, etc.
+        const input = document.getElementById('prod-barcode');
+        if (input) { input.value = cleanCode; input.dataset.autoBarcode = '0'; }
+        syncProductHierarchyFromMother(cleanCode);
+        if (input) { input.value = cleanCode; input.dataset.autoBarcode = '0'; }
+        updateProductQrPreview();
     } else {
+        // Scanning one particular variant changes only that variant's own reference.
         const scope = sourceInput.closest('.admin-panel, .variant-edit-card, .var-edit-expanded');
-        childInput = scope?.querySelector('.var-id, .ve-id') || null;
+        const childInput = scope?.querySelector('.var-id, .ve-id');
+        if (childInput) {
+            childInput.value = cleanCode; childInput.dataset.scannedReference = '1';
+            childInput.dispatchEvent(new Event('input', {bubbles:true}));
+            childInput.dispatchEvent(new Event('change', {bubbles:true}));
+        }
     }
-
-    if (childInput) {
-        childInput.value = cleanCode;
-        childInput.dataset.scannedReference = '1';
-        childInput.dispatchEvent(new Event('input', { bubbles: true }));
-        childInput.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    const hint = sourceInput?.id === 'prod-barcode'
-        ? document.getElementById('prod-barcode-hint')
-        : sourceInput?.closest('.admin-panel')?.querySelector('.var-barcode-hint');
-    if (hint) hint.textContent = 'Codigo detectado: la referencia hija se sincronizo automaticamente.';
+    const hint = sourceInput?.id === 'prod-barcode' ? document.getElementById('prod-barcode-hint') : sourceInput?.closest('.admin-panel')?.querySelector('.var-barcode-hint');
+    if (hint) hint.textContent = sourceInput?.id === 'prod-barcode' ? 'Código físico asignado al ID madre. Referencias y variantes sincronizadas.' : 'Código de esta variante sincronizado.';
     return cleanCode;
 }
 
@@ -1522,6 +1555,7 @@ function initProductBarcodeField() {
     barcodeInput?.addEventListener('input', () => {
         const scanModeEnabled = document.getElementById('prod-barcode-scan-mode')?.checked === true;
         barcodeInput.dataset.autoBarcode = scanModeEnabled && barcodeInput.value.trim() ? '0' : '1';
+        if (scanModeEnabled && barcodeInput.value.trim()) syncScannedCodeToChildReference(barcodeInput.value, barcodeInput);
         updateProductQrPreview();
     });
     document.getElementById('prod-barcode-scan-mode')?.addEventListener('change', event => {
@@ -2494,7 +2528,7 @@ function getNextVariantId(idProducto) {
         collect(product.idVariacion || product.ID || product['ID Variacion'] || product['ID Variación']);
     });
 
-    document.querySelectorAll('#variants-container .var-id').forEach(function (input) {
+    document.querySelectorAll('#variants-container .var-id, #variants-container .ve-id').forEach(function (input) {
         collect(input.value);
     });
 
@@ -3771,16 +3805,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateLivePreview(); // Actualización inicial
 
-    document.getElementById('prod-id-producto')?.addEventListener('change', () => {
-        const motherId = getInputValue('prod-id-producto');
-        setMotherProductId(motherId);
-        const childIdInput = document.getElementById('prod-id');
-        const currentChildId = getInputValue('prod-id');
-        const hasScannedReference = childIdInput?.dataset.scannedReference === '1';
-        if (!hasScannedReference && motherId && (!currentChildId || /^VAR-/i.test(currentChildId) || /-V01$/i.test(currentChildId))) {
-            setInputValue('prod-id', `${motherId}-V01`);
-        }
-        updateLivePreview();
+    for (const event of ['input', 'change']) document.getElementById('prod-id-producto')?.addEventListener(event, () => {
+        syncProductHierarchyFromMother(getInputValue('prod-id-producto'));
     });
 
     // --- LOGIN LOGIC ---
@@ -4096,7 +4122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const variantBarcodeHint = card.querySelector('.var-barcode-hint');
         const syncVariantBarcode = (force = false) => {
             if (!variantBarcodeInput) return;
-            const generated = makeProductBarcode(ids.idProducto, variantIdInput?.value || autoVariantId);
+            const generated = makeProductBarcode(getInputValue('prod-id-producto') || ids.idProducto, variantIdInput?.value || autoVariantId);
             const current = normalizeBarcodeValue(variantBarcodeInput.value);
             const previousGenerated = normalizeBarcodeValue(variantBarcodeInput.dataset.generatedBarcode || '');
             variantBarcodeInput.dataset.generatedBarcode = generated;
@@ -4112,7 +4138,7 @@ document.addEventListener('DOMContentLoaded', () => {
             variantBarcodePanel?.classList.toggle('is-visible', scanModeEnabled);
             if (!variantBarcodeInput) return;
             if (scanModeEnabled) {
-                const generated = normalizeBarcodeValue(variantBarcodeInput.dataset.generatedBarcode || makeProductBarcode(ids.idProducto, variantIdInput?.value || autoVariantId));
+                const generated = normalizeBarcodeValue(variantBarcodeInput.dataset.generatedBarcode || makeProductBarcode(getInputValue('prod-id-producto') || ids.idProducto, variantIdInput?.value || autoVariantId));
                 const current = normalizeBarcodeValue(variantBarcodeInput.value);
                 if (!current || current === generated || variantBarcodeInput.dataset.autoBarcode === '1') {
                     variantBarcodeInput.value = '';
@@ -7049,7 +7075,10 @@ function initInventoryPdfExport() {
 
 function buildRegisteredVariantEditPayload(row, idProducto) {
     const originalId = row.dataset.originalVarid;
-    const original = inventario.find(item => getInventoryVariationId(item) === originalId && getInventoryMotherId(item) === idProducto);
+    const originalMainId = document.getElementById('product-form')?.dataset.originalVariationId;
+    const originalMain = inventario.find(item => getInventoryVariationId(item) === originalMainId);
+    const originalMotherId = originalMain ? getInventoryMotherId(originalMain) : idProducto;
+    const original = inventario.find(item => getInventoryVariationId(item) === originalId && getInventoryMotherId(item) === originalMotherId);
     if (!original) throw new Error('No se encontró la variante ' + originalId + '. Actualiza el inventario.');
     const value = selector => row.querySelector(selector)?.value?.trim() ?? '';
     const id = value('.ve-id');
