@@ -10,7 +10,7 @@ async function adminAccessJson(api, nativeFetch, options = {}) {
   throw error;
  } finally { clearTimeout(timeout); }
 }
-// Credentials stay in memory and are submitted only to the private server over HTTPS.
+// Access is memory-only. Leaving the page requires a fresh sign-in.
 async function initializeAdminPasswordAccess(api, nativeFetch, form, onAccess) {
     form.parentElement.querySelector('.admin-secure-access')?.remove();
     const area = document.createElement('div');
@@ -42,7 +42,7 @@ async function initializeAdminPasswordAccess(api, nativeFetch, form, onAccess) {
             area.querySelector('form').addEventListener('submit', async event => {
                 event.preventDefault();const login = event.currentTarget, button = login.querySelector('button'), message = login.querySelector('[role=status]');
                 button.disabled = true;message.textContent = 'Verificando acceso…';
-                try {const auth = await request({action:'adminpasswordlogin', usuario:login.elements.usuario.value, password:login.elements.password.value, codigo:login.elements.codigo.value});login.reset();onAccess(auth.token);}
+                try {const auth = await request({action:'adminpasswordlogin', usuario:login.elements.usuario.value, password:login.elements.password.value, codigo:login.elements.codigo.value});login.reset();onAccess(auth.token,{email:auth.email,expires:Date.now()+30*60*1000});}
                 catch(error){message.textContent=error.message;login.elements.password.value='';login.elements.codigo.value='';}
                 finally{button.disabled=false;}
             });
@@ -60,8 +60,8 @@ async function initializeAdminPasswordAccess(api, nativeFetch, form, onAccess) {
             verifyingAccount = true;
             message.textContent = 'Verificando cuenta…';
             try {
-                await request({action:'adminsession',adminCredential:result.credential});
-                onAccess(result.credential);
+                const identity=await request({action:'adminsession',adminCredential:result.credential});
+                onAccess(result.credential,identity);
             }catch(error){message.textContent=error.message;verifyingAccount=false;}
         }});
         window.google.accounts.id.renderButton(area.querySelector('#admin-bootstrap-google'),{type:'standard',theme:'outline',size:'large',text:'continue_with',locale:'es'});

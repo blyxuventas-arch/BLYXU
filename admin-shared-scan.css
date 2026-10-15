@@ -12,4 +12,6 @@
 .shared-scan-body .form-control{width:100%;min-width:0;box-sizing:border-box;margin-top:6px}
 .shared-scan-manual{margin-top:14px;font-size:11px}.shared-scan-manual summary{cursor:pointer}.shared-scan-manual button{margin-top:8px}
 .shared-scan-received{outline:2px solid #62e5a4!important;box-shadow:0 0 20px #62e5a433!important}
+#product-form[data-shared-role="phone"]>:not(.shared-scan-panel){display:none!important}
+[data-share-phone-reference]{padding:12px;border:1px solid #78549c65;border-radius:10px;background:#ffffff06;overflow-wrap:anywhere;white-space:pre-line}
 @media(max-width:600px){.shared-scan-pc{grid-template-columns:1fr}.shared-scan-pc img{margin:auto}.shared-scan-controls button{flex-basis:100%}.shared-scan-body{padding:0 12px 14px}}

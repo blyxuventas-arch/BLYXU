@@ -1,11 +1,12 @@
 const GOOGLE_SHEET_API = window.BLYXU_API_URL || 'https://script.google.com/macros/s/AKfycbyMytX5vDXXvNxywckgVmGObGfjLLJEo5iFkJdfqOoDdomVmJ--tnPsOPcmXVSyP9BzuQ/exec';
 
-// Las credenciales administrativas se mantienen en memoria y se envían solo al servidor.
+// La credencial temporal se valida en el servidor; el borrador permanece en esta pestaña.
 const adminNativeFetch = window.fetch.bind(window);
 let secureAdminCredential = '';
 let secureAdminExpiryTimer;
-function revokeAdminSession() {
-    window.BlyxuSharedScan?.shutdown();
+function revokeAdminSession({preserveWork=false}={}) {
+    if(preserveWork){window.BlyxuAdminWorkSession?.suspend();window.BlyxuSharedScan?.suspend();}
+    else{window.BlyxuAdminWorkSession?.clear();window.BlyxuSharedScan?.shutdown();}
     const token=secureAdminCredential;secureAdminCredential='';clearTimeout(secureAdminExpiryTimer);
     if(token.startsWith('BLYXU-A3-'))adminNativeFetch(GOOGLE_SHEET_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'adminlogout',adminCredential:token}),keepalive:true}).catch(()=>{});
 }
@@ -1977,6 +1978,7 @@ async function startHtml5BarcodeCamera(reader, video, status, handleDetectedCode
 }
 
 async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId = '', scannerMode = 'auto', continuous = false, getContext = () => '', preserveRawValue = false } = {}) {
+    ({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue}=window.BlyxuSharedScan?.scannerOptions({targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue})||{targetInputId,onDetected,preferredDeviceId,scannerMode,continuous,getContext,preserveRawValue});
     const modal = buildBarcodeScannerModal();
     const scannerSession = barcodeScannerSession;
     const video = modal.querySelector('#barcode-scanner-video');
@@ -1996,6 +1998,7 @@ async function openBarcodeScanner({ targetInputId, onDetected, preferredDeviceId
         if(scannerSession!==barcodeScannerSession)return;
         const cleanCode = preserveRawValue ? String(code || '').trim().slice(0, 2048) : normalizeBarcodeValue(code);
         if (!cleanCode) return;
+        window.BlyxuAdminWorkSession?.activity();
         if(continuous){
             if(captureBusy)return;captureBusy=true;
             const capturedContext=getContext();
@@ -2174,7 +2177,37 @@ window.scanBarcodeToElement = function (elementId) {
     });
 };
 
-window.BlyxuSharedScanBridge={barcodeMode:()=>{const field=document.getElementById('prod-barcode'),value=field?.value;setProductBarcodeScanMode(true);if(field)field.value=value||'';},closeScanner:closeBarcodeScanner};
+window.BlyxuSharedScanBridge={barcodeMode:()=>{const field=document.getElementById('prod-barcode'),value=field?.value;setProductBarcodeScanMode(true);if(field)field.value=value||'';},syncReference:syncScannedCodeToChildReference,closeScanner:closeBarcodeScanner,captureDraft:captureSharedProductDraft,restoreDraft:restoreSharedProductDraft};
+
+function captureSharedProductDraft(){
+    const form=document.getElementById('product-form');if(!form)return null;
+    const value=field=>({value:field.value,checked:field.checked,auto:field.dataset.autoBarcode,scanned:field.dataset.scannedReference});
+    const fields=Array.from(form.querySelectorAll('input[id],select[id],textarea[id]')).filter(field=>field.id.startsWith('prod-')&&field.type!=='file'&&!field.closest('#variants-container')).map(field=>({id:field.id,...value(field)}));
+    const variants=Array.from(document.querySelectorAll('#variants-container .admin-panel,#variants-container .variant-edit-card')).map(card=>({
+        existing:card.classList.contains('variant-edit-card'),originalId:card.querySelector('[data-original-varid]')?.dataset.originalVarid||'',barcodeId:card.querySelector('.ve-barcode,.var-barcode')?.id,
+        fields:Array.from(card.querySelectorAll('input,select,textarea')).filter(field=>field.type!=='file').flatMap(field=>{const key=Array.from(field.classList).find(name=>/^(ve-|var-)/.test(name));return key?[{key,...value(field)}]:[];})
+    }));
+    return {fields,variants,originalId:form.dataset.originalVariationId||'',pendingKey:form.dataset.pendingKey||''};
+}
+async function restoreSharedProductDraft(draft){
+    if(!draft?.fields)return {};
+    if(draft.originalId){const index=inventario.findIndex(product=>getInventoryVariationId(product)===draft.originalId);if(index<0)throw new Error('Actualiza el inventario para retomar el producto en edición.');editarProducto(index);}
+    else{resetProductForm();switchDashboardView('products','Gestión de Productos');}
+    const apply=(field,data)=>{if(!field||field.type==='file')return;field.value=String(data.value??'');if(field.type==='checkbox'||field.type==='radio')field.checked=data.checked===true;if(data.auto!==undefined)field.dataset.autoBarcode=data.auto;if(data.scanned!==undefined)field.dataset.scannedReference=data.scanned;};
+    for(const data of draft.fields){if(/^prod-[a-z0-9-]+$/.test(data.id))apply(document.getElementById(data.id),data);}
+    const map={};
+    for(const variant of draft.variants||[]){
+        let card;
+        if(variant.existing)card=Array.from(document.querySelectorAll('#variants-container .variant-edit-card')).find(node=>node.querySelector('[data-original-varid]')?.dataset.originalVarid===variant.originalId);
+        else{document.getElementById('btn-add-manual-variant')?.click();card=document.querySelector('#variants-container .admin-panel:last-child');await new Promise(resolve=>setTimeout(resolve,2));}
+        if(!card)throw new Error('No se pudo retomar una variante. Revisa el formulario antes de guardar.');
+        for(const data of variant.fields||[]){if(/^(ve-|var-)[a-z0-9-]+$/.test(data.key))apply(card.querySelector('.'+data.key),data);}
+        const barcode=card.querySelector('.ve-barcode,.var-barcode');if(barcode&&variant.barcodeId)map[variant.barcodeId]=barcode.id;
+    }
+    const form=document.getElementById('product-form');if(draft.pendingKey)form.dataset.pendingKey=draft.pendingKey;
+    updateProductMeasurementFields();renderProductGalleryManager();updateLivePreview();updateProductQrPreview();
+    return map;
+}
 
 function getSubmittedStockValue(payload) {
     const candidates = [
@@ -3798,16 +3831,28 @@ document.addEventListener('DOMContentLoaded', () => {
     syncAdminVaultState();
 
 
-    if (loginForm) initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,credential=>{
+    function onAdminAccess(credential,identity={}){
         secureAdminCredential=credential;siteConfigPromise=null;
+        const activeSession=window.BlyxuAdminWorkSession?.start({credential,identity,api:GOOGLE_SHEET_API,onLock:message=>{
+            revokeAdminSession({preserveWork:true});
+            loginScreen.style.display='';mainContent.style.display='none';
+            showToast(message,'warning');
+            initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,onAdminAccess);
+        }});
+        if(activeSession===false)return;
         window.BlyxuSharedScan?.initialize({getCredential:()=>secureAdminCredential,fetcher:adminNativeFetch,openScanner:openBarcodeScanner});
         window.initializeBlyxuDriveConnection?.(()=>secureAdminCredential);
         window.refreshOrderNotifications?.();
         initCustomerAccessNotifications();
-        clearTimeout(secureAdminExpiryTimer);secureAdminExpiryTimer=setTimeout(logoutAdminSecurely,30*60*1000);
         loginScreen.style.display='none';mainContent.style.display='';initAdminHeavyFeatures();renderAdminDashboard();
-        Promise.allSettled([cargarInventario(),cargarPedidos()]).then(()=>renderAdminDashboard());
-    });
+        Promise.allSettled([cargarInventario(),cargarPedidos()]).then(async()=>{
+            renderAdminDashboard();const resumed=await window.BlyxuSharedScan?.resume();
+            const draft=window.BlyxuAdminWorkSession?.draft(identity.email);
+            if(!resumed&&draft)await restoreSharedProductDraft(draft);
+            if(draft)window.BlyxuAdminWorkSession?.clearDraft();
+        }).catch(error=>showToast('Tu borrador se conservó. '+error.message,'warning'));
+    }
+    if(loginForm)initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,onAdminAccess);
     // -------------------
 
     document.getElementById('product-form').addEventListener('submit', async (e) => {
@@ -10476,13 +10521,14 @@ window.activeOrdersAdminTab = 'quick-sale';
 const ADMIN_ORDERS_CACHE_KEY = 'blyxu_admin_orders_invoices_cache_v2';
 try { localStorage.removeItem(ADMIN_ORDERS_CACHE_KEY); } catch (_) {}
 window.addEventListener('pagehide', () => {
-    revokeAdminSession();
+    revokeAdminSession({preserveWork:true});
     sessionStorage.removeItem(ADMIN_ORDERS_CACHE_KEY);
     const screen = document.getElementById('admin-login-screen');
     const main = document.getElementById('admin-main-content');
     if (screen) screen.style.display = '';
     if (main) main.style.display = 'none';
 });
+window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
 const ADMIN_ORDERS_CACHE_TTL = 45 * 1000;
 let adminOrdersLoadPromise = null;
 
