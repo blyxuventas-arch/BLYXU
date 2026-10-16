@@ -14,14 +14,24 @@ async function request(data){
 }
 async function load(){
     if(loading)return loading;
+    const retry=$('retail-pricing-retry');if(retry)retry.disabled=true;
     loading=(async()=>{try{
-        const state=await request({operation:'read'});percent=parsePercent(state.percent);revision=state.revision;
+        const state=await request({operation:'read'});
+        if(!Object.prototype.hasOwnProperty.call(state,'percent')||state.revision===undefined)throw new Error('Debes enviar resource: productos, pedidos, clientes o facturas.');
+        percent=parsePercent(state.percent);revision=state.revision;
         $('retail-pricing-percent').value=percent??'';$('retail-pricing-percent').disabled=false;$('retail-pricing-save').disabled=false;
+        if(retry)retry.hidden=true;
         notify(percent===null?'Todavía no hay porcentaje general. Tus precios actuales se conservan.':`Porcentaje guardado: ${percent} %. Los precios manuales se conservan.`);
         if(!$('product-form')?.dataset.originalVariationId&&!$('prod-precio').value&&percent!==null)$('prod-retail-mode').value='percentage';
         bindMain();refreshControls();decorateInventory();
-    }catch(error){notify(error.message+' Vuelve a entrar a Inventario para reintentar.');}
-    finally{loading=null;}})();return loading;
+    }catch(error){
+        $('retail-pricing-percent').disabled=true;$('retail-pricing-save').disabled=true;
+        if(retry)retry.hidden=false;
+        notify(/debes enviar resource|resource: productos, pedidos, clientes o facturas/i.test(error.message)
+            ? 'Servidor pendiente de actualizar: la función blyxu-api de Supabase todavía no admite el porcentaje minorista. Actualiza esa función con el código entregado y pulsa Reintentar conexión. Publicar solo los archivos de la página no activa este cálculo.'
+            : error.message+' Pulsa Reintentar conexión para volver a comprobarlo.');
+    }
+    finally{loading=null;if(retry)retry.disabled=false;}})();return loading;
 }
 function makeSelect(mode){const select=document.createElement('select');select.className='form-control retail-mode';select.setAttribute('aria-label','Cálculo del precio minorista');select.innerHTML='<option value="percentage">Usar porcentaje general</option><option value="manual">Precio manual</option>';select.value=mode;return select;}
 function bind(container,price,wholesale,select){
@@ -93,6 +103,7 @@ function decorateInventory(){
 window.BlyxuRetailAdmin={load,edit,reset,preparePayload,decorateInventory,refreshControls};
 document.addEventListener('DOMContentLoaded',()=>{
     bindMain();bindVariants();
+    $('retail-pricing-retry')?.addEventListener('click',()=>load());
     new MutationObserver(bindVariants).observe($('variants-container'),{childList:true,subtree:true});
     $('retail-pricing-form').addEventListener('submit',async event=>{
         event.preventDefault();const button=$('retail-pricing-save');button.disabled=true;

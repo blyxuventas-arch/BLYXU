@@ -2884,6 +2884,8 @@ function renderProducts(products, options = {}) {
         const priceInfo = getProductCardPriceInfo(p, mode);
         const price = priceInfo.price;
         const showPrices = shouldShowProductPrices(mode) && price > 0;
+        const cardFlow = getCustomerFlowCopy(mode, [{mode,price}]);
+        const flowKind = cardFlow.wholesale ? 'order' : cardFlow.quote ? 'quotation' : 'purchase';
         const oldPrice = priceInfo.oldPrice;
         const rawImg = getCatalogProductImageSource(p);
         const img = normalizeImageUrl(rawImg, 'card');
@@ -2910,30 +2912,35 @@ function renderProducts(products, options = {}) {
         const fullImageAttr = img && previewImg && img !== previewImg ? ` data-full-src="${escapeHtml(img)}"` : '';
 
         return `
-        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}"${detailPrepAttrs} tabindex="0">
+        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}" data-order-flow="${flowKind}"${detailPrepAttrs} tabindex="0">
             <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
                 <button type="button" class="product-card-favorite" style="position:absolute;top:12px;right:12px;z-index:3;border-radius:50%;width:36px;height:36px;background:#17171c;color:#fff;border:1px solid #666;cursor:pointer" aria-label="Guardar en favoritos" onclick="event.stopPropagation();saveCustomerFavorite(${productIndex},this)">♡</button>
                 ${img ? `<img ${imageSourceAttrs}${fullImageAttr} data-catalog-priority="${imagePriority}" alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onload="handleCatalogImageLoad(this)" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
-                ${stock > 0 ? `<button class="product-card-quick" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" title="${getCustomerFlowCopy(mode, [{mode,price}]).add}" aria-label="${getCustomerFlowCopy(mode, [{mode,price}]).add}">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
-                </button>` : ''}
+
             </div>
             <div class="product-card-info" onclick="openProductDetail(${productIndex}, '${mode}')">
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
                 ${colors.length ? `<div class="product-card-colors" aria-label="Colores disponibles">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" aria-hidden="true"></span>`).join('')}</div>` : ''}
+                <span class="product-card-flow-label">${cardFlow.wholesale ? 'Pedido mayorista' : cardFlow.quote ? 'Cotización minorista' : 'Compra en línea'}</span>
                 ${showPrices ? `<div class="product-card-price ${oldPrice > price ? 'discount-active' : ''}">
                     <span class="product-price-icon" aria-hidden="true">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg>
                     </span>
-                    <span class="product-price-current">${formatMoney(price)}</span>
+                    <span class="product-price-current">${formatMoney(price)}</span>${cardFlow.quote ? '<span class="product-price-estimate">· estimado</span>' : ''}
                     ${oldPrice > price ? `<span class="old">${formatMoney(oldPrice)}</span><span class="product-price-discount">-${priceInfo.discountPercentage}%</span>` : ''}
                 </div>` : stock > 0 ? `<button class="product-card-price price-hidden price-consult-btn" type="button" onclick="event.stopPropagation(); consultProductByWhatsApp(allProducts[${productIndex}], '${detailUrl}')">Precio por consultar</button>` :
                 `<button class="product-card-price price-hidden price-consult-btn" type="button" disabled>Agotado por ahora</button>`}
+            </div>
+            <div class="product-card-actions">
+                <button type="button" class="product-card-add" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" ${stock <= 0 ? 'disabled' : ''} aria-label="${escapeHtml(stock > 0 ? cardFlow.add + ': ' + name : 'Agotado: ' + name)}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+                    <span>${stock > 0 ? cardFlow.add : 'Agotado por ahora'}</span>
+                </button>
             </div>
         </div>`;
     }
@@ -3230,6 +3237,7 @@ function addToCart(idx, sourceButton, mode = activeCatalogMode) {
     const nextItem = getCartItemFromProduct(p, mode, 1);
     const idVariacion = nextItem.idVariacion;
     const stock = nextItem.stock;
+    if(stock <= 0)return;
     const priceVisible = shouldShowProductPrices(mode);
     const existing = cart.find(c => (c.idVariacion || c.name) === idVariacion && c.mode === mode);
     if (existing) {
@@ -3253,8 +3261,14 @@ function addToCart(idx, sourceButton, mode = activeCatalogMode) {
     }
     
     // Button animation
-    const btn = sourceButton || document.querySelector(`.product-card[data-index="${idx}"] .product-card-quick`);
-    if (btn) { btn.style.background = '#22c55e'; setTimeout(() => btn.style.background = '', 600); }
+    const btn = sourceButton || document.querySelector(`.product-card[data-index="${idx}"] .product-card-add`);
+    if (btn) {
+        const label=btn.querySelector('span');
+        clearTimeout(btn.__cartFeedbackTimer);
+        if(label){if(!btn.dataset.addLabel)btn.dataset.addLabel=label.textContent;label.textContent='Añadido';}
+        btn.classList.add('is-added');
+        btn.__cartFeedbackTimer=setTimeout(()=>{btn.classList.remove('is-added');if(label)label.textContent=btn.dataset.addLabel;},1400);
+    }
 }
 
 function removeFromCart(idx) {
