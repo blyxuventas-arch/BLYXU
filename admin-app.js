@@ -6235,7 +6235,7 @@ function showProductQrTicket(ticket) {
     setInventoryQrText('inventory-qr-ref', ticket.reference);
     setInventoryQrText('inventory-qr-name', ticket.name);
     setInventoryQrText('inventory-qr-category', ticket.category || '-');
-    setInventoryQrText('inventory-qr-sku', ticket.sku || ticket.variationId || '-');
+    setInventoryQrText('inventory-qr-sku', ticket.motherId || ticket.reference || '-');
     setInventoryQrText('inventory-qr-stock', `${ticket.stock} und.`);
     setInventoryQrText('inventory-qr-price', formatAdminMoney(ticket.price));
     setInventoryQrText('inventory-qr-pm', ticket.wholesaleCode ? `PM: ${ticket.wholesaleCode}` : 'PM: -');
@@ -6321,7 +6321,7 @@ window.openInventoryQrTicket = function(key) {
     setInventoryQrText('inventory-qr-ref', ticket.reference);
     setInventoryQrText('inventory-qr-name', ticket.name);
     setInventoryQrText('inventory-qr-category', ticket.category || '-');
-    setInventoryQrText('inventory-qr-sku', ticket.sku || ticket.variationId || '-');
+    setInventoryQrText('inventory-qr-sku', ticket.motherId || ticket.reference || '-');
     setInventoryQrText('inventory-qr-stock', `${ticket.stock} und.`);
     setInventoryQrText('inventory-qr-price', formatAdminMoney(ticket.price));
     setInventoryQrText('inventory-qr-pm', ticket.wholesaleCode ? `PM: ${ticket.wholesaleCode}` : 'PM: -');
@@ -6355,7 +6355,8 @@ window.copyInventoryQrReference = function() {
 function buildInventoryQrLabel(ticket, options = {}) {
     const brandLogo = document.querySelector('.sidebar-logo img');
     const logo = brandLogo?.src || new URL('Logo2-nav.png', window.location.href).href;
-    const id = ticket.variationId || ticket.sku || ticket.motherId || ticket.reference;
+    const id = ticket.motherId || ticket.reference || ticket.sku || ticket.variationId;
+    const reference = normalizeBarcodeValue(ticket.motherId || ticket.reference);
     const compact = Number(options.width) === 40 && Number(options.height) === 15;
     const width = compact ? 40 : 50;
     const height = compact ? 15 : 30;
@@ -6363,7 +6364,7 @@ function buildInventoryQrLabel(ticket, options = {}) {
     const logoMarkup = `<img class="iq-logo" src="${escapeHtml(logo)}" alt="${escapeHtml(brandLogo?.alt || 'BLYXU')}">`;
     return `<section class="iq-label${compact ? ' iq-compact' : ''}" data-width="${width}" data-height="${height}" style="--iq-width:${width}mm;--iq-height:${height}mm;--iq-scale:${scale}" aria-label="Etiqueta de producto ${width} por ${height} milímetros">
         ${compact ? logoMarkup : ''}
-        <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(ticket.reference, 400, compact ? 'M' : 'H'))}" alt="QR ${escapeHtml(ticket.reference)}">
+        <img class="iq-qr" src="${escapeHtml(getInventoryQrImageUrl(reference, 400, compact ? 'M' : 'H'))}" alt="QR ${escapeHtml(reference)}">
         <div class="iq-copy">
             ${compact ? '' : logoMarkup}
             <b class="iq-id">ID: ${escapeHtml(id)}</b>
@@ -11255,6 +11256,7 @@ function getQuickSaleProductMeta(product) {
 
 function getQuickSaleSearchText(product) {
     return normalizeSearchText([
+        getInventoryMotherId(product),
         getInvoiceProductName(product),
         getInvoiceProductSku(product),
         getInvoiceProductId(product),
@@ -11344,6 +11346,18 @@ async function handleQuickSaleScannedCode(rawCode, addToSale = true) {
         return false;
     }
 
+    // A family label opens its variants; only a specific variant code adds immediately.
+    const motherMatches = inventario.filter(item => !isBannerInventoryProduct(item) && normalizeBarcodeValue(getInventoryMotherId(item)) === code);
+    if (motherMatches.length) {
+        window.quickSaleCategory = 'all';
+        input.value = code;
+        window.quickSaleSelectedKey = '';
+        renderQuickSaleResults();
+        renderQuickSaleDetail(null);
+        syncQuickSaleMobilePane('catalog');
+        showToast('Referencia encontrada. Elige la variante y cantidad para añadirla.', 'success');
+        return true;
+    }
     const key = getInventoryProductKey(product);
     window.quickSaleCategory = 'all';
     input.value = getInventoryVariationId(product) || getInvoiceProductSku(product) || code;
