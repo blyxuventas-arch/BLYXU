@@ -13,3 +13,10 @@
 @media(prefers-reduced-motion:reduce){.entry-feature-toggle input::before{transition:none}}
 #product-form.entry-create-mode .admin-btn:not(#btn-save){background:#241a30!important;color:#ded0eb!important;border:1px solid #604574!important;box-shadow:none!important}
 #product-form.entry-create-mode .main-product-fold .variant-card>.config-card-heading{display:none}
+/* Editors live inside the narrow form column even on a wide desktop. */
+.variant-edit-card{container-type:inline-size;min-width:0;max-width:100%}
+.variant-edit-panel,.variant-edit-section,.variant-edit-grid,.variant-edit-grid>*{min-width:0;box-sizing:border-box}
+.variant-edit-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.variant-edit-panel .entry-feature-body{grid-template-columns:repeat(2,minmax(0,1fr))}
+@container(max-width:780px){.variant-edit-summary{grid-template-columns:48px minmax(0,1fr) auto!important}.variant-edit-thumb{width:48px;height:48px}.variant-edit-summary>div:nth-child(n+3){display:none}.variant-edit-summary .variant-edit-toggle{max-width:90px}.variant-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@container(max-width:450px){.variant-edit-grid,.variant-edit-grid.four,.variant-edit-panel .entry-feature-body{grid-template-columns:minmax(0,1fr)!important}.variant-edit-panel{padding:10px}.variant-edit-summary{padding:10px;gap:8px}}

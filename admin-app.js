@@ -7235,7 +7235,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     var barcodeInputId = 've-barcode-' + cleanInventoryId(vid);
     var html = '';
 
-    html += '<article class="variant-edit-card" data-varid="' + safeVid + '">';
+    html += '<article class="variant-edit-card" data-variant-photo="' + escapeHtml(v['Mostrar Foto Variante'] || 'NO') + '" data-varid="' + safeVid + '">';
     html += '<div class="variant-edit-summary">';
     html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="handleInventoryImageError(this)"></div>';
     html += '<div><span>ID variante</span><strong>' + escapeHtml(vid) + '</strong></div>';
@@ -7352,7 +7352,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
     container.innerHTML = buildVariantEditorCardsHtml(variantes, idProducto);
     initColorPickers(container);
-    container.querySelectorAll('.variant-edit-card').forEach(setupVariantImageMode);
+    container.querySelectorAll('.variant-edit-card').forEach(card=>{setupVariantImageMode(card);window.BlyxuProductEntryUI?.decorateExisting(card);});
     return;
 
     tableHtml += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:11px;">';
@@ -7621,6 +7621,7 @@ function editarProducto(index) {
     setInputValue('prod-fecha-creacion', p.Fecha_Creacion || p['Fecha de Creacion'] || '');
     document.querySelector('#product-form .main-product-fold')?.setAttribute('open', '');
     setProductFormMode(true);
+    window.BlyxuProductEntryUI?.loadProduct(p);
     updateLivePreview();
 
     var variantBadge = document.getElementById('variant-editing-badge');

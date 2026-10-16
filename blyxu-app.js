@@ -456,8 +456,10 @@ function preloadCatalogImageUrl(src, priority = 'auto') {
 function primeCatalogImages(products, grid) {
     if (!Array.isArray(products) || !products.length || typeof Image === 'undefined') return;
     const columns = getCatalogGridColumnCount(grid);
-    const highPriorityCount = Math.max(CATALOG_BATCH_SIZE, columns * 2);
-    products.slice(0, CATALOG_IMAGE_PRELOAD_LIMIT).forEach((product, index) => {
+    const mobile = window.innerWidth <= 640;
+    const highPriorityCount = columns;
+    const preloadLimit = mobile ? columns * 2 : CATALOG_IMAGE_PRELOAD_LIMIT;
+    products.slice(0, preloadLimit).forEach((product, index) => {
         const source = getCatalogProductImageSource(product);
         const preview = getCatalogPreviewImageUrl(source);
         if (preview) preloadCatalogImageUrl(preview, index < highPriorityCount ? 'high' : 'auto');
@@ -700,8 +702,12 @@ function getImageTargetWidth(kindOrWidth = 'default') {
     if (key === 'banner' && typeof window !== 'undefined' && window.innerWidth >= 900) return 1400;
     if (key === 'detail' && typeof window !== 'undefined') return window.innerWidth <= 640 ? 640 : 800;
     if (key === 'card' && typeof window !== 'undefined') {
-        const baseWidth = window.innerWidth <= 640 ? 320 : 360;
-        return Math.min(640, Math.round(baseWidth * Math.min(window.devicePixelRatio || 1, 2)));
+        if(window.innerWidth <= 640) {
+            const slow = navigator.connection?.saveData || /(^|-)2g$/.test(navigator.connection?.effectiveType || '');
+            const slot = Math.max(140,Math.ceil((window.innerWidth-40)/2));
+            return Math.min(slow?240:400,Math.round(slot*Math.min(window.devicePixelRatio||1,slow?1:1.5)));
+        }
+        return Math.min(640,Math.round(360*Math.min(window.devicePixelRatio||1,2)));
     }
     if (key === 'spotlight' && typeof window !== 'undefined' && window.innerWidth <= 640) return 320;
     return base;
@@ -2728,6 +2734,8 @@ function getProductMeasurementData(product) {
         });
     }
 
+    const plainMeasure = sizeText.match(/^([\d.,]+)\s*(cm|ml|m)$/i);
+    if (plainMeasure && ![width,length,depth,radius,capacity].some(Boolean)) {width=plainMeasure[1];unit=plainMeasure[2].toLowerCase();}
     if (!textileSize && kind === 'textil') textileSize = sizeText;
     if (!kind && textileSize) kind = 'textil';
     if ((!kind || kind === 'medidas') && (unit === 'ml' || capacity)) kind = 'liquido';
@@ -2751,7 +2759,7 @@ function hasPhysicalProductMeasurements(product) {
         || (data.kind === 'liquido' && (data.capacity || data.width));
 }
 
-function getProductMeasurementMarkup(product) {
+function getProductMeasurementMarkup(product, variants = []) {
     const data = getProductMeasurementData(product);
 
     if (data.kind === 'textil' && data.textileSize) {
@@ -2777,14 +2785,17 @@ function getProductMeasurementMarkup(product) {
             { label: 'Largo', value: data.length },
             { label: 'Fondo', value: data.depth }
         ].filter(item => item.value);
-    const maxDimension = Math.max(30, ...dimensionItems.map(item => parseCatalogAmount(item.value)), 1);
+    const number = value => Math.max(0,parseFloat(String(value || '').replace(',','.')) || 0);
+    const factor = unit => unit === 'm' ? 100 : 1;
+    const comparable = variants.map(getProductMeasurementData).filter(item => item.kind === data.kind && (data.kind === 'liquido' || item.unit === data.unit || ['cm','m'].includes(item.unit) && ['cm','m'].includes(data.unit)));
+    const maxDimension = Math.max(0.001,...dimensionItems.map(item=>number(item.value)),...comparable.flatMap(item=>(data.kind==='liquido'?[item.capacity||item.width]:[item.width,item.length,item.depth,item.radius]).map(value=>number(value)*factor(item.unit)/factor(data.unit))));
 
     return `
         <div class="product-card-measure product-card-specs" aria-label="Medidas del producto">
             <div class="product-card-specs-title">Medidas</div>
             ${dimensionItems.map(item => {
-                const amount = parseCatalogAmount(item.value);
-                const width = Math.max(14, Math.min(100, Math.round((amount / maxDimension) * 100)));
+                const amount = number(item.value);
+                const width = Math.max(0, Math.min(100, Math.round((amount / maxDimension) * 100)));
                 return `
                     <div class="product-card-spec-row">
                         <span class="product-card-spec-label">${escapeHtml(item.label)}</span>
@@ -2872,7 +2883,7 @@ function renderProducts(products, options = {}) {
 
     grid.innerHTML = '';
     let rendered = 0;
-    const immediateImageCount = initialBatchSize;
+    const immediateImageCount = Math.min(initialBatchSize,getCatalogGridColumnCount(grid)*2);
     const highPriorityImageCount = Math.min(initialBatchSize, getCatalogGridColumnCount(grid));
     const shouldPrioritizeCatalogImages = mode === 'wholesale'
         || gridId === 'wholesale-products-grid'
@@ -2925,8 +2936,7 @@ function renderProducts(products, options = {}) {
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
-                ${colors.length ? `<div class="product-card-colors" aria-label="Colores disponibles">${colors.map(c => `<span class="color-dot" style="background:${getColorHex(c)}" aria-hidden="true"></span>`).join('')}</div>` : ''}
-                <span class="product-card-flow-label">${cardFlow.wholesale ? 'Pedido mayorista' : cardFlow.quote ? 'Cotización minorista' : 'Compra en línea'}</span>
+                ${cardFlow.quote ? '' : `<span class="product-card-flow-label">${cardFlow.wholesale ? 'Pedido mayorista' : 'Compra en línea'}</span>`}
                 ${showPrices ? `<div class="product-card-price ${oldPrice > price ? 'discount-active' : ''}">
                     <span class="product-price-icon" aria-hidden="true">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 11h18"></path></svg>
