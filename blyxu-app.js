@@ -1312,7 +1312,7 @@ function getProductImageSet(product, imageSize = 'default') {
         product.Imagen,
         product.imagen,
         product.Foto,
-        ...(Array.isArray(product.Galeria) ? product.Galeria : [])
+        ...parseGallery(product.Galeria || product['Galería JSON'] || product['Galeria JSON'] || product.galeria || [])
     ]
         .map(src => normalizeImageUrl(src, imageSize))
         .filter(Boolean);

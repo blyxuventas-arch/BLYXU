@@ -1007,7 +1007,13 @@
     <link rel="stylesheet" href="product-detail-minimal.css?v=delicate-detail-20261008">
     <link rel="stylesheet" href="catalog-minimal-dark.css?v=catalog-actions-20261016">
     <link rel="stylesheet" href="storefront-refinement.css?v=nav-fixed-position-20261007">
-</head>
+<style>
+.product-detail-luxury .detail-variant-chip.text-only{width:auto!important;min-width:85px;max-width:100%!important;min-height:42px;padding:10px 14px!important;white-space:normal!important;overflow-wrap:anywhere;line-height:1.4;font-size:12px}
+.product-detail-luxury .detail-variant-list:has(.text-only){display:flex!important;flex-wrap:wrap;gap:8px}
+.product-detail-luxury .gallery-thumb{flex-shrink:0;width:64px;height:64px;padding:3px}
+.product-detail-luxury #detail-thumbnails{gap:8px;max-height:520px;overflow:auto}
+@media(max-width:640px){.product-detail-luxury #detail-thumbnails{flex-direction:row!important;max-height:none;overflow-x:auto}.product-detail-luxury .detail-variant-chip.text-only{font-size:11px;min-width:74px;min-height:42px}}
+</style></head>
 <body class="dark-mode product-detail-page">
 
     <div class="bg-animation"></div>
@@ -1251,7 +1257,8 @@
         </div>
     </div>
 
-    <script src="blyxu-app.js?v=catalog-actions-20261016" defer></script>
+    <script src="product-option-display.js?v=simple-entry-20261016" defer></script>
+    <script src="blyxu-app.js?v=simple-entry-20261016" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1568,10 +1575,23 @@
             }
 
             function renderVariantThumbnails(product, name, activeSrc) {
-                thumbsContainer.innerHTML = '';
+                thumbsContainer.replaceChildren();
+                const images = getProductImageSet(product, 'detail');
                 const gallery = thumbsContainer.closest('.product-gallery');
-                gallery?.classList.add('has-single-image');
-                thumbsContainer.style.display = 'none';
+                gallery?.classList.toggle('has-single-image', images.length <= 1);
+                thumbsContainer.style.display = images.length > 1 ? 'flex' : 'none';
+                for (const [index,src] of images.entries()) {
+                    const button = document.createElement('button');button.type='button';button.className='gallery-thumb';
+                    button.classList.toggle('active',getImageIdentity(src)===getImageIdentity(activeSrc));
+                    button.setAttribute('aria-pressed', String(getImageIdentity(src)===getImageIdentity(activeSrc)));
+                    button.setAttribute('aria-label', index===0?'Foto principal':'Foto de ángulo '+index);
+                    const image=document.createElement('img');image.src=normalizeImageUrl(src,'thumb');image.alt='';image.loading='lazy';image.decoding='async';button.append(image);
+                    button.addEventListener('click',()=>{
+                        switchMainImage(src,name);
+                        thumbsContainer.querySelectorAll('button').forEach(item=>{item.classList.toggle('active',item===button);item.setAttribute('aria-pressed',String(item===button));});
+                    });
+                    thumbsContainer.append(button);
+                }
             }
 
             function renderVariantChips(productId, product) {
@@ -1627,6 +1647,10 @@
                         chip.appendChild(dot);
                         list.appendChild(chip);
                         return;
+                    }
+                    const usePhoto = shouldShowVariantPhoto(sib);
+                    if (!usePhoto && variantDimension !== 'color') {
+                        chip.classList.add('text-only');chip.textContent=label;chip.title=label;list.appendChild(chip);return;
                     }
                     const showColorOnly = variantDimension === 'color' && colorValue;
                     if (showColorOnly) {

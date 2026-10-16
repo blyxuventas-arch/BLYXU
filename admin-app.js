@@ -211,7 +211,12 @@ function getAdminPromotionDiscountPercent() {
     return 20;
 }
 
+let productPreviewTimer = null;
 function updateLivePreview() {
+    clearTimeout(productPreviewTimer);
+    productPreviewTimer = setTimeout(() => requestAnimationFrame(renderLivePreviewNow), 90);
+}
+function renderLivePreviewNow() {
     const nombre = document.getElementById('prod-nombre')?.value || 'Nombre del Producto';
     const categoria = document.getElementById('prod-categoria')?.value || 'CATEGORÍA';
     const precio = document.getElementById('prod-precio')?.value || '0';
@@ -222,9 +227,9 @@ function updateLivePreview() {
     const catalogo = document.getElementById('prod-catalogo')?.value || 'Ambos';
     const stock = Number(document.getElementById('prod-stock-inicial')?.value || 0);
     const descripcion = document.getElementById('prod-descripcion')?.value?.trim() || '';
-    const color = document.getElementById('prod-color')?.value?.trim() || '';
-    const estilo = document.getElementById('prod-estilo')?.value?.trim() || '';
-    const medida = typeof getProductSizeValue === 'function' ? getProductSizeValue() : (document.getElementById('prod-tamano')?.value || '');
+    const color = document.getElementById('prod-color')?.disabled ? '' : (document.getElementById('prod-color')?.value?.trim() || '');
+    const estilo = document.getElementById('prod-estilo')?.disabled ? '' : (document.getElementById('prod-estilo')?.value?.trim() || '');
+    const medida = document.getElementById('prod-size-kind')?.disabled ? '' : typeof getProductSizeValue === 'function' ? getProductSizeValue() : (document.getElementById('prod-tamano')?.value || '');
     if (typeof syncAllVariantAutoSizes === 'function') syncAllVariantAutoSizes();
     var idVar = document.getElementById('prod-id')?.value || '';
     var idProd = document.getElementById('prod-id-producto')?.value || '';
@@ -1428,6 +1433,8 @@ function updateProductQrPreview() {
     const codeLabel = document.getElementById('prod-generated-qr-code');
     const code = normalizeBarcodeValue(getInputValue('prod-id-producto'));
 
+    if (image?.dataset.qrCode === code) return;
+    if (image) image.dataset.qrCode = code;
     if (codeLabel) codeLabel.textContent = code || 'Generando referencia...';
     if (image) {
         image.hidden = !code;
@@ -2208,6 +2215,7 @@ async function restoreSharedProductDraft(draft){
     const form=document.getElementById('product-form');if(draft.pendingKey)form.dataset.pendingKey=draft.pendingKey;
     document.querySelectorAll('#variants-container .admin-panel,#variants-container .variant-edit-card').forEach(card=>{setupVariantImageMode(card); if(card.querySelector('.var-tamano'))syncVariantSizeField(card);});
     window.BlyxuRetailAdmin?.refreshControls();
+    window.BlyxuProductEntryUI?.hydrate();
     updateProductMeasurementFields();renderProductGalleryManager();updateLivePreview();updateProductQrPreview();
     return map;
 }
@@ -2292,6 +2300,7 @@ function normalizeProductPayloadForSubmit(data) {
     if (cantidad !== '') payload.Stock = cantidad;
     applyAutomaticStockStatus(payload);
 
+    window.BlyxuProductEntryUI?.preparePayload(payload);
     return window.BlyxuRetailAdmin?.preparePayload(payload) || payload;
 }
 
@@ -2624,6 +2633,7 @@ async function submitProductForm(e) {
     btn.disabled = true;
     btn.textContent = 'Guardando producto y variantes…';
     setProductSaveFeedback('Guardando. Espera la confirmación antes de cerrar.', 'progress');
+    let productSaved = false;
     try {
         ensureProductHierarchyIds();
 
@@ -2669,6 +2679,7 @@ async function submitProductForm(e) {
                 const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
                     fallbackEditOverride: isEditingProduct ? true : false
                 });
+                productSaved = true;
                 const pendingKey = document.getElementById('product-form')?.dataset.pendingKey;
                 if (pendingKey) {
                     try { await window.BlyxuPendingProducts?.complete(pendingKey); }
@@ -2697,8 +2708,13 @@ async function submitProductForm(e) {
     } catch (err) {
         const message = err?.message || 'No se pudo guardar el producto. Reintenta cuando haya conexión.';
         console.error('Error al guardar producto:', err);
-        setProductSaveFeedback('No se pudo guardar: ' + message + ' Los datos del formulario se conservan para revisarlos.');
-        showToast('Error: ' + message, 'error');
+        if (productSaved) {
+            setProductSaveFeedback('El producto se guardó, pero no se pudo actualizar la vista: ' + message + ' Revisa el inventario antes de volver a guardar.', 'success');
+            showToast('Producto guardado. Revisa el inventario antes de repetir.', 'warning');
+        } else {
+            setProductSaveFeedback('No se pudo guardar: ' + message + ' Los datos del formulario se conservan para revisarlos.');
+            showToast('Error: ' + message, 'error');
+        }
     } finally {
         btn.disabled = false;
         btn.textContent = isEditingProduct ? 'Guardar toda la referencia' : 'Guardar producto y variantes';
@@ -2707,6 +2723,7 @@ async function submitProductForm(e) {
 
 function setProductFormMode(isEditing) {
     isEditingProduct = isEditing;
+    window.BlyxuProductEntryUI?.refresh(isEditing);
     const title = el('product-form-title');
     const mode = el('product-form-mode');
     const btn = el('btn-save');
@@ -2995,9 +3012,9 @@ function getVariantEditorCardPreviewRow(card, index = 0, activeImage = '') {
         };
     }
 
-    const color = card.querySelector('.var-color')?.value || '';
-    const measure = getVariantSizeValue(card);
-    const style = cleanProductStyleValue(card.querySelector('.var-estilo')?.value || '');
+    const color = card.querySelector('.var-color')?.disabled ? '' : (card.querySelector('.var-color')?.value || '');
+    const measure = card.querySelector('.var-size-mode')?.disabled ? '' : getVariantSizeValue(card);
+    const style = card.querySelector('.var-estilo')?.disabled ? '' : cleanProductStyleValue(card.querySelector('.var-estilo')?.value || '');
     const image = normalizeImageUrl(getVariantImageValue(card) || baseImage);
     const title = card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre') || `Variante ${index + 2}`;
     return {
@@ -3165,9 +3182,9 @@ function getPreviewColorDotsHtml(value) {
 
 function getPreviewVariantRows(activeImage = '') {
     const baseImage = normalizeImageUrl(document.getElementById('prod-imagen')?.value || getAdminGalleryUrls()[0] || 'Logo2.png');
-    const baseColor = getInputValue('prod-color');
-    const baseMeasure = typeof getProductSizeValue === 'function' ? getProductSizeValue() : getInputValue('prod-tamano');
-    const baseStyle = getProductStyleValue();
+    const baseColor = document.getElementById('prod-color')?.disabled ? '' : getInputValue('prod-color');
+    const baseMeasure = document.getElementById('prod-size-kind')?.disabled ? '' : typeof getProductSizeValue === 'function' ? getProductSizeValue() : getInputValue('prod-tamano');
+    const baseStyle = document.getElementById('prod-estilo')?.disabled ? '' : getProductStyleValue();
     const baseStock = Number(getInputValue('prod-stock-inicial') || 0);
     const activeKey = getActiveVariantPreviewKey();
     const rows = [{
@@ -3221,12 +3238,17 @@ function renderProductPreviewOptions(activeImage = '') {
     panel.style.display = 'block';
 
     const activeIndex = rows.findIndex(row => row.active);
+    const usePhoto = isEditingProduct || document.getElementById('prod-style-photo')?.checked;
+    panel.classList.toggle('text-options',!usePhoto);
+    const signature = JSON.stringify([rows,usePhoto]);
+    if(panel.dataset.signature === signature) return;
+    panel.dataset.signature = signature;
     panel.innerHTML = `
         <span class="preview-panel-title">Opciones visibles</span>
         <div class="preview-variant-list">
             ${rows.map((row, index) => `
                 <button type="button" class="preview-variant-card ${(activeIndex === -1 ? index === 0 : row.active) ? 'active' : ''}" data-preview-index="${index}" data-preview-key="${escapeHtml(row.key || '')}" data-preview-url="${escapeHtml(row.image || '')}">
-                    <img src="${escapeHtml(row.image || 'Logo2.png')}" alt="" onerror="handleInventoryImageError(this)">
+                    ${usePhoto ? `<img src="${escapeHtml(row.image || 'Logo2.png')}" alt="" onerror="handleInventoryImageError(this)">` : ''}
                     <span class="preview-variant-copy">
                         <strong>${escapeHtml(row.label || `Variante ${index + 1}`)}</strong>
                         <span>${escapeHtml(row.detail || 'Sin atributos')}</span>
@@ -3257,6 +3279,7 @@ function renderProductPreviewGallery(activeUrl = '') {
     if (urls.length <= 1) {
         if (gallery) {
             gallery.innerHTML = '';
+            delete gallery.dataset.signature;
             gallery.style.display = 'none';
         }
         return;
@@ -3273,6 +3296,9 @@ function renderProductPreviewGallery(activeUrl = '') {
     gallery.style.display = 'flex';
 
     const active = normalizeImageUrl(activeUrl || urls[0]);
+    const signature = JSON.stringify([urls,active]);
+    if(gallery.dataset.signature === signature) return;
+    gallery.dataset.signature = signature;
     gallery.innerHTML = urls.map((url, index) => `
         <button type="button" class="preview-angle-thumb ${url === active ? 'active' : ''}" data-preview-url="${escapeHtml(url)}" aria-label="Vista ${index + 1}">
             <img src="${escapeHtml(url)}" alt="">
@@ -4223,6 +4249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncVariantSizeField(card);
         setupVariantImagePicker(card);
         setupVariantImageMode(card);
+        window.BlyxuProductEntryUI?.decorateVariant(card);
         card.querySelectorAll('.variant-own-measurements input,.variant-own-measurements select').forEach(field => field.addEventListener('input', () => {syncVariantSizeField(card); updateLivePreview();}));
         updateLivePreview();
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -4349,6 +4376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const summary = document.getElementById('variation-generator-summary');
+        window.BlyxuProductEntryUI?.hydrate();
         if (summary) summary.textContent = `${combinations.length} variante(s) hijas listas: V01 en la variante inicial y ${Math.max(combinations.length - 1, 0)} tarjeta(s) adicional(es).`;
         updateLivePreview();
         showToast(`${combinations.length} variacion(es) generadas`, 'success');
@@ -5444,13 +5472,13 @@ function canvasToBlob(canvas, type, quality) {
     });
 }
 
-async function prepareImageForUpload(file) {
+async function prepareImageForUpload(file, options = {}) {
     if (file.type === 'image/gif') {
         return file;
     }
 
     const img = await loadImageFile(file);
-    const scale = Math.min(1, IMAGE_UPLOAD_MAX_EDGE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    const scale = Math.min(1, (options.maxEdge || IMAGE_UPLOAD_MAX_EDGE) / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
     canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
@@ -5461,7 +5489,7 @@ async function prepareImageForUpload(file) {
     }
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    let blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, IMAGE_UPLOAD_QUALITY);
+    let blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, options.quality || IMAGE_UPLOAD_QUALITY);
     if (blob.size > MAX_CAROUSEL_IMAGE_SIZE) {
         blob = await canvasToBlob(canvas, IMAGE_UPLOAD_FORMAT, 0.68);
     }
@@ -5476,13 +5504,13 @@ async function prepareImageForUpload(file) {
     return new File([blob], `${cleanName}.${IMAGE_UPLOAD_EXTENSION}`, { type: IMAGE_UPLOAD_FORMAT });
 }
 
-async function uploadCarouselImage(file) {
+async function uploadCarouselImage(file, options = {}) {
     if (!file) return '';
     if (!file.type.startsWith('image/')) {
         throw new Error('Selecciona un archivo de imagen valido');
     }
 
-    const uploadFile = await prepareImageForUpload(file);
+    const uploadFile = await prepareImageForUpload(file, options);
     if (uploadFile.size > MAX_CAROUSEL_IMAGE_SIZE) {
         throw new Error('La imagen pesa mas de 5 MB');
     }
@@ -5693,8 +5721,11 @@ function initProductGalleryUpload() {
     if (!dropZone || !fileInput) return;
 
     async function uploadGalleryFiles(files) {
-        const selected = Array.from(files || []).filter(file => file.type && file.type.startsWith('image/'));
+        if (dropZone.dataset.uploading === '1') return;
+        const selected = Array.from(files || []).filter(file => file.type && file.type.startsWith('image/')).slice(0, 8);
+        dropZone.dataset.uploading = '1';
         if (!selected.length) {
+            delete dropZone.dataset.uploading;
             showToast('Selecciona imagenes validas para la galeria', 'warning');
             return;
         }
@@ -5707,11 +5738,21 @@ function initProductGalleryUpload() {
         }
 
         try {
-            const uploadedUrls = [];
-            for (const file of selected) {
-                uploadedUrls.push(await uploadCarouselImage(file));
+            const uploadedUrls = new Array(selected.length);
+            const failures = [];
+            let cursor = 0, finished = 0;
+            async function worker() {
+                while (cursor < selected.length) {
+                    const index = cursor++;
+                    try {uploadedUrls[index] = await uploadCarouselImage(selected[index], {maxEdge:1200,quality:0.76});}
+                    catch(error) {failures.push(selected[index].name + ': ' + error.message);}
+                    finished++;
+                    if (saveBtn) saveBtn.textContent = 'Subiendo ángulos ' + finished + '/' + selected.length;
+                }
             }
-            appendAdminGalleryUrls(uploadedUrls);
+            await Promise.all([worker(),worker()]);
+            appendAdminGalleryUrls(uploadedUrls.filter(Boolean));
+            if(failures.length) throw new Error('Se conservaron las fotos subidas. ' + failures.join(' · '));
             showToast(`${uploadedUrls.length} foto(s) agregadas a la galeria`, 'success');
         } catch (error) {
             console.error('Error subiendo galeria de producto:', error);
@@ -5721,6 +5762,7 @@ function initProductGalleryUpload() {
                 saveBtn.disabled = false;
                 saveBtn.textContent = previousText;
             }
+            delete dropZone.dataset.uploading;
             fileInput.value = '';
         }
     }
