@@ -2587,6 +2587,124 @@ function validateProductEditReferences(items) {
     }
 }
 
+function setProductSaveFeedback(message, kind = 'error') {
+    const status = document.getElementById('product-save-status');
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.kind = kind;
+    status.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+}
+
+function revealInvalidProductField(field) {
+    if (!field) return;
+    const folds = [];
+    for (let node = field.parentElement; node && node.id !== 'product-form'; node = node.parentElement) {
+        if (node.tagName === 'DETAILS') folds.push(node);
+    }
+    focusProductEntryStage(folds.find(fold => fold.classList.contains('product-entry-fold')) || null);
+    folds.reverse().forEach(fold => {fold.open = true;});
+    const panel = field.closest('.variant-edit-panel');
+    if (panel) {focusProductEntryStage(panel);panel.classList.add('is-open');}
+    field.focus();
+}
+
+async function submitProductForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-save');
+    if (!btn || btn.disabled) return;
+    const form = document.getElementById('product-form');
+    const invalid = Array.from(form?.elements || []).find(field => field.willValidate && !field.validity.valid);
+    if (invalid) {
+        revealInvalidProductField(invalid);
+        setProductSaveFeedback('Revisa el campo marcado antes de guardar. Tus datos se conservan.');
+        invalid.reportValidity();
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Guardando producto y variantes…';
+    setProductSaveFeedback('Guardando. Espera la confirmación antes de cerrar.', 'progress');
+    try {
+        ensureProductHierarchyIds();
+
+        const rawPrecio = document.getElementById('prod-precio').value;
+        const cleanPrecio = parseAmount(rawPrecio);
+        const rawPrecioMayorista = document.getElementById('prod-precio-mayorista').value;
+        const cleanPrecioMayorista = parseAmount(rawPrecioMayorista);
+
+        const stock = Number(document.getElementById('prod-stock-inicial').value || 0);
+        const estado = document.getElementById('prod-estado').value;
+
+        const data = {
+            'Nombre del Producto': document.getElementById('prod-nombre').value,
+            Categoria: document.getElementById('prod-categoria').value,
+            'Categoría': document.getElementById('prod-categoria').value,
+            Precio: cleanPrecio,
+            'Precio Mayor': cleanPrecioMayorista,
+            'Stock Inicial': stock,
+            Cantidad: stock,
+            'Imagen Principal': document.getElementById('prod-imagen').value,
+            Color: document.getElementById('prod-color').value,
+            Estilo: getProductStyleValue(),
+            Estado: estado
+        };
+        Object.assign(data, buildProductPayload());
+        const originalVariationId = document.getElementById('product-form')?.dataset.originalVariationId || '';
+        if (isEditingProduct && originalVariationId) data.__adminOriginalId = originalVariationId;
+        const motherProductId = getInputValue('prod-id-producto') || ensureProductHierarchyIds().idProducto;
+        data['ID Producto'] = motherProductId;
+        data.ID_Producto = motherProductId;
+        data.idProducto = motherProductId;
+
+
+                const variants = collectVariantPayloads();
+                const editedVariantIds = new Set(variants.map(item => String(item.__adminOriginalId || item['ID Variacion'] || '')));
+                const groupCategoryUpdates = isEditingProduct
+                    ? buildGroupCategorySyncPayloads(motherProductId, data['ID Variacion'] || data['ID Variación'] || originalVariationId, data.Categoria, data.Promocion)
+                        .filter(item => !editedVariantIds.has(String(item.__adminOriginalId || item['ID Variacion'] || '')))
+                    : [];
+                const itemsToSave = [data, ...groupCategoryUpdates, ...variants];
+                validateProductEditReferences(itemsToSave);
+                
+                const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
+                    fallbackEditOverride: isEditingProduct ? true : false
+                });
+                const pendingKey = document.getElementById('product-form')?.dataset.pendingKey;
+                if (pendingKey) {
+                    try { await window.BlyxuPendingProducts?.complete(pendingKey); }
+                    catch (_) { showToast('Producto guardado; no se pudo cerrar el pendiente. Actualiza la lista antes de retomarlo.', 'error'); }
+                }
+                clearPublicProductsCache();
+                
+                try {
+                    mergeSavedProductsIntoInventory(savedProducts);
+                } catch (renderError) {
+                    console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
+                }
+                const savedQrTicket = getProductFormQrTicketData(data);
+                const savedVariantsCount = savedProducts.length - 1;
+                showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} actualizacion(es) de variante guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
+                resetProductForm();
+                showProductQrTicket(savedQrTicket);
+
+                const editModal = document.getElementById('edit-product-modal');
+                if (editModal?.classList.contains('open') || editModal?.style.display === 'flex') {
+                    cerrarModalEdicion();
+                }
+                setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
+
+        setProductSaveFeedback('Producto y variantes guardados correctamente.', 'success');
+    } catch (err) {
+        const message = err?.message || 'No se pudo guardar el producto. Reintenta cuando haya conexión.';
+        console.error('Error al guardar producto:', err);
+        setProductSaveFeedback('No se pudo guardar: ' + message + ' Los datos del formulario se conservan para revisarlos.');
+        showToast('Error: ' + message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = isEditingProduct ? 'Guardar toda la referencia' : 'Guardar producto y variantes';
+    }
+}
+
 function setProductFormMode(isEditing) {
     isEditingProduct = isEditing;
     const title = el('product-form-title');
@@ -3891,90 +4009,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(loginForm)initializeAdminPasswordAccess(GOOGLE_SHEET_API,adminNativeFetch,loginForm,onAdminAccess);
     // -------------------
 
-    document.getElementById('product-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const btn = document.getElementById('btn-save');
-        btn.disabled = true;
-        btn.textContent = 'Enviando...';
-        ensureProductHierarchyIds();
-
-        const rawPrecio = document.getElementById('prod-precio').value;
-        const cleanPrecio = parseAmount(rawPrecio);
-        const rawPrecioMayorista = document.getElementById('prod-precio-mayorista').value;
-        const cleanPrecioMayorista = parseAmount(rawPrecioMayorista);
-
-        const stock = Number(document.getElementById('prod-stock-inicial').value || 0);
-        const estado = document.getElementById('prod-estado').value;
-
-        const data = {
-            'Nombre del Producto': document.getElementById('prod-nombre').value,
-            Categoria: document.getElementById('prod-categoria').value,
-            'Categoría': document.getElementById('prod-categoria').value,
-            Precio: cleanPrecio,
-            'Precio Mayor': cleanPrecioMayorista,
-            'Stock Inicial': stock,
-            Cantidad: stock,
-            'Imagen Principal': document.getElementById('prod-imagen').value,
-            Color: document.getElementById('prod-color').value,
-            Estilo: getProductStyleValue(),
-            Estado: estado
-        };
-        Object.assign(data, buildProductPayload());
-        const originalVariationId = document.getElementById('product-form')?.dataset.originalVariationId || '';
-        if (isEditingProduct && originalVariationId) data.__adminOriginalId = originalVariationId;
-        const motherProductId = getInputValue('prod-id-producto') || ensureProductHierarchyIds().idProducto;
-        data['ID Producto'] = motherProductId;
-        data.ID_Producto = motherProductId;
-        data.idProducto = motherProductId;
-
-        async function proceedSubmit(finalData) {
-            try {
-                const variants = collectVariantPayloads();
-                const editedVariantIds = new Set(variants.map(item => String(item.__adminOriginalId || item['ID Variacion'] || '')));
-                const groupCategoryUpdates = isEditingProduct
-                    ? buildGroupCategorySyncPayloads(motherProductId, finalData['ID Variacion'] || finalData['ID Variación'] || originalVariationId, finalData.Categoria, finalData.Promocion)
-                        .filter(item => !editedVariantIds.has(String(item.__adminOriginalId || item['ID Variacion'] || '')))
-                    : [];
-                const itemsToSave = [finalData, ...groupCategoryUpdates, ...variants];
-                validateProductEditReferences(itemsToSave);
-                
-                const savedProducts = await saveProductListToGoogleSheets(itemsToSave, {
-                    fallbackEditOverride: isEditingProduct ? true : false
-                });
-                const pendingKey = document.getElementById('product-form')?.dataset.pendingKey;
-                if (pendingKey) {
-                    try { await window.BlyxuPendingProducts?.complete(pendingKey); }
-                    catch (_) { showToast('Producto guardado; no se pudo cerrar el pendiente. Actualiza la lista antes de retomarlo.', 'error'); }
-                }
-                clearPublicProductsCache();
-                
-                try {
-                    mergeSavedProductsIntoInventory(savedProducts);
-                } catch (renderError) {
-                    console.warn('Producto guardado, pero no se pudo refrescar el inventario local:', renderError);
-                }
-                const savedQrTicket = getProductFormQrTicketData(finalData);
-                const savedVariantsCount = savedProducts.length - 1;
-                showToast(savedVariantsCount > 0 ? `Producto y ${savedVariantsCount} actualizacion(es) de variante guardados en Google Sheets` : 'Producto guardado en Google Sheets', 'success');
-                resetProductForm();
-                showProductQrTicket(savedQrTicket);
-                btn.disabled = false;
-                btn.textContent = 'Guardar producto y variantes';
-                const editModal = document.getElementById('edit-product-modal');
-                if (editModal?.classList.contains('open') || editModal?.style.display === 'flex') {
-                    cerrarModalEdicion();
-                }
-                setTimeout(function () { cargarInventario({ silent: true }); }, 1000);
-            } catch (err) {
-                showToast('Error: ' + err.message, 'error');
-                btn.disabled = false;
-                btn.textContent = 'Guardar / Enviar';
-            }
-        }
-
-        proceedSubmit(data);
-    });
+    const productSaveForm = document.getElementById('product-form');
+    productSaveForm.noValidate = true;
+    productSaveForm.addEventListener('submit', submitProductForm);
 
     document.getElementById('btn-reset-product')?.addEventListener('click', resetProductForm);
 
