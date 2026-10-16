@@ -1424,13 +1424,9 @@ function updateProductBarcodeField(force = false) {
 }
 
 function updateProductQrPreview() {
-    const barcodeInput = document.getElementById('prod-barcode');
     const image = document.getElementById('prod-generated-qr');
     const codeLabel = document.getElementById('prod-generated-qr-code');
-    const code = normalizeBarcodeValue(barcodeInput?.value || makeProductBarcode(
-        getInputValue('prod-id-producto'),
-        getInputValue('prod-id')
-    ));
+    const code = normalizeBarcodeValue(getInputValue('prod-id-producto'));
 
     if (codeLabel) codeLabel.textContent = code || 'Generando referencia...';
     if (image) {
@@ -2210,6 +2206,7 @@ async function restoreSharedProductDraft(draft){
         const barcode=card.querySelector('.ve-barcode,.var-barcode');if(barcode&&variant.barcodeId)map[variant.barcodeId]=barcode.id;
     }
     const form=document.getElementById('product-form');if(draft.pendingKey)form.dataset.pendingKey=draft.pendingKey;
+    document.querySelectorAll('#variants-container .admin-panel,#variants-container .variant-edit-card').forEach(card=>{setupVariantImageMode(card); if(card.querySelector('.var-tamano'))syncVariantSizeField(card);});
     window.BlyxuRetailAdmin?.refreshControls();
     updateProductMeasurementFields();renderProductGalleryManager();updateLivePreview();updateProductQrPreview();
     return map;
@@ -2522,16 +2519,12 @@ function buildVariantPayloadFromCard(card) {
     const variantId = card.querySelector('.var-id')?.value?.trim() || '';
     if (!variantId) return null;
     const stock = Number(card.querySelector('.var-stock')?.value || 0);
-    const imagen = card.querySelector('.var-imagen')?.value?.trim() || getInputValue('prod-imagen');
+    const imagen = getVariantImageValue(card);
     const tamano = getVariantSizeValue(card);
     const color = card.querySelector('.var-color')?.value?.trim() || '';
     const estiloInput = card.querySelector('.var-estilo');
     const estilo = estiloInput ? cleanProductStyleValue(estiloInput.value) : getProductStyleValue();
-    const measurementData = getProductMeasurementFormData();
-    const variantMeasurementData = {
-        ...measurementData,
-        textileSize: measurementData.kind === 'textil' && tamano ? tamano : measurementData.textileSize
-    };
+    const variantMeasurementData = getVariantMeasurementData(card);
 
     return {
         __adminForceCreate: true,
@@ -2724,26 +2717,68 @@ function getVariantAutoSizeValue() {
     return (typeof getProductSizeValue === 'function' ? getProductSizeValue() : '') || getInputValue('prod-tamano') || '';
 }
 
+function getVariantMeasurementData(card) {
+    if ((card.querySelector('.var-size-mode')?.value || 'auto') === 'auto') return getProductMeasurementFormData();
+    const value = name => card.querySelector('.var-' + name)?.value?.trim() || '';
+    const kind = value('size-kind');
+    const unit = kind === 'liquido' ? 'ml' : (value('measure-unit') || 'cm');
+    return {kind, unit, capacity:value('measure-capacity'), width:unit === 'ml' ? value('measure-capacity') : value('measure-width'), length:value('measure-length'), depth:value('measure-depth'), radius:value('measure-radius'), textileSize:value('textile-size')};
+}
+
+function variantMeasurementControls() {
+    return '<div class="variant-own-measurements admin-form-grid" hidden><div class="form-group"><label>Tipo de tamaño<select class="form-control var-size-kind"><option value="">Normal</option><option value="textil">Textil</option><option value="medidas">Medidas</option><option value="liquido">Líquidos / ml</option></select></label></div><div class="form-group var-textile-field" hidden><label>Talla textil<input class="form-control var-textile-size" placeholder="XS, S, M, XL u otra talla"></label></div><div class="variant-dimensions admin-form-grid" hidden><div class="form-group"><label>Unidad<select class="form-control var-measure-unit"><option>cm</option><option>m</option><option>m3</option><option>ml</option></select></label></div>' + ['width:Ancho','length:Largo','depth:Fondo','radius:Radio','capacity:Capacidad'].map(item=>{const [key,label]=item.split(':');return '<div class="form-group var-measure-'+key+'-field"><label>'+label+'<input type="number" min="0" step="0.01" class="form-control var-measure-'+key+'"></label></div>';}).join('') + '</div></div>';
+}
+
 function syncVariantSizeField(card) {
     if (!card) return '';
-    const mode = card.querySelector('.var-size-mode')?.value || 'auto';
-    const sizeInput = card.querySelector('.var-tamano');
+    const auto = (card.querySelector('.var-size-mode')?.value || 'auto') === 'auto';
+    const input = card.querySelector('.var-tamano');
+    const data = getVariantMeasurementData(card);
+    if (!input) return getVariantAutoSizeValue();
+    const own = card.querySelector('.variant-own-measurements');
+    if (own) own.hidden = auto;
+    const textile = card.querySelector('.var-textile-field');
+    const dimensions = card.querySelector('.variant-dimensions');
+    if (textile) textile.hidden = data.kind !== 'textil';
+    if (dimensions) dimensions.hidden = !['medidas','liquido'].includes(data.kind);
+    card.querySelectorAll('.var-measure-width-field,.var-measure-length-field,.var-measure-depth-field,.var-measure-radius-field').forEach(field=>field.hidden=data.unit === 'ml');
+    const capacity = card.querySelector('.var-measure-capacity-field');
+    if (capacity) capacity.hidden = data.unit !== 'ml';
+    input.readOnly = auto || !!data.kind;
+    if (auto) input.value = getVariantAutoSizeValue();
+    else if (data.kind === 'textil') input.value = data.textileSize;
+    else if (data.kind) input.value = formatProductPhysicalSizeLabel(data);
     const hint = card.querySelector('.var-size-hint');
-    const autoValue = getVariantAutoSizeValue();
-    if (!sizeInput) return autoValue;
+    if (hint) hint.textContent = auto ? 'Usa las medidas del producto principal.' : 'Medidas independientes de esta variante.';
+    return input.value.trim();
+}
 
-    if (mode === 'auto') {
-        sizeInput.value = autoValue;
-        sizeInput.readOnly = true;
-        sizeInput.placeholder = autoValue || 'Automatico del producto principal';
-        if (hint) hint.textContent = autoValue ? `Usando: ${autoValue}` : 'Toma automaticamente el tamano del producto principal.';
-        return autoValue;
-    }
+function getVariantImageValue(card) {
+    const edit = !!card.querySelector('.ve-imagen');
+    const own = card.querySelector(edit ? '.ve-own-image' : '.var-own-image');
+    const url = card.querySelector(edit ? '.ve-imagen' : '.var-imagen')?.value?.trim() || '';
+    return own && !own.checked ? getInputValue('prod-imagen') : (url || getInputValue('prod-imagen'));
+}
 
-    sizeInput.readOnly = false;
-    sizeInput.placeholder = autoValue ? `Ej: ${autoValue}` : 'Escribe tamano, talla o capacidad';
-    if (hint) hint.textContent = 'Ajuste manual solo para esta variante.';
-    return sizeInput.value.trim() || autoValue;
+function setupVariantImageMode(card) {
+    const edit = !!card.querySelector('.ve-imagen');
+    const toggle = card.querySelector(edit ? '.ve-own-image' : '.var-own-image');
+    const fields = card.querySelector('.variant-own-image-fields');
+    if (!toggle || !fields) return;
+    const sync = () => { fields.hidden = !toggle.checked; updateLivePreview(); };
+    toggle.addEventListener('change', sync);
+    fields.hidden = !toggle.checked;
+}
+
+function focusProductEntryStage(stage) {
+    document.querySelectorAll('#product-form .product-entry-fold').forEach(fold => { if (fold !== stage) fold.open = false; });
+    document.querySelectorAll('#variants-container .variant-edit-panel').forEach(panel => {
+        if (panel === stage) return;
+        panel.classList.remove('is-open');
+        const card = panel.closest('.variant-edit-card'); card?.classList.remove('is-editing');
+        const button = card?.querySelector('.variant-edit-toggle');
+        if (button) {button.textContent='Editar';button.setAttribute('aria-expanded','false');}
+    });
 }
 
 function syncAllVariantAutoSizes() {
@@ -2823,7 +2858,7 @@ function getVariantEditorCardPreviewRow(card, index = 0, activeImage = '') {
         const color = row.querySelector('.ve-color')?.value || '';
         const measure = getVariantEditSizeValue(row);
         const style = cleanProductStyleValue(row.querySelector('.ve-estilo')?.value || '');
-        const image = normalizeImageUrl(row.querySelector('.ve-imagen')?.value || baseImage);
+        const image = normalizeImageUrl(getVariantImageValue(row) || baseImage);
         const detail = [splitProductColorValues(color).map(getColorDisplayName).join(', '), style, measure].filter(Boolean).join(' / ');
         return {
             id: variantId,
@@ -2845,7 +2880,7 @@ function getVariantEditorCardPreviewRow(card, index = 0, activeImage = '') {
     const color = card.querySelector('.var-color')?.value || '';
     const measure = getVariantSizeValue(card);
     const style = cleanProductStyleValue(card.querySelector('.var-estilo')?.value || '');
-    const image = normalizeImageUrl(card.querySelector('.var-imagen')?.value || baseImage);
+    const image = normalizeImageUrl(getVariantImageValue(card) || baseImage);
     const title = card.querySelector('.var-nombre')?.value || getInputValue('prod-nombre') || `Variante ${index + 2}`;
     return {
         id: card.querySelector('.var-id')?.value || `Variante ${index + 2}`,
@@ -3988,6 +4023,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('variants-container');
         if (!container) return;
 
+        focusProductEntryStage(null);
         const ids = ensureProductHierarchyIds();
         if (!container.querySelector('table') && !container.querySelector('.admin-panel')) {
             container.innerHTML = '';
@@ -4052,7 +4088,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="custom">Ajustar manual</option>
                         </select>
                         <input type="text" class="form-control var-tamano" value="${escapeHtml(getVariantAutoSizeValue())}" readonly>
-                        <small class="field-hint var-size-hint">Toma automaticamente el tamano del producto principal.</small>
+                        <small class="field-hint var-size-hint">Usa las medidas del producto principal.</small>
+                        ${variantMeasurementControls()}
                     </div>
                 </div>
 
@@ -4066,7 +4103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="number" class="form-control var-stock" value="12">
                 </div>
                 <div class="form-group variant-image-field">
-                    <label>Imagen de variante</label>
+                    <label class="variant-image-mode"><input type="checkbox" class="var-own-image" role="switch"> Usar foto independiente de la variante</label><small class="field-hint">Apagado: usa la foto del producto principal.</small><div class="variant-own-image-fields" hidden>
                     <input type="file" class="var-image-file" accept="image/*" style="display:none;">
                     <div class="var-drop-zone drop-zone variant-image-picker">
                         <div class="variant-image-placeholder">
@@ -4082,12 +4119,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     </div>
-                    <div class="image-url-row"><input type="text" class="form-control var-imagen" placeholder="O pega aqui la URL directa de la imagen (https://...)"><small class="field-hint">Esta sera la imagen visible de esta variante.</small></div>
+                    <div class="image-url-row"><input type="text" class="form-control var-imagen" placeholder="O pega aqui la URL directa de la imagen (https://...)"><small class="field-hint">Esta sera la imagen visible de esta variante.</small></div></div>
                 </div>
             </div>
             <button type="button" class="admin-btn btn-save-individual-variant" style="background:linear-gradient(135deg, #6C5CE7, #9B2CFA); margin-top:10px;">Guardar esta Variante</button>
         `;
 
+        const stage = document.createElement('details');
+        stage.className = 'product-entry-fold variant-entry-fold'; stage.open = true;
+        const summary = document.createElement('summary'); summary.textContent = 'Variante ' + autoVariantId + ' · editar datos';
+        const body = document.createElement('div'); body.className = 'product-entry-body';
+        while(card.firstChild) body.appendChild(card.firstChild);
+        stage.append(summary, body); card.appendChild(stage);
+        stage.addEventListener('toggle', () => {if(stage.open) focusProductEntryStage(stage);});
         container.appendChild(card);
         initColorPickers(card);
         const variantIdInput = card.querySelector('.var-id');
@@ -4131,7 +4175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             variantBarcodeInput.dataset.autoBarcode = scanModeEnabled && variantBarcodeInput.value.trim() ? '0' : '1';
         });
         variantBarcodeMode?.addEventListener('change', event => setVariantBarcodeMode(event.target.checked));
-        variantIdInput?.addEventListener('input', () => syncVariantBarcode());
+        variantIdInput?.addEventListener('input', () => {syncVariantBarcode(); summary.textContent = 'Variante ' + (variantIdInput.value || autoVariantId) + ' · editar datos';});
         variantIdInput?.addEventListener('change', () => syncVariantBarcode());
         setVariantBarcodeMode(false);
         const variantSizeMode = card.querySelector('.var-size-mode');
@@ -4141,6 +4185,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         syncVariantSizeField(card);
         setupVariantImagePicker(card);
+        setupVariantImageMode(card);
+        card.querySelectorAll('.variant-own-measurements input,.variant-own-measurements select').forEach(field => field.addEventListener('input', () => {syncVariantSizeField(card); updateLivePreview();}));
         updateLivePreview();
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
@@ -4156,12 +4202,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             const originalText = btn.textContent;
             btn.textContent = 'Guardando...';
-            const measurementData = getProductMeasurementFormData();
             const variantTamano = getVariantSizeValue(card);
-            const variantMeasurementData = {
-                ...measurementData,
-                textileSize: measurementData.kind === 'textil' && variantTamano ? variantTamano : measurementData.textileSize
-            };
+            const variantMeasurementData = getVariantMeasurementData(card);
 
                 const data = {
                     'ID Variacion': card.querySelector('.var-id').value,
@@ -4188,8 +4230,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     Estilo: card.querySelector('.var-estilo') ? cleanProductStyleValue(card.querySelector('.var-estilo').value) : getProductStyleValue(),
                     'Codigo Barras': card.querySelector('.var-barcode')?.value || makeProductBarcode(motherId, card.querySelector('.var-id').value),
                     SKU: card.querySelector('.var-sku')?.value || '',
-                    Imagen: card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
-                    'Imagen Principal': card.querySelector('.var-imagen')?.value || getInputValue('prod-imagen'),
+                    Imagen: getVariantImageValue(card),
+                    'Imagen Principal': getVariantImageValue(card),
                     'Galeria JSON': '',
                     'Galería JSON': '',
                     Estado: getInputValue('prod-estado') || 'Activo'
@@ -6090,6 +6132,7 @@ function getInventoryProductByKey(key) {
 
 function getInventoryQrReference(product) {
     return normalizeBarcodeValue(
+        getInventoryMotherId(product) ||
         getProductBarcode(product) ||
         product?.SKU ||
         getInventoryVariationId(product) ||
@@ -6151,6 +6194,7 @@ function getProductFormQrTicketData(source = null) {
     const motherId = String(data['ID Producto'] || data.idProducto || getInputValue('prod-id-producto') || '').trim();
     const sku = String(data.SKU || getInputValue('prod-sku') || '').trim();
     const reference = normalizeBarcodeValue(
+        motherId ||
         getProductBarcode(data) ||
         data['Codigo Barras'] ||
         getInputValue('prod-barcode') ||
@@ -7065,8 +7109,8 @@ function buildRegisteredVariantEditPayload(row, idProducto) {
     const price = parseAmount(value('.ve-precio'));
     const wholesale = parseAmount(value('.ve-precio-mayorista'));
     if (price < 0 || wholesale < 0) throw new Error('Los precios no pueden ser negativos: ' + id);
-    const image = value('.ve-imagen') || getInputValue('prod-imagen') || original.Imagen || '';
-    const size = value('.ve-tamano');
+    const image = getVariantImageValue(row) || original.Imagen || '';
+    const size = getVariantEditSizeValue(row);
     const data = {
         ...original,
         __adminOriginalId: originalId,
@@ -7111,7 +7155,7 @@ function buildVariantEditorCardHtml(v, idProducto) {
     var barcodeInputId = 've-barcode-' + cleanInventoryId(vid);
     var html = '';
 
-    html += '<article class="variant-edit-card is-editing" data-varid="' + safeVid + '">';
+    html += '<article class="variant-edit-card" data-varid="' + safeVid + '">';
     html += '<div class="variant-edit-summary">';
     html += '<div class="variant-edit-thumb"><img src="' + escapeHtml(vImage) + '" alt="" onerror="handleInventoryImageError(this)"></div>';
     html += '<div><span>ID variante</span><strong>' + escapeHtml(vid) + '</strong></div>';
@@ -7119,15 +7163,15 @@ function buildVariantEditorCardHtml(v, idProducto) {
     html += '<div><span>Stock</span><b style="color:' + (Number(vStock) > 0 ? '#10B981' : '#EF4444') + ';">' + escapeHtml(vStock) + '</b></div>';
     html += '<div><span>Precio</span><b>$' + escapeHtml(vPrecio) + '</b></div>';
     html += '<div><span>SKU</span><b>' + escapeHtml(vSku) + '</b></div>';
-    html += '<button type="button" class="admin-btn secondary variant-edit-toggle" aria-expanded="true" onclick="expandirVarianteEdicion(\'' + vid + '\')">Ocultar</button>';
+    html += '<button type="button" class="admin-btn secondary variant-edit-toggle" aria-expanded="false" onclick="expandirVarianteEdicion(\'' + vid + '\')">Editar</button>';
     html += '</div>';
 
-    html += '<div class="variant-edit-panel var-edit-expanded is-open" id="var-expand-' + safeVid + '" data-original-varid="' + safeVid + '">';
+    html += '<div class="variant-edit-panel var-edit-expanded" id="var-expand-' + safeVid + '" data-original-varid="' + safeVid + '">';
     html += '<details class="variant-edit-section"><summary>Referencia, código e imagen</summary><div class="variant-edit-grid">';
     html += '<div><label>ID</label><input class="form-control ve-id" value="' + escapeHtml(vid) + '"></div>';
     html += '<div><label>SKU</label><input class="form-control ve-sku" value="' + escapeHtml(v.SKU || '') + '"></div>';
     html += '<div><label>Codigo barras</label><div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;"><input class="form-control ve-barcode" id="' + barcodeInputId + '" value="' + escapeHtml(vBarcode) + '"><button type="button" class="admin-btn secondary" onclick="scanBarcodeToElement(\'' + barcodeInputId + '\')" style="width:auto;min-height:40px;padding:8px 12px;font-size:10px;">Scan</button></div></div>';
-    html += '<div style="grid-column:1/-1;"><label>Imagen URL</label><input class="form-control ve-imagen" value="' + escapeHtml(v.Imagen || '') + '" placeholder="https://..."></div>';
+    html += '<div style="grid-column:1/-1;"><label class="variant-image-mode"><input type="checkbox" role="switch" class="ve-own-image"' + (vImage && vImage !== normalizeImageUrl(getInputValue('prod-imagen')) ? ' checked' : '') + '> Usar foto independiente</label><small>Apagado: usa la foto principal.</small><div class="variant-own-image-fields"><label>Imagen URL</label><input class="form-control ve-imagen" value="' + escapeHtml(v.Imagen || '') + '" placeholder="https://..."></div></div>';
     html += '</div></details>';
 
     html += '<section class="variant-edit-section"><h5><span>02</span> Atributos visibles</h5><div class="variant-edit-grid">';
@@ -7228,6 +7272,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     var tableHtml = '<div style="margin-bottom:12px;"><h4 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#FFA500;font-weight:800;margin:0;padding:0 4px 10px;">VARIANTES DE ESTE ID (' + variantes.length + ')</h4></div>';
     container.innerHTML = buildVariantEditorCardsHtml(variantes, idProducto);
     initColorPickers(container);
+    container.querySelectorAll('.variant-edit-card').forEach(setupVariantImageMode);
     return;
 
     tableHtml += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:11px;">';
@@ -7293,6 +7338,7 @@ function cargarVariantesAlFormulario(idProducto, idVariacionActual) {
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
     initColorPickers(container);
+    container.querySelectorAll('.variant-edit-card').forEach(setupVariantImageMode);
 }
 
 function getVariantEditPanel(vid) {
@@ -7314,6 +7360,7 @@ window.expandirVarianteEdicion = function (vid) {
     row.classList.toggle('is-open', isOpen);
     card?.classList.toggle('is-editing', isOpen);
     if (isOpen && card) {
+        focusProductEntryStage(row);
         setActiveVariantPreviewCard(card);
         updateLivePreview();
     }
@@ -13509,3 +13556,8 @@ function openQuickSaleProductInfo(groupKey) {
     dialog.querySelector('button').onclick = () => dialog.close();
     dialog.showModal();
 }
+
+// One registration stage at a time; collapsing does not reset the form.
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('#product-form > .product-entry-fold').forEach(fold => fold.addEventListener('toggle', () => {if(fold.open) focusProductEntryStage(fold);}));
+});

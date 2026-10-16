@@ -7398,7 +7398,16 @@
 <link rel="stylesheet" href="admin-luxe.css?v=20261015-retail-pricing">
 <link rel="stylesheet" href="inventory-qr-label.css?v=label-40x15-20261009">
 <link rel="stylesheet" href="inventory-category-manager.css?v=20261013-batch">
-<link rel="stylesheet" href="admin-retail-pricing.css?v=20261015-diagnostico-2"><link rel="stylesheet" href="admin-order-workflow.css?v=20261015-1"></head>
+<link rel="stylesheet" href="admin-retail-pricing.css?v=20261015-diagnostico-2"><link rel="stylesheet" href="admin-order-workflow.css?v=20261015-1"><style>
+.variant-own-measurements[hidden],.variant-own-image-fields[hidden],.variant-dimensions[hidden],.var-textile-field[hidden],.variant-dimensions [hidden]{display:none!important}
+.variant-own-measurements,.variant-dimensions{grid-column:1/-1;min-width:0;gap:12px}
+.variant-dimensions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.variant-size-control{min-width:0}.variant-size-control .form-control{min-width:0;width:100%}
+.variant-image-mode{display:flex!important;align-items:center;gap:10px;cursor:pointer;line-height:1.5}
+.variant-image-mode input{appearance:auto;width:36px;height:22px;accent-color:#b58aeb;flex-shrink:0}
+.variant-entry-fold>summary{padding:8px 0;color:#ddc8ff}.variant-entry-fold .product-entry-body{padding-top:18px}
+@media(max-width:600px){.variant-own-measurements{grid-template-columns:1fr}.variant-dimensions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style></head>
 <body id="admin-workspace" class="admin-graphite">
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
@@ -8288,7 +8297,7 @@
 <script src="admin-work-session.js?v=20261014-1" defer></script>
 <script type="module" src="admin-retail-pricing.mjs?v=20261015-diagnostico-2"></script>
 <script src="admin-order-workflow.js?v=20261015-1" defer></script>
-<script src="admin-app.js?v=customer-flow-20261015" defer></script>
+<script src="admin-app.js?v=variant-stages-20261016" defer></script>
 <script src="inventory-category-manager.js?v=20261013-batch" defer></script>
 <script src="order-summary.js?v=customer-flow-20261015" defer></script>
 <script src="order-receipt-access.js?v=browser-qr-20261006" defer></script>
