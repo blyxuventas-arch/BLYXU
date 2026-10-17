@@ -1067,6 +1067,8 @@
                         const box = document.getElementById('detail-img-container');
                         const params = new URLSearchParams(location.search);
                         const productId = Number.parseInt(params.get('id'), 10);
+                        const requestedRef = params.get('ref') || '';
+                        const requestedFamily = params.get('family') || '';
                         const mode = params.get('catalogo') === 'mayorista' ? 'wholesale' : 'retail';
                         const escapeAttr = value => String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
                         const normalizeImage = (value, width = 420) => {
@@ -1097,7 +1099,7 @@
                         try {
                             const preview = JSON.parse(sessionStorage.getItem('blyxu_product_detail_preview_v1') || 'null');
                             const fresh = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
-                            if (fresh && preview.id === productId && preview.mode === mode) {
+                            if (fresh && (requestedRef ? preview.ref === requestedRef && (!requestedFamily || preview.family === requestedFamily) : preview.id === productId) && preview.mode === mode) {
                                 initialSrc = preview.imageDetail || preview.image || preview.imageCard || '';
                                 initialName = preview.name || '';
                             }
@@ -1105,7 +1107,8 @@
 
                         if (!initialSrc) try {
                             const cache = JSON.parse(localStorage.getItem('blyxu_products_cache_v3') || 'null');
-                            const product = cache?.data?.products?.[productId];
+                            const cachedProducts = cache?.data?.products || [];
+                            const product = requestedRef ? cachedProducts.find(p => String(p.idVariacion || p['ID Variación'] || p['ID Variacion'] || p.ID || p.id || p.SKU || '') === requestedRef && (!requestedFamily || String(p.idProducto || p['ID Producto'] || p.ID_Producto || '') === requestedFamily)) : cachedProducts[productId];
                             if (product) {
                                 initialName = product.Nombre || product.nombre || product.Producto || '';
                                 initialSrc = normalizeImage(product.Imagen || product.imagen || product.Foto || (product.Galeria && product.Galeria[0]), window.innerWidth <= 640 ? 640 : 800);
@@ -1258,7 +1261,8 @@
     </div>
 
     <script src="product-option-display.js?v=edit-catalog-20261016" defer></script>
-    <script src="blyxu-app.js?v=edit-catalog-20261016" defer></script>
+    <script src="product-detail-identity.js?v=stable-detail-20261017" defer></script>
+<script src="blyxu-app.js?v=stable-detail-20261017" defer></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1281,11 +1285,13 @@
             const consultBtn = document.getElementById('btn-consult-product-detail');
             const cartNote = document.getElementById('detail-cart-note');
 
+            let cachedDetailPreview = null;
             try {
                 const preview = JSON.parse(sessionStorage.getItem(PRODUCT_DETAIL_PREVIEW_KEY) || 'null');
+                cachedDetailPreview = preview;
                 const isFreshPreview = preview && Date.now() - Number(preview.savedAt || 0) < 120000;
                 const previewImage = preview?.imageCard || preview?.image || preview?.imageDetail || '';
-                if (isFreshPreview && preview.id === currentDetailProductId && preview.mode === detailCatalogMode && previewImage) {
+                if (isFreshPreview && (urlParams.get('ref') ? preview.ref === urlParams.get('ref') && (!urlParams.get('family') || preview.family === urlParams.get('family')) : preview.id === currentDetailProductId) && preview.mode === detailCatalogMode && previewImage) {
                     let previewFallbackTried = false;
                     detailImg.onerror = () => {
                         const alternate = typeof getImageFallbackUrl === 'function'
@@ -1315,6 +1321,11 @@
             if (allProducts.length === 0) {
                 await loadProducts({ renderCatalog: false });
             }
+            // Resolve only after the active catalogue request settles; list order can change between pages.
+            if (productsLoadPromise) {
+                try {await productsLoadPromise;} catch (error) {console.warn('Se usará el catálogo disponible:',error);}
+            }
+            currentDetailProductId = BlyxuProductIdentity.resolve(allProducts,urlParams,cachedDetailPreview,detailCatalogMode);
             detailShowsPrices = shouldShowProductPrices(detailCatalogMode);
             updateCartUI();
 
@@ -1794,7 +1805,7 @@
                 document.title = `${name} - BLYXU`;
 
                 if (updateUrl) {
-                    const nextUrl = `producto.html?id=${productId}${detailCatalogMode === 'wholesale' ? '&catalogo=mayorista' : ''}`;
+                    const nextUrl = getProductDetailUrl(product,productId,detailCatalogMode);
                     history.replaceState({ productId }, '', nextUrl);
                 }
             }

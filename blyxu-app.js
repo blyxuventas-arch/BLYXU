@@ -788,6 +788,7 @@ function prepareProductDetailPreview(productIndex, mode = 'retail') {
     try {
         sessionStorage.setItem(PRODUCT_DETAIL_PREVIEW_KEY, JSON.stringify({
             id: index,
+            ...BlyxuProductIdentity.identity(product),
             mode,
             name: getProductPreviewName(product),
             image,
@@ -800,11 +801,19 @@ function prepareProductDetailPreview(productIndex, mode = 'retail') {
     if (image) preloadCatalogImageUrl(image, 'low');
 }
 
-function openProductDetail(productIndex, mode = 'retail') {
+function getProductDetailUrl(product, index = allProducts.indexOf(product), mode = 'retail') {
+    return BlyxuProductIdentity.url(product,index,mode);
+}
+function getCatalogCardProductIndex(node) {
+    const url = node.closest('[data-detail-url]')?.dataset.detailUrl;
+    return url ? BlyxuProductIdentity.resolve(allProducts,new URL(url,location.href).searchParams) : -1;
+}
+function openProductDetail(productIndex, mode = 'retail', stableUrl = '') {
     const index = Number(productIndex);
-    prepareProductDetailPreview(index, mode);
-    const catalogParam = mode === 'wholesale' ? '&catalogo=mayorista' : '';
-    window.location.href = `producto.html?id=${index}${catalogParam}`;
+    const url = stableUrl || getProductDetailUrl(allProducts[index], index, mode);
+    const resolved = BlyxuProductIdentity.resolve(allProducts,new URL(url,location.href).searchParams);
+    if(resolved>=0)prepareProductDetailPreview(resolved,mode);
+    window.location.href = url;
 }
 
 function getImageFallbackUrl(source, imageSize = 'default') {
@@ -1385,7 +1394,7 @@ function getSpotlightProductDetails(product, index = 0) {
     const tags = [category, variantSummary].filter(Boolean).slice(0, 3);
     const price = getProductCardPriceInfo(product, 'retail').price;
     const showPrice = shouldShowProductPrices('retail');
-    const detailUrl = productIndex >= 0 ? `producto.html?id=${productIndex}` : '#coleccion';
+    const detailUrl = productIndex >= 0 ? getProductDetailUrl(product,productIndex) : '#coleccion';
     const images = getProductImageSet(product, 'spotlight');
     const image = images[0] || 'hero_necklace.png';
 
@@ -1834,7 +1843,7 @@ function renderInventorySpotlight() {
     const eagerCount = IS_MOBILE_VIEWPORT ? 4 : 6;
     const getMarqueeItemHtml = (p, index, isDuplicate = false) => {
         const img = getProductImageSet(p, 'card')[0];
-        const detailUrl = `producto.html?id=${allProducts.indexOf(p)}`;
+        const detailUrl = getProductDetailUrl(p, allProducts.indexOf(p));
         const stockBadge = getProductBadgeMarkup(p);
         const name = p.Nombre || p.nombre || p.Producto || 'Producto BLYXU';
         const price = getProductCardPriceInfo(p, 'retail').price;
@@ -2908,7 +2917,7 @@ function renderProducts(products, options = {}) {
         const originalIndex = allProducts.indexOf(p);
         const productIndex = originalIndex >= 0 ? originalIndex : i;
         const isFeatured = featuredFirst && i === 0;
-        const detailUrl = `producto.html?id=${productIndex}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`;
+        const detailUrl = getProductDetailUrl(p, productIndex, mode);
         const badge = getProductBadgeMarkup(p, i);
         const detailPrepAttrs = mode === 'wholesale'
             ? ''
@@ -2923,16 +2932,16 @@ function renderProducts(products, options = {}) {
         const fullImageAttr = img && previewImg && img !== previewImg ? ` data-full-src="${escapeHtml(img)}"` : '';
 
         return `
-        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}" data-order-flow="${flowKind}"${detailPrepAttrs} tabindex="0">
-            <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}')">
-                <button type="button" class="product-card-favorite" style="position:absolute;top:12px;right:12px;z-index:3;border-radius:50%;width:36px;height:36px;background:#17171c;color:#fff;border:1px solid #666;cursor:pointer" aria-label="Guardar en favoritos" onclick="event.stopPropagation();saveCustomerFavorite(${productIndex},this)">♡</button>
+        <div class="product-card ${isFeatured ? 'featured' : ''} reveal" data-index="${productIndex}" data-order-flow="${flowKind}" data-detail-url="${escapeHtml(detailUrl)}"${detailPrepAttrs} tabindex="0">
+            <div class="product-card-img" onclick="openProductDetail(${productIndex}, '${mode}', this.closest('[data-detail-url]').dataset.detailUrl)">
+                <button type="button" class="product-card-favorite" style="position:absolute;top:12px;right:12px;z-index:3;border-radius:50%;width:36px;height:36px;background:#17171c;color:#fff;border:1px solid #666;cursor:pointer" aria-label="Guardar en favoritos" onclick="event.stopPropagation();saveCustomerFavorite(getCatalogCardProductIndex(this),this)">♡</button>
                 ${img ? `<img ${imageSourceAttrs}${fullImageAttr} data-catalog-priority="${imagePriority}" alt="${escapeHtml(name)}" loading="${imageLoading}" decoding="async" fetchpriority="${imagePriority}" referrerpolicy="no-referrer" onload="handleCatalogImageLoad(this)" onerror="handleCatalogImageError(this)">` :
                   `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a0e2e,#2d1552);font-size:48px;opacity:.3;">?</div>`}
                 ${badge}
                 ${getProductPromotionBadgeMarkup(p, mode)}
 
             </div>
-            <div class="product-card-info" onclick="openProductDetail(${productIndex}, '${mode}')">
+            <div class="product-card-info" onclick="openProductDetail(${productIndex}, '${mode}', this.closest('[data-detail-url]').dataset.detailUrl)">
                 <div class="product-card-name">${name}</div>
                 <div class="product-card-desc">${cat}</div>
                 ${variantText ? `<div class="product-card-variant">${escapeHtml(variantText)}</div>` : ''}
@@ -2947,7 +2956,7 @@ function renderProducts(products, options = {}) {
                 `<button class="product-card-price price-hidden price-consult-btn" type="button" disabled>Agotado por ahora</button>`}
             </div>
             <div class="product-card-actions">
-                <button type="button" class="product-card-add" onclick="event.stopPropagation(); addToCart(${productIndex}, this, '${mode}')" ${stock <= 0 ? 'disabled' : ''} aria-label="${escapeHtml(stock > 0 ? cardFlow.add + ': ' + name : 'Agotado: ' + name)}">
+                <button type="button" class="product-card-add" onclick="event.stopPropagation(); addToCart(getCatalogCardProductIndex(this), this, '${mode}')" ${stock <= 0 ? 'disabled' : ''} aria-label="${escapeHtml(stock > 0 ? cardFlow.add + ': ' + name : 'Agotado: ' + name)}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
                     <span>${stock > 0 ? cardFlow.add : 'Agotado por ahora'}</span>
                 </button>
@@ -3373,7 +3382,7 @@ function closeCartPreview() {
 function getCartProductDetailUrl(product, mode = activeCartMode) {
     const productIndex = allProducts.indexOf(product);
     if (productIndex < 0) return '#';
-    return `producto.html?id=${productIndex}${normalizeCartMode(mode) === 'wholesale' ? '&catalogo=mayorista' : ''}`;
+    return getProductDetailUrl(product,productIndex,normalizeCartMode(mode));
 }
 
 function openCartItemPreview(idx) {
@@ -4086,7 +4095,7 @@ function getGlobalProductResults(query) {
             return {
                 title: product.Nombre || product.nombre || product.Producto || 'Producto',
                 detail: `${category}${product.SKU ? ' · ' + product.SKU : ''}`,
-                href: `producto.html?id=${productIndex >= 0 ? productIndex : 0}${mode === 'wholesale' ? '&catalogo=mayorista' : ''}`,
+                href: getProductDetailUrl(product,productIndex,mode),
                 image: normalizeImageUrl(getProductImageSet(product, 'search')[0] || product.Imagen || product['Imagen Principal'] || product.imagen || '', 'search'),
                 meta: price ? `$${Number(price).toLocaleString('es-CO')}` : 'Producto'
             };
@@ -5277,7 +5286,7 @@ function renderCustomerFavoritesList(favorites = []) {
 
     list.innerHTML = favorites.map(item => {
         const productIndex = findProductIndexForFavorite(item);
-        const href = productIndex >= 0 ? `producto.html?id=${productIndex}` : 'index.html#coleccion';
+        const href = productIndex >= 0 ? getProductDetailUrl(allProducts[productIndex],productIndex) : 'index.html#coleccion';
         return `
             <article class="customer-favorite-card">
                 <a href="${href}">
